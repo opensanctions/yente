@@ -11,14 +11,9 @@ from followthemoney.schema import Schema
 from followthemoney.property import Property
 from followthemoney.types import registry
 
-from opensanctions.core import configure_logging, Dataset
-from opensanctions.core.db import with_conn
-from opensanctions.core.statements import all_schemata, max_last_seen
-from opensanctions.core.entity import Entity
-
 from osapi.settings import ES_INDEX, ES_URL, BASE_SCHEMA
 from osapi.mapping import make_mapping, INDEX_SETTINGS, TEXT_TYPES
-from osapi.data import get_scope, get_database
+from osapi.data import get_scope
 
 warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 

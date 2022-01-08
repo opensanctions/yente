@@ -62,6 +62,7 @@ def make_mapping(schemata):
             prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
 
     mapping = {
+        "canonical_id": make_field("keyword"),
         "schema": make_field("keyword"),
         "caption": make_field("keyword", copy_to=["names", "text"]),
         "datasets": make_field("keyword"),

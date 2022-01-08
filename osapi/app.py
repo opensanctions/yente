@@ -19,7 +19,7 @@ from osapi.models import FreebaseTypeSuggestResponse
 from osapi.models import FreebaseManifest, FreebaseQueryResult
 from osapi.models import StatementResponse
 from osapi.models import MAX_LIMIT
-from osapi.data import get_resolver, get_datasets
+from osapi.data import get_datasets
 from osapi.index import get_entity, query_entities, query_results
 from osapi.index import text_query, entity_query, facet_aggregations
 from osapi.index import serialize_entity
@@ -58,7 +58,7 @@ QUERY_PREFIX = Query(None, min_length=1, description="Search prefix")
 # https://github.com/tiangolo/full-stack-fastapi-postgresql/issues/104
 
 
-def get_dataset(name: str) -> Dataset:
+async def get_dataset(name: str) -> Dataset:
     dataset = Dataset.get(name)
     if dataset is None or dataset not in get_datasets():
         raise HTTPException(404, detail="No such dataset.")
@@ -253,34 +253,35 @@ async def statements(
     users access to detailed provenance information for each property value.
     """
     ds = get_dataset(dataset)
-    async with with_conn() as conn:
-        total = await count_statements(
-            conn,
-            dataset=ds,
-            entity_id=entity_id,
-            canonical_id=canonical_id,
-            prop=prop,
-            value=value,
-            schema=schema,
-        )
-        stmts = paged_statements(
-            conn,
-            dataset=ds,
-            limit=limit,
-            offset=offset,
-            entity_id=entity_id,
-            canonical_id=canonical_id,
-            prop=prop,
-            value=value,
-            schema=schema,
-        )
-        statements = [s async for s in stmts]
-    return {
-        "limit": limit,
-        "offset": offset,
-        "total": total,
-        "results": [s for s in statements],
-    }
+    # async with with_conn() as conn:
+    #     total = await count_statements(
+    #         conn,
+    #         dataset=ds,
+    #         entity_id=entity_id,
+    #         canonical_id=canonical_id,
+    #         prop=prop,
+    #         value=value,
+    #         schema=schema,
+    #     )
+    #     stmts = paged_statements(
+    #         conn,
+    #         dataset=ds,
+    #         limit=limit,
+    #         offset=offset,
+    #         entity_id=entity_id,
+    #         canonical_id=canonical_id,
+    #         prop=prop,
+    #         value=value,
+    #         schema=schema,
+    #     )
+    #     statements = [s async for s in stmts]
+    # return {
+    #     "limit": limit,
+    #     "offset": offset,
+    #     "total": total,
+    #     "results": [s for s in statements],
+    # }
+    return {}
 
 
 @app.get(
