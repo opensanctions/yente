@@ -8,11 +8,6 @@ from followthemoney.types import registry
 from starlette.responses import RedirectResponse
 from followthemoney import model
 from followthemoney.exc import InvalidData
-from opensanctions.core.dataset import Dataset
-from opensanctions.core.entity import Entity
-from opensanctions.core.db import with_conn
-from opensanctions.core.statements import count_statements, paged_statements
-from opensanctions.core.logs import configure_logging
 
 from osapi import settings
 from osapi.models import HealthzResponse, IndexResponse
@@ -51,7 +46,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-configure_logging(level=logging.INFO)
 
 PATH_DATASET = Path(
     settings.SCOPE_DATASET,

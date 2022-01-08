@@ -1,12 +1,10 @@
 from banal import as_bool
-from importlib.metadata import metadata
 from opensanctions.settings import env_str
 
-meta = metadata("opensanctions")
-VERSION = meta["Version"]
-AUTHOR = meta["Author"]
-HOME_PAGE = meta["Home-page"]
-EMAIL = meta["Author-email"]
+VERSION = "3.2.0"
+AUTHOR = "OpenSanctions Project"
+HOME_PAGE = "https://www.opensanctions.org"
+EMAIL = "info@opensanctions.org"
 CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
 TITLE = "OpenSanctions Matching API"
@@ -69,7 +67,7 @@ TAGS = [
 
 DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
 DATA_INDEX = env_str("OSAPI_DATA_INDEX", DATA_INDEX)
-SCOPE_DATASET = env_str("OSAPI_SCOPE_DATASET", "default")
+SCOPE_DATASET = env_str("OSAPI_SCOPE_DATASET", "all")
 ENDPOINT_URL = env_str("OSAPI_ENDPOINT_URL", "http://localhost:8000")
 ES_URL = env_str("OSAPI_ELASTICSEARCH_URL", "http://localhost:9200")
 ES_INDEX = env_str("OSAPI_ELASTICSEARCH_INDEX", "opensanctions-api")

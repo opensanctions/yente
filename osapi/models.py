@@ -4,7 +4,6 @@ from followthemoney.model import ModelToDict
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
 
-from opensanctions.core import Dataset
 from osapi import settings
 
 MAX_LIMIT = 1000
@@ -31,7 +30,7 @@ class ScoredEntityResponse(EntityResponse):
 
 
 class IndexResponse(BaseModel):
-    datasets: List[str] = Dataset.names()
+    datasets: List[str]
     model: ModelToDict
     index: Dict[str, Any]
 

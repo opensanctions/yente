@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 
 
 def match_prefix(prefix: str, *labels: Optional[str]):
@@ -12,3 +13,7 @@ def match_prefix(prefix: str, *labels: Optional[str]):
         if label.startswith(prefix):
             return True
     return False
+
+
+def iso_datetime(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
