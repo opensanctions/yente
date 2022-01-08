@@ -3,7 +3,6 @@ from typing import List, Set
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.property import Property
-from opensanctions.model import Statement
 from opensanctions.core.entity import Entity
 from opensanctions.core.dataset import Dataset
 from opensanctions.core.resolver import get_resolver
