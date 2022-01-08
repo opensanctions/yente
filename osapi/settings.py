@@ -67,6 +67,8 @@ TAGS = [
     },
 ]
 
+DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
+DATA_INDEX = env_str("OSAPI_DATA_INDEX", DATA_INDEX)
 SCOPE_DATASET = env_str("OSAPI_SCOPE_DATASET", "default")
 ENDPOINT_URL = env_str("OSAPI_ENDPOINT_URL", "http://localhost:8000")
 ES_URL = env_str("OSAPI_ELASTICSEARCH_URL", "http://localhost:9200")

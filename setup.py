@@ -20,6 +20,7 @@ setup(
         "nomenklatura",
         "elasticsearch[async]",
         "fastapi",
+        "httpx",
         "uvicorn[standard,uvloop]",
         "python-multipart",
         "email-validator",
