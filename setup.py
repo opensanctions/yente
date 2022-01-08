@@ -17,7 +17,9 @@ setup(
     namespace_packages=[],
     zip_safe=False,
     install_requires=[
+        "followthemoney",
         "nomenklatura",
+        "asyncstdlib",
         "elasticsearch[async]",
         "fastapi",
         "httpx",
