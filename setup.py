@@ -20,6 +20,7 @@ setup(
         "followthemoney",
         "nomenklatura",
         "asyncstdlib",
+        "aiocron",
         "elasticsearch[async]",
         "fastapi",
         "httpx",

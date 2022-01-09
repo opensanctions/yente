@@ -1,6 +1,10 @@
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND noninteractive
 
+LABEL org.opencontainers.image.title "OpenSanctions SanctionSearch"
+LABEL org.opencontainers.image.licenses MIT
+LABEL org.opencontainers.image.source https://github.com/opensanctions/sanctionsearch
+
 RUN apt-get -qq -y update \
     && apt-get -qq -y upgrade \
     && apt-get -qq -y install locales ca-certificates curl python3-pip python3-icu python3-crypto \

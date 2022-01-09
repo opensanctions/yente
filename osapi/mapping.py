@@ -1,4 +1,6 @@
+from typing import Iterable
 from followthemoney import model
+from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
@@ -49,10 +51,11 @@ def make_type_field(type_, copy_to=True, index=None):
     return make_field(field_type, copy_to=copy_to, index=index)
 
 
-def make_mapping(schemata):
+def make_mapping(schemata: Iterable[Schema]):
     prop_mapping = {}
     for schema_name in schemata:
         schema = model.get(schema_name)
+        assert schema is not None, schema_name
         for name, prop in schema.properties.items():
             if prop.stub:
                 continue
@@ -74,6 +77,8 @@ def make_mapping(schemata):
         "properties": {"dynamic": "strict", "properties": prop_mapping},
     }
     for t in registry.groups.values():
+        if t.group is None:
+            continue
         mapping[t.group] = make_type_field(t, index=True, copy_to="text")
 
     drop_fields = [t.group for t in registry.groups.values()]

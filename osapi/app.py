@@ -2,14 +2,17 @@ import json
 import logging
 from urllib.parse import urljoin
 from typing import Any, Dict, List, Optional, Union
-from fastapi import FastAPI, Path, Query, Form, HTTPException
+from fastapi import FastAPI, Path, Query, Form
+from fastapi import BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney.types import registry
 from starlette.responses import RedirectResponse
 from followthemoney import model
+from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
 from osapi import settings
+from osapi.entity import Dataset
 from osapi.models import HealthzResponse, IndexResponse
 from osapi.models import EntityMatchQuery, EntityMatchResponse
 from osapi.models import EntityResponse, SearchResponse
@@ -19,17 +22,19 @@ from osapi.models import FreebaseTypeSuggestResponse
 from osapi.models import FreebaseManifest, FreebaseQueryResult
 from osapi.models import StatementResponse
 from osapi.models import MAX_LIMIT
+from osapi.search import get_entity, query_entities, query_results
+from osapi.search import text_query, entity_query, facet_aggregations
+from osapi.search import serialize_entity
+from osapi.search import get_index_status, get_index_stats
+from osapi.indexer import update_index
 from osapi.data import get_datasets
-from osapi.index import get_entity, query_entities, query_results
-from osapi.index import text_query, entity_query, facet_aggregations
-from osapi.index import serialize_entity
-from osapi.index import get_index_status, get_index_stats
 from osapi.data import get_freebase_type, get_freebase_types
 from osapi.data import get_freebase_entity, get_freebase_property
 from osapi.data import get_matchable_schemata, get_scope
 from osapi.util import match_prefix
 
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.TITLE,
@@ -54,15 +59,18 @@ PATH_DATASET = Path(
 )
 QUERY_PREFIX = Query(None, min_length=1, description="Search prefix")
 
-# Dependency injection of DB session:
-# https://github.com/tiangolo/full-stack-fastapi-postgresql/issues/104
-
 
 async def get_dataset(name: str) -> Dataset:
-    dataset = Dataset.get(name)
-    if dataset is None or dataset not in get_datasets():
+    datasets = await get_datasets()
+    dataset = datasets.get(name)
+    if dataset is None:
         raise HTTPException(404, detail="No such dataset.")
     return dataset
+
+
+@app.on_event("startup")
+async def startup_event():
+    await update_index()
 
 
 @app.get(
@@ -75,8 +83,9 @@ async def index():
     """Get system information: the list of available dataset names, the size of
     the search index in memory, and the followthemoney model specification which
     describes the types of entities and properties in use by the API."""
+    datasets = await get_datasets()
     return {
-        "datasets": [ds.name for ds in get_datasets()],
+        "datasets": [d for d in datasets.keys()],
         "model": model.to_dict(),
         "index": await get_index_stats(),
     }
@@ -95,6 +104,19 @@ async def healthz():
     if not ok:
         raise HTTPException(500, detail="Index not ready")
     return {"status": "ok"}
+
+
+# @app.post(
+#     "/updatez",
+#     summary="Force an index update",
+#     tags=["System information"],
+#     response_model=HealthzResponse,
+# )
+# async def force_update(background_tasks: BackgroundTasks):
+#     """No-op basic health check. This is used by cluster management systems like
+#     Kubernetes to verify the service is responsive."""
+#     background_tasks.add_task(update_index, force=True)
+#     return {"status": "ok"}
 
 
 @app.get(
@@ -118,7 +140,7 @@ async def search(
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead."""
-    ds = get_dataset(dataset)
+    ds = await get_dataset(dataset)
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
@@ -192,10 +214,10 @@ async def match(
     * **Company**: ``name``, ``jurisdiction``, ``registrationNumber``, ``address``,
       ``incorporationDate``
     """
-    ds = get_dataset(dataset)
+    ds = await get_dataset(dataset)
     responses = {}
     for name, example in query.get("queries").items():
-        entity = Entity(example.get("schema"))
+        entity = EntityProxy.from_dict(model, example, cleaned=False)
         for prop, value in example.get("properties").items():
             entity.add(prop, value, cleaned=False)
         entity_query = entity_query(ds, entity, fuzzy=fuzzy)
@@ -212,8 +234,8 @@ async def fetch_entity(
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
     passport, sanction and associated entities) included."""
-    resolver = await get_resolver()
-    canonical_id = str(resolver.get_canonical(entity_id))
+    # resolver = await get_resolver()
+    # canonical_id = str(resolver.get_canonical(entity_id))
     if canonical_id != entity_id:
         url = app.url_path_for("fetch_entity", entity_id=canonical_id)
         return RedirectResponse(url=url)
@@ -221,7 +243,7 @@ async def fetch_entity(
     entity = await get_entity(entity_id)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    scope = get_scope()
+    scope = await get_scope()
     data = await serialize_entity(scope, entity, nested=True)
     return data
 
@@ -233,7 +255,7 @@ async def fetch_entity(
     response_model=StatementResponse,
 )
 async def statements(
-    dataset: str = Query(get_scope().name, title="Filter by dataset"),
+    dataset: str = Query(settings.SCOPE_DATASET, title="Filter by dataset"),
     entity_id: str = Query(None, title="Filter by source entity ID"),
     canonical_id: str = Query(None, title="Filter by normalised entity ID"),
     prop: str = Query(None, title="Filter by property name"),
@@ -252,7 +274,7 @@ async def statements(
     easier use. Using the raw statement data offered by this API will grant
     users access to detailed provenance information for each property value.
     """
-    ds = get_dataset(dataset)
+    ds = await get_dataset(dataset)
     # async with with_conn() as conn:
     #     total = await count_statements(
     #         conn,
@@ -298,7 +320,7 @@ async def reconcile(
     to bulk match entities against the system using an end-user application like
     [OpenRefine](https://openrefine.org).
     """
-    ds = get_dataset(dataset)
+    ds = await get_dataset(dataset)
     if queries is not None:
         return await reconcile_queries(ds, queries)
     base_url = urljoin(settings.ENDPOINT_URL, f"/reconcile/{dataset}")
@@ -322,7 +344,7 @@ async def reconcile(
                 "service_path": "/suggest/property",
             },
         },
-        "defaultTypes": await get_freebase_types(ds),
+        "defaultTypes": await get_freebase_types(),
     }
 
 
@@ -338,7 +360,7 @@ async def reconcile_post(
 ):
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
-    ds = get_dataset(dataset)
+    ds = await get_dataset(dataset)
     return await reconcile_queries(ds, queries)
 
 
@@ -363,7 +385,7 @@ async def reconcile_query(dataset: Dataset, query: Dict[str, Any]):
     # log.info("Reconcile: %r", query)
     limit = min(MAX_LIMIT, int(query.get("limit", 5)))
     type = query.get("type", settings.BASE_SCHEMA)
-    proxy = Entity(type)
+    proxy = EntityProxy.from_dict(model, {"schema": type})
     proxy.add("name", query.get("query"))
     # proxy.add("notes", query.get("query"))
     for p in query.get("properties", []):
@@ -400,8 +422,8 @@ async def reconcile_suggest_entity(
 
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
-    ds = get_dataset(dataset)
-    entity = Entity(settings.BASE_SCHEMA)
+    ds = await get_dataset(dataset)
+    entity = EntityProxy.from_dict(model, {"schema": settings.BASE_SCHEMA})
     entity.add("name", prefix)
     entity.add("notes", prefix)
     results = []
@@ -428,7 +450,7 @@ async def reconcile_suggest_property(
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
     ds = get_dataset(dataset)
-    schemata = await get_matchable_schemata(ds)
+    schemata = await get_matchable_schemata()
     matches = []
     for prop in model.properties:
         if prop.schema not in schemata:
@@ -458,7 +480,7 @@ async def reconcile_suggest_type(
     configuration of reconciliation in OpenRefine."""
     ds = get_dataset(dataset)
     matches = []
-    for schema in await get_matchable_schemata(ds):
+    for schema in await get_matchable_schemata():
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(get_freebase_type(schema))
     return {

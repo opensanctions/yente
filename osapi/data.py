@@ -1,5 +1,7 @@
+import json
 import asyncio
-from typing import List, Set
+import logging
+from typing import AsyncGenerator, List, Set
 from httpx import AsyncClient
 from datetime import datetime
 from asyncstdlib.functools import cache
@@ -11,6 +13,8 @@ from osapi import settings
 from osapi.entity import Entity, Dataset, Datasets
 from osapi.models import FreebaseType
 from osapi.models import FreebaseEntity, FreebaseProperty
+
+log = logging.getLogger(__name__)
 
 
 @cache
@@ -95,11 +99,23 @@ def get_freebase_property(prop: Property) -> FreebaseProperty:
 async def check_update():
     get_data_index.cache_clear()
     get_datasets.cache_clear()
-    # index = await get_data_index()
-    # print(repr(await get_export_time()))
-    print(await get_freebase_types())
+
+
+async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]:
+    if dataset.entities_url is None:
+        raise ValueError("Dataset has no entity source: %s" % dataset)
+    datasets = await get_datasets()
+    async with AsyncClient() as client:
+        async with client.stream("GET", dataset.entities_url) as response:
+            async for line in response.aiter_lines():
+                data = json.loads(line)
+                entity = Entity.from_data(data, datasets)
+                if not len(entity.datasets):
+                    entity.datasets.add(dataset)
+                yield entity
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(check_update())
