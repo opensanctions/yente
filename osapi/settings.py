@@ -2,14 +2,14 @@ from banal import as_bool
 from opensanctions.settings import env_str
 
 VERSION = "3.2.0"
-AUTHOR = "OpenSanctions Project"
+AUTHOR = "OpenSanctions"
 HOME_PAGE = "https://www.opensanctions.org"
 EMAIL = "info@opensanctions.org"
 CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
-TITLE = "OpenSanctions Matching API"
+TITLE = "SanctionSearch API"
 DESCRIPTION = """
-The OpenSanctions API provides tools that help you determine if any of the people
+The SanctionSearch API provides tools that help you determine if any of the people
 or companies mentioned in your data are subject to international sanctions, known
 to be involved in criminal activity, or if they are politically exposed people.
 
