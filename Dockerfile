@@ -3,7 +3,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 LABEL org.opencontainers.image.title "OpenSanctions SanctionSearch"
 LABEL org.opencontainers.image.licenses MIT
-LABEL org.opencontainers.image.source https://github.com/opensanctions/sanctionsearch
+LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
 
 RUN apt-get -qq -y update \
     && apt-get -qq -y upgrade \
