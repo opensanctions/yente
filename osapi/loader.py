@@ -1,7 +1,12 @@
-from typing import Optional
+from typing import AsyncGenerator, Optional, Tuple
 from nomenklatura.loader import Loader
+from followthemoney.types import registry
+from followthemoney.property import Property
+from elasticsearch.exceptions import NotFoundError
 
+from osapi.settings import ES_INDEX
 from osapi.entity import Dataset, Datasets, Entity
+from osapi.index import es
 
 
 class IndexLoader(Loader[Dataset, Entity]):
@@ -12,10 +17,12 @@ class IndexLoader(Loader[Dataset, Entity]):
         self.datasets = datasets
 
     async def get_entity(self, id: str) -> Optional[Entity]:
-        async for cached in self.db.query(self.dataset, entity_id=id):
-            for entity in self.assemble(cached):
-                return entity
-        return None
+        try:
+            data = await es.get(index=ES_INDEX, id=id)
+            entity, _ = result_entity(self.datasets, data)
+            return entity
+        except NotFoundError:
+            return None
 
     async def _get_inverted(self, id: str) -> AsyncGenerator[Entity, None]:
         async for cached in self.db.query(self.dataset, inverted_id=id):
@@ -25,21 +32,37 @@ class IndexLoader(Loader[Dataset, Entity]):
     async def get_inverted(
         self, id: str
     ) -> AsyncGenerator[Tuple[Property, Entity], None]:
-        async for entity in self._get_inverted(id):
-            for prop, value in entity.itervalues():
-                if value == id and prop.reverse is not None:
-                    yield prop.reverse, entity
+        # Do we need to query referents here?
+        query = {"term": {"entities": id}}
+        filtered = filter_query([query], dataset)
+        resp = await es.search(index=ES_INDEX, query=filtered, size=9999)
+        for adj, _ in result_entities(resp):
+            for prop, value in adj.itervalues():
+                if prop.type == registry.entity and value == id:
+                    if prop.reverse is not None:
+                        yield prop.reverse, adj
 
-    async def _iter_entities(self) -> AsyncGenerator[CachedEntity, None]:
-        async for cached in self.db.query(self.dataset):
-            yield cached
+    async def get_adjacent(
+        self, entity: Entity, inverted: bool = True
+    ) -> AsyncGenerator[Tuple[Property, Entity], None]:
+
+        # TODO mget
+
+        if inverted:
+            async for adj, prop in self.get_inverted(entity.id):
+                yield adj, prop
 
     async def entities(self) -> AsyncGenerator[Entity, None]:
-        raise NotImplemented()
+        if False:
+            dummy = await self.get_entity("dummy")
+            if dummy is not None:
+                yield dummy
+        raise NotImplemented
 
     async def count(self) -> int:
-        async with engine.begin() as conn:
-            return await count_entities(conn, self.dataset)
+        # TODO add empty text query on dataset
+        response = await es.count(index=ES_INDEX)
+        return response.get("count", 0)
 
     def __repr__(self):
         return f"<IndexLoader({self.dataset!r})>"

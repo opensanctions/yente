@@ -10,9 +10,7 @@ See https://api.opensanctions.org
 
 ## Usage
 
-In order to use the OpenSanctions API, we recommend running an on-premises instance on your
-own servers or in a data center. Updated images of the API with current data are built
-nightly and can be pulled from Docker hub:
+In order to use the OpenSanctions API, we recommend running an on-premises instance on your own servers or in a data center. Updated images of the API with current data are built nightly and can be pulled from Docker hub:
 
 ```bash
 mkdir -p opensanctions-api && cd opensanctions-api
@@ -23,17 +21,13 @@ docker-compose run --rm app python3 osapi/index.py
 
 This will make the matching API available on Port 8000 of the local machine.
 
-If you run the container in a cluster management system like Kubernetes, you may want to
-find a way to pull a fresh container every night so that a new image with updated data
-will be pulled from the Docker registry. You will then also need to re-run the indexer,
-the equivalent of the last line in the example above.
+If you run the container in a cluster management system like Kubernetes, you may want to find a way to pull a fresh container every night so that a new image with updated data will be pulled from the Docker registry. You will then also need to re-run the indexer, the equivalent of the last line in the example above.
 
 Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) if you are interested in exploring a hosted solution for running the API.
 
 ### Settings
 
-The API server has a few settings, which are passed as environment variables. The settings
-include:
+The API server has a few settings, which are passed as environment variables. The settings include:
 
 * ``OSAPI_ENDPOINT_URL`` the URL which should be used to generate external links back to
   the API server, e.g. ``https://osapi.mycompany.com``.
@@ -45,8 +39,7 @@ include:
 
 ### Development
 
-For development, install the parent ``opensanctions`` package into a virtual environment,
-then add the ``osapi`` package:
+For development, install the parent ``opensanctions`` package into a virtual environment, then add the ``osapi`` package:
 
 ```bash
 cd api/

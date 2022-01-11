@@ -1,17 +1,7 @@
 import logging
-from typing import (
-    Any,
-    AsyncGenerator,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-)
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from elasticsearch import TransportError
 from elasticsearch.exceptions import NotFoundError
-from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.property import Property
 from followthemoney.proxy import EntityProxy
