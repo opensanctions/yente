@@ -1,4 +1,4 @@
-# OpenSanctions Matching API
+# OpenSanctions Match-making API
 
 This directory contains code and a Docker image for running an API to match data against
 OpenSanctions. It is intended to be run on-premises in KYC contexts so that no customer
@@ -13,10 +13,9 @@ See https://api.opensanctions.org
 In order to use the OpenSanctions API, we recommend running an on-premises instance on your own servers or in a data center. Updated images of the API with current data are built nightly and can be pulled from Docker hub:
 
 ```bash
-mkdir -p opensanctions-api && cd opensanctions-api
-wget https://github.com/pudo/opensanctions/blob/main/api/docker-compose.yml
+mkdir -p yente && cd yente
+wget https://github.com/opensanctions/yente/blob/main/docker-compose.yml
 docker-compose up
-docker-compose run --rm app python3 osapi/index.py
 ```
 
 This will make the matching API available on Port 8000 of the local machine.
@@ -39,15 +38,14 @@ The API server has a few settings, which are passed as environment variables. Th
 
 ### Development
 
-For development, install the parent ``opensanctions`` package into a virtual environment, then add the ``osapi`` package:
+For development, install package like this:
 
 ```bash
-cd api/
 pip install -e .
 ```
 
 Finally, you can run an auto-reloading web server like this:
 
 ```bash
-uvicorn osapi.app:app --reload
+uvicorn yente.app:app --reload
 ```

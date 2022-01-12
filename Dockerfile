@@ -1,7 +1,7 @@
 FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND noninteractive
 
-LABEL org.opencontainers.image.title "OpenSanctions SanctionSearch"
+LABEL org.opencontainers.image.title "OpenSanctions yente"
 LABEL org.opencontainers.image.licenses MIT
 LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
 
@@ -23,4 +23,4 @@ COPY . /app
 RUN pip install --no-cache-dir -e /app
 
 USER app:app
-CMD ["/usr/local/bin/uvicorn", "osapi.app:app", "--proxy-headers", "--port", "8000", "--host", "0.0.0.0"]
+CMD ["/usr/local/bin/uvicorn", "yente.app:app", "--proxy-headers", "--port", "8000", "--host", "0.0.0.0"]

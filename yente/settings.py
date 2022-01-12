@@ -1,17 +1,18 @@
 from banal import as_bool
 from opensanctions.settings import env_str
 
-VERSION = "3.2.0"
+VERSION = "1.0.0"
 AUTHOR = "OpenSanctions"
 HOME_PAGE = "https://www.opensanctions.org"
 EMAIL = "info@opensanctions.org"
 CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
-TITLE = "SanctionSearch API"
+TITLE = "yente"
 DESCRIPTION = """
-The SanctionSearch API provides tools that help you determine if any of the people
-or companies mentioned in your data are subject to international sanctions, known
-to be involved in criminal activity, or if they are politically exposed people.
+The OpenSanctions Match-making API provides tools that help you determine if any
+of the people or companies mentioned in your data are subject to international
+sanctions, known to be involved in criminal activity, or if they are politically
+exposed people.
 
 **IMPORTANT: This open source API is intended to be operated on-premises in your
 infrastructure. The online version exists as a demo and does not provide any data
@@ -29,7 +30,7 @@ control.
 
 Further reading:
 
-* [Install and deployment](https://github.com/pudo/opensanctions/blob/main/api/README.md)
+* [Install and deployment](https://github.com/opensanctions/yente/blob/main/README.md)
 * [Data dictionary](https://opensanctions.org/reference/)
 """
 
