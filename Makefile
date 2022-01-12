@@ -1,4 +1,4 @@
-IMAGE=pudo/opensanctions-api:latest
+IMAGE=opensanctions/yente
 
 all:
 	make index
