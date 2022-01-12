@@ -67,9 +67,9 @@ TAGS = [
 ]
 
 DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
-DATA_INDEX = env_str("OSAPI_DATA_INDEX", DATA_INDEX)
-SCOPE_DATASET = env_str("OSAPI_SCOPE_DATASET", "all")
-ENDPOINT_URL = env_str("OSAPI_ENDPOINT_URL", "http://localhost:8000")
-ES_URL = env_str("OSAPI_ELASTICSEARCH_URL", "http://localhost:9200")
-ES_INDEX = env_str("OSAPI_ELASTICSEARCH_INDEX", "opensanctions-api")
+DATA_INDEX = env_str("YENTE_DATA_INDEX", DATA_INDEX)
+SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET", "all")
+ENDPOINT_URL = env_str("YENTE_ENDPOINT_URL", "http://localhost:8000")
+ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
+ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 BASE_SCHEMA = "Thing"

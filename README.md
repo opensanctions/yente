@@ -28,11 +28,11 @@ Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) 
 
 The API server has a few settings, which are passed as environment variables. The settings include:
 
-* ``OSAPI_ENDPOINT_URL`` the URL which should be used to generate external links back to
+* ``YENTE_ENDPOINT_URL`` the URL which should be used to generate external links back to
   the API server, e.g. ``https://osapi.mycompany.com``.
-* ``OSAPI_CACHED`` can be set to "true" in order to load all data to memory on startup.
+* ``YENTE_CACHED`` can be set to "true" in order to load all data to memory on startup.
   This will make the API incredibly fast, but consume 3-4GB of RAM.
-* ``OSAPI_SCOPE_DATASET`` can be used to define the main dataset being used. This is
+* ``YENTE_SCOPE_DATASET`` can be used to define the main dataset being used. This is
   usually ``default``, but can be set e.g. to ``sanctions`` to load a more specific set
   of data.
 

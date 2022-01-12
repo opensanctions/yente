@@ -34,7 +34,7 @@ services:
     ports:
       - "0.0.0.0:8000:8000"
     environment:
-      - OSAPI_ELASTICSEARCH_URL=http://index:9200
+      - YENTE_ELASTICSEARCH_URL=http://index:9200
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/healthz" ]
       interval: 30s
