@@ -4,9 +4,9 @@ from followthemoney.types import registry
 from followthemoney.property import Property
 from elasticsearch.exceptions import NotFoundError
 
-from osapi.settings import ES_INDEX
-from osapi.entity import Dataset, Datasets, Entity
-from osapi.index import es
+from yente.settings import ES_INDEX
+from yente.entity import Dataset, Datasets, Entity
+from yente.index import es
 
 
 class IndexLoader(Loader[Dataset, Entity]):

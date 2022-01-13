@@ -11,27 +11,27 @@ from followthemoney import model
 from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
-from osapi import settings
-from osapi.entity import Dataset
-from osapi.models import HealthzResponse, IndexResponse
-from osapi.models import EntityMatchQuery, EntityMatchResponse
-from osapi.models import EntityResponse, SearchResponse
-from osapi.models import FreebaseEntitySuggestResponse
-from osapi.models import FreebasePropertySuggestResponse
-from osapi.models import FreebaseTypeSuggestResponse
-from osapi.models import FreebaseManifest, FreebaseQueryResult
-from osapi.models import StatementResponse
-from osapi.models import MAX_LIMIT
-from osapi.search import get_entity, query_entities, query_results
-from osapi.search import text_query, entity_query, facet_aggregations
-from osapi.search import serialize_entity
-from osapi.search import get_index_status, get_index_stats
-from osapi.indexer import update_index
-from osapi.data import get_datasets
-from osapi.data import get_freebase_type, get_freebase_types
-from osapi.data import get_freebase_entity, get_freebase_property
-from osapi.data import get_matchable_schemata, get_scope
-from osapi.util import match_prefix
+from yente import settings
+from yente.entity import Dataset
+from yente.models import HealthzResponse, IndexResponse
+from yente.models import EntityMatchQuery, EntityMatchResponse
+from yente.models import EntityResponse, SearchResponse
+from yente.models import FreebaseEntitySuggestResponse
+from yente.models import FreebasePropertySuggestResponse
+from yente.models import FreebaseTypeSuggestResponse
+from yente.models import FreebaseManifest, FreebaseQueryResult
+from yente.models import StatementResponse
+from yente.models import MAX_LIMIT
+from yente.search import get_entity, query_entities, query_results
+from yente.search import text_query, entity_query, facet_aggregations
+from yente.search import serialize_entity
+from yente.search import get_index_status, get_index_stats
+from yente.indexer import update_index
+from yente.data import get_datasets
+from yente.data import get_freebase_type, get_freebase_types
+from yente.data import get_freebase_entity, get_freebase_property
+from yente.data import get_matchable_schemata, get_scope
+from yente.util import match_prefix
 
 
 logging.basicConfig(level=logging.INFO)

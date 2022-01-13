@@ -7,11 +7,11 @@ from followthemoney.property import Property
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
-from osapi.settings import ES_INDEX
-from osapi.entity import Dataset, Entity
-from osapi.index import es
-from osapi.data import get_datasets
-from osapi.mapping import TEXT_TYPES
+from yente.settings import ES_INDEX
+from yente.entity import Dataset, Entity
+from yente.index import es
+from yente.data import get_datasets
+from yente.mapping import TEXT_TYPES
 
 log = logging.getLogger(__name__)
 

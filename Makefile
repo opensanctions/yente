@@ -1,4 +1,3 @@
-IMAGE=opensanctions/yente
 
 all:
 	make index
@@ -15,6 +14,3 @@ services:
 
 api: build services
 	docker-compose up --remove-orphans app
-
-index: build services
-	docker-compose run --rm app python3 osapi/index.py

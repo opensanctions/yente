@@ -8,11 +8,11 @@ from elasticsearch.helpers import async_bulk
 from followthemoney import model
 from followthemoney.schema import Schema
 
-from osapi.settings import ES_INDEX
-from osapi.entity import Dataset
-from osapi.data import check_update, get_dataset_entities, get_scope
-from osapi.index import es
-from osapi.mapping import make_mapping, INDEX_SETTINGS
+from yente.settings import ES_INDEX
+from yente.entity import Dataset
+from yente.data import check_update, get_dataset_entities, get_scope
+from yente.index import es
+from yente.mapping import make_mapping, INDEX_SETTINGS
 
 log = logging.getLogger("osapi.index")
 # SKIP_ADJACENT = (registry.date, registry.entity, registry.topic)

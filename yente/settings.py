@@ -1,4 +1,3 @@
-from banal import as_bool
 from opensanctions.settings import env_str
 
 VERSION = "1.0.0"

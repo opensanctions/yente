@@ -3,7 +3,7 @@ from followthemoney import model
 from nomenklatura.entity import CompositeEntity
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
 
-from osapi.util import iso_datetime
+from yente.util import iso_datetime
 
 
 class Dataset(NomenklaturaDataset):

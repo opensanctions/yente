@@ -9,10 +9,10 @@ from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.property import Property
 
-from osapi import settings
-from osapi.entity import Entity, Dataset, Datasets
-from osapi.models import FreebaseType
-from osapi.models import FreebaseEntity, FreebaseProperty
+from yente import settings
+from yente.entity import Entity, Dataset, Datasets
+from yente.models import FreebaseType
+from yente.models import FreebaseEntity, FreebaseProperty
 
 log = logging.getLogger(__name__)
 
