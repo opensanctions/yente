@@ -1,0 +1,10 @@
+followthemoney==2.8.0
+nomenklatura >= 2.0.0, < 2.1.0
+asyncstdlib==3.10.2
+aiocron==1.8
+elasticsearch[async]==7.16.2
+fastapi==0.71.0
+httpx==0.21.3
+uvicorn[standard,uvloop]==0.16.0
+python-multipart==0.0.5
+email-validator==1.1.3

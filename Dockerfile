@@ -17,10 +17,12 @@ RUN apt-get -qq -y update \
 
 ENV LANG='en_US.UTF-8'
 
+COPY requirements.txt /tmp/
+RUN pip install --no-cache-dir -q -r /tmp/requirements.txt
 RUN mkdir -p /app
 WORKDIR /app
 COPY . /app
-RUN pip install --no-cache-dir -e /app
+RUN pip install --no-cache-dir -q -e /app
 
 USER app:app
 CMD ["/usr/local/bin/uvicorn", "yente.app:app", "--proxy-headers", "--port", "8000", "--host", "0.0.0.0"]
