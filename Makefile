@@ -10,7 +10,7 @@ build:
 	docker-compose build --pull
 
 services:
-	docker-compose up --remove-orphans --wait -d index
+	docker-compose up --remove-orphans -d index
 
 api: build services
 	docker-compose up --remove-orphans app

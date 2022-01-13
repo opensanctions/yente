@@ -11,10 +11,10 @@ from followthemoney.schema import Schema
 from yente.settings import ES_INDEX
 from yente.entity import Dataset
 from yente.data import check_update, get_dataset_entities, get_scope
-from yente.index import es
+from yente.index import get_es
 from yente.mapping import make_mapping, INDEX_SETTINGS
 
-log = logging.getLogger("osapi.index")
+log = logging.getLogger(__name__)
 # SKIP_ADJACENT = (registry.date, registry.entity, registry.topic)
 
 
@@ -51,6 +51,7 @@ async def index(dataset: Dataset, schemata: Iterable[Schema], timestamp: datetim
     ts = timestamp.strftime("%Y%m%d%H%M%S")
     prefix = f"{ES_INDEX}-{dataset.name}"
     next_index = f"{prefix}-{ts}"
+    es = await get_es()
     exists = await es.indices.exists(index=next_index)
     if exists:
         log.info("Index [%s] is up to date.", next_index)

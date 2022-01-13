@@ -3,7 +3,7 @@ import logging
 from urllib.parse import urljoin
 from typing import Any, Dict, List, Optional, Union
 from fastapi import FastAPI, Path, Query, Form
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney.types import registry
 from starlette.responses import RedirectResponse

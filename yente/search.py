@@ -9,7 +9,7 @@ from followthemoney.types import registry
 
 from yente.settings import ES_INDEX
 from yente.entity import Dataset, Entity
-from yente.index import es
+from yente.index import get_es
 from yente.data import get_datasets
 from yente.mapping import TEXT_TYPES
 
@@ -120,6 +120,7 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
 
 async def query_entities(query: Dict[Any, Any], limit: int = 5):
     # pprint(query)
+    es = await get_es()
     resp = await es.search(index=ES_INDEX, query=query, size=limit)
     async for entity, score in result_entities(resp):
         yield entity, score
@@ -133,6 +134,7 @@ async def query_results(
     offset: Optional[int] = None,
     aggregations: Optional[Dict] = None,
 ):
+    es = await get_es()
     results = []
     resp = await es.search(
         index=ES_INDEX, query=query, size=limit, from_=offset, aggregations=aggregations
@@ -169,6 +171,7 @@ async def query_results(
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:
+    es = await get_es()
     datasets = await get_datasets()
     try:
         data = await es.get(index=ES_INDEX, id=entity_id)
@@ -181,6 +184,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
 async def get_adjacent(
     dataset: Dataset, entity: Entity
 ) -> AsyncGenerator[Tuple[Property, Entity], None]:
+    es = await get_es()
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
     if len(entities):
@@ -232,11 +236,13 @@ async def serialize_entity(
 
 
 async def get_index_stats() -> Dict[str, Any]:
+    es = await get_es()
     stats = await es.indices.stats(index=ES_INDEX)
     return stats.get("indices", {}).get(ES_INDEX)
 
 
 async def get_index_status() -> bool:
+    es = await get_es()
     try:
         health = await es.cluster.health(index=ES_INDEX)
         return health.get("status") in ("yellow", "green")

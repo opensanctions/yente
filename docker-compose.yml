@@ -34,7 +34,7 @@ services:
     ports:
       - "0.0.0.0:8000:8000"
     environment:
-      - YENTE_ELASTICSEARCH_URL=http://index:9200
+      YENTE_ELASTICSEARCH_URL: http://index:9200
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/healthz" ]
       interval: 30s
@@ -44,7 +44,6 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-      labels: [ APP=VOTING ]
       restart_policy:
         condition: on-failure
         delay: 10s

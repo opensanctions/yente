@@ -6,7 +6,7 @@ from elasticsearch.exceptions import NotFoundError
 
 from yente.settings import ES_INDEX
 from yente.entity import Dataset, Datasets, Entity
-from yente.index import es
+from yente.index import get_es
 
 
 class IndexLoader(Loader[Dataset, Entity]):
@@ -15,6 +15,7 @@ class IndexLoader(Loader[Dataset, Entity]):
 
     def __init__(self, datasets: Datasets):
         self.datasets = datasets
+        self.es = get_es()
 
     async def get_entity(self, id: str) -> Optional[Entity]:
         try:

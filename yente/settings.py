@@ -1,4 +1,12 @@
-from opensanctions.settings import env_str
+from os import environ as env
+from normality import stringify
+
+
+def env_str(name: str, default: str) -> str:
+    """Ensure the env returns a string even on Windows (#100)."""
+    value = stringify(env.get(name))
+    return default if value is None else value
+
 
 VERSION = "1.0.0"
 AUTHOR = "OpenSanctions"
