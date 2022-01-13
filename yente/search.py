@@ -1,9 +1,8 @@
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Dict, List, Optional, Tuple
 from elasticsearch import TransportError
-from elasticsearch.exceptions import NotFoundError
+from nomenklatura.loader import Loader
 from followthemoney.schema import Schema
-from followthemoney.property import Property
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
@@ -12,6 +11,9 @@ from yente.entity import Dataset, Entity
 from yente.index import get_es
 from yente.data import get_datasets
 from yente.mapping import TEXT_TYPES
+
+if TYPE_CHECKING:
+    from yente.loader import IndexLoader
 
 log = logging.getLogger(__name__)
 
@@ -72,13 +74,13 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
 
 def text_query(
     dataset: Dataset,
-    schema: Schema,
     query: str,
+    schema: Optional[Schema] = None,
     filters: Dict[str, List[str]] = {},
     fuzzy: bool = False,
 ):
 
-    if not len(query.strip()):
+    if query is None or not len(query.strip()):
         should = {"match_all": {}}
     else:
         should = {
@@ -127,25 +129,30 @@ async def query_entities(query: Dict[Any, Any], limit: int = 5):
 
 
 async def query_results(
-    dataset: Dataset,
+    loader: "IndexLoader",
     query: Dict[Any, Any],
     limit: int,
     nested: bool = False,
     offset: Optional[int] = None,
     aggregations: Optional[Dict] = None,
 ):
-    es = await get_es()
     results = []
-    resp = await es.search(
-        index=ES_INDEX, query=query, size=limit, from_=offset, aggregations=aggregations
+    resp = await loader.es.search(
+        index=ES_INDEX,
+        query=query,
+        size=limit,
+        from_=offset,
+        aggregations=aggregations,
     )
     async for result, score in result_entities(resp):
-        data = await serialize_entity(dataset, result, nested=nested)
+        if not nested:
+            data = result.to_dict()
+        else:
+            data = await result.to_nested_dict(loader)
         data["score"] = score
         results.append(data)
     hits = resp.get("hits", {})
     total = hits.get("total")
-    datasets = await get_datasets()
     facets = {}
     for field, agg in resp.get("aggregations", {}).items():
         facets[field] = {"label": field, "values": []}
@@ -155,7 +162,7 @@ async def query_results(
             value = {"name": key, "label": key, "count": bucket.get("doc_count")}
             if field == "datasets":
                 facets[field]["label"] = "Data sources"
-                value["label"] = datasets[key].title
+                value["label"] = loader.datasets[key].title
             if field in registry.groups:
                 type_ = registry.groups[field]
                 facets[field]["label"] = type_.plural
@@ -168,71 +175,6 @@ async def query_results(
         "limit": limit,
         "offset": offset,
     }
-
-
-async def get_entity(entity_id: str) -> Optional[Entity]:
-    es = await get_es()
-    datasets = await get_datasets()
-    try:
-        data = await es.get(index=ES_INDEX, id=entity_id)
-        entity, _ = result_entity(datasets, data)
-        return entity
-    except NotFoundError:
-        return None
-
-
-async def get_adjacent(
-    dataset: Dataset, entity: Entity
-) -> AsyncGenerator[Tuple[Property, Entity], None]:
-    es = await get_es()
-    entities = entity.get_type_values(registry.entity)
-    datasets = await get_datasets()
-    if len(entities):
-        resp = await es.mget(index=ES_INDEX, body={"ids": entities})
-        for raw in resp.get("docs", []):
-            adj, _ = result_entity(datasets, raw)
-            if adj is None:
-                continue
-            for prop, value in entity.itervalues():
-                if prop.type == registry.entity and value == adj.id:
-                    yield prop, adj
-
-    # Do we need to query referents here?
-    query = {"term": {"entities": entity.id}}
-    filtered = filter_query([query], dataset)
-    resp = await es.search(index=ES_INDEX, query=filtered, size=9999)
-    for adj, _ in result_entities(resp):
-        for prop, value in adj.itervalues():
-            if prop.type == registry.entity and value == entity.id:
-                if prop.reverse is not None:
-                    yield prop.reverse, adj
-
-
-async def _to_nested_dict(
-    dataset: Dataset, entity: Entity, depth: int, path: List[str]
-) -> Dict[str, Any]:
-    next_depth = depth if entity.schema.edge else depth - 1
-    next_path = path + [entity.id]
-    data = entity.to_dict()
-    if next_depth < 0:
-        return data
-    nested: Dict[str, Any] = {}
-    async for prop, adjacent in get_adjacent(dataset, entity):
-        if adjacent.id in next_path:
-            continue
-        value = await _to_nested_dict(dataset, adjacent, next_depth, next_path)
-        if prop.name not in nested:
-            nested[prop.name] = []
-        nested[prop.name].append(value)
-    data["properties"].update(nested)
-    return data
-
-
-async def serialize_entity(
-    dataset: Dataset, entity: Entity, nested: bool = False
-) -> Dict[str, Any]:
-    depth = 1 if nested else -1
-    return await _to_nested_dict(dataset, entity, depth=depth, path=[])
 
 
 async def get_index_stats() -> Dict[str, Any]:
