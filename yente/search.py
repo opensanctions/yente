@@ -12,6 +12,7 @@ from yente.entity import Dataset, Entity
 from yente.index import get_es
 from yente.data import get_datasets
 from yente.mapping import TEXT_TYPES
+from yente.util import EntityRedirect
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +176,9 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     datasets = await get_datasets()
     try:
         data = await es.get(index=ES_INDEX, id=entity_id)
+        _source = data.get("_source")
+        if _source.get("canonical_id") != id:
+            raise EntityRedirect(_source.get("canonical_id"))
         entity, _ = result_entity(datasets, data)
         return entity
     except NotFoundError:

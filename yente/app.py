@@ -31,7 +31,7 @@ from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
 from yente.data import get_matchable_schemata, get_scope
-from yente.util import match_prefix
+from yente.util import match_prefix, EntityRedirect
 
 
 logging.basicConfig(level=logging.INFO)
@@ -234,13 +234,11 @@ async def fetch_entity(
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
     passport, sanction and associated entities) included."""
-    # resolver = await get_resolver()
-    # canonical_id = str(resolver.get_canonical(entity_id))
-    if canonical_id != entity_id:
-        url = app.url_path_for("fetch_entity", entity_id=canonical_id)
+    try:
+        entity = await get_entity(entity_id)
+    except EntityRedirect as redir:
+        url = app.url_path_for("fetch_entity", entity_id=redir.canonical_id)
         return RedirectResponse(url=url)
-
-    entity = await get_entity(entity_id)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     scope = await get_scope()
