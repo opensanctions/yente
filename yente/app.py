@@ -3,7 +3,7 @@ import logging
 from urllib.parse import urljoin
 from typing import Any, Dict, List, Optional, Union
 from fastapi import FastAPI, Path, Query, Form
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney.types import registry
 from starlette.responses import RedirectResponse
@@ -106,17 +106,24 @@ async def healthz():
     return {"status": "ok"}
 
 
-# @app.post(
-#     "/updatez",
-#     summary="Force an index update",
-#     tags=["System information"],
-#     response_model=HealthzResponse,
-# )
-# async def force_update(background_tasks: BackgroundTasks):
-#     """No-op basic health check. This is used by cluster management systems like
-#     Kubernetes to verify the service is responsive."""
-#     background_tasks.add_task(update_index, force=True)
-#     return {"status": "ok"}
+@app.post(
+    "/updatez",
+    summary="Force an index update",
+    tags=["System information"],
+    response_model=HealthzResponse,
+)
+async def force_update(
+    background_tasks: BackgroundTasks,
+    token: str = Query("", title="Update token for authentication"),
+):
+    """Force the index to be re-generated. Works only if the update token is provided
+    (serves as an API key, and can be set in the container environment)."""
+    if not len(token.strip()) or not len(settings.UPDATE_TOKEN):
+        raise HTTPException(403, detail="Invalid token.")
+    if token != settings.UPDATE_TOKEN:
+        raise HTTPException(403, detail="Invalid token.")
+    background_tasks.add_task(update_index, force=True)
+    return {"status": "ok"}
 
 
 @app.get(

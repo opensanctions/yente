@@ -77,6 +77,7 @@ DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
 DATA_INDEX = env_str("YENTE_DATA_INDEX", DATA_INDEX)
 SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET", "all")
 ENDPOINT_URL = env_str("YENTE_ENDPOINT_URL", "http://localhost:8000")
+UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "")
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 BASE_SCHEMA = "Thing"
