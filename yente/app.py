@@ -12,7 +12,7 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
 from yente import settings
-from yente.entity import Dataset, Entity
+from yente.entity import Dataset
 from yente.models import HealthzResponse, IndexResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
@@ -22,15 +22,16 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.models import MAX_LIMIT
-from yente.search import query_entities, query_results
+from yente.search import get_entity, query_entities, query_results
 from yente.search import text_query, entity_query, facet_aggregations
+from yente.search import serialize_entity
 from yente.search import get_index_status, get_index_stats
 from yente.indexer import update_index
-from yente.loader import get_loader
-from yente.data import get_datasets, get_matchable_schemata
+from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
-from yente.util import match_prefix, EntityRedirect
+from yente.data import get_matchable_schemata, get_scope
+from yente.util import match_prefix
 
 
 logging.basicConfig(level=logging.INFO)
@@ -140,15 +141,14 @@ async def search(
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead."""
     ds = await get_dataset(dataset)
-    loader = await get_loader()
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
     filters = {"countries": countries, "topics": topics, "datasets": datasets}
-    query = text_query(ds, q, schema=schema_obj, filters=filters, fuzzy=fuzzy)
-    aggregations = facet_aggregations(list(filters.keys()))
+    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
+    aggregations = facet_aggregations(filters.keys())
     return await query_results(
-        loader, query, limit, aggregations=aggregations, nested=nested, offset=offset
+        ds, query, limit, aggregations=aggregations, nested=nested, offset=offset
     )
 
 
@@ -215,14 +215,13 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    loader = await get_loader()
     responses = {}
     for name, example in query.get("queries").items():
         entity = EntityProxy.from_dict(model, example, cleaned=False)
         for prop, value in example.get("properties").items():
             entity.add(prop, value, cleaned=False)
         entity_query = entity_query(ds, entity, fuzzy=fuzzy)
-        results = await query_results(loader, entity_query, limit, nested=nested)
+        results = await query_results(ds, entity_query, limit, nested=nested)
         results["query"] = entity.to_dict()
         responses[name] = results
     return {"responses": responses}
@@ -235,15 +234,18 @@ async def fetch_entity(
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
     passport, sanction and associated entities) included."""
-    loader = await get_loader()
-    try:
-        entity = await loader.get_entity(entity_id)
-    except EntityRedirect as r:
-        url = app.url_path_for("fetch_entity", entity_id=r.canonical_id)
+    # resolver = await get_resolver()
+    # canonical_id = str(resolver.get_canonical(entity_id))
+    if canonical_id != entity_id:
+        url = app.url_path_for("fetch_entity", entity_id=canonical_id)
         return RedirectResponse(url=url)
+
+    entity = await get_entity(entity_id)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    return await entity.to_nested_dict(loader)
+    scope = await get_scope()
+    data = await serialize_entity(scope, entity, nested=True)
+    return data
 
 
 @app.get(
@@ -391,7 +393,7 @@ async def reconcile_query(dataset: Dataset, query: Dict[str, Any]):
         if prop is None:
             continue
         try:
-            proxy.add(prop, p.get("v"), fuzzy=True)
+            proxy.add_cast(prop.schema, prop.name, p.get("v"), fuzzy=True)
         except InvalidData:
             log.exception("Invalid property is set.")
 

@@ -17,8 +17,3 @@ def match_prefix(prefix: str, *labels: Optional[str]):
 
 def iso_datetime(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
-
-
-class EntityRedirect(Exception):
-    def __init__(self, canonical_id):
-        self.canonical_id = canonical_id
