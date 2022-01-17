@@ -3,7 +3,7 @@ nomenklatura >= 2.0.0, < 2.1.0
 asyncstdlib==3.10.2
 aiocron==1.8
 elasticsearch[async]==7.16.3
-fastapi==0.71.0
+fastapi==0.72.0
 httpx==0.21.3
 uvicorn[standard,uvloop]==0.16.0
 python-multipart==0.0.5
