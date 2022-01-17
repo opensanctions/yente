@@ -22,10 +22,9 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.models import MAX_LIMIT
+from yente.queries import text_query, entity_query, facet_aggregations
 from yente.search import get_entity, query_entities, query_results
-from yente.search import text_query, entity_query, facet_aggregations
-from yente.search import serialize_entity
-from yente.search import get_index_status, get_index_stats
+from yente.search import serialize_entity, get_index_status, get_index_stats
 from yente.indexer import update_index
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
