@@ -1,7 +1,7 @@
 import json
 import logging
 from urllib.parse import urljoin
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form
 from fastapi import HTTPException, BackgroundTasks
@@ -159,7 +159,14 @@ async def search(
     )
 
 
-async def _match_one(name, ds, example, fuzzy, limit, nested):
+async def _match_one(
+    name: str,
+    ds: Dataset,
+    example: Dict[str, Any],
+    fuzzy: bool,
+    limit: int,
+    nested: bool,
+) -> Tuple[str, Dict[str, Any]]:
     entity = EntityProxy.from_dict(model, example, cleaned=False)
     for prop, value in example.get("properties").items():
         entity.add(prop, value, cleaned=False)
@@ -378,21 +385,22 @@ async def reconcile_post(
 
 async def reconcile_queries(
     dataset: Dataset,
-    queries: Dict[str, Any],
+    data: str,
 ):
     # multiple requests in one query
     try:
-        queries = json.loads(queries)
-        results = {}
-        for k, q in queries.items():
-            results[k] = await reconcile_query(dataset, q)
-        # log.info("RESULTS: %r" % results)
-        return results
+        queries = json.loads(data)
     except ValueError:
         raise HTTPException(400, detail="Cannot decode query")
 
+    tasks = []
+    for k, q in queries.items():
+        tasks.append(reconcile_query(k, dataset, q))
+    results = await asyncio.gather(*tasks)
+    return {k: r for (k, r) in results}
 
-async def reconcile_query(dataset: Dataset, query: Dict[str, Any]):
+
+async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
     limit = min(MAX_LIMIT, int(query.get("limit", 5)))
@@ -414,7 +422,7 @@ async def reconcile_query(dataset: Dataset, query: Dict[str, Any]):
     query = entity_query(dataset, proxy, fuzzy=True)
     async for result, score in query_entities(query, limit=limit):
         results.append(get_freebase_entity(result, score))
-    return {"result": results}
+    return name, {"result": results}
 
 
 @app.get(
