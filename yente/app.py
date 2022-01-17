@@ -2,6 +2,7 @@ import json
 import logging
 from urllib.parse import urljoin
 from typing import Any, Dict, List, Optional, Union
+from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form
 from fastapi import HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -158,6 +159,16 @@ async def search(
     )
 
 
+async def _match_one(name, ds, example, fuzzy, limit, nested):
+    entity = EntityProxy.from_dict(model, example, cleaned=False)
+    for prop, value in example.get("properties").items():
+        entity.add(prop, value, cleaned=False)
+    query = entity_query(ds, entity, fuzzy=fuzzy)
+    results = await query_results(ds, query, limit, nested=nested)
+    results["query"] = entity.to_dict()
+    return (name, results)
+
+
 @app.post(
     "/match/{dataset}",
     summary="Query by example matcher",
@@ -221,16 +232,13 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    responses = {}
+    tasks = []
     for name, example in query.get("queries").items():
-        entity = EntityProxy.from_dict(model, example, cleaned=False)
-        for prop, value in example.get("properties").items():
-            entity.add(prop, value, cleaned=False)
-        entity_query = entity_query(ds, entity, fuzzy=fuzzy)
-        results = await query_results(ds, entity_query, limit, nested=nested)
-        results["query"] = entity.to_dict()
-        responses[name] = results
-    return {"responses": responses}
+        tasks.append(_match_one(name, ds, example, fuzzy, limit, nested))
+    if not len(tasks):
+        raise HTTPException(400, "No queries provided.")
+    responses = await asyncio.gather(*tasks)
+    return {"responses": {n: r for n, r in responses}}
 
 
 @app.get("/entities/{entity_id}", tags=["Data access"], response_model=EntityResponse)
