@@ -6,6 +6,6 @@ aiocsv==1.2.1
 aiohttp==3.8.1
 elasticsearch[async]==7.16.3
 fastapi==0.72.0
-uvicorn[standard,uvloop]==0.17.0
+uvicorn[standard]==0.17.0
 python-multipart==0.0.5
 email-validator==1.1.3
