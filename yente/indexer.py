@@ -39,18 +39,10 @@ async def entity_docs(dataset: Dataset, index: str):
 
 
 async def statement_docs(index: str):
-    # TMP:
-    from hashlib import sha1
-
-    def stmt_key(stmt):
-        """Hash the key properties of a statement record to make a unique ID."""
-        key = f"{stmt['dataset']}.{stmt['entity_id']}.{stmt['prop']}.{stmt['value']}"
-        return sha1(key.encode("utf-8")).hexdigest()
-
     async for idx, row in a.enumerate(get_statements()):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index [%s]: %d statements...", index, idx)
-        stmt_id = row.pop("id", stmt_key(row))
+        stmt_id = row.pop("id")
         yield {"_index": index, "_id": stmt_id, "_source": row}
 
 
@@ -91,7 +83,7 @@ async def index_entities(
     log.info("Create index: %s", next_index)
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
     docs = entity_docs(dataset, next_index)
-    await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
+    await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
     await deploy_versioned_index(es, ENTITY_INDEX, next_index)
 
 
@@ -111,8 +103,8 @@ async def index_statements(
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
 
     docs = statement_docs(next_index)
-    await async_bulk(es, docs, stats_only=True, max_retries=5)
-    await deploy_versioned_index(es, ENTITY_INDEX, next_index)
+    await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
+    await deploy_versioned_index(es, STATEMENT_INDEX, next_index)
 
 
 async def update_index(force=False):
