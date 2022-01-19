@@ -50,12 +50,17 @@ class SearchFacet(BaseModel):
     values: List[SearchFacetItem]
 
 
+class TotalSpec(BaseModel):
+    value: int
+    relation: str
+
+
 class SearchResponse(BaseModel):
     results: List[EntityResponse]
     facets: Dict[str, SearchFacet]
     limit: int
     offset: int = 0
-    total: int = 0
+    total: TotalSpec
 
 
 class EntityExample(BaseModel):
@@ -95,7 +100,7 @@ class StatementResponse(BaseModel):
     results: List[StatementModel]
     limit: int
     offset: int = 0
-    total: int = 0
+    total: TotalSpec
 
 
 class FreebaseType(BaseModel):

@@ -93,3 +93,23 @@ def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
     for field in fields:
         aggs[field] = {"terms": {"field": field, "size": 1000}}
     return aggs
+
+
+def statement_query(
+    dataset=Optional[Dataset], **kwargs: Optional[str]
+) -> Dict[str, Any]:
+    # dataset: Optional[str] = None,
+    # entity_id: Optional[str] = None,
+    # canonical_id: Optional[str] = None,
+    # prop: Optional[str] = None,
+    # value: Optional[str] = None,
+    # schema: Optional[str] = None,
+    filters = []
+    if dataset is not None:
+        filters.append({"terms": {"dataset": dataset.source_names}})
+    for field, value in kwargs.items():
+        if value is not None:
+            filters.append({"term": {field: value}})
+    if not len(filters):
+        return {"match_all": {}}
+    return {"bool": {"filter": filters}}

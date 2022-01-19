@@ -1,11 +1,12 @@
 import logging
+import asyncio
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from elasticsearch import TransportError
 from elasticsearch.exceptions import NotFoundError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
-from yente.settings import ENTITY_INDEX
+from yente.settings import ENTITY_INDEX, STATEMENT_INDEX
 from yente.entity import Dataset, Entity
 from yente.index import get_es
 from yente.queries import filter_query
@@ -35,7 +36,7 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
 async def query_entities(query: Dict[Any, Any], limit: int = 5):
     # pprint(query)
     es = await get_es()
-    resp = await es.search(index=ES_INDEX, query=query, size=limit)
+    resp = await es.search(index=ENTITY_INDEX, query=query, size=limit)
     async for entity, score in result_entities(resp):
         yield entity, score
 
@@ -62,7 +63,6 @@ async def query_results(
         data["score"] = score
         results.append(data)
     hits = resp.get("hits", {})
-    total = hits.get("total")
     datasets = await get_datasets()
     facets = {}
     for field, agg in resp.get("aggregations", {}).items():
@@ -82,7 +82,35 @@ async def query_results(
     return {
         "results": results,
         "facets": facets,
-        "total": total.get("value"),
+        "total": hits.get("total"),
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+async def statement_results(
+    query: Dict[str, Any], limit: int, offset: int
+) -> Dict[str, Any]:
+    es = await get_es()
+    results = []
+    resp = await es.search(
+        index=STATEMENT_INDEX,
+        query=query,
+        size=limit,
+        from_=offset,
+    )
+    # count_body = None if "match_all" in query else query
+    # count_await = es.count(body=count_body, index=STATEMENT_INDEX)
+    # resp, totals = await asyncio.gather(search_await, count_await)
+
+    hits = resp.get("hits", {})
+    for hit in hits.get("hits", []):
+        source = hit.get("_source")
+        source["id"] = hit.get("_id")
+        results.append(source)
+    return {
+        "results": results,
+        "total": hits.get("total"),
         "limit": limit,
         "offset": offset,
     }

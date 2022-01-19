@@ -23,8 +23,8 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.models import MAX_LIMIT
-from yente.queries import text_query, entity_query, facet_aggregations
-from yente.search import get_entity, query_entities, query_results
+from yente.queries import statement_query, text_query, entity_query, facet_aggregations
+from yente.search import get_entity, query_entities, query_results, statement_results
 from yente.search import serialize_entity, get_index_status, get_index_stats
 from yente.indexer import update_index
 from yente.data import get_datasets
@@ -70,7 +70,8 @@ async def get_dataset(name: str) -> Dataset:
 
 @app.on_event("startup")
 async def startup_event():
-    await update_index()
+    # await update_index()
+    pass
 
 
 @app.get(
@@ -274,13 +275,13 @@ async def fetch_entity(
     response_model=StatementResponse,
 )
 async def statements(
-    dataset: str = Query(settings.SCOPE_DATASET, title="Filter by dataset"),
-    entity_id: str = Query(None, title="Filter by source entity ID"),
-    canonical_id: str = Query(None, title="Filter by normalised entity ID"),
-    prop: str = Query(None, title="Filter by property name"),
-    value: str = Query(None, title="Filter by property value"),
-    schema: str = Query(None, title="Filter by schema type"),
-    limit: int = Query(1000, title="Number of results to return"),
+    dataset: Optional[str] = Query(None, title="Filter by dataset"),
+    entity_id: Optional[str] = Query(None, title="Filter by source entity ID"),
+    canonical_id: Optional[str] = Query(None, title="Filter by normalised entity ID"),
+    prop: Optional[str] = Query(None, title="Filter by property name"),
+    value: Optional[str] = Query(None, title="Filter by property value"),
+    schema: Optional[str] = Query(None, title="Filter by schema type"),
+    limit: int = Query(50, title="Number of results to return"),
     offset: int = Query(0, title="Number of results to skip before returning them"),
 ):
     """Access raw entity data as statements. OpenSanctions stores all of its
@@ -293,36 +294,18 @@ async def statements(
     easier use. Using the raw statement data offered by this API will grant
     users access to detailed provenance information for each property value.
     """
-    ds = await get_dataset(dataset)
-    # async with with_conn() as conn:
-    #     total = await count_statements(
-    #         conn,
-    #         dataset=ds,
-    #         entity_id=entity_id,
-    #         canonical_id=canonical_id,
-    #         prop=prop,
-    #         value=value,
-    #         schema=schema,
-    #     )
-    #     stmts = paged_statements(
-    #         conn,
-    #         dataset=ds,
-    #         limit=limit,
-    #         offset=offset,
-    #         entity_id=entity_id,
-    #         canonical_id=canonical_id,
-    #         prop=prop,
-    #         value=value,
-    #         schema=schema,
-    #     )
-    #     statements = [s async for s in stmts]
-    # return {
-    #     "limit": limit,
-    #     "offset": offset,
-    #     "total": total,
-    #     "results": [s for s in statements],
-    # }
-    return {}
+    ds = None
+    if dataset is not None:
+        ds = await get_dataset(dataset)
+    query = statement_query(
+        dataset=ds,
+        entity_id=entity_id,
+        canonical_id=canonical_id,
+        prop=prop,
+        value=value,
+        schema=schema,
+    )
+    return await statement_results(query, limit, offset)
 
 
 @app.get(
@@ -445,7 +428,6 @@ async def reconcile_suggest_entity(
     ds = await get_dataset(dataset)
     entity = EntityProxy.from_dict(model, {"schema": settings.BASE_SCHEMA})
     entity.add("name", prefix)
-    entity.add("notes", prefix)
     results = []
     query = entity_query(ds, entity)
     async for result, score in query_entities(query, limit=limit):
