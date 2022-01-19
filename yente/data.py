@@ -1,8 +1,10 @@
 import json
 import asyncio
 import logging
-from typing import AsyncGenerator, List, Set
-from httpx import AsyncClient
+from banal import as_bool
+from aiohttp import ClientSession
+from aiocsv import AsyncDictReader
+from typing import AsyncGenerator, Dict, List, Set
 from datetime import datetime
 from asyncstdlib.functools import cache
 from followthemoney import model
@@ -13,15 +15,16 @@ from yente import settings
 from yente.entity import Entity, Dataset, Datasets
 from yente.models import FreebaseType
 from yente.models import FreebaseEntity, FreebaseProperty
+from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)
 
 
 @cache
 async def get_data_index():
-    async with AsyncClient() as client:
-        response = await client.get(settings.DATA_INDEX)
-        return response.json()
+    async with ClientSession() as client:
+        async with client.get(settings.DATA_INDEX) as resp:
+            return await resp.json()
 
 
 @cache
@@ -105,9 +108,9 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
     if dataset.entities_url is None:
         raise ValueError("Dataset has no entity source: %s" % dataset)
     datasets = await get_datasets()
-    async with AsyncClient() as client:
-        async with client.stream("GET", dataset.entities_url) as response:
-            async for line in response.aiter_lines():
+    async with ClientSession() as client:
+        async with client.get(dataset.entities_url) as resp:
+            async for line in resp.content:
                 data = json.loads(line)
                 entity = Entity.from_data(data, datasets)
                 if not len(entity.datasets):
@@ -115,7 +118,23 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
                 yield entity
 
 
+async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
+    index = await get_data_index()
+    url = index.get("statements_url")
+    if url is None:
+        raise ValueError("No statement URL in index")
+    async with ClientSession() as client:
+        async with client.get(url) as resp:
+            wrapper = AsyncTextReaderWrapper(resp.content, "utf-8")
+            async for row in AsyncDictReader(wrapper):
+                row["target"] = as_bool(row["target"])
+                row["unique"] = as_bool(row["unique"])
+                row["first_seen"] = iso_datetime(row["first_seen"])
+                row["last_seen"] = iso_datetime(row["last_seen"])
+                yield row
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(check_update())
+    # loop.run_until_complete(test_get_statements())
