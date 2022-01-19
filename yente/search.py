@@ -122,7 +122,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     try:
         data = await es.get(index=ENTITY_INDEX, id=entity_id)
         _source = data.get("_source")
-        if _source.get("canonical_id") != id:
+        if _source.get("canonical_id") != entity_id:
             raise EntityRedirect(_source.get("canonical_id"))
         entity, _ = result_entity(datasets, data)
         return entity
@@ -150,7 +150,7 @@ async def get_adjacent(
     query = {"term": {"entities": entity.id}}
     filtered = filter_query([query], dataset)
     resp = await es.search(index=ENTITY_INDEX, query=filtered, size=9999)
-    for adj, _ in result_entities(resp):
+    async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
                 if prop.reverse is not None:
