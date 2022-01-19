@@ -91,7 +91,7 @@ async def index_entities(
     log.info("Create index: %s", next_index)
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
     docs = entity_docs(dataset, next_index)
-    await async_bulk(es, docs, stats_only=True, chunk_size=2000)
+    await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
     await deploy_versioned_index(es, ENTITY_INDEX, next_index)
 
 
@@ -111,7 +111,7 @@ async def index_statements(
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
 
     docs = statement_docs(next_index)
-    await async_bulk(es, docs, stats_only=True)
+    await async_bulk(es, docs, stats_only=True, max_retries=5)
     await deploy_versioned_index(es, ENTITY_INDEX, next_index)
 
 

@@ -2,7 +2,7 @@ import json
 import asyncio
 import logging
 from banal import as_bool
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
 from typing import AsyncGenerator, Dict, List, Set
 from datetime import datetime
@@ -18,11 +18,12 @@ from yente.models import FreebaseEntity, FreebaseProperty
 from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)
+http_timeout = ClientTimeout(total=2 * 3600, sock_read=600)
 
 
 @cache
 async def get_data_index():
-    async with ClientSession() as client:
+    async with ClientSession(timeout=http_timeout) as client:
         async with client.get(settings.DATA_INDEX) as resp:
             return await resp.json()
 
@@ -108,7 +109,7 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
     if dataset.entities_url is None:
         raise ValueError("Dataset has no entity source: %s" % dataset)
     datasets = await get_datasets()
-    async with ClientSession() as client:
+    async with ClientSession(timeout=http_timeout) as client:
         async with client.get(dataset.entities_url) as resp:
             async for line in resp.content:
                 data = json.loads(line)
@@ -123,7 +124,7 @@ async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
     url = index.get("statements_url")
     if url is None:
         raise ValueError("No statement URL in index")
-    async with ClientSession() as client:
+    async with ClientSession(timeout=http_timeout) as client:
         async with client.get(url) as resp:
             wrapper = AsyncTextReaderWrapper(resp.content, "utf-8")
             async for row in AsyncDictReader(wrapper):
