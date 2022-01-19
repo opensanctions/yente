@@ -4,7 +4,6 @@ ENV DEBIAN_FRONTEND noninteractive
 LABEL org.opencontainers.image.title "OpenSanctions yente"
 LABEL org.opencontainers.image.licenses MIT
 LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
-LABEL org.opencontainers.image.version 1.0.0
 
 RUN apt-get -qq -y update \
     && apt-get -qq -y upgrade \
