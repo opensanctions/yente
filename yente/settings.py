@@ -80,4 +80,6 @@ ENDPOINT_URL = env_str("YENTE_ENDPOINT_URL", "http://localhost:8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "")
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
+ENTITY_INDEX = f"{ES_INDEX}-entities"
+STATEMENT_INDEX = f"{ES_INDEX}-statements"
 BASE_SCHEMA = "Thing"

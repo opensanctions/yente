@@ -5,7 +5,7 @@ from elasticsearch.exceptions import NotFoundError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
-from yente.settings import ES_INDEX
+from yente.settings import ENTITY_INDEX
 from yente.entity import Dataset, Entity
 from yente.index import get_es
 from yente.queries import filter_query
@@ -51,7 +51,11 @@ async def query_results(
     es = await get_es()
     results = []
     resp = await es.search(
-        index=ES_INDEX, query=query, size=limit, from_=offset, aggregations=aggregations
+        index=ENTITY_INDEX,
+        query=query,
+        size=limit,
+        from_=offset,
+        aggregations=aggregations,
     )
     async for result, score in result_entities(resp):
         data = await serialize_entity(dataset, result, nested=nested)
@@ -88,7 +92,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     datasets = await get_datasets()
     try:
-        data = await es.get(index=ES_INDEX, id=entity_id)
+        data = await es.get(index=ENTITY_INDEX, id=entity_id)
         _source = data.get("_source")
         if _source.get("canonical_id") != id:
             raise EntityRedirect(_source.get("canonical_id"))
@@ -105,7 +109,7 @@ async def get_adjacent(
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
     if len(entities):
-        resp = await es.mget(index=ES_INDEX, body={"ids": entities})
+        resp = await es.mget(index=ENTITY_INDEX, body={"ids": entities})
         for raw in resp.get("docs", []):
             adj, _ = result_entity(datasets, raw)
             if adj is None:
@@ -117,7 +121,7 @@ async def get_adjacent(
     # Do we need to query referents here?
     query = {"term": {"entities": entity.id}}
     filtered = filter_query([query], dataset)
-    resp = await es.search(index=ES_INDEX, query=filtered, size=9999)
+    resp = await es.search(index=ENTITY_INDEX, query=filtered, size=9999)
     for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
@@ -154,14 +158,14 @@ async def serialize_entity(
 
 async def get_index_stats() -> Dict[str, Any]:
     es = await get_es()
-    stats = await es.indices.stats(index=ES_INDEX)
-    return stats.get("indices", {}).get(ES_INDEX)
+    stats = await es.indices.stats(index=ENTITY_INDEX)
+    return stats.get("indices", {}).get(ENTITY_INDEX)
 
 
 async def get_index_status() -> bool:
     es = await get_es()
     try:
-        health = await es.cluster.health(index=ES_INDEX)
+        health = await es.cluster.health(request_timeout=5)
         return health.get("status") in ("yellow", "green")
     except TransportError:
         return False
