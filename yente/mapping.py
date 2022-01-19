@@ -51,7 +51,7 @@ def make_type_field(type_, copy_to=True, index=None):
     return make_field(field_type, copy_to=copy_to, index=index)
 
 
-def make_mapping(schemata: Iterable[Schema]):
+def make_entity_mapping(schemata: Iterable[Schema]):
     prop_mapping = {}
     for schema_name in schemata:
         schema = model.get(schema_name)
@@ -87,4 +87,27 @@ def make_mapping(schemata: Iterable[Schema]):
         "dynamic": "strict",
         "properties": mapping,
         "_source": {"excludes": drop_fields},
+    }
+
+
+def make_statement_mapping():
+    mapping = {
+        "canonical_id": {"type": "keyword"},
+        "entity_id": {"type": "keyword"},
+        "prop": {"type": "keyword"},
+        "prop_type": {"type": "keyword"},
+        "schema": {"type": "keyword"},
+        "value": {
+            "type": "keyword",
+            "fields": {"text": {"type": "text", "analyzer": "osa-analyzer"}},
+        },
+        "dataset": {"type": "keyword"},
+        "target": {"type": "boolean"},
+        "unique": {"type": "boolean"},
+        "last_seen": make_field("date", format=DATE_FORMAT),
+        "first_seen": make_field("date", format=DATE_FORMAT),
+    }
+    return {
+        "dynamic": "strict",
+        "properties": mapping,
     }
