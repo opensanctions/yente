@@ -5,7 +5,6 @@ from banal import as_bool
 from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
 from typing import AsyncGenerator, Dict, List, Set
-from datetime import datetime
 from asyncstdlib.functools import cache
 from followthemoney import model
 from followthemoney.schema import Schema
@@ -44,11 +43,6 @@ async def get_scope() -> Dataset:
     if dataset is None:
         raise RuntimeError("Scope dataset does not exist: %s" % settings.SCOPE_DATASET)
     return dataset
-
-
-async def get_export_time() -> datetime:
-    scope = await get_scope()
-    return scope.last_export
 
 
 async def get_schemata() -> List[Schema]:
