@@ -70,8 +70,7 @@ async def get_dataset(name: str) -> Dataset:
 
 @app.on_event("startup")
 async def startup_event():
-    # await update_index()
-    pass
+    await update_index()
 
 
 @app.get(
