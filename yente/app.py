@@ -294,6 +294,8 @@ async def statements(
     easier use. Using the raw statement data offered by this API will grant
     users access to detailed provenance information for each property value.
     """
+    if not settings.STATEMENT_API:
+        raise HTTPException(501, "Statement API not enabled.")
     ds = None
     if dataset is not None:
         ds = await get_dataset(dataset)

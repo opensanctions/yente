@@ -8,7 +8,7 @@ from elasticsearch.helpers import async_bulk
 from followthemoney import model
 from followthemoney.schema import Schema
 
-from yente.settings import ENTITY_INDEX, STATEMENT_INDEX
+from yente import settings
 from yente.entity import Dataset
 from yente.data import check_update, get_dataset_entities, get_statements, get_scope
 from yente.index import get_es
@@ -71,7 +71,7 @@ async def index_entities(
     schemata: Iterable[Schema],
     timestamp: datetime,
 ):
-    next_index = versioned_index(ENTITY_INDEX, timestamp)
+    next_index = versioned_index(settings.ENTITY_INDEX, timestamp)
     es = await get_es()
     exists = await es.indices.exists(index=next_index)
     if exists:
@@ -84,13 +84,13 @@ async def index_entities(
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
     docs = entity_docs(dataset, next_index)
     await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
-    await deploy_versioned_index(es, ENTITY_INDEX, next_index)
+    await deploy_versioned_index(es, settings.ENTITY_INDEX, next_index)
 
 
 async def index_statements(
     timestamp: datetime,
 ):
-    next_index = versioned_index(STATEMENT_INDEX, timestamp)
+    next_index = versioned_index(settings.STATEMENT_INDEX, timestamp)
     es = await get_es()
     exists = await es.indices.exists(index=next_index)
     if exists:
@@ -98,13 +98,16 @@ async def index_statements(
         # await es.indices.delete(index=next_index)
         return
 
+    if not settings.STATEMENT_API:
+        log.warning("Statement API is disabled, not indexing statements.")
+
     mapping = make_statement_mapping()
     log.info("Create index: %s", next_index)
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
 
     docs = statement_docs(next_index)
     await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
-    await deploy_versioned_index(es, STATEMENT_INDEX, next_index)
+    await deploy_versioned_index(es, settings.STATEMENT_INDEX, next_index)
 
 
 async def update_index(force=False):
