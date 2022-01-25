@@ -122,6 +122,8 @@ async def update_index(force=False):
 
 @aiocron.crontab("23 * * * *")
 async def regular_update():
+    if settings.TESTING:
+        return
     await check_update()
     await update_index()
 

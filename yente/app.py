@@ -70,26 +70,7 @@ async def get_dataset(name: str) -> Dataset:
 
 @app.on_event("startup")
 async def startup_event():
-    # await update_index()
-    pass
-
-
-@app.get(
-    "/info",
-    summary="System information",
-    tags=["System information"],
-    response_model=IndexResponse,
-)
-async def index():
-    """Get system information: the list of available dataset names, the size of
-    the search index in memory, and the followthemoney model specification which
-    describes the types of entities and properties in use by the API."""
-    datasets = await get_datasets()
-    return {
-        "datasets": [d for d in datasets.keys()],
-        "model": model.to_dict(),
-        "index": await get_index_stats(),
-    }
+    asyncio.create_task(update_index())
 
 
 @app.get(
