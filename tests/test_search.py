@@ -8,6 +8,15 @@ def test_search_putin():
     assert "results" in data, data
     results = data.get("results")
     assert len(results), results
+    assert results[0]["id"] == "Q7747", results
+
+
+def test_search_putin_scope():
+    res = client.get("/search/sanctions?q=vladimir putin")
+    assert res.status_code == 200, res
+    data = res.json()
+    results = data.get("results")
+    assert results[0]["id"] != "Q7747", results
 
 
 def test_search_limit():
