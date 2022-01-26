@@ -1,8 +1,9 @@
-from fastapi.testclient import TestClient
+# from fastapi.testclient import TestClient
 
-from yente.app import app
+# from yente.app import app
+from .conftest import client
 
-client = TestClient(app)
+# client = TestClient(app)
 
 
 def test_healthz():
@@ -23,4 +24,4 @@ def test_search():
     data = res.json()
     assert "results" in data, data
     results = data.get("results")
-    assert len(results) == 0, results
+    assert len(results), results
