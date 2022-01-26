@@ -49,6 +49,8 @@ async def query_results(
     offset: Optional[int] = None,
     aggregations: Optional[Dict] = None,
 ):
+    if offset is None:
+        offset = 0
     es = await get_es()
     results = []
     resp = await es.search(

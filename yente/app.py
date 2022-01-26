@@ -14,7 +14,7 @@ from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
-from yente.models import HealthzResponse
+from yente.models import EntityExample, HealthzResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.models import FreebaseEntitySuggestResponse
@@ -154,16 +154,16 @@ async def search(
 async def _match_one(
     name: str,
     ds: Dataset,
-    example: Dict[str, Any],
+    example: EntityExample,
     fuzzy: bool,
     limit: int,
-    nested: bool,
 ) -> Tuple[str, Dict[str, Any]]:
-    entity = EntityProxy.from_dict(model, example, cleaned=False)
-    for prop, value in example.get("properties").items():
-        entity.add(prop, value, cleaned=False)
+    data = example.dict()
+    data["id"] = "sample"
+    data["schema"] = data.pop("schema_", data.pop("schema", None))
+    entity = model.get_proxy(data, cleaned=False)
     query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(ds, query, limit, nested=nested)
+    results = await query_results(ds, query, limit)
     results["query"] = entity.to_dict()
     return (name, results)
 
@@ -175,11 +175,10 @@ async def _match_one(
     response_model=EntityMatchResponse,
 )
 async def match(
-    query: EntityMatchQuery,
+    match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
     limit: int = Query(5, title="Number of results to return", lt=MAX_LIMIT),
     fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
-    nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -214,9 +213,11 @@ async def match(
     ```json
     "responses": {
         "entity1": {
+            "query": {},
             "results": [...]
         },
         "entity2": {
+            "query": {},
             "results": [...]
         }
     }
@@ -232,8 +233,8 @@ async def match(
     """
     ds = await get_dataset(dataset)
     tasks = []
-    for name, example in query.get("queries").items():
-        tasks.append(_match_one(name, ds, example, fuzzy, limit, nested))
+    for name, example in match.queries.items():
+        tasks.append(_match_one(name, ds, example, fuzzy, limit))
     if not len(tasks):
         raise HTTPException(400, "No queries provided.")
     responses = await asyncio.gather(*tasks)
