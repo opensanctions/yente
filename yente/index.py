@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 @cache
-async def get_es():
+async def get_es() -> AsyncElasticsearch:
     log.info("Connection to ES at: %s", ES_URL)
     es = AsyncElasticsearch(hosts=[ES_URL])
     for retry in range(7):
