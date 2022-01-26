@@ -12,11 +12,9 @@ jobs:
       index:
         image: docker.elastic.co/elasticsearch/elasticsearch
         env:
-          - node.name=index
-          - cluster.name=opensanctions-index
-          - discovery.type=single-node
-          - bootstrap.memory_lock=true
-          - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+          node.name: index
+          cluster.name: yente-index
+          discovery.type: single-node
         ports:
           - 9200:9200
 
