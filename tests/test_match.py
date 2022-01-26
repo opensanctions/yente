@@ -11,7 +11,7 @@ EXAMPLE = {
 
 
 def test_match_putin():
-    query = {"queries": {"vv": EXAMPLE}}
+    query = {"queries": {"vv": EXAMPLE, "xx": EXAMPLE, "zz": EXAMPLE}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text
     data = resp.json()

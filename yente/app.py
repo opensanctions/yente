@@ -57,7 +57,7 @@ PATH_DATASET = Path(
     description="Data source or collection name",
     example=settings.SCOPE_DATASET,
 )
-QUERY_PREFIX = Query(None, min_length=1, description="Search prefix")
+QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
 
 
 async def get_dataset(name: str) -> Dataset:
@@ -419,7 +419,7 @@ async def reconcile_suggest_entity(
 
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
-    ds = await get_dataset(dataset)
+    await get_dataset(dataset)
     entity = EntityProxy.from_dict(model, {"schema": settings.BASE_SCHEMA})
     entity.add("name", prefix)
     results = []
@@ -445,7 +445,7 @@ async def reconcile_suggest_property(
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
-    ds = get_dataset(dataset)
+    await get_dataset(dataset)
     schemata = await get_matchable_schemata()
     matches = []
     for prop in model.properties:
@@ -474,7 +474,7 @@ async def reconcile_suggest_type(
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
-    ds = get_dataset(dataset)
+    await get_dataset(dataset)
     matches = []
     for schema in await get_matchable_schemata():
         if match_prefix(prefix, schema.name, schema.label):
