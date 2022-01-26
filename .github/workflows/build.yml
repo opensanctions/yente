@@ -6,6 +6,42 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      index:
+        image: docker.elastic.co/elasticsearch/elasticsearch
+        env:
+          - node.name=index
+          - cluster.name=opensanctions-index
+          - discovery.type=single-node
+          - bootstrap.memory_lock=true
+          - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+
+    env:
+      YENTE_INDEX_URL: "http://index:9200/"
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.9"
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y -qq libicu-dev
+          pip install --no-cache-dir -q pyicu
+          pip install --no-cache-dir -q -r requirements.txt
+          pip install --no-cache-dir -q -e ".[dev]"
+          pip freeze
+      - name: Run pytest
+        run: |
+          pytest
+
   build:
     runs-on: ubuntu-latest
     steps:
