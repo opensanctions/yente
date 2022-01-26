@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       index:
-        image: docker.elastic.co/elasticsearch/elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
         env:
           node.name: index
           cluster.name: yente-index
