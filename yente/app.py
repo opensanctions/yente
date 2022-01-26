@@ -384,9 +384,8 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     # log.info("Reconcile: %r", query)
     limit = min(MAX_LIMIT, int(query.get("limit", 5)))
     type = query.get("type", settings.BASE_SCHEMA)
-    proxy = EntityProxy.from_dict(model, {"schema": type})
-    proxy.add("name", query.get("query"))
-    # proxy.add("notes", query.get("query"))
+    proxy = model.make_entity(type)
+    proxy.add("alias", query.get("query"))
     for p in query.get("properties", []):
         prop = model.get_qname(p.get("pid"))
         if prop is None:

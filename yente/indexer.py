@@ -27,6 +27,7 @@ async def entity_docs(dataset: Dataset, index: str):
         data = entity.to_dict()
         data["canonical_id"] = entity.id
         data["text"] = texts
+        # TODO: add partial dates
 
         entity_id = data.pop("id")
         yield {"_index": index, "_id": entity_id, "_source": data}

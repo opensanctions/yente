@@ -40,13 +40,15 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
     for prop, value in entity.itervalues():
         if prop.type == registry.name:
             query = {
-                "match_phrase": {
+                "match": {
                     "names": {
                         "query": value,
-                        "slop": 3,
-                        # "fuzziness": 1,
-                        "boost": 3.0,
-                        # "lenient": True,
+                        "lenient": False,
+                        "operator": "AND",
+                        "minimum_should_match": "60%",
+                        # "slop": 3,
+                        "fuzziness": 1,
+                        # "boost": 3.0,
                     }
                 }
             }
@@ -63,6 +65,7 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
         shoulds.append({"terms": {field: texts}})
     for text in texts:
         shoulds.append({"match_phrase": {"text": text}})
+    # print("XXXX", entity.to_dict())
     return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 

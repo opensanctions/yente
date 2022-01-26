@@ -1,4 +1,23 @@
+import json
 from .conftest import client
+
+
+def test_reconcile_metadata():
+    resp = client.get("/reconcile/default")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "opensanctions.org" in data["identifierSpace"], data
+    assert len(data["defaultTypes"]) > 3, data
+    assert "suggest" in data, data
+
+
+def test_reconcile_post():
+    queries = {"mutti": {"query": "Angela Merkel"}}
+    resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["mutti"]["result"]
+    assert res[0]["id"] == "Q567", res
 
 
 def test_reconcile_suggest_entity_no_prefix():
