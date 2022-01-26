@@ -5,16 +5,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form
 from fastapi import HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from followthemoney.types import registry
-from starlette.responses import RedirectResponse
 from followthemoney import model
+from followthemoney.types import registry
 from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
-from yente.models import HealthzResponse, IndexResponse
+from yente.models import HealthzResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.models import FreebaseEntitySuggestResponse
@@ -249,7 +249,8 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=True)
-    return data
+    headers = {"Cache-Control": "public; max-age=84600"}
+    return JSONResponse(content=data, headers=headers)
 
 
 @app.get(

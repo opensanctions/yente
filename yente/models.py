@@ -29,12 +29,6 @@ class ScoredEntityResponse(EntityResponse):
     match: bool = False
 
 
-class IndexResponse(BaseModel):
-    datasets: List[str]
-    model: ModelToDict
-    index: Dict[str, Any]
-
-
 class HealthzResponse(BaseModel):
     status: str = "ok"
 
