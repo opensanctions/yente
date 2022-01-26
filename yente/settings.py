@@ -90,3 +90,5 @@ ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
+
+CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}

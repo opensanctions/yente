@@ -140,9 +140,15 @@ async def search(
     filters = {"countries": countries, "topics": topics, "datasets": datasets}
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations(filters.keys())
-    return await query_results(
-        ds, query, limit, aggregations=aggregations, nested=nested, offset=offset
+    resp = await query_results(
+        ds,
+        query,
+        limit,
+        aggregations=aggregations,
+        nested=nested,
+        offset=offset,
     )
+    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
 async def _match_one(
@@ -249,8 +255,7 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=True)
-    headers = {"Cache-Control": "public; max-age=84600"}
-    return JSONResponse(content=data, headers=headers)
+    return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
 
 
 @app.get(
@@ -292,7 +297,8 @@ async def statements(
         value=value,
         schema=schema,
     )
-    return await statement_results(query, limit, offset)
+    resp = await statement_results(query, limit, offset)
+    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
 @app.get(
