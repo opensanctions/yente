@@ -1,6 +1,33 @@
 from .conftest import client
 
 
+def test_reconcile_suggest_property_no_prefix():
+    resp = client.get("/reconcile/default/suggest/property")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "result" in data
+    assert len(data["result"]) == 0, data
+
+
+def test_reconcile_suggest_property_prefix():
+    resp = client.get("/reconcile/default/suggest/property?prefix=country")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "result" in data
+    res = data["result"]
+    assert len(res) > 1, data
+    assert ":country" in res[0]["id"], data
+
+
+def test_reconcile_suggest_property_prefix_dummy():
+    resp = client.get("/reconcile/default/suggest/property?prefix=banana")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "result" in data
+    res = data["result"]
+    assert len(res) == 0, data
+
+
 def test_reconcile_suggest_type_no_prefix():
     resp = client.get("/reconcile/default/suggest/type")
     assert resp.status_code == 200, resp.text
