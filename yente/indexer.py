@@ -90,6 +90,10 @@ async def index_entities(
 async def index_statements(
     timestamp: datetime,
 ):
+    if not settings.STATEMENT_API:
+        log.warning("Statement API is disabled, not indexing statements.")
+        return
+
     next_index = versioned_index(settings.STATEMENT_INDEX, timestamp)
     es = await get_es()
     exists = await es.indices.exists(index=next_index)
@@ -97,9 +101,6 @@ async def index_statements(
         log.info("Index [%s] is up to date.", next_index)
         # await es.indices.delete(index=next_index)
         return
-
-    if not settings.STATEMENT_API:
-        log.warning("Statement API is disabled, not indexing statements.")
 
     mapping = make_statement_mapping()
     log.info("Create index: %s", next_index)

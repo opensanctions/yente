@@ -23,17 +23,7 @@ settings.STATEMENT_API = False
 client = TestClient(app)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def load_data():
-    client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
-    yield
-
-
-@pytest.fixture(autouse=True)
-def flush_cached_es():
-    """Reference: https://github.com/pytest-dev/pytest-asyncio/issues/38#issuecomment-264418154"""
-    yield
-
+def clear_state():
     async def shutdown():
         es = await get_es()
         await es.close()
@@ -41,3 +31,17 @@ def flush_cached_es():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(shutdown())
     get_es.cache_clear()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def load_data():
+    client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
+    clear_state()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def flush_cached_es():
+    """Reference: https://github.com/pytest-dev/pytest-asyncio/issues/38#issuecomment-264418154"""
+    yield
+    clear_state()
