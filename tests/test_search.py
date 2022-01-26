@@ -16,7 +16,8 @@ def test_search_putin_scope():
     assert res.status_code == 200, res
     data = res.json()
     results = data.get("results")
-    assert results[0]["id"] != "Q7747", results
+    assert len(results) == 0, results
+    # assert results[0]["id"] != "Q7747", results
 
 
 def test_search_limit():

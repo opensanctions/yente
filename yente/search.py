@@ -6,7 +6,7 @@ from elasticsearch.exceptions import NotFoundError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
-from yente.settings import ENTITY_INDEX, STATEMENT_INDEX
+from yente import settings
 from yente.entity import Dataset, Entity
 from yente.index import get_es
 from yente.queries import filter_query
@@ -36,7 +36,7 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
 async def query_entities(query: Dict[Any, Any], limit: int = 5):
     # pprint(query)
     es = await get_es()
-    resp = await es.search(index=ENTITY_INDEX, query=query, size=limit)
+    resp = await es.search(index=settings.ENTITY_INDEX, query=query, size=limit)
     async for entity, score in result_entities(resp):
         yield entity, score
 
@@ -52,7 +52,7 @@ async def query_results(
     es = await get_es()
     results = []
     resp = await es.search(
-        index=ENTITY_INDEX,
+        index=settings.ENTITY_INDEX,
         query=query,
         size=limit,
         from_=offset,
@@ -94,7 +94,7 @@ async def statement_results(
     es = await get_es()
     results = []
     resp = await es.search(
-        index=STATEMENT_INDEX,
+        index=settings.STATEMENT_INDEX,
         query=query,
         size=limit,
         from_=offset,
@@ -120,7 +120,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     datasets = await get_datasets()
     try:
-        data = await es.get(index=ENTITY_INDEX, id=entity_id)
+        data = await es.get(index=settings.ENTITY_INDEX, id=entity_id)
         _source = data.get("_source")
         if _source.get("canonical_id") != entity_id:
             raise EntityRedirect(_source.get("canonical_id"))
@@ -135,7 +135,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
     if len(entities):
-        resp = await es.mget(index=ENTITY_INDEX, body={"ids": entities})
+        resp = await es.mget(index=settings.ENTITY_INDEX, body={"ids": entities})
         for raw in resp.get("docs", []):
             adj, _ = result_entity(datasets, raw)
             if adj is None:
@@ -147,7 +147,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     # Do we need to query referents here?
     query = {"term": {"entities": entity.id}}
     filtered = filter_query([query])
-    resp = await es.search(index=ENTITY_INDEX, query=filtered, size=9999)
+    resp = await es.search(index=settings.ENTITY_INDEX, query=filtered, size=9999)
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
@@ -182,8 +182,8 @@ async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, An
 
 async def get_index_stats() -> Dict[str, Any]:
     es = await get_es()
-    stats = await es.indices.stats(index=ENTITY_INDEX)
-    return stats.get("indices", {}).get(ENTITY_INDEX)
+    stats = await es.indices.stats(index=settings.ENTITY_INDEX)
+    return stats.get("indices", {}).get(settings.ENTITY_INDEX)
 
 
 async def get_index_status() -> bool:
