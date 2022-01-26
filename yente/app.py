@@ -30,7 +30,7 @@ from yente.indexer import update_index
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
-from yente.data import get_matchable_schemata, get_scope
+from yente.data import get_matchable_schemata
 from yente.util import match_prefix, EntityRedirect
 
 
@@ -97,6 +97,7 @@ async def healthz():
 async def force_update(
     background_tasks: BackgroundTasks,
     token: str = Query("", title="Update token for authentication"),
+    sync: bool = Query(False, title="Wait until indexing is complete"),
 ):
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""
@@ -104,7 +105,10 @@ async def force_update(
         raise HTTPException(403, detail="Invalid token.")
     if token != settings.UPDATE_TOKEN:
         raise HTTPException(403, detail="Invalid token.")
-    background_tasks.add_task(update_index, force=True)
+    if sync:
+        await update_index(force=True)
+    else:
+        background_tasks.add_task(update_index, force=True)
     return {"status": "ok"}
 
 
@@ -244,8 +248,7 @@ async def fetch_entity(
         return RedirectResponse(url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    scope = await get_scope()
-    data = await serialize_entity(scope, entity, nested=True)
+    data = await serialize_entity(entity, nested=True)
     return data
 
 
