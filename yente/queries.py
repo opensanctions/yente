@@ -90,6 +90,17 @@ def text_query(
     return filter_query([should], dataset=dataset, schema=schema, filters=filters)
 
 
+def prefix_query(
+    dataset: Dataset,
+    prefix: str,
+):
+    if not len(prefix.strip()):
+        should = {"match_none": {}}
+    else:
+        should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
+    return filter_query([should], dataset=dataset)
+
+
 def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
     aggs = {}
     for field in fields:

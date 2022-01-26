@@ -182,12 +182,6 @@ async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, An
     return await _to_nested_dict(entity, depth=depth, path=[])
 
 
-async def get_index_stats() -> Dict[str, Any]:
-    es = await get_es()
-    stats = await es.indices.stats(index=settings.ENTITY_INDEX)
-    return stats.get("indices", {}).get(settings.ENTITY_INDEX)
-
-
 async def get_index_status() -> bool:
     es = await get_es()
     try:

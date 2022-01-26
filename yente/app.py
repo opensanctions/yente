@@ -23,9 +23,11 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.models import MAX_LIMIT
-from yente.queries import statement_query, text_query, entity_query, facet_aggregations
+from yente.queries import statement_query, text_query, entity_query, prefix_query
+from yente.queries import facet_aggregations
+
 from yente.search import get_entity, query_entities, query_results, statement_results
-from yente.search import serialize_entity, get_index_status, get_index_stats
+from yente.search import serialize_entity, get_index_status
 from yente.indexer import update_index
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
@@ -419,11 +421,9 @@ async def reconcile_suggest_entity(
 
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
-    await get_dataset(dataset)
-    entity = EntityProxy.from_dict(model, {"schema": settings.BASE_SCHEMA})
-    entity.add("name", prefix)
+    ds = await get_dataset(dataset)
     results = []
-    query = entity_query(ds, entity)
+    query = prefix_query(ds, prefix)
     async for result, score in query_entities(query, limit=limit):
         results.append(get_freebase_entity(result, score))
     return {
