@@ -29,12 +29,6 @@ class ScoredEntityResponse(EntityResponse):
     match: bool = False
 
 
-class IndexResponse(BaseModel):
-    datasets: List[str]
-    model: ModelToDict
-    index: Dict[str, Any]
-
-
 class HealthzResponse(BaseModel):
     status: str = "ok"
 
@@ -55,24 +49,29 @@ class TotalSpec(BaseModel):
     relation: str
 
 
-class SearchResponse(BaseModel):
-    results: List[EntityResponse]
-    facets: Dict[str, SearchFacet]
+class ResultsResponse(BaseModel):
     limit: int
     offset: int = 0
     total: TotalSpec
 
 
+class SearchResponse(ResultsResponse):
+    results: List[EntityResponse]
+    facets: Dict[str, SearchFacet]
+
+
 class EntityExample(BaseModel):
     schema_: str = Field(..., example=settings.BASE_SCHEMA, alias="schema")
-    properties: Dict[str, List[str]] = Field(..., example={"name": ["John Doe"]})
+    properties: Dict[str, Union[str, List[str]]] = Field(
+        ..., example={"name": ["John Doe"]}
+    )
 
 
 class EntityMatchQuery(BaseModel):
     queries: Dict[str, EntityExample]
 
 
-class EntityMatches(BaseModel):
+class EntityMatches(ResultsResponse):
     results: List[ScoredEntityResponse]
     query: EntityExample
 
@@ -96,11 +95,8 @@ class StatementModel(BaseModel):
     last_seen: datetime
 
 
-class StatementResponse(BaseModel):
+class StatementResponse(ResultsResponse):
     results: List[StatementModel]
-    limit: int
-    offset: int = 0
-    total: TotalSpec
 
 
 class FreebaseType(BaseModel):

@@ -28,7 +28,7 @@ class AsyncTextReaderWrapper:
 def match_prefix(prefix: str, *labels: Optional[str]):
     prefix = prefix.lower().strip()
     if not len(prefix):
-        return True
+        return False
     for label in labels:
         if label is None:
             continue

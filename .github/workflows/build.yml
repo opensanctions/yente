@@ -6,6 +6,40 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      index:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+        env:
+          node.name: index
+          cluster.name: yente-index
+          discovery.type: single-node
+        ports:
+          - 9200:9200
+
+    env:
+      YENTE_INDEX_URL: "http://index:9200/"
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.9"
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y -qq libicu-dev
+          pip install --no-cache-dir -q pyicu
+          pip install --no-cache-dir -q -r requirements.txt
+          pip install --no-cache-dir -q -e ".[dev]"
+          pip freeze
+      - name: Run pytest
+        run: |
+          pytest -v
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -38,12 +72,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push release
         uses: docker/build-push-action@v2
-        # if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

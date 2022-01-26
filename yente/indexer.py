@@ -27,6 +27,7 @@ async def entity_docs(dataset: Dataset, index: str):
         data = entity.to_dict()
         data["canonical_id"] = entity.id
         data["text"] = texts
+        # TODO: add partial dates
 
         entity_id = data.pop("id")
         yield {"_index": index, "_id": entity_id, "_source": data}
@@ -90,6 +91,10 @@ async def index_entities(
 async def index_statements(
     timestamp: datetime,
 ):
+    if not settings.STATEMENT_API:
+        log.warning("Statement API is disabled, not indexing statements.")
+        return
+
     next_index = versioned_index(settings.STATEMENT_INDEX, timestamp)
     es = await get_es()
     exists = await es.indices.exists(index=next_index)
@@ -97,9 +102,6 @@ async def index_statements(
         log.info("Index [%s] is up to date.", next_index)
         # await es.indices.delete(index=next_index)
         return
-
-    if not settings.STATEMENT_API:
-        log.warning("Statement API is disabled, not indexing statements.")
 
     mapping = make_statement_mapping()
     log.info("Create index: %s", next_index)
@@ -122,6 +124,8 @@ async def update_index(force=False):
 
 @aiocron.crontab("23 * * * *")
 async def regular_update():
+    if settings.TESTING:
+        return
     await check_update()
     await update_index()
 

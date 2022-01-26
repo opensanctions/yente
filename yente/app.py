@@ -5,16 +5,16 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form
 from fastapi import HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from followthemoney.types import registry
-from starlette.responses import RedirectResponse
 from followthemoney import model
+from followthemoney.types import registry
 from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
-from yente.models import HealthzResponse, IndexResponse
+from yente.models import EntityExample, HealthzResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.models import FreebaseEntitySuggestResponse
@@ -23,14 +23,16 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.models import MAX_LIMIT
-from yente.queries import statement_query, text_query, entity_query, facet_aggregations
+from yente.queries import statement_query, text_query, entity_query, prefix_query
+from yente.queries import facet_aggregations
+
 from yente.search import get_entity, query_entities, query_results, statement_results
-from yente.search import serialize_entity, get_index_status, get_index_stats
+from yente.search import serialize_entity, get_index_status
 from yente.indexer import update_index
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
-from yente.data import get_matchable_schemata, get_scope
+from yente.data import get_matchable_schemata
 from yente.util import match_prefix, EntityRedirect
 
 
@@ -57,7 +59,7 @@ PATH_DATASET = Path(
     description="Data source or collection name",
     example=settings.SCOPE_DATASET,
 )
-QUERY_PREFIX = Query(None, min_length=1, description="Search prefix")
+QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
 
 
 async def get_dataset(name: str) -> Dataset:
@@ -70,26 +72,7 @@ async def get_dataset(name: str) -> Dataset:
 
 @app.on_event("startup")
 async def startup_event():
-    # await update_index()
-    pass
-
-
-@app.get(
-    "/info",
-    summary="System information",
-    tags=["System information"],
-    response_model=IndexResponse,
-)
-async def index():
-    """Get system information: the list of available dataset names, the size of
-    the search index in memory, and the followthemoney model specification which
-    describes the types of entities and properties in use by the API."""
-    datasets = await get_datasets()
-    return {
-        "datasets": [d for d in datasets.keys()],
-        "model": model.to_dict(),
-        "index": await get_index_stats(),
-    }
+    asyncio.create_task(update_index())
 
 
 @app.get(
@@ -116,6 +99,7 @@ async def healthz():
 async def force_update(
     background_tasks: BackgroundTasks,
     token: str = Query("", title="Update token for authentication"),
+    sync: bool = Query(False, title="Wait until indexing is complete"),
 ):
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""
@@ -123,7 +107,10 @@ async def force_update(
         raise HTTPException(403, detail="Invalid token.")
     if token != settings.UPDATE_TOKEN:
         raise HTTPException(403, detail="Invalid token.")
-    background_tasks.add_task(update_index, force=True)
+    if sync:
+        await update_index(force=True)
+    else:
+        background_tasks.add_task(update_index, force=True)
     return {"status": "ok"}
 
 
@@ -155,24 +142,30 @@ async def search(
     filters = {"countries": countries, "topics": topics, "datasets": datasets}
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations(filters.keys())
-    return await query_results(
-        ds, query, limit, aggregations=aggregations, nested=nested, offset=offset
+    resp = await query_results(
+        ds,
+        query,
+        limit,
+        aggregations=aggregations,
+        nested=nested,
+        offset=offset,
     )
+    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
 async def _match_one(
     name: str,
     ds: Dataset,
-    example: Dict[str, Any],
+    example: EntityExample,
     fuzzy: bool,
     limit: int,
-    nested: bool,
 ) -> Tuple[str, Dict[str, Any]]:
-    entity = EntityProxy.from_dict(model, example, cleaned=False)
-    for prop, value in example.get("properties").items():
-        entity.add(prop, value, cleaned=False)
+    data = example.dict()
+    data["id"] = "sample"
+    data["schema"] = data.pop("schema_", data.pop("schema", None))
+    entity = model.get_proxy(data, cleaned=False)
     query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(ds, query, limit, nested=nested)
+    results = await query_results(ds, query, limit)
     results["query"] = entity.to_dict()
     return (name, results)
 
@@ -184,11 +177,10 @@ async def _match_one(
     response_model=EntityMatchResponse,
 )
 async def match(
-    query: EntityMatchQuery,
+    match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
     limit: int = Query(5, title="Number of results to return", lt=MAX_LIMIT),
     fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
-    nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -223,9 +215,11 @@ async def match(
     ```json
     "responses": {
         "entity1": {
+            "query": {},
             "results": [...]
         },
         "entity2": {
+            "query": {},
             "results": [...]
         }
     }
@@ -241,8 +235,8 @@ async def match(
     """
     ds = await get_dataset(dataset)
     tasks = []
-    for name, example in query.get("queries").items():
-        tasks.append(_match_one(name, ds, example, fuzzy, limit, nested))
+    for name, example in match.queries.items():
+        tasks.append(_match_one(name, ds, example, fuzzy, limit))
     if not len(tasks):
         raise HTTPException(400, "No queries provided.")
     responses = await asyncio.gather(*tasks)
@@ -263,9 +257,8 @@ async def fetch_entity(
         return RedirectResponse(url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    scope = await get_scope()
-    data = await serialize_entity(scope, entity, nested=True)
-    return data
+    data = await serialize_entity(entity, nested=True)
+    return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
 
 
 @app.get(
@@ -307,7 +300,8 @@ async def statements(
         value=value,
         schema=schema,
     )
-    return await statement_results(query, limit, offset)
+    resp = await statement_results(query, limit, offset)
+    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
 @app.get(
@@ -390,9 +384,8 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     # log.info("Reconcile: %r", query)
     limit = min(MAX_LIMIT, int(query.get("limit", 5)))
     type = query.get("type", settings.BASE_SCHEMA)
-    proxy = EntityProxy.from_dict(model, {"schema": type})
-    proxy.add("name", query.get("query"))
-    # proxy.add("notes", query.get("query"))
+    proxy = model.make_entity(type)
+    proxy.add("alias", query.get("query"))
     for p in query.get("properties", []):
         prop = model.get_qname(p.get("pid"))
         if prop is None:
@@ -428,10 +421,8 @@ async def reconcile_suggest_entity(
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
     ds = await get_dataset(dataset)
-    entity = EntityProxy.from_dict(model, {"schema": settings.BASE_SCHEMA})
-    entity.add("name", prefix)
     results = []
-    query = entity_query(ds, entity)
+    query = prefix_query(ds, prefix)
     async for result, score in query_entities(query, limit=limit):
         results.append(get_freebase_entity(result, score))
     return {
@@ -453,7 +444,7 @@ async def reconcile_suggest_property(
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
-    ds = get_dataset(dataset)
+    await get_dataset(dataset)
     schemata = await get_matchable_schemata()
     matches = []
     for prop in model.properties:
@@ -482,7 +473,7 @@ async def reconcile_suggest_type(
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
-    ds = get_dataset(dataset)
+    await get_dataset(dataset)
     matches = []
     for schema in await get_matchable_schemata():
         if match_prefix(prefix, schema.name, schema.label):

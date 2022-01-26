@@ -15,5 +15,18 @@ setup(
     author_email="info@opensanctions.org",
     packages=find_packages(exclude=["examples", "test"]),
     namespace_packages=[],
+    extras_require={
+        "dev": [
+            "pip>=10.0.0",
+            "bump2version",
+            "wheel>=0.29.0",
+            "twine",
+            "mypy",
+            "pytest",
+            "pytest-cov",
+            "flake8>=2.6.0",
+            "black",
+        ],
+    },
     zip_safe=False,
 )

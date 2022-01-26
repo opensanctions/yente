@@ -12,11 +12,13 @@ log = logging.getLogger(__name__)
 
 def filter_query(
     shoulds,
-    dataset: Dataset,
+    dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: Dict[str, List[str]] = {},
 ):
-    filterqs = [{"terms": {"datasets": dataset.source_names}}]
+    filterqs = []
+    if dataset is not None:
+        filterqs.append({"terms": {"datasets": dataset.source_names}})
     if schema is not None:
         schemata = schema.matchable_schemata
         schemata.add(schema)
@@ -38,13 +40,15 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
     for prop, value in entity.itervalues():
         if prop.type == registry.name:
             query = {
-                "match_phrase": {
+                "match": {
                     "names": {
                         "query": value,
-                        "slop": 3,
-                        # "fuzziness": 1,
-                        "boost": 3.0,
-                        # "lenient": True,
+                        "lenient": False,
+                        "operator": "AND",
+                        "minimum_should_match": "60%",
+                        # "slop": 3,
+                        "fuzziness": 1,
+                        # "boost": 3.0,
                     }
                 }
             }
@@ -61,7 +65,8 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
         shoulds.append({"terms": {field: texts}})
     for text in texts:
         shoulds.append({"match_phrase": {"text": text}})
-    return filter_query(shoulds, dataset, schema=entity.schema)
+    # print("XXXX", entity.to_dict())
+    return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 
 def text_query(
@@ -85,7 +90,18 @@ def text_query(
                 "lenient": fuzzy,
             }
         }
-    return filter_query([should], dataset, schema=schema, filters=filters)
+    return filter_query([should], dataset=dataset, schema=schema, filters=filters)
+
+
+def prefix_query(
+    dataset: Dataset,
+    prefix: str,
+):
+    if not len(prefix.strip()):
+        should = {"match_none": {}}
+    else:
+        should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
+    return filter_query([should], dataset=dataset)
 
 
 def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:

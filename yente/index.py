@@ -6,7 +6,7 @@ from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import ElasticsearchWarning
 from elasticsearch.exceptions import TransportError, ConnectionError
 
-from yente.settings import ES_URL, ES_INDEX
+from yente import settings
 
 warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 
@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 
 
 @cache
-async def get_es():
-    log.info("Connection to ES at: %s", ES_URL)
-    es = AsyncElasticsearch(hosts=[ES_URL])
+async def get_es() -> AsyncElasticsearch:
+    log.info("Connection to ES at: %s", settings.ES_URL)
+    es = AsyncElasticsearch(hosts=[settings.ES_URL])
     for retry in range(7):
         try:
             await es.cluster.health(wait_for_status="yellow", request_timeout=5)
