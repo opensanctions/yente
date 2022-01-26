@@ -59,7 +59,7 @@ async def query_results(
         aggregations=aggregations,
     )
     async for result, score in result_entities(resp):
-        data = await serialize_entity(dataset, result, nested=nested)
+        data = await serialize_entity(result, nested=nested)
         data["score"] = score
         results.append(data)
     hits = resp.get("hits", {})
@@ -130,9 +130,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
         return None
 
 
-async def get_adjacent(
-    dataset: Dataset, entity: Entity
-) -> AsyncGenerator[Tuple[Property, Entity], None]:
+async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity], None]:
     es = await get_es()
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
@@ -148,7 +146,7 @@ async def get_adjacent(
 
     # Do we need to query referents here?
     query = {"term": {"entities": entity.id}}
-    filtered = filter_query([query], dataset)
+    filtered = filter_query([query])
     resp = await es.search(index=ENTITY_INDEX, query=filtered, size=9999)
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
@@ -158,7 +156,7 @@ async def get_adjacent(
 
 
 async def _to_nested_dict(
-    dataset: Dataset, entity: Entity, depth: int, path: List[str]
+    entity: Entity, depth: int, path: List[str]
 ) -> Dict[str, Any]:
     next_depth = depth if entity.schema.edge else depth - 1
     next_path = path + [entity.id]
@@ -166,10 +164,10 @@ async def _to_nested_dict(
     if next_depth < 0:
         return data
     nested: Dict[str, Any] = {}
-    async for prop, adjacent in get_adjacent(dataset, entity):
+    async for prop, adjacent in get_adjacent(entity):
         if adjacent.id in next_path:
             continue
-        value = await _to_nested_dict(dataset, adjacent, next_depth, next_path)
+        value = await _to_nested_dict(adjacent, next_depth, next_path)
         if prop.name not in nested:
             nested[prop.name] = []
         nested[prop.name].append(value)
@@ -177,11 +175,9 @@ async def _to_nested_dict(
     return data
 
 
-async def serialize_entity(
-    dataset: Dataset, entity: Entity, nested: bool = False
-) -> Dict[str, Any]:
+async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, Any]:
     depth = 1 if nested else -1
-    return await _to_nested_dict(dataset, entity, depth=depth, path=[])
+    return await _to_nested_dict(entity, depth=depth, path=[])
 
 
 async def get_index_stats() -> Dict[str, Any]:

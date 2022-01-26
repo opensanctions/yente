@@ -12,11 +12,13 @@ log = logging.getLogger(__name__)
 
 def filter_query(
     shoulds,
-    dataset: Dataset,
+    dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: Dict[str, List[str]] = {},
 ):
-    filterqs = [{"terms": {"datasets": dataset.source_names}}]
+    filterqs = []
+    if dataset is not None:
+        filterqs.append({"terms": {"datasets": dataset.source_names}})
     if schema is not None:
         schemata = schema.matchable_schemata
         schemata.add(schema)
@@ -61,7 +63,7 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
         shoulds.append({"terms": {field: texts}})
     for text in texts:
         shoulds.append({"match_phrase": {"text": text}})
-    return filter_query(shoulds, dataset, schema=entity.schema)
+    return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 
 def text_query(
@@ -85,7 +87,7 @@ def text_query(
                 "lenient": fuzzy,
             }
         }
-    return filter_query([should], dataset, schema=schema, filters=filters)
+    return filter_query([should], dataset=dataset, schema=schema, filters=filters)
 
 
 def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
