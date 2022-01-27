@@ -27,14 +27,15 @@ jobs:
         uses: actions/setup-python@v2.3.1
         with:
           python-version: "3.9"
+          cache: "pip"
       - name: Install dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get install -y -qq libicu-dev
-          pip install --no-cache-dir -q pyicu
-          pip install --no-cache-dir -q -r requirements.txt
-          pip install --no-cache-dir -q -e ".[dev]"
+          pip install -q pyicu
+          pip install -q -r requirements.txt
+          pip install -q -e ".[dev]"
           pip freeze
       - name: Run pytest
         run: |
