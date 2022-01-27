@@ -43,5 +43,7 @@ def load_data():
 @pytest.fixture(autouse=True)
 def flush_cached_es():
     """Reference: https://github.com/pytest-dev/pytest-asyncio/issues/38#issuecomment-264418154"""
-    yield
-    clear_state()
+    try:
+        yield
+    finally:
+        clear_state()
