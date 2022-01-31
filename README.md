@@ -20,7 +20,7 @@ docker-compose up
 
 This will make the matching API available on Port 8000 of the local machine.
 
-If you run the container in a cluster management system like Kubernetes, you may want to find a way to pull a fresh container every night so that a new image with updated data will be pulled from the Docker registry. You will then also need to re-run the indexer, the equivalent of the last line in the example above.
+If you run the container in a cluster management system like Kubernetes, you will need to run both of the containers defined in the compose file (the API and ElasticSearch instance). You will also need to assign the API container network policy permissions to fetch data from `data.opensanctions.org` once every hour so that it can update itself.
 
 Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) if you are interested in exploring a hosted solution for running the API.
 
