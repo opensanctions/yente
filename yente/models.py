@@ -1,12 +1,10 @@
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Union
-from followthemoney.model import ModelToDict
+from datetime import datetime
+from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
 
 from yente import settings
 
-MAX_LIMIT = 1000
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
 

@@ -9,7 +9,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney import model
 from followthemoney.types import registry
-from followthemoney.proxy import EntityProxy
 from followthemoney.exc import InvalidData
 
 from yente import settings
@@ -22,7 +21,6 @@ from yente.models import FreebasePropertySuggestResponse
 from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
-from yente.models import MAX_LIMIT
 from yente.queries import statement_query, text_query, entity_query, prefix_query
 from yente.queries import facet_aggregations
 
@@ -33,7 +31,7 @@ from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
 from yente.data import get_matchable_schemata
-from yente.util import match_prefix, EntityRedirect
+from yente.util import match_prefix, limit_window, EntityRedirect
 
 
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +58,7 @@ PATH_DATASET = Path(
     example=settings.SCOPE_DATASET,
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
+MATCH_PAGE = 5
 
 
 async def get_dataset(name: str) -> Dataset:
@@ -127,14 +126,15 @@ async def search(
     countries: List[str] = Query([], title="Filter by country code"),
     topics: List[str] = Query([], title="Filter by entity topics"),
     datasets: List[str] = Query([], title="Filter by data sources"),
-    limit: int = Query(10, title="Number of results to return", max=MAX_LIMIT),
-    offset: int = Query(0, title="Start at result", max=MAX_LIMIT),
+    limit: int = Query(10, title="Number of results to return", max=settings.MAX_PAGE),
+    offset: int = Query(0, title="Start at result", max=settings.MAX_PAGE),
     fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
     nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead."""
+    limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
     schema_obj = model.get(schema)
     if schema_obj is None:
@@ -143,12 +143,11 @@ async def search(
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations(filters.keys())
     resp = await query_results(
-        ds,
         query,
-        limit,
-        aggregations=aggregations,
-        nested=nested,
+        limit=limit,
         offset=offset,
+        nested=nested,
+        aggregations=aggregations,
     )
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
@@ -165,7 +164,7 @@ async def _match_one(
     data["schema"] = data.pop("schema_", data.pop("schema", None))
     entity = model.get_proxy(data, cleaned=False)
     query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(ds, query, limit)
+    results = await query_results(query, limit=limit, offset=0, nested=False)
     results["query"] = entity.to_dict()
     return (name, results)
 
@@ -179,7 +178,11 @@ async def _match_one(
 async def match(
     match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
-    limit: int = Query(5, title="Number of results to return", lt=MAX_LIMIT),
+    limit: int = Query(
+        MATCH_PAGE,
+        title="Number of results to return",
+        lt=settings.MAX_PAGE,
+    ),
     fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
 ):
     """Match entities based on a complex set of criteria, like name, date of birth
@@ -234,6 +237,7 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
+    limit, _ = limit_window(limit, 0, 10)
     tasks = []
     for name, example in match.queries.items():
         tasks.append(_match_one(name, ds, example, fuzzy, limit))
@@ -274,8 +278,16 @@ async def statements(
     prop: Optional[str] = Query(None, title="Filter by property name"),
     value: Optional[str] = Query(None, title="Filter by property value"),
     schema: Optional[str] = Query(None, title="Filter by schema type"),
-    limit: int = Query(50, title="Number of results to return"),
-    offset: int = Query(0, title="Number of results to skip before returning them"),
+    limit: int = Query(
+        50,
+        title="Number of results to return",
+        lt=settings.MAX_PAGE,
+    ),
+    offset: int = Query(
+        0,
+        title="Number of results to skip before returning them",
+        lt=settings.MAX_PAGE,
+    ),
 ):
     """Access raw entity data as statements. OpenSanctions stores all of its
     material as a set of statements, e.g. 'the US sanctions list, as of our
@@ -300,6 +312,7 @@ async def statements(
         value=value,
         schema=schema,
     )
+    limit, offset = limit_window(limit, offset, 50)
     resp = await statement_results(query, limit, offset)
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
@@ -382,7 +395,7 @@ async def reconcile_queries(
 async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
-    limit = min(MAX_LIMIT, int(query.get("limit", 5)))
+    limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
     type = query.get("type", settings.BASE_SCHEMA)
     proxy = model.make_entity(type)
     proxy.add("alias", query.get("query"))
@@ -398,7 +411,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     results = []
     # log.info("QUERY %r %s", proxy.to_dict(), limit)
     query = entity_query(dataset, proxy, fuzzy=True)
-    async for result, score in query_entities(query, limit=limit):
+    async for result, score in query_entities(query, limit=limit, offset=offset):
         results.append(get_freebase_entity(result, score))
     return name, {"result": results}
 
@@ -412,7 +425,11 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
 async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
-    limit: int = Query(10, description="Number of suggestions to return"),
+    limit: int = Query(
+        MATCH_PAGE,
+        description="Number of suggestions to return",
+        lt=settings.MAX_PAGE,
+    ),
 ):
     """Suggest an entity based on a text query. This is functionally very
     similar to the basic search API, but returns data in the structure assumed
@@ -423,7 +440,8 @@ async def reconcile_suggest_entity(
     ds = await get_dataset(dataset)
     results = []
     query = prefix_query(ds, prefix)
-    async for result, score in query_entities(query, limit=limit):
+    limit, offset = limit_window(limit, 0, MATCH_PAGE)
+    async for result, score in query_entities(query, limit=limit, offset=offset):
         results.append(get_freebase_entity(result, score))
     return {
         "prefix": prefix,

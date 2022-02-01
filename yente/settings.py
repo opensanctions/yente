@@ -92,3 +92,5 @@ ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
 
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
+
+MAX_PAGE = 9900
