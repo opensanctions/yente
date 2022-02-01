@@ -41,6 +41,9 @@ def match_prefix(prefix: str, *labels: Optional[str]):
 
 
 def limit_window(limit: Any, offset: Any, default_limit: int = 10) -> Tuple[int, int]:
+    """ElasticSearch can only return results from within a window of the first 10,000
+    scored results. This means that offset + limit may never exceed 10,000 - so here's
+    a bunch of bounding magic to enforce that."""
     try:
         num_limit = max(0, int(limit))
     except (ValueError, TypeError):

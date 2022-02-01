@@ -78,7 +78,7 @@ def test_search_offset():
     assert "results" in data, data
     results = data.get("results")
     assert len(results) == 0, results
-    assert data["offset"] == 1000, data["offset"]
+    assert data["offset"] == 100, data["offset"]
 
 
 def test_search_range_offset():
