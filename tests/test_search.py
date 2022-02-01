@@ -78,3 +78,20 @@ def test_search_offset():
     assert "results" in data, data
     results = data.get("results")
     assert len(results) == 0, results
+    assert data["offset"] == 100, data["offset"]
+
+
+def test_search_range_offset():
+    res = client.get("/search/default?offset=100000&q=putin")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert data["offset"] < 10000, data
+    assert data["limit"] == 0, data
+
+
+def test_search_range_limit():
+    res = client.get("/search/default?limit=100000&q=putin")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert data["limit"] < 10000, data
+    assert data["offset"] == 0, data

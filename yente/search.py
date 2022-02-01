@@ -33,24 +33,26 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
             yield entity, score
 
 
-async def query_entities(query: Dict[Any, Any], limit: int = 5):
+async def query_entities(query: Dict[Any, Any], limit: int = 5, offset: int = 0):
     # pprint(query)
     es = await get_es()
-    resp = await es.search(index=settings.ENTITY_INDEX, query=query, size=limit)
+    resp = await es.search(
+        index=settings.ENTITY_INDEX,
+        query=query,
+        size=limit,
+        from_=offset,
+    )
     async for entity, score in result_entities(resp):
         yield entity, score
 
 
 async def query_results(
-    dataset: Dataset,
     query: Dict[Any, Any],
     limit: int,
     nested: bool = False,
-    offset: Optional[int] = None,
+    offset: int = 0,
     aggregations: Optional[Dict] = None,
 ):
-    if offset is None:
-        offset = 0
     es = await get_es()
     results = []
     resp = await es.search(
@@ -149,7 +151,11 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     # Do we need to query referents here?
     query = {"term": {"entities": entity.id}}
     filtered = filter_query([query])
-    resp = await es.search(index=settings.ENTITY_INDEX, query=filtered, size=9999)
+    resp = await es.search(
+        index=settings.ENTITY_INDEX,
+        query=filtered,
+        size=settings.MAX_PAGE,
+    )
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
