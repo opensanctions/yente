@@ -14,7 +14,7 @@ In order to use the OpenSanctions API, we recommend running an on-premises insta
 
 ```bash
 mkdir -p yente && cd yente
-wget https://github.com/opensanctions/yente/blob/main/docker-compose.yml
+wget https://raw.githubusercontent.com/opensanctions/yente/main/docker-compose.yml
 docker-compose up
 ```
 
@@ -38,13 +38,19 @@ The API server has a few settings, which are passed as environment variables. Th
 
 ### Development
 
-For development, install package like this:
+If you are fine working on the package while it is running docker, use the docker shell:
+
+```bash
+make shell
+```
+
+For development without docker, install the Python package like this:
 
 ```bash
 pip install -e .
 ```
 
-Finally, you can run an auto-reloading web server like this:
+Once you've set the ``YENTE_ELASTICSEARCH_URL`` environment variable to point to a running instance of ElasticSearch, you can run an auto-reloading web server like this:
 
 ```bash
 uvicorn yente.app:app --reload

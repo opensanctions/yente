@@ -1,13 +1,12 @@
 
 all:
-	make index
 	make api
 
-run: build
-	docker-compose run --rm app bash
-
 build:
-	docker-compose build --pull
+	docker build -t ghcr.io/opensanctions/yente:latest .
+
+shell: build
+	docker-compose run --rm app bash
 
 services:
 	docker-compose up --remove-orphans -d index
