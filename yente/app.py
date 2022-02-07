@@ -255,7 +255,10 @@ async def fetch_entity(
 ):
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
-    passport, sanction and associated entities) included."""
+    passport, sanction and associated entities) included.
+
+    Intro: [entity data model](https://www.opensanctions.org/docs/entities/).
+    """
     try:
         entity = await get_entity(entity_id)
     except EntityRedirect as redir:
