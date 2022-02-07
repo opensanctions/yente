@@ -189,6 +189,8 @@ async def match(
     and nationality of a person. This works by submitting a batch of entities, each
     formatted like those returned by the API.
 
+    Tutorial: [Using the matching API to do KYC-style checks](/articles/2022-02-01-matching-api/).
+
     For example, the following would be valid query examples:
 
     ```json
@@ -289,15 +291,10 @@ async def statements(
         lt=settings.MAX_PAGE,
     ),
 ):
-    """Access raw entity data as statements. OpenSanctions stores all of its
-    material as a set of statements, e.g. 'the US sanctions list, as of our
-    most recent update, claims that entity X has the property `name` set to
-    the value `John Doe`'.
+    """Access raw entity data as statements.
 
-    All other forms of the data, including the nested JSON format usually
-    returned by this API, are derived from this format and simplified for
-    easier use. Using the raw statement data offered by this API will grant
-    users access to detailed provenance information for each property value.
+    Read [statement-based data model](https://www.opensanctions.org/docs/statements/)
+    for context regarding this endpoint.
     """
     if not settings.STATEMENT_API:
         raise HTTPException(501, "Statement API not enabled.")
@@ -330,6 +327,8 @@ async def reconcile(
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
     [OpenRefine](https://openrefine.org).
+
+    Tutorial: [Using OpenRefine to match entities in a spreadsheet](/articles/2022-01-10-openrefine-reconciliation/).
     """
     ds = await get_dataset(dataset)
     if queries is not None:
