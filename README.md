@@ -4,11 +4,9 @@ This directory contains code and a Docker image for running an API to match data
 OpenSanctions. It is intended to be run on-premises in KYC contexts so that no customer
 data leaves the deployment context.
 
-Documentation: https://www.opensanctions.org/docs/api/
-
-## Demo instance
-
-See https://api.opensanctions.org 
+* Documentation: https://www.opensanctions.org/docs/api/
+* Licensing OpenSanctions for commercial use: https://www.opensanctions.org/licensing/
+* Demo instance: https://api.opensanctions.org
 
 ## Usage
 
