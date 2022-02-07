@@ -5,7 +5,7 @@ OpenSanctions. It is intended to be run on-premises in KYC contexts so that no c
 data leaves the deployment context.
 
 * Documentation: https://www.opensanctions.org/docs/api/
-* Licensing OpenSanctions for commercial use: https://www.opensanctions.org/licensing/
+* Commercial use: https://www.opensanctions.org/licensing/
 * Demo instance: https://api.opensanctions.org
 
 ## Usage
