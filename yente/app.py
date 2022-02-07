@@ -341,6 +341,11 @@ async def reconcile(
         "identifierSpace": "https://opensanctions.org/reference/#schema",
         "schemaSpace": "https://opensanctions.org/reference/#schema",
         "view": {"url": ("https://opensanctions.org/entities/{{id}}/")},
+        "preview": {
+            "url": "https://opensanctions.org/entities/preview/{{id}}/",
+            "width": 430,
+            "height": 300,
+        },
         "suggest": {
             "entity": {
                 "service_url": base_url,

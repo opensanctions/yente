@@ -143,6 +143,12 @@ class FreebaseManifestView(BaseModel):
     url: str
 
 
+class FreebaseManifestPreview(BaseModel):
+    url: str
+    width: int
+    height: int
+
+
 class FreebaseManifestSuggestType(BaseModel):
     service_url: AnyHttpUrl
     service_path: str
@@ -160,6 +166,7 @@ class FreebaseManifest(BaseModel):
     identifierSpace: AnyHttpUrl
     schemaSpace: AnyHttpUrl
     view: FreebaseManifestView
+    preview: FreebaseManifestPreview
     suggest: FreebaseManifestSuggest
     defaultTypes: List[FreebaseType]
 
