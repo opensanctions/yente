@@ -5,7 +5,7 @@ aiocron==1.8
 aiocsv==1.2.1
 aiohttp[speedups]==3.8.1
 elasticsearch[async]==7.17.0
-fastapi==0.73.0
+fastapi==0.74.0
 uvicorn[standard]==0.17.4
 python-multipart==0.0.5
 email-validator==1.1.3
