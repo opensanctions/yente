@@ -88,6 +88,7 @@ SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET", "all")
 ENDPOINT_URL = env_str("YENTE_ENDPOINT_URL", "http://localhost:8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "")
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
+LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "true"))
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
 
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
