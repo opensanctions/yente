@@ -7,32 +7,40 @@ from yente import settings
 
 def configure_logging(level=logging.INFO):
     """Configure log levels and structured logging"""
-    processors = [
-        structlog.stdlib.add_log_level,
+    shared_processors = [
+        structlog.processors.add_log_level,
         structlog.stdlib.add_logger_name,
-        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f"),
+        # structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
-        structlog.processors.format_exc_info,
+        structlog.processors.TimeStamper(fmt="iso"),
+        # structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
     ]
+
     if settings.LOG_JSON:
-        processors.append(format_json)
+        shared_processors.append(format_json)
         formatter = structlog.stdlib.ProcessorFormatter(
-            foreign_pre_chain=processors,
+            foreign_pre_chain=shared_processors,
             processor=structlog.processors.JSONRenderer(),
         )
     else:
         formatter = structlog.stdlib.ProcessorFormatter(
-            foreign_pre_chain=processors,
+            foreign_pre_chain=shared_processors,
             processor=structlog.dev.ConsoleRenderer(),
         )
 
-    # processors.append(structlog.stdlib.ProcessorFormatter.wrap_for_formatter)
+    processors = shared_processors + [
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ]
 
     # configuration for structlog based loggers
     structlog.configure(
+        cache_logger_on_first_use=True,
+        # wrapper_class=structlog.stdlib.AsyncBoundLogger,
+        wrapper_class=structlog.stdlib.BoundLogger,
         processors=processors,
+        context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
     )
 
@@ -58,8 +66,7 @@ def configure_logging(level=logging.INFO):
     error_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    root_logger.handlers = []
+    root_logger.setLevel(settings.LOG_LEVEL)
     root_logger.addHandler(out_handler)
     root_logger.addHandler(error_handler)
 

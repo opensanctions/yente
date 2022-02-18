@@ -1,9 +1,11 @@
 import json
-import logging
+import time
+import structlog
 from urllib.parse import urljoin
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form, Depends
+from fastapi import Request, Response
 from fastapi import HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,8 +36,7 @@ from yente.data import get_matchable_schemata
 from yente.util import match_prefix, limit_window, EntityRedirect
 
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
 app = FastAPI(
     title=settings.TITLE,
     description=settings.DESCRIPTION,
@@ -67,6 +68,27 @@ async def get_dataset(name: str) -> Dataset:
     if dataset is None:
         raise HTTPException(404, detail="No such dataset.")
     return dataset
+
+
+@app.middleware("http")
+async def request_middleware(request: Request, call_next):
+    start_time = time.time()
+    # request_id = str(uuid.uuid4())
+    # request_id_contextvar.set(request_id)
+    # debug("Request started")
+    response = cast(Response, await call_next(request))
+    time_delta = time.time() - start_time
+    log.info(
+        str(request.url.path),
+        action="request",
+        method=request.method,
+        query=request.url.query,
+        ua=request.headers.get("user-agent"),
+        client=request.client.host,
+        status=response.status_code,
+        took=time_delta,
+    )
+    return response
 
 
 @app.on_event("startup")
@@ -324,6 +346,7 @@ async def statements(
     response_model=Union[FreebaseManifest, FreebaseQueryResult],
 )
 async def reconcile(
+    request: Request,
     queries: Optional[str] = None,
     dataset: str = PATH_DATASET,
 ):
@@ -336,7 +359,7 @@ async def reconcile(
     ds = await get_dataset(dataset)
     if queries is not None:
         return await reconcile_queries(ds, queries)
-    base_url = urljoin(settings.ENDPOINT_URL, f"/reconcile/{dataset}")
+    base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
     return {
         "versions": ["0.2"],
         "name": f"{ds.title} ({settings.TITLE})",
@@ -411,7 +434,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         if prop is None:
             continue
         try:
-            proxy.add_cast(prop.schema, prop.name, p.get("v"), fuzzy=True)
+            proxy.add(prop.name, p.get("v"), fuzzy=True)
         except InvalidData:
             log.exception("Invalid property is set.")
 
