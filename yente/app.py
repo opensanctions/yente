@@ -14,6 +14,7 @@ from followthemoney.types import registry
 from followthemoney.exc import InvalidData
 
 from yente import settings
+from yente.context import Context
 from yente.entity import Dataset
 from yente.models import EntityExample, HealthzResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
@@ -73,20 +74,21 @@ async def get_dataset(name: str) -> Dataset:
 @app.middleware("http")
 async def request_middleware(request: Request, call_next):
     start_time = time.time()
-    # request_id = str(uuid.uuid4())
-    # request_id_contextvar.set(request_id)
-    # debug("Request started")
+    ctx = Context.from_request(request)
     response = cast(Response, await call_next(request))
     time_delta = time.time() - start_time
     log.info(
         str(request.url.path),
         action="request",
         method=request.method,
+        path=request.url.path,
         query=request.url.query,
-        ua=request.headers.get("user-agent"),
+        agent=request.headers.get("user-agent"),
+        referer=request.headers.get("referer"),
         client=request.client.host,
-        status=response.status_code,
+        code=response.status_code,
         took=time_delta,
+        **ctx.log,
     )
     return response
 
@@ -142,6 +144,7 @@ async def force_update(
     response_model=SearchResponse,
 )
 async def search(
+    ctx: Context = Depends(Context.get),
     q: str = Query("", title="Query text"),
     dataset: str = PATH_DATASET,
     schema: str = Query(settings.BASE_SCHEMA, title="Types of entities that can match"),
@@ -150,7 +153,7 @@ async def search(
     datasets: List[str] = Query([], title="Filter by data sources"),
     limit: int = Query(10, title="Number of results to return", max=settings.MAX_PAGE),
     offset: int = Query(0, title="Start at result", max=settings.MAX_PAGE),
-    fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
+    fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Search endpoint for matching entities based on a simple piece of text, e.g.
@@ -163,7 +166,7 @@ async def search(
         raise HTTPException(400, detail="Invalid schema")
     filters = {"countries": countries, "topics": topics, "datasets": datasets}
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
-    aggregations = facet_aggregations(filters.keys())
+    aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await query_results(
         query,
         limit=limit,
@@ -171,10 +174,19 @@ async def search(
         nested=nested,
         aggregations=aggregations,
     )
+    log.info(
+        "Query",
+        action="search",
+        query=q,
+        dataset=ds.name,
+        total=resp.get("total"),
+        **ctx.log,
+    )
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
 async def _match_one(
+    ctx: Context,
     name: str,
     ds: Dataset,
     example: EntityExample,
@@ -188,6 +200,7 @@ async def _match_one(
     query = entity_query(ds, entity, fuzzy=fuzzy)
     results = await query_results(query, limit=limit, offset=0, nested=False)
     results["query"] = entity.to_dict()
+    log.info("Match", action="match", schema=data["schema"], **ctx.log)
     return (name, results)
 
 
@@ -199,6 +212,7 @@ async def _match_one(
 )
 async def match(
     match: EntityMatchQuery,
+    ctx: Context = Depends(Context.get),
     dataset: str = PATH_DATASET,
     limit: int = Query(
         MATCH_PAGE,
@@ -264,7 +278,7 @@ async def match(
     limit, _ = limit_window(limit, 0, 10)
     tasks = []
     for name, example in match.queries.items():
-        tasks.append(_match_one(name, ds, example, fuzzy, limit))
+        tasks.append(_match_one(ctx, name, ds, example, fuzzy, limit))
     if not len(tasks):
         raise HTTPException(400, "No queries provided.")
     responses = await asyncio.gather(*tasks)
@@ -273,7 +287,8 @@ async def match(
 
 @app.get("/entities/{entity_id}", tags=["Data access"], response_model=EntityResponse)
 async def fetch_entity(
-    entity_id: str = Path(None, description="ID of the entity to retrieve")
+    ctx: Context = Depends(Context.get),
+    entity_id: str = Path(None, description="ID of the entity to retrieve"),
 ):
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
@@ -289,6 +304,7 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=True)
+    log.info(data.get("caption"), action="entity", entity_id=entity_id, **ctx.log)
     return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
 
 
@@ -347,6 +363,7 @@ async def statements(
 )
 async def reconcile(
     request: Request,
+    ctx: Context = Depends(Context.get),
     queries: Optional[str] = None,
     dataset: str = PATH_DATASET,
 ):
@@ -358,7 +375,7 @@ async def reconcile(
     """
     ds = await get_dataset(dataset)
     if queries is not None:
-        return await reconcile_queries(ds, queries)
+        return await reconcile_queries(ctx, ds, queries)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
     return {
         "versions": ["0.2"],
@@ -396,16 +413,18 @@ async def reconcile(
     response_model=FreebaseQueryResult,
 )
 async def reconcile_post(
+    ctx: Context = Depends(Context.get),
     dataset: str = PATH_DATASET,
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
 ):
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     ds = await get_dataset(dataset)
-    return await reconcile_queries(ds, queries)
+    return await reconcile_queries(ctx, ds, queries)
 
 
 async def reconcile_queries(
+    ctx: Context,
     dataset: Dataset,
     data: str,
 ):
@@ -417,12 +436,14 @@ async def reconcile_queries(
 
     tasks = []
     for k, q in queries.items():
-        tasks.append(reconcile_query(k, dataset, q))
+        tasks.append(reconcile_query(ctx, k, dataset, q))
     results = await asyncio.gather(*tasks)
     return {k: r for (k, r) in results}
 
 
-async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
+async def reconcile_query(
+    ctx: Context, name: str, dataset: Dataset, query: Dict[str, Any]
+):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
     limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
@@ -443,6 +464,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     query = entity_query(dataset, proxy, fuzzy=True)
     async for result, score in query_entities(query, limit=limit, offset=offset):
         results.append(get_freebase_entity(result, score))
+    log.info("Reconcile", action="match", schema=proxy.schema.name, **ctx.log)
     return name, {"result": results}
 
 

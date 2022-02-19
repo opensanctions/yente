@@ -11,10 +11,10 @@ def configure_logging(level=logging.INFO):
         structlog.processors.add_log_level,
         structlog.stdlib.add_logger_name,
         # structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.StackInfoRenderer(),
+        # structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
-        # structlog.processors.format_exc_info,
+        structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
     ]
 
