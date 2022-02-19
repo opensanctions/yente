@@ -82,7 +82,11 @@ async def request_middleware(request: Request, call_next):
             _, user_id = user_id.split(" ", 1)
         user_id = slugify(user_id)
     trace_id = uuid4().hex
-    bind_contextvars(user_id=user_id, trace_id=trace_id)
+    bind_contextvars(
+        user_id=user_id,
+        trace_id=trace_id,
+        client_ip=request.client.host,
+    )
     response = cast(Response, await call_next(request))
     time_delta = time.time() - start_time
     response.headers["x-trace-id"] = trace_id
@@ -96,7 +100,6 @@ async def request_middleware(request: Request, call_next):
         query=request.url.query,
         agent=request.headers.get("user-agent"),
         referer=request.headers.get("referer"),
-        client=request.client.host,
         code=response.status_code,
         took=time_delta,
     )

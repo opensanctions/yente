@@ -1,6 +1,7 @@
 import sys
 import logging
 import structlog
+from structlog.dev import ConsoleRenderer, set_exc_info
 from structlog.contextvars import merge_contextvars
 from structlog.processors import UnicodeDecoder, TimeStamper
 from structlog.processors import format_exc_info, add_log_level
@@ -19,7 +20,7 @@ def configure_logging(level=logging.INFO):
         # structlog.stdlib.PositionalArgumentsFormatter(),
         # structlog.processors.StackInfoRenderer(),
         merge_contextvars,
-        structlog.dev.set_exc_info,
+        set_exc_info,
         TimeStamper(fmt="iso"),
         format_exc_info,
         UnicodeDecoder(),
@@ -34,7 +35,7 @@ def configure_logging(level=logging.INFO):
     else:
         formatter = ProcessorFormatter(
             foreign_pre_chain=shared_processors,
-            processor=structlog.dev.ConsoleRenderer(),
+            processor=ConsoleRenderer(),
         )
 
     processors = shared_processors + [
@@ -51,7 +52,7 @@ def configure_logging(level=logging.INFO):
         logger_factory=LoggerFactory(),
     )
 
-    es_logger = logging.getLogger("elasticsearch")
+    es_logger = logging.getLogger("elastic_transport")
     es_logger.setLevel(logging.WARNING)
 
     uv_logger = logging.getLogger("uvicorn")
