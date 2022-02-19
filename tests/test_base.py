@@ -7,6 +7,17 @@ def test_healthz():
     res = client.get("/healthz")
     assert res.status_code == 200, res
     assert res.json().get("status") == "ok", res
+    assert "x-trace-id" in res.headers
+
+
+def test_healthz_with_user():
+    headers = {"Authorization": "Token BANANA"}
+    res = client.get("/healthz", headers=headers)
+    assert res.status_code == 200, res
+    assert res.json().get("status") == "ok", res
+    assert "x-trace-id" in res.headers
+    assert "x-user-id" in res.headers
+    assert res.headers["x-user-id"] == "banana", res.headers
 
 
 def test_updatez_get():
