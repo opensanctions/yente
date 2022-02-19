@@ -95,7 +95,7 @@ ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
 
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
 
