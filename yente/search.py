@@ -41,12 +41,12 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
 async def query_entities(query: Dict[Any, Any], limit: int = 5, offset: int = 0):
     # pprint(query)
     es = await get_es()
-    resp = await es.search(
+    es_ = es.options(opaque_id=get_opaque_id())
+    resp = await es_.search(
         index=settings.ENTITY_INDEX,
         query=query,
         size=limit,
         from_=offset,
-        opaque_id=get_opaque_id(),
     )
     async for entity, score in result_entities(resp):
         yield entity, score
@@ -61,13 +61,13 @@ async def query_results(
 ):
     es = await get_es()
     results = []
-    resp = await es.search(
+    es_ = es.options(opaque_id=get_opaque_id())
+    resp = await es_.search(
         index=settings.ENTITY_INDEX,
         query=query,
         size=limit,
         from_=offset,
         aggregations=aggregations,
-        opaque_id=get_opaque_id(),
     )
     async for result, score in result_entities(resp):
         data = await serialize_entity(result, nested=nested)
@@ -104,12 +104,12 @@ async def statement_results(
 ) -> Dict[str, Any]:
     es = await get_es()
     results = []
-    resp = await es.search(
+    es_ = es.options(opaque_id=get_opaque_id())
+    resp = await es_.search(
         index=settings.STATEMENT_INDEX,
         query=query,
         size=limit,
         from_=offset,
-        opaque_id=get_opaque_id(),
     )
     # count_body = None if "match_all" in query else query
     # count_await = es.count(body=count_body, index=STATEMENT_INDEX)
@@ -132,11 +132,8 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     datasets = await get_datasets()
     try:
-        data = await es.get(
-            index=settings.ENTITY_INDEX,
-            id=entity_id,
-            opaque_id=get_opaque_id(),
-        )
+        es_ = es.options(opaque_id=get_opaque_id())
+        data = await es_.get(index=settings.ENTITY_INDEX, id=entity_id)
         _source = data.get("_source")
         if _source.get("canonical_id") != entity_id:
             raise EntityRedirect(_source.get("canonical_id"))
@@ -148,14 +145,11 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
 
 async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity], None]:
     es = await get_es()
+    es_ = es.options(opaque_id=get_opaque_id())
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
     if len(entities):
-        resp = await es.mget(
-            index=settings.ENTITY_INDEX,
-            body={"ids": entities},
-            opaque_id=get_opaque_id(),
-        )
+        resp = await es_.mget(index=settings.ENTITY_INDEX, ids=entities)
         for raw in resp.get("docs", []):
             adj, _ = result_entity(datasets, raw)
             if adj is None:
@@ -167,11 +161,11 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     # Do we need to query referents here?
     query = {"term": {"entities": entity.id}}
     filtered = filter_query([query])
-    resp = await es.search(
+
+    resp = await es_.search(
         index=settings.ENTITY_INDEX,
         query=filtered,
         size=settings.MAX_PAGE,
-        opaque_id=get_opaque_id(),
     )
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
@@ -208,10 +202,8 @@ async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, An
 async def get_index_status() -> bool:
     es = await get_es()
     try:
-        health = await es.cluster.health(
-            request_timeout=5,
-            opaque_id=get_opaque_id(),
-        )
+        es_ = es.options(request_timeout=10, opaque_id=get_opaque_id())
+        health = await es_.cluster.health()
         return health.get("status") in ("yellow", "green")
     except TransportError:
         return False

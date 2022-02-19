@@ -19,7 +19,8 @@ async def get_es() -> AsyncElasticsearch:
     es = AsyncElasticsearch(hosts=[settings.ES_URL])
     for retry in range(7):
         try:
-            await es.cluster.health(wait_for_status="yellow", request_timeout=5)
+            es_ = es.options(request_timeout=5)
+            await es_.cluster.health(wait_for_status="yellow")
             return es
         except (TransportError, ConnectionError) as exc:
             log.exception("Cannot connect to ElasticSearch")

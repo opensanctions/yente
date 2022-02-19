@@ -31,6 +31,7 @@ from yente.queries import facet_aggregations
 from yente.search import get_entity, query_entities, query_results, statement_results
 from yente.search import serialize_entity, get_index_status
 from yente.indexer import update_index
+from yente.index import get_es
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
@@ -106,6 +107,12 @@ async def request_middleware(request: Request, call_next):
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(update_index())
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    es = await get_es()
+    await es.close()
 
 
 @app.get(
