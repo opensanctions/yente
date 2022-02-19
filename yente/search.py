@@ -1,5 +1,5 @@
 import logging
-import asyncio
+from structlog.contextvars import get_contextvars
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from elasticsearch import TransportError
 from elasticsearch.exceptions import NotFoundError
@@ -7,13 +7,18 @@ from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
-from yente.entity import Dataset, Entity
+from yente.entity import Entity
 from yente.index import get_es
 from yente.queries import filter_query
 from yente.data import get_datasets
 from yente.util import EntityRedirect
 
 log = logging.getLogger(__name__)
+
+
+def get_opaque_id() -> str:
+    ctx = get_contextvars()
+    return ctx.get("trace_id")
 
 
 def result_entity(datasets, data) -> Tuple[Optional[Entity], float]:
@@ -41,6 +46,7 @@ async def query_entities(query: Dict[Any, Any], limit: int = 5, offset: int = 0)
         query=query,
         size=limit,
         from_=offset,
+        opaque_id=get_opaque_id(),
     )
     async for entity, score in result_entities(resp):
         yield entity, score
@@ -61,6 +67,7 @@ async def query_results(
         size=limit,
         from_=offset,
         aggregations=aggregations,
+        opaque_id=get_opaque_id(),
     )
     async for result, score in result_entities(resp):
         data = await serialize_entity(result, nested=nested)
@@ -102,6 +109,7 @@ async def statement_results(
         query=query,
         size=limit,
         from_=offset,
+        opaque_id=get_opaque_id(),
     )
     # count_body = None if "match_all" in query else query
     # count_await = es.count(body=count_body, index=STATEMENT_INDEX)
@@ -124,7 +132,11 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     datasets = await get_datasets()
     try:
-        data = await es.get(index=settings.ENTITY_INDEX, id=entity_id)
+        data = await es.get(
+            index=settings.ENTITY_INDEX,
+            id=entity_id,
+            opaque_id=get_opaque_id(),
+        )
         _source = data.get("_source")
         if _source.get("canonical_id") != entity_id:
             raise EntityRedirect(_source.get("canonical_id"))
@@ -139,7 +151,11 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     entities = entity.get_type_values(registry.entity)
     datasets = await get_datasets()
     if len(entities):
-        resp = await es.mget(index=settings.ENTITY_INDEX, body={"ids": entities})
+        resp = await es.mget(
+            index=settings.ENTITY_INDEX,
+            body={"ids": entities},
+            opaque_id=get_opaque_id(),
+        )
         for raw in resp.get("docs", []):
             adj, _ = result_entity(datasets, raw)
             if adj is None:
@@ -155,6 +171,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
         index=settings.ENTITY_INDEX,
         query=filtered,
         size=settings.MAX_PAGE,
+        opaque_id=get_opaque_id(),
     )
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():
@@ -191,7 +208,10 @@ async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, An
 async def get_index_status() -> bool:
     es = await get_es()
     try:
-        health = await es.cluster.health(request_timeout=5)
+        health = await es.cluster.health(
+            request_timeout=5,
+            opaque_id=get_opaque_id(),
+        )
         return health.get("status") in ("yellow", "green")
     except TransportError:
         return False
