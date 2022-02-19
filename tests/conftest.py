@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 
 from yente import settings
-from yente.index import get_es
+from yente.search.index import get_es
 from yente.app import app
 
 

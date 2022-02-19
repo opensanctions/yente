@@ -8,8 +8,8 @@ from followthemoney.types import registry
 
 from yente import settings
 from yente.entity import Entity
-from yente.index import get_es
-from yente.queries import filter_query
+from yente.search.base import get_es
+from yente.search.queries import filter_query
 from yente.data import get_datasets
 from yente.util import EntityRedirect
 

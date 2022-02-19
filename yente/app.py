@@ -26,12 +26,13 @@ from yente.models import FreebasePropertySuggestResponse
 from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
-from yente.queries import statement_query, text_query, entity_query, prefix_query
-from yente.queries import facet_aggregations
-from yente.search import get_entity, query_entities, query_results, statement_results
-from yente.search import serialize_entity, get_index_status
-from yente.indexer import update_index
-from yente.index import get_es
+from yente.search.queries import text_query, entity_query, prefix_query
+from yente.search.queries import facet_aggregations, statement_query
+from yente.search.search import get_entity, query_entities, query_results
+from yente.search.search import serialize_entity, get_index_status
+from yente.search.search import statement_results
+from yente.search.indexer import update_index
+from yente.search.base import get_es
 from yente.data import get_datasets
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property

@@ -5,7 +5,7 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
 from yente.entity import Dataset
-from yente.mapping import TEXT_TYPES
+from yente.search.mapping import TEXT_TYPES
 
 log = logging.getLogger(__name__)
 
