@@ -1,13 +1,12 @@
 import pytest
 import asyncio
-import warnings
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 
 from yente import settings
-from yente.search.index import get_es
+from yente.search.base import get_es
 from yente.app import app
 
 
