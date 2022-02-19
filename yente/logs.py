@@ -1,6 +1,7 @@
 import sys
 import logging
 import structlog
+from structlog.contextvars import merge_contextvars
 
 from yente import settings
 
@@ -12,6 +13,7 @@ def configure_logging(level=logging.INFO):
         structlog.stdlib.add_logger_name,
         # structlog.stdlib.PositionalArgumentsFormatter(),
         # structlog.processors.StackInfoRenderer(),
+        merge_contextvars,
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.format_exc_info,
