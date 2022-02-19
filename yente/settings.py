@@ -1,3 +1,4 @@
+import logging
 from banal import as_bool
 from os import environ as env
 from normality import stringify
@@ -79,20 +80,22 @@ TAGS = [
 
 # Check if we're running in the context of unit tests:
 TESTING = False
+DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
 BASE_SCHEMA = "Thing"
 
 DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
 DATA_INDEX = env_str("YENTE_DATA_INDEX", DATA_INDEX)
 SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET", "all")
-ENDPOINT_URL = env_str("YENTE_ENDPOINT_URL", "http://localhost:8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "")
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
-
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
+
+LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
+LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
 

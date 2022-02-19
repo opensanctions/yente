@@ -1,9 +1,14 @@
 import json
-import logging
+import time
+import structlog
+from uuid import uuid4
+from normality import slugify
+from structlog.contextvars import clear_contextvars, bind_contextvars
 from urllib.parse import urljoin
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from async_timeout import asyncio
 from fastapi import FastAPI, Path, Query, Form
+from fastapi import Request, Response
 from fastapi import HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +28,6 @@ from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
 from yente.queries import statement_query, text_query, entity_query, prefix_query
 from yente.queries import facet_aggregations
-
 from yente.search import get_entity, query_entities, query_results, statement_results
 from yente.search import serialize_entity, get_index_status
 from yente.indexer import update_index
@@ -34,8 +38,7 @@ from yente.data import get_matchable_schemata
 from yente.util import match_prefix, limit_window, EntityRedirect
 
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
 app = FastAPI(
     title=settings.TITLE,
     description=settings.DESCRIPTION,
@@ -67,6 +70,37 @@ async def get_dataset(name: str) -> Dataset:
     if dataset is None:
         raise HTTPException(404, detail="No such dataset.")
     return dataset
+
+
+@app.middleware("http")
+async def request_middleware(request: Request, call_next):
+    start_time = time.time()
+    user_id = request.headers.get("authorization")
+    if user_id is not None:
+        if " " in user_id:
+            _, user_id = user_id.split(" ", 1)
+        user_id = slugify(user_id)
+    trace_id = uuid4().hex
+    bind_contextvars(user_id=user_id, trace_id=trace_id)
+    response = cast(Response, await call_next(request))
+    time_delta = time.time() - start_time
+    response.headers["x-trace-id"] = trace_id
+    if user_id is not None:
+        response.headers["x-user-id"] = user_id
+    log.info(
+        str(request.url.path),
+        action="request",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        agent=request.headers.get("user-agent"),
+        referer=request.headers.get("referer"),
+        client=request.client.host,
+        code=response.status_code,
+        took=time_delta,
+    )
+    clear_contextvars()
+    return response
 
 
 @app.on_event("startup")
@@ -128,7 +162,7 @@ async def search(
     datasets: List[str] = Query([], title="Filter by data sources"),
     limit: int = Query(10, title="Number of results to return", max=settings.MAX_PAGE),
     offset: int = Query(0, title="Start at result", max=settings.MAX_PAGE),
-    fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
+    fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Search endpoint for matching entities based on a simple piece of text, e.g.
@@ -141,13 +175,20 @@ async def search(
         raise HTTPException(400, detail="Invalid schema")
     filters = {"countries": countries, "topics": topics, "datasets": datasets}
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
-    aggregations = facet_aggregations(filters.keys())
+    aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await query_results(
         query,
         limit=limit,
         offset=offset,
         nested=nested,
         aggregations=aggregations,
+    )
+    log.info(
+        "Query",
+        action="search",
+        query=q,
+        dataset=ds.name,
+        total=resp.get("total"),
     )
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
@@ -166,6 +207,7 @@ async def _match_one(
     query = entity_query(ds, entity, fuzzy=fuzzy)
     results = await query_results(query, limit=limit, offset=0, nested=False)
     results["query"] = entity.to_dict()
+    log.info("Match", action="match", schema=data["schema"])
     return (name, results)
 
 
@@ -251,7 +293,7 @@ async def match(
 
 @app.get("/entities/{entity_id}", tags=["Data access"], response_model=EntityResponse)
 async def fetch_entity(
-    entity_id: str = Path(None, description="ID of the entity to retrieve")
+    entity_id: str = Path(None, description="ID of the entity to retrieve"),
 ):
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
@@ -267,6 +309,7 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=True)
+    log.info(data.get("caption"), action="entity", entity_id=entity_id)
     return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
 
 
@@ -324,6 +367,7 @@ async def statements(
     response_model=Union[FreebaseManifest, FreebaseQueryResult],
 )
 async def reconcile(
+    request: Request,
     queries: Optional[str] = None,
     dataset: str = PATH_DATASET,
 ):
@@ -336,7 +380,7 @@ async def reconcile(
     ds = await get_dataset(dataset)
     if queries is not None:
         return await reconcile_queries(ds, queries)
-    base_url = urljoin(settings.ENDPOINT_URL, f"/reconcile/{dataset}")
+    base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
     return {
         "versions": ["0.2"],
         "name": f"{ds.title} ({settings.TITLE})",
@@ -411,7 +455,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         if prop is None:
             continue
         try:
-            proxy.add_cast(prop.schema, prop.name, p.get("v"), fuzzy=True)
+            proxy.add(prop.name, p.get("v"), fuzzy=True)
         except InvalidData:
             log.exception("Invalid property is set.")
 
@@ -420,6 +464,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     query = entity_query(dataset, proxy, fuzzy=True)
     async for result, score in query_entities(query, limit=limit, offset=offset):
         results.append(get_freebase_entity(result, score))
+    log.info("Reconcile", action="match", schema=proxy.schema.name)
     return name, {"result": results}
 
 
