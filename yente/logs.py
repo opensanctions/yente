@@ -2,6 +2,11 @@ import sys
 import logging
 import structlog
 from structlog.contextvars import merge_contextvars
+from structlog.processors import UnicodeDecoder, TimeStamper
+from structlog.processors import format_exc_info, add_log_level
+from structlog.processors import JSONRenderer
+from structlog.stdlib import ProcessorFormatter, add_logger_name
+from structlog.stdlib import BoundLogger, LoggerFactory
 
 from yente import settings
 
@@ -9,41 +14,41 @@ from yente import settings
 def configure_logging(level=logging.INFO):
     """Configure log levels and structured logging"""
     shared_processors = [
-        structlog.processors.add_log_level,
-        structlog.stdlib.add_logger_name,
+        add_log_level,
+        add_logger_name,
         # structlog.stdlib.PositionalArgumentsFormatter(),
         # structlog.processors.StackInfoRenderer(),
         merge_contextvars,
         structlog.dev.set_exc_info,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
+        TimeStamper(fmt="iso"),
+        format_exc_info,
+        UnicodeDecoder(),
     ]
 
     if settings.LOG_JSON:
         shared_processors.append(format_json)
-        formatter = structlog.stdlib.ProcessorFormatter(
+        formatter = ProcessorFormatter(
             foreign_pre_chain=shared_processors,
-            processor=structlog.processors.JSONRenderer(),
+            processor=JSONRenderer(),
         )
     else:
-        formatter = structlog.stdlib.ProcessorFormatter(
+        formatter = ProcessorFormatter(
             foreign_pre_chain=shared_processors,
             processor=structlog.dev.ConsoleRenderer(),
         )
 
     processors = shared_processors + [
-        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ProcessorFormatter.wrap_for_formatter,
     ]
 
     # configuration for structlog based loggers
     structlog.configure(
         cache_logger_on_first_use=True,
-        # wrapper_class=structlog.stdlib.AsyncBoundLogger,
-        wrapper_class=structlog.stdlib.BoundLogger,
+        # wrapper_class=AsyncBoundLogger,
+        wrapper_class=BoundLogger,
         processors=processors,
         context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
+        logger_factory=LoggerFactory(),
     )
 
     es_logger = logging.getLogger("elasticsearch")
