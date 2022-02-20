@@ -4,41 +4,32 @@ import structlog
 from uuid import uuid4
 from normality import slugify
 from structlog.contextvars import clear_contextvars, bind_contextvars
-from urllib.parse import urljoin
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 from async_timeout import asyncio
-from fastapi import FastAPI, Path, Query, Form
+from fastapi import FastAPI, Path, Query
 from fastapi import Request, Response
 from fastapi import HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney import model
-from followthemoney.types import registry
-from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
 from yente.models import EntityExample, HealthzResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
-from yente.models import FreebaseEntitySuggestResponse
-from yente.models import FreebasePropertySuggestResponse
-from yente.models import FreebaseTypeSuggestResponse
-from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.models import StatementResponse
-from yente.search.queries import text_query, entity_query, prefix_query
+from yente.search.queries import text_query, entity_query
 from yente.search.queries import facet_aggregations, statement_query
-from yente.search.search import get_entity, query_entities, query_results
+from yente.search.search import get_entity, query_results
 from yente.search.search import serialize_entity, get_index_status
 from yente.search.search import statement_results
 from yente.search.indexer import update_index
 from yente.search.base import get_es
-from yente.data import get_datasets
-from yente.data import get_freebase_type, get_freebase_types
-from yente.data import get_freebase_entity, get_freebase_property
-from yente.data import get_matchable_schemata
-from yente.util import match_prefix, limit_window, EntityRedirect
-
+from yente.util import limit_window, EntityRedirect
+from yente.routers import reconcile
+from yente.routers.util import get_dataset
+from yente.routers.util import MATCH_PAGE, PATH_DATASET
 
 log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
 app = FastAPI(
@@ -56,22 +47,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-PATH_DATASET = Path(
-    settings.SCOPE_DATASET,
-    description="Data source or collection name",
-    example=settings.SCOPE_DATASET,
-)
-QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
-MATCH_PAGE = 5
-
-
-async def get_dataset(name: str) -> Dataset:
-    datasets = await get_datasets()
-    dataset = datasets.get(name)
-    if dataset is None:
-        raise HTTPException(404, detail="No such dataset.")
-    return dataset
+app.include_router(reconcile.router)
 
 
 @app.middleware("http")
@@ -369,197 +345,3 @@ async def statements(
     limit, offset = limit_window(limit, offset, 50)
     resp = await statement_results(query, limit, offset)
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
-
-
-@app.get(
-    "/reconcile/{dataset}",
-    summary="Reconciliation info",
-    tags=["Reconciliation"],
-    response_model=Union[FreebaseManifest, FreebaseQueryResult],
-)
-async def reconcile(
-    request: Request,
-    queries: Optional[str] = None,
-    dataset: str = PATH_DATASET,
-):
-    """Reconciliation API, emulates Google Refine API. This endpoint can be used
-    to bulk match entities against the system using an end-user application like
-    [OpenRefine](https://openrefine.org).
-
-    Tutorial: [Using OpenRefine to match entities in a spreadsheet](/articles/2022-01-10-openrefine-reconciliation/).
-    """
-    ds = await get_dataset(dataset)
-    if queries is not None:
-        return await reconcile_queries(ds, queries)
-    base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
-    return {
-        "versions": ["0.2"],
-        "name": f"{ds.title} ({settings.TITLE})",
-        "identifierSpace": "https://opensanctions.org/reference/#schema",
-        "schemaSpace": "https://opensanctions.org/reference/#schema",
-        "view": {"url": ("https://opensanctions.org/entities/{{id}}/")},
-        "preview": {
-            "url": "https://opensanctions.org/entities/preview/{{id}}/",
-            "width": 430,
-            "height": 300,
-        },
-        "suggest": {
-            "entity": {
-                "service_url": base_url,
-                "service_path": "/suggest/entity",
-            },
-            "type": {
-                "service_url": base_url,
-                "service_path": "/suggest/type",
-            },
-            "property": {
-                "service_url": base_url,
-                "service_path": "/suggest/property",
-            },
-        },
-        "defaultTypes": await get_freebase_types(),
-    }
-
-
-@app.post(
-    "/reconcile/{dataset}",
-    summary="Reconciliation queries",
-    tags=["Reconciliation"],
-    response_model=FreebaseQueryResult,
-)
-async def reconcile_post(
-    dataset: str = PATH_DATASET,
-    queries: str = Form(None, description="JSON-encoded reconciliation queries"),
-):
-    """Reconciliation API, emulates Google Refine API. This endpoint is used by
-    clients for matching, refer to the discovery endpoint for details."""
-    ds = await get_dataset(dataset)
-    return await reconcile_queries(ds, queries)
-
-
-async def reconcile_queries(
-    dataset: Dataset,
-    data: str,
-):
-    # multiple requests in one query
-    try:
-        queries = json.loads(data)
-    except ValueError:
-        raise HTTPException(400, detail="Cannot decode query")
-
-    tasks = []
-    for k, q in queries.items():
-        tasks.append(reconcile_query(k, dataset, q))
-    results = await asyncio.gather(*tasks)
-    return {k: r for (k, r) in results}
-
-
-async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
-    """Reconcile operation for a single query."""
-    # log.info("Reconcile: %r", query)
-    limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
-    type = query.get("type", settings.BASE_SCHEMA)
-    proxy = model.make_entity(type)
-    proxy.add("alias", query.get("query"))
-    for p in query.get("properties", []):
-        prop = model.get_qname(p.get("pid"))
-        if prop is None:
-            continue
-        try:
-            proxy.add(prop.name, p.get("v"), fuzzy=True)
-        except InvalidData:
-            log.exception("Invalid property is set.")
-
-    results = []
-    # log.info("QUERY %r %s", proxy.to_dict(), limit)
-    query = entity_query(dataset, proxy, fuzzy=True)
-    async for result, score in query_entities(query, limit=limit, offset=offset):
-        results.append(get_freebase_entity(result, score))
-    log.info("Reconcile", action="match", schema=proxy.schema.name)
-    return name, {"result": results}
-
-
-@app.get(
-    "/reconcile/{dataset}/suggest/entity",
-    summary="Suggest entity",
-    tags=["Reconciliation"],
-    response_model=FreebaseEntitySuggestResponse,
-)
-async def reconcile_suggest_entity(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-    limit: int = Query(
-        MATCH_PAGE,
-        description="Number of suggestions to return",
-        lt=settings.MAX_PAGE,
-    ),
-):
-    """Suggest an entity based on a text query. This is functionally very
-    similar to the basic search API, but returns data in the structure assumed
-    by the community specification.
-
-    Searches are conducted based on name and text content, using all matchable
-    entities in the system index."""
-    ds = await get_dataset(dataset)
-    results = []
-    query = prefix_query(ds, prefix)
-    limit, offset = limit_window(limit, 0, MATCH_PAGE)
-    async for result, score in query_entities(query, limit=limit, offset=offset):
-        results.append(get_freebase_entity(result, score))
-    return {
-        "prefix": prefix,
-        "result": results,
-    }
-
-
-@app.get(
-    "/reconcile/{dataset}/suggest/property",
-    summary="Suggest property",
-    tags=["Reconciliation"],
-    response_model=FreebasePropertySuggestResponse,
-)
-async def reconcile_suggest_property(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-):
-    """Given a search prefix, return all the type/schema properties which match
-    the given text. This is used to auto-complete property selection for detail
-    filters in OpenRefine."""
-    await get_dataset(dataset)
-    schemata = await get_matchable_schemata()
-    matches = []
-    for prop in model.properties:
-        if prop.schema not in schemata:
-            continue
-        if prop.hidden or prop.type == prop.type == registry.entity:
-            continue
-        if match_prefix(prefix, prop.name, prop.label):
-            matches.append(get_freebase_property(prop))
-    return {
-        "prefix": prefix,
-        "result": matches,
-    }
-
-
-@app.get(
-    "/reconcile/{dataset}/suggest/type",
-    summary="Suggest type (schema)",
-    tags=["Reconciliation"],
-    response_model=FreebaseTypeSuggestResponse,
-)
-async def reconcile_suggest_type(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-):
-    """Given a search prefix, return all the types (i.e. schema) which match
-    the given text. This is used to auto-complete type selection for the
-    configuration of reconciliation in OpenRefine."""
-    await get_dataset(dataset)
-    matches = []
-    for schema in await get_matchable_schemata():
-        if match_prefix(prefix, schema.name, schema.label):
-            matches.append(get_freebase_type(schema))
-    return {
-        "prefix": prefix,
-        "result": matches,
-    }
