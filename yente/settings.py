@@ -10,7 +10,7 @@ def env_str(name: str, default: str) -> str:
     return default if value is None else value
 
 
-VERSION = "VERSION = "1.2.0""
+VERSION = "1.2.0"
 AUTHOR = "OpenSanctions"
 HOME_PAGE = "https://www.opensanctions.org"
 EMAIL = "info@opensanctions.org"
