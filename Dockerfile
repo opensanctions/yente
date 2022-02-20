@@ -25,4 +25,4 @@ COPY . /app
 RUN pip install --no-cache-dir -q -e /app
 
 USER app:app
-CMD ["/usr/local/bin/uvicorn", "yente.app:app", "--proxy-headers", "--port", "8000", "--host", "0.0.0.0"]
+CMD ["python3", "yente/server.py"]
