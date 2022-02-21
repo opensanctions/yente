@@ -1,9 +1,9 @@
-import asyncio
 import aiocron
 import structlog
 import asyncstdlib as a
 from typing import Iterable
 from datetime import datetime
+from structlog.stdlib import BoundLogger
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from followthemoney import model
@@ -16,7 +16,7 @@ from yente.search.base import get_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
 
-log = structlog.get_logger(__name__)
+log: BoundLogger = structlog.get_logger(__name__)
 
 
 async def entity_docs(dataset: Dataset, index: str):
@@ -80,7 +80,7 @@ async def index_entities(
     next_index = versioned_index(settings.ENTITY_INDEX, timestamp)
     es = await get_es()
     exists = await es.indices.exists(index=next_index)
-    if exists:
+    if exists.body:
         log.info("Index is up to date.", index=next_index)
         # await es.indices.delete(index=next_index)
         return
@@ -120,9 +120,13 @@ async def index_statements(
 async def update_index(force=False):
     scope = await get_scope()
     schemata = list(model)
-    timestamp = datetime.utcnow() if force else scope.last_export
+    timestamp = scope.last_export
+    if force:
+        timestamp = datetime.utcnow()
+    log.info("Index update check", next_ts=timestamp)
     await index_entities(scope, schemata, timestamp)
     await index_statements(timestamp)
+    log.info("Update check done")
 
 
 @aiocron.crontab("23 * * * *")

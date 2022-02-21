@@ -5,6 +5,7 @@ from normality import slugify
 from typing import cast
 from fastapi import FastAPI
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from followthemoney import model
 from structlog.contextvars import clear_contextvars, bind_contextvars
@@ -48,7 +49,11 @@ async def request_middleware(request: Request, call_next):
         trace_id=trace_id,
         client_ip=request.client.host,
     )
-    response = cast(Response, await call_next(request))
+    try:
+        response = cast(Response, await call_next(request))
+    except Exception as exc:
+        log.exception("Exception during request.")
+        response = JSONResponse(status_code=500, content={"status": "error"})
     time_delta = time.time() - start_time
     response.headers["x-trace-id"] = trace_id
     if user_id is not None:

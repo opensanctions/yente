@@ -17,7 +17,12 @@ from yente.models import FreebaseEntity, FreebaseProperty
 from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)
-http_timeout = ClientTimeout(total=2 * 3600, sock_read=None)
+http_timeout = ClientTimeout(
+    total=3600 * 6,
+    connect=None,
+    sock_read=None,
+    sock_connect=None,
+)
 
 
 @cache
@@ -103,9 +108,7 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
     if dataset.entities_url is None:
         raise ValueError("Dataset has no entity source: %s" % dataset)
     datasets = await get_datasets()
-    async with ClientSession(
-        timeout=http_timeout, read_timeout=None, conn_timeout=None
-    ) as client:
+    async with ClientSession(timeout=http_timeout) as client:
         async with client.get(dataset.entities_url) as resp:
             async for line in resp.content:
                 data = json.loads(line)
@@ -120,9 +123,7 @@ async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
     url = index.get("statements_url")
     if url is None:
         raise ValueError("No statement URL in index")
-    async with ClientSession(
-        timeout=http_timeout, read_timeout=None, conn_timeout=None
-    ) as client:
+    async with ClientSession(timeout=http_timeout) as client:
         async with client.get(url) as resp:
             wrapper = AsyncTextReaderWrapper(resp.content, "utf-8")
             async for row in AsyncDictReader(wrapper):
