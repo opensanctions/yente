@@ -56,6 +56,7 @@ async def request_middleware(request: Request, call_next):
     log.info(
         str(request.url.path),
         action="request",
+        headers=dict(request.headers.items()),
         method=request.method,
         path=request.url.path,
         query=request.url.query,
