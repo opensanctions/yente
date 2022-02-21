@@ -52,7 +52,7 @@ async def request_middleware(request: Request, call_next):
     try:
         response = cast(Response, await call_next(request))
     except Exception as exc:
-        log.exception("Exception during request.")
+        log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
     time_delta = time.time() - start_time
     response.headers["x-trace-id"] = trace_id
@@ -61,7 +61,6 @@ async def request_middleware(request: Request, call_next):
     log.info(
         str(request.url.path),
         action="request",
-        headers=dict(request.headers.items()),
         method=request.method,
         path=request.url.path,
         query=request.url.query,
