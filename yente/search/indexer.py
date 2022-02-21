@@ -121,10 +121,8 @@ async def update_index(force=False):
     scope = await get_scope()
     schemata = list(model)
     timestamp = datetime.utcnow() if force else scope.last_export
-    await asyncio.gather(
-        index_entities(scope, schemata, timestamp),
-        index_statements(timestamp),
-    )
+    await index_entities(scope, schemata, timestamp)
+    await index_statements(timestamp)
 
 
 @aiocron.crontab("23 * * * *")
