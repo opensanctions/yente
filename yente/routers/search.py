@@ -1,37 +1,26 @@
-import json
-import time
 import structlog
-from uuid import uuid4
-from normality import slugify
-from structlog.contextvars import clear_contextvars, bind_contextvars
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Tuple
 from async_timeout import asyncio
 from fastapi import APIRouter, Path, Query
-from fastapi import Request, Response
-from fastapi import HTTPException, BackgroundTasks
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
 from followthemoney import model
+from structlog.stdlib import BoundLogger
 
 from yente import settings
 from yente.entity import Dataset
-from yente.models import EntityExample, HealthzResponse
+from yente.models import EntityExample
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
-from yente.models import StatementResponse
 from yente.search.queries import text_query, entity_query
-from yente.search.queries import facet_aggregations, statement_query
+from yente.search.queries import facet_aggregations
 from yente.search.search import get_entity, query_results
-from yente.search.search import serialize_entity, get_index_status
-from yente.search.search import statement_results
-from yente.search.indexer import update_index
-from yente.search.base import get_es
+from yente.search.search import serialize_entity
 from yente.util import limit_window, EntityRedirect
-from yente.routers import reconcile, admin
 from yente.routers.util import get_dataset
 from yente.routers.util import MATCH_PAGE, PATH_DATASET
 
-log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
+log: BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
