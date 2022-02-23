@@ -1,4 +1,3 @@
-import logging
 from uvicorn import Config, Server
 
 from yente import settings

@@ -1,5 +1,5 @@
+import asyncio
 import structlog
-from async_timeout import asyncio
 from structlog.stdlib import BoundLogger
 from fastapi import APIRouter, Query
 from fastapi import HTTPException, BackgroundTasks

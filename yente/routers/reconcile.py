@@ -1,9 +1,9 @@
 import json
+import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
 from urllib.parse import urljoin
 from typing import Any, Dict, Optional, Union
-from async_timeout import asyncio
 from fastapi import APIRouter, Query, Form
 from fastapi import Request
 from fastapi import HTTPException
@@ -18,7 +18,7 @@ from yente.models import FreebasePropertySuggestResponse
 from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
-from yente.search.search import query_entities
+from yente.search.search import search_entities, result_entities, result_total
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
 from yente.data import get_matchable_schemata
@@ -132,9 +132,15 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     results = []
     # log.info("QUERY %r %s", proxy.to_dict(), limit)
     query = entity_query(dataset, proxy, fuzzy=True)
-    async for result, score in query_entities(query, limit=limit, offset=offset):
+    resp = await search_entities(query, limit=limit, offset=offset)
+    async for result, score in result_entities(resp):
         results.append(get_freebase_entity(result, score))
-    log.info("Reconcile", action="match", schema=proxy.schema.name)
+    log.info(
+        "Reconcile",
+        action="match",
+        schema=proxy.schema.name,
+        total=result_total(resp),
+    )
     return name, {"result": results}
 
 
@@ -163,8 +169,16 @@ async def reconcile_suggest_entity(
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, MATCH_PAGE)
-    async for result, score in query_entities(query, limit=limit, offset=offset):
+    resp = await search_entities(query, limit=limit, offset=offset)
+    async for result, score in result_entities(resp):
         results.append(get_freebase_entity(result, score))
+    log.info(
+        "Prefix query",
+        action="search",
+        q=prefix,
+        dataset=ds.name,
+        total=result_total(resp),
+    )
     return {
         "prefix": prefix,
         "result": results,

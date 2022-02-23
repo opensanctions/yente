@@ -4,7 +4,6 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from followthemoney import model
 
 from yente import settings
 from yente.models import StatementResponse

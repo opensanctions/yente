@@ -1,6 +1,7 @@
 import logging
+from elastic_transport import ObjectApiResponse
 from structlog.contextvars import get_contextvars
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, cast
 from elasticsearch import TransportError
 from elasticsearch.exceptions import NotFoundError
 from followthemoney.property import Property
@@ -8,6 +9,7 @@ from followthemoney.types import registry
 
 from yente import settings
 from yente.entity import Entity
+from yente.models import TotalSpec
 from yente.search.base import get_es
 from yente.search.queries import filter_query
 from yente.data import get_datasets
@@ -29,7 +31,13 @@ def result_entity(datasets, data) -> Tuple[Optional[Entity], float]:
     return Entity.from_data(source, datasets), data.get("_score")
 
 
-async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
+def result_total(result: ObjectApiResponse) -> TotalSpec:
+    return cast(TotalSpec, result.get("hits", {}).get("total"))
+
+
+async def result_entities(
+    result: ObjectApiResponse,
+) -> AsyncGenerator[Tuple[Entity, float], None]:
     datasets = await get_datasets()
     hits = result.get("hits", {})
     for hit in hits.get("hits", []):
@@ -38,7 +46,12 @@ async def result_entities(result) -> AsyncGenerator[Tuple[Entity, float], None]:
             yield entity, score
 
 
-async def query_entities(query: Dict[Any, Any], limit: int = 5, offset: int = 0):
+async def search_entities(
+    query: Dict[Any, Any],
+    limit: int = 5,
+    offset: int = 0,
+    aggregations: Optional[Dict] = None,
+) -> ObjectApiResponse:
     # pprint(query)
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
@@ -47,9 +60,9 @@ async def query_entities(query: Dict[Any, Any], limit: int = 5, offset: int = 0)
         query=query,
         size=limit,
         from_=offset,
+        aggregations=aggregations,
     )
-    async for entity, score in result_entities(resp):
-        yield entity, score
+    return resp
 
 
 async def query_results(
@@ -59,21 +72,17 @@ async def query_results(
     offset: int = 0,
     aggregations: Optional[Dict] = None,
 ):
-    es = await get_es()
-    results = []
-    es_ = es.options(opaque_id=get_opaque_id())
-    resp = await es_.search(
-        index=settings.ENTITY_INDEX,
-        query=query,
-        size=limit,
-        from_=offset,
+    resp = await search_entities(
+        query,
+        limit=limit,
+        offset=offset,
         aggregations=aggregations,
     )
+    results = []
     async for result, score in result_entities(resp):
         data = await serialize_entity(result, nested=nested)
         data["score"] = score
         results.append(data)
-    hits = resp.get("hits", {})
     datasets = await get_datasets()
     facets = {}
     for field, agg in resp.get("aggregations", {}).items():
@@ -93,7 +102,7 @@ async def query_results(
     return {
         "results": results,
         "facets": facets,
-        "total": hits.get("total"),
+        "total": result_total(resp),
         "limit": limit,
         "offset": offset,
     }
@@ -122,7 +131,7 @@ async def statement_results(
         results.append(source)
     return {
         "results": results,
-        "total": hits.get("total"),
+        "total": result_total(resp),
         "limit": limit,
         "offset": offset,
     }

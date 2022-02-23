@@ -1,11 +1,11 @@
+import asyncio
 import structlog
+from structlog.stdlib import BoundLogger
 from typing import Any, Dict, List, Tuple
-from async_timeout import asyncio
 from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from followthemoney import model
-from structlog.stdlib import BoundLogger
 
 from yente import settings
 from yente.entity import Dataset
