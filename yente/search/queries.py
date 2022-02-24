@@ -117,7 +117,7 @@ def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
 
 
 def statement_query(
-    dataset=Optional[Dataset], **kwargs: Optional[str]
+    dataset=Optional[Dataset], **kwargs: Optional[Union[str, bool]]
 ) -> Dict[str, Any]:
     # dataset: Optional[str] = None,
     # entity_id: Optional[str] = None,

@@ -28,6 +28,7 @@ async def statements(
     canonical_id: Optional[str] = Query(None, title="Filter by normalised entity ID"),
     prop: Optional[str] = Query(None, title="Filter by property name"),
     value: Optional[str] = Query(None, title="Filter by property value"),
+    target: Optional[bool] = Query(None, title="Filter by targeted entities"),
     schema: Optional[str] = Query(None, title="Filter by schema type"),
     sort: List[str] = Query(["canonical_id", "prop"], title="Sorting criteria"),
     limit: int = Query(
@@ -57,6 +58,7 @@ async def statements(
         canonical_id=canonical_id,
         prop=prop,
         value=value,
+        target=target,
         schema=schema,
     )
     limit, offset = limit_window(limit, offset, 50)
