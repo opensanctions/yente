@@ -54,6 +54,40 @@ def test_search_facet_countries():
     assert "ru" not in names, names
 
 
+def test_search_no_targets():
+    res = client.get("/search/default?target=false")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert "results" in data, data
+    results = data.get("results")
+    assert len(results), results
+    for res in results:
+        assert res["target"] == False, res
+
+
+def test_search_targets():
+    res = client.get("/search/default?target=true")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert "results" in data, data
+    results = data.get("results")
+    assert len(results), results
+    for res in results:
+        assert res["target"] == True, res
+
+
+def test_search_sorted():
+    res = client.get("/search/default?sort=canonical_id:desc")
+    data = res.json()
+    assert "results" in data, data
+    results = data.get("results")
+    prev_seen = None
+    for res in results:
+        if prev_seen is not None:
+            assert res["canonical_id"] <= prev_seen, res
+        prev_seen = res["canonical_id"]
+
+
 def test_search_putin_scope():
     res = client.get("/search/sanctions?q=vladimir putin")
     assert res.status_code == 200, res

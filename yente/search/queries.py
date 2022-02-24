@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
@@ -9,12 +9,14 @@ from yente.search.mapping import TEXT_TYPES
 
 log = logging.getLogger(__name__)
 
+FilterDict = Dict[str, Union[bool, str, List[str]]]
+
 
 def filter_query(
     shoulds,
     dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
-    filters: Dict[str, List[str]] = {},
+    filters: FilterDict = {},
 ):
     filterqs = []
     if dataset is not None:
@@ -27,6 +29,9 @@ def filter_query(
         names = [s.name for s in schemata]
         filterqs.append({"terms": {"schema": names}})
     for field, values in filters.items():
+        if isinstance(values, (bool, str)):
+            filterqs.append({"term": {field: {"value": values}}})
+            continue
         values = [v for v in values if len(v)]
         if len(values):
             filterqs.append({"terms": {field: values}})
@@ -73,7 +78,7 @@ def text_query(
     dataset: Dataset,
     schema: Schema,
     query: str,
-    filters: Dict[str, List[str]] = {},
+    filters: FilterDict = {},
     fuzzy: bool = False,
 ):
 
@@ -129,3 +134,16 @@ def statement_query(
     if not len(filters):
         return {"match_all": {}}
     return {"bool": {"filter": filters}}
+
+
+def parse_sorts(sorts: List[str]) -> List[Any]:
+    """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
+    objs: List[Any] = []
+    for sort in sorts:
+        order = "asc"
+        if ":" in sort:
+            sort, order = sort.rsplit(":", 1)
+        obj = {sort: {"order": order, "missing": "_last"}}
+        objs.append(obj)
+    objs.append("_score")
+    return objs

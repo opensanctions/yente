@@ -51,6 +51,7 @@ async def search_entities(
     limit: int = 5,
     offset: int = 0,
     aggregations: Optional[Dict] = None,
+    sort: List[Any] = [],
 ) -> ObjectApiResponse:
     # pprint(query)
     es = await get_es()
@@ -59,6 +60,7 @@ async def search_entities(
         index=settings.ENTITY_INDEX,
         query=query,
         size=limit,
+        sort=sort,
         from_=offset,
         aggregations=aggregations,
     )
@@ -71,12 +73,14 @@ async def query_results(
     nested: bool = False,
     offset: int = 0,
     aggregations: Optional[Dict] = None,
+    sort: List[Any] = [],
 ):
     resp = await search_entities(
         query,
         limit=limit,
         offset=offset,
         aggregations=aggregations,
+        sort=sort,
     )
     results = []
     async for result, score in result_entities(resp):
@@ -109,7 +113,7 @@ async def query_results(
 
 
 async def statement_results(
-    query: Dict[str, Any], limit: int, offset: int
+    query: Dict[str, Any], limit: int, offset: int, sort: List[Any]
 ) -> Dict[str, Any]:
     es = await get_es()
     results = []
@@ -119,6 +123,7 @@ async def statement_results(
         query=query,
         size=limit,
         from_=offset,
+        sort=sort,
     )
     # count_body = None if "match_all" in query else query
     # count_await = es.count(body=count_body, index=STATEMENT_INDEX)

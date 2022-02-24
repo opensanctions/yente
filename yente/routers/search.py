@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Union, Optional, Tuple
 from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -12,8 +12,9 @@ from yente.entity import Dataset
 from yente.models import EntityExample
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
-from yente.search.queries import text_query, entity_query
+from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
+from yente.search.queries import FilterDict
 from yente.search.search import get_entity, query_results
 from yente.search.search import serialize_entity
 from yente.util import limit_window, EntityRedirect
@@ -40,6 +41,8 @@ async def search(
     limit: int = Query(10, title="Number of results to return", max=settings.MAX_PAGE),
     offset: int = Query(0, title="Start at result", max=settings.MAX_PAGE),
     fuzzy: bool = Query(False, title="Enable fuzzy matching"),
+    sort: List[str] = Query([], title="Sorting criteria"),
+    target: Optional[bool] = Query(None, title="Include only targeted entities"),
     nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Search endpoint for matching entities based on a simple piece of text, e.g.
@@ -50,15 +53,23 @@ async def search(
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
-    filters = {"countries": countries, "topics": topics, "datasets": datasets}
+    filters: FilterDict = {
+        "countries": countries,
+        "topics": topics,
+        "datasets": datasets,
+    }
+    if target is not None:
+        filters["target"] = target
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
+    sorts = parse_sorts(sort)
     resp = await query_results(
         query,
         limit=limit,
         offset=offset,
         nested=nested,
         aggregations=aggregations,
+        sort=sorts,
     )
     log.info(
         "Query",
