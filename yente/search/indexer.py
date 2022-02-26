@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 import asyncstdlib as a
 from typing import Iterable
@@ -124,6 +125,8 @@ async def update_index(force=False):
     if force:
         timestamp = datetime.utcnow()
     log.info("Index update check", next_ts=timestamp)
-    await index_entities(scope, schemata, timestamp)
-    await index_statements(timestamp)
-    log.info("Update check done")
+    await asyncio.gather(
+        index_entities(scope, schemata, timestamp),
+        index_statements(timestamp),
+    )
+    log.info("Index update complete.", next_ts=timestamp)
