@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from followthemoney import model
 from structlog.contextvars import clear_contextvars, bind_contextvars
 
 from yente import settings

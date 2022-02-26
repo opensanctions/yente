@@ -1,4 +1,3 @@
-import aiocron
 import structlog
 import asyncstdlib as a
 from typing import Iterable
@@ -118,6 +117,7 @@ async def index_statements(
 
 
 async def update_index(force=False):
+    await check_update()
     scope = await get_scope()
     schemata = list(model)
     timestamp = scope.last_export
@@ -127,11 +127,3 @@ async def update_index(force=False):
     await index_entities(scope, schemata, timestamp)
     await index_statements(timestamp)
     log.info("Update check done")
-
-
-@aiocron.crontab("23 * * * *")
-async def regular_update():
-    if settings.TESTING:
-        return
-    await check_update()
-    await update_index()

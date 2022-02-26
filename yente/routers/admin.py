@@ -1,5 +1,7 @@
 import asyncio
+import aiocron
 import structlog
+from collections import namedtuple
 from structlog.stdlib import BoundLogger
 from fastapi import APIRouter, Query
 from fastapi import HTTPException, BackgroundTasks
@@ -14,9 +16,16 @@ log: BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+async def regular_update():
+    if settings.TESTING:
+        return
+    await update_index()
+
+
 @router.on_event("startup")
 async def startup_event():
     asyncio.create_task(update_index())
+    router.crontab = aiocron.crontab("*/30 * * * *", func=regular_update)
 
 
 @router.on_event("shutdown")
