@@ -88,9 +88,13 @@ async def index_entities(
     mapping = make_entity_mapping(schemata)
     log.info("Create index", index=next_index)
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
-    docs = entity_docs(dataset, next_index)
-    await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
-    await deploy_versioned_index(es, settings.ENTITY_INDEX, next_index)
+    try:
+        docs = entity_docs(dataset, next_index)
+        await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
+        await deploy_versioned_index(es, settings.ENTITY_INDEX, next_index)
+    except Exception:
+        await es.indices.delete(index=next_index)
+        raise
 
 
 async def index_statements(
@@ -112,9 +116,13 @@ async def index_statements(
     log.info("Create index", index=next_index)
     await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
 
-    docs = statement_docs(next_index)
-    await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
-    await deploy_versioned_index(es, settings.STATEMENT_INDEX, next_index)
+    try:
+        docs = statement_docs(next_index)
+        await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
+        await deploy_versioned_index(es, settings.STATEMENT_INDEX, next_index)
+    except Exception:
+        await es.indices.delete(index=next_index)
+        raise
 
 
 async def update_index(force=False):
