@@ -23,6 +23,6 @@ async def get_es() -> AsyncElasticsearch:
             await es_.cluster.health(wait_for_status="yellow")
             return es
         except (TransportError, ConnectionError) as exc:
-            log.exception("Cannot connect to ElasticSearch")
-            time.sleep(retry ** 2)
+            log.error("Cannot connect to ElasticSearch: %r" % exc)
+            time.sleep(retry**2)
     raise RuntimeError("Cannot connect to ElasticSearch")

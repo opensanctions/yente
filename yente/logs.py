@@ -22,7 +22,7 @@ def configure_logging(level=logging.INFO):
         merge_contextvars,
         set_exc_info,
         TimeStamper(fmt="iso"),
-        format_exc_info,
+        # format_exc_info,
         UnicodeDecoder(),
     ]
 

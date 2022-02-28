@@ -30,8 +30,7 @@ async def startup_event():
 
 @router.on_event("shutdown")
 async def shutdown_event():
-    es = await get_es()
-    await es.close()
+    get_es.cache_clear()
 
 
 @router.get(

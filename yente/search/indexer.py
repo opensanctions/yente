@@ -1,9 +1,9 @@
 import asyncio
 import structlog
-import asyncstdlib as a
-from typing import Iterable
+from typing import Any, Dict, Iterable
 from datetime import datetime
 from structlog.stdlib import BoundLogger
+from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from followthemoney import model
@@ -20,10 +20,12 @@ log: BoundLogger = structlog.get_logger(__name__)
 
 
 async def entity_docs(dataset: Dataset, index: str):
-    entities = get_dataset_entities(dataset)
-    async for idx, entity in a.enumerate(entities):
+    idx = 0
+    async for entity in get_dataset_entities(dataset):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
+        idx += 1
+
         texts = entity.pop("indexText")
         data = entity.to_dict()
         data["canonical_id"] = entity.id
@@ -41,35 +43,57 @@ async def entity_docs(dataset: Dataset, index: str):
 
 
 async def statement_docs(index: str):
-    async for idx, row in a.enumerate(get_statements()):
+    idx = 0
+    async for row in get_statements():
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d statements..." % idx, index=index)
         stmt_id = row.pop("id")
         yield {"_index": index, "_id": stmt_id, "_source": row}
+        idx += 1
 
 
-def versioned_index(base_index: str, timestamp: datetime):
-    ts = timestamp.strftime("%Y%m%d%H%M%S")
-    return f"{base_index}-{ts}"
-
-
-async def deploy_versioned_index(
+@asynccontextmanager
+async def versioned_index(
     es: AsyncElasticsearch,
     base_alias: str,
-    next_index: str,
+    mapping: Dict[str, Any],
+    timestamp: datetime,
 ):
-    await es.indices.refresh(index=next_index)
-    await es.indices.forcemerge(index=next_index)
+    ts = timestamp.strftime("%Y%m%d%H%M%S")
+    next_index = f"{base_alias}-{ts}"
+    exists = await es.indices.exists(index=next_index)
+    if exists.body:
+        log.info("Index is up to date.", index=next_index)
+        # await es.indices.delete(index=next_index)
+        yield None
+        return
 
-    await es.indices.put_alias(index=next_index, name=base_alias)
-    log.info("Index is now aliased to: %s" % base_alias, index=next_index)
+    log.info("Create index", index=next_index)
+    await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
+    try:
+        yield next_index
+        await es.indices.refresh(index=next_index)
+        await es.indices.forcemerge(index=next_index)
 
-    indices = await es.cat.indices(format="json")
-    for spec in indices:
-        name = spec.get("index")
-        if name.startswith(f"{base_alias}-") and name != next_index:
-            log.info("Delete existing index: %s" % name, index=name)
-            await es.indices.delete(index=name)
+        await es.indices.put_alias(index=next_index, name=base_alias)
+        log.info("Index is now aliased to: %s" % base_alias, index=next_index)
+        indices = await es.cat.indices(format="json")
+        for spec in indices:
+            name = spec.get("index")
+            if name.startswith(f"{base_alias}-") and name != next_index:
+                log.info("Delete existing index: %s" % name, index=name)
+                await es.indices.delete(index=name)
+    except (
+        Exception,
+        KeyboardInterrupt,
+        RuntimeError,
+        SystemExit,
+    ) as exc:
+        log.warning("Error [%r]; deleting partial index" % exc, index=next_index)
+        get_es.cache_clear()
+        es = await get_es()
+        await es.indices.delete(index=next_index, ignore_unavailable=True)
+        raise
 
 
 async def index_entities(
@@ -77,24 +101,17 @@ async def index_entities(
     schemata: Iterable[Schema],
     timestamp: datetime,
 ):
-    next_index = versioned_index(settings.ENTITY_INDEX, timestamp)
     es = await get_es()
-    exists = await es.indices.exists(index=next_index)
-    if exists.body:
-        log.info("Index is up to date.", index=next_index)
-        # await es.indices.delete(index=next_index)
-        return
-
     mapping = make_entity_mapping(schemata)
-    log.info("Create index", index=next_index)
-    await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
-    try:
-        docs = entity_docs(dataset, next_index)
-        await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
-        await deploy_versioned_index(es, settings.ENTITY_INDEX, next_index)
-    except Exception:
-        await es.indices.delete(index=next_index)
-        raise
+    async with versioned_index(
+        es,
+        settings.ENTITY_INDEX,
+        mapping,
+        timestamp,
+    ) as next_index:
+        if next_index is not None:
+            docs = entity_docs(dataset, next_index)
+            await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
 
 
 async def index_statements(
@@ -104,25 +121,17 @@ async def index_statements(
         log.warning("Statement API is disabled, not indexing statements.")
         return
 
-    next_index = versioned_index(settings.STATEMENT_INDEX, timestamp)
     es = await get_es()
-    exists = await es.indices.exists(index=next_index)
-    if exists:
-        log.info("Index is up to date.", index=next_index)
-        # await es.indices.delete(index=next_index)
-        return
-
     mapping = make_statement_mapping()
-    log.info("Create index", index=next_index)
-    await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
-
-    try:
-        docs = statement_docs(next_index)
-        await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
-        await deploy_versioned_index(es, settings.STATEMENT_INDEX, next_index)
-    except Exception:
-        await es.indices.delete(index=next_index)
-        raise
+    async with versioned_index(
+        es,
+        settings.STATEMENT_INDEX,
+        mapping,
+        timestamp,
+    ) as next_index:
+        if next_index is not None:
+            docs = statement_docs(next_index)
+            await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
 
 
 async def update_index(force=False):
