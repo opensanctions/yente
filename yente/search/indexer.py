@@ -143,10 +143,8 @@ async def update_index(force=False):
     if force:
         timestamp = datetime.utcnow()
     log.info("Index update check", next_ts=timestamp)
-    await asyncio.gather(
-        index_entities(scope, schemata, timestamp),
-        index_statements(timestamp),
-    )
+    await index_entities(scope, schemata, timestamp)
+    await index_statements(timestamp)
     log.info("Index update complete.", next_ts=timestamp)
 
 

@@ -24,7 +24,12 @@ async def get_es() -> AsyncElasticsearch:
         return POOL[loop_id]
 
     log.info("Connection to ES at: %s", settings.ES_URL)
-    es = AsyncElasticsearch(hosts=[settings.ES_URL])
+    es = AsyncElasticsearch(
+        hosts=[settings.ES_URL],
+        max_retries=10,
+        retry_on_timeout=True,
+        sniff_on_connection_fail=True,
+    )
     for retry in range(7):
         try:
             es_ = es.options(request_timeout=5)
