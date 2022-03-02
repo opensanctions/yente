@@ -1,5 +1,6 @@
 import asyncio
 import structlog
+import threading
 from typing import Any, Dict, Iterable
 from datetime import datetime
 from structlog.stdlib import BoundLogger
@@ -12,7 +13,7 @@ from followthemoney.schema import Schema
 from yente import settings
 from yente.entity import Dataset
 from yente.data import check_update, get_dataset_entities, get_statements, get_scope
-from yente.search.base import get_es
+from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
 
@@ -147,3 +148,17 @@ async def update_index(force=False):
         index_statements(timestamp),
     )
     log.info("Index update complete.", next_ts=timestamp)
+
+
+def update_index_threaded(force=False):
+    async def update_in_thread():
+        await update_index(force=force)
+        await close_es()
+
+    thread = threading.Thread(
+        target=asyncio.run,
+        args=(update_in_thread(),),
+        daemon=True,
+    )
+    thread.start()
+    # asyncio.to_thread(update_index, force=force)

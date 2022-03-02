@@ -1,7 +1,6 @@
 import asyncio
 import aiocron
 import structlog
-from collections import namedtuple
 from structlog.stdlib import BoundLogger
 from fastapi import APIRouter, Query
 from fastapi import HTTPException, BackgroundTasks
@@ -9,8 +8,8 @@ from fastapi import HTTPException, BackgroundTasks
 from yente import settings
 from yente.models import HealthzResponse
 from yente.search.search import get_index_status
-from yente.search.indexer import update_index
-from yente.search.base import get_es
+from yente.search.indexer import update_index, update_index_threaded
+from yente.search.base import close_es
 
 log: BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -19,18 +18,18 @@ router = APIRouter()
 async def regular_update():
     if settings.TESTING:
         return
-    await update_index()
+    update_index_threaded()
 
 
 @router.on_event("startup")
 async def startup_event():
-    asyncio.create_task(update_index())
+    update_index_threaded()
     router.crontab = aiocron.crontab("*/30 * * * *", func=regular_update)
 
 
 @router.on_event("shutdown")
 async def shutdown_event():
-    get_es.cache_clear()
+    await close_es()
 
 
 @router.get(
@@ -55,7 +54,6 @@ async def healthz():
     response_model=HealthzResponse,
 )
 async def force_update(
-    background_tasks: BackgroundTasks,
     token: str = Query("", title="Update token for authentication"),
     sync: bool = Query(False, title="Wait until indexing is complete"),
 ):
@@ -68,5 +66,5 @@ async def force_update(
     if sync:
         await update_index(force=True)
     else:
-        background_tasks.add_task(update_index, force=True)
+        update_index_threaded(force=True)
     return {"status": "ok"}

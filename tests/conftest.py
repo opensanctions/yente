@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 
 from yente import settings
-from yente.search.base import get_es
+from yente.search.base import get_es, close_es
 from yente.app import app
 
 
@@ -23,13 +23,7 @@ client = TestClient(app)
 
 
 def clear_state():
-    async def shutdown():
-        es = await get_es()
-        await es.close()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(shutdown())
-    get_es.cache_clear()
+    pass
 
 
 @pytest.fixture(scope="session", autouse=True)
