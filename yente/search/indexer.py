@@ -81,7 +81,7 @@ async def versioned_index(
         indices = await es.cat.indices(format="json")
         for spec in indices:
             name = spec.get("index")
-            if name.startswith(f"{base_alias}-") and name != next_index:
+            if name.startswith(f"{base_alias}-") and name < next_index:
                 log.info("Delete existing index: %s" % name, index=name)
                 await es.indices.delete(index=name)
     except (
