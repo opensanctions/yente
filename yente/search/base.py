@@ -26,9 +26,9 @@ async def get_es() -> AsyncElasticsearch:
     log.info("Connection to ES at: %s", settings.ES_URL)
     es = AsyncElasticsearch(
         hosts=[settings.ES_URL],
-        max_retries=10,
-        retry_on_timeout=True,
-        sniff_on_connection_fail=True,
+        # max_retries=10,
+        # retry_on_timeout=True,
+        # sniff_on_connection_fail=True,
     )
     for retry in range(7):
         try:

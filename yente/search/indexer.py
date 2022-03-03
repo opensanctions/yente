@@ -91,7 +91,7 @@ async def versioned_index(
         SystemExit,
     ) as exc:
         log.warning("Error [%r]; deleting partial index" % exc, index=next_index)
-        get_es.cache_clear()
+        await close_es()
         es = await get_es()
         await es.indices.delete(index=next_index, ignore_unavailable=True)
         raise
