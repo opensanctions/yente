@@ -1,10 +1,11 @@
 import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Any, Dict, List, Union, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
+from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 
 from yente import settings
@@ -63,14 +64,17 @@ async def search(
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
     sorts = parse_sorts(sort)
-    resp = await query_results(
-        query,
-        limit=limit,
-        offset=offset,
-        nested=nested,
-        aggregations=aggregations,
-        sort=sorts,
-    )
+    try:
+        resp = await query_results(
+            query,
+            limit=limit,
+            offset=offset,
+            nested=nested,
+            aggregations=aggregations,
+            sort=sorts,
+        )
+    except BadRequestError as err:
+        raise HTTPException(400, detail=err.message)
     log.info(
         "Query",
         action="search",

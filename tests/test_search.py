@@ -18,6 +18,11 @@ def test_search_no_query():
     assert len(results) > 9, results
 
 
+def test_search_invalid_query():
+    res = client.get("/search/default?q=invalid/query")
+    assert res.status_code == 400, res
+
+
 def test_search_filter_schema_invalid():
     res = client.get("/search/default?q=angela merkel&schema=Banana")
     assert res.status_code == 400, res
