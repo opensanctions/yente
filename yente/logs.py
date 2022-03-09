@@ -27,6 +27,7 @@ def configure_logging(level=logging.INFO):
     ]
 
     if settings.LOG_JSON:
+        shared_processors.append(format_exc_info)
         shared_processors.append(format_json)
         formatter = ProcessorFormatter(
             foreign_pre_chain=shared_processors,

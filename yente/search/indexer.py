@@ -7,6 +7,7 @@ from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
+from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 from followthemoney.schema import Schema
 
@@ -59,18 +60,26 @@ async def versioned_index(
     base_alias: str,
     mapping: Dict[str, Any],
     timestamp: datetime,
+    force: bool = False,
 ):
     ts = timestamp.strftime("%Y%m%d%H%M%S")
     next_index = f"{base_alias}-{ts}"
     exists = await es.indices.exists(index=next_index)
-    if exists.body:
+    if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
         # await es.indices.delete(index=next_index)
         yield None
         return
 
     log.info("Create index", index=next_index)
-    await es.indices.create(index=next_index, mappings=mapping, settings=INDEX_SETTINGS)
+    try:
+        await es.indices.create(
+            index=next_index,
+            mappings=mapping,
+            settings=INDEX_SETTINGS,
+        )
+    except BadRequestError as exc:
+        log.error("Cannot create index: %s" % exc.message, index=next_index)
     try:
         yield next_index
         await es.indices.refresh(index=next_index)
@@ -101,6 +110,7 @@ async def index_entities(
     dataset: Dataset,
     schemata: Iterable[Schema],
     timestamp: datetime,
+    force: bool,
 ):
     es = await get_es()
     mapping = make_entity_mapping(schemata)
@@ -109,15 +119,21 @@ async def index_entities(
         settings.ENTITY_INDEX,
         mapping,
         timestamp,
+        force=force,
     ) as next_index:
         if next_index is not None:
             docs = entity_docs(dataset, next_index)
-            await async_bulk(es, docs, stats_only=True, chunk_size=1000, max_retries=5)
+            await async_bulk(
+                es,
+                docs,
+                stats_only=True,
+                chunk_size=1000,
+                max_retries=5,
+                refresh=False,
+            )
 
 
-async def index_statements(
-    timestamp: datetime,
-):
+async def index_statements(timestamp: datetime, force: bool):
     if not settings.STATEMENT_API:
         log.warning("Statement API is disabled, not indexing statements.")
         return
@@ -129,23 +145,28 @@ async def index_statements(
         settings.STATEMENT_INDEX,
         mapping,
         timestamp,
+        force=force,
     ) as next_index:
         if next_index is not None:
             docs = statement_docs(next_index)
-            await async_bulk(es, docs, stats_only=True, chunk_size=2000, max_retries=5)
+            await async_bulk(
+                es,
+                docs,
+                stats_only=True,
+                chunk_size=2000,
+                max_retries=5,
+                refresh=False,
+            )
 
 
 async def update_index(force=False):
     await check_update()
     scope = await get_scope()
     schemata = list(model)
-    timestamp = scope.last_export
-    if force:
-        timestamp = datetime.utcnow()
-    log.info("Index update check", next_ts=timestamp)
-    await index_entities(scope, schemata, timestamp)
-    await index_statements(timestamp)
-    log.info("Index update complete.", next_ts=timestamp)
+    log.info("Index update check", next_ts=scope.last_export)
+    await index_entities(scope, schemata, scope.last_export, force)
+    await index_statements(scope.last_export, force)
+    log.info("Index update complete.", next_ts=scope.last_export)
 
 
 def update_index_threaded(force=False):
