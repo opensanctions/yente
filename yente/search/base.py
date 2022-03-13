@@ -47,4 +47,5 @@ async def close_es():
     loop_id = hash(loop)
     es = POOL.pop(loop_id, None)
     if es is not None:
+        log.info("Closing elasticsearch client")
         await es.close()

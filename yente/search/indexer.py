@@ -79,20 +79,22 @@ async def versioned_index(
             settings=INDEX_SETTINGS,
         )
     except BadRequestError as exc:
-        log.error("Cannot create index: %s" % exc.message, index=next_index)
+        log.warning("Cannot create index: %s" % exc.message, index=next_index)
     try:
         yield next_index
         await es.indices.refresh(index=next_index)
-        await es.indices.forcemerge(index=next_index)
-
         await es.indices.put_alias(index=next_index, name=base_alias)
         log.info("Index is now aliased to: %s" % base_alias, index=next_index)
         indices = await es.cat.indices(format="json")
         for spec in indices:
             name = spec.get("index")
-            if name.startswith(f"{base_alias}-") and name < next_index:
+            if not name.startswith(f"{base_alias}-"):
+                continue
+            if name < next_index:
                 log.info("Delete existing index: %s" % name, index=name)
                 await es.indices.delete(index=name)
+            else:
+                await es.indices.put_alias(index=name, name=base_alias)
     except (
         Exception,
         KeyboardInterrupt,
