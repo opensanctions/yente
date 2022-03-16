@@ -15,6 +15,26 @@ warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 log = logging.getLogger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
 
+# Get elasticsearch connection.
+def get_es_connection() -> AsyncElasticsearch:
+    if settings.ES_CLOUD_ID:
+        log.info("Connecting to Elastic Cloud ID: %s", settings.ES_CLOUD_ID)
+        return AsyncElasticsearch(
+            cloud_id=settings.ES_CLOUD_ID,
+            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD)
+        )
+    else:
+        if settings.ES_USERNAME and settings.ES_PASSWORD:
+            log.info("Connection to Elasticsearch (Authenticated) at: %s", settings.ES_URL)
+            return AsyncElasticsearch(
+                hosts=[settings.ES_URL],
+                basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD)
+            )
+        else:
+            log.info("Connection to Elasticsearch (Open) at: %s", settings.ES_URL)
+            return AsyncElasticsearch(
+                hosts=[settings.ES_URL]
+            )
 
 # @cache
 async def get_es() -> AsyncElasticsearch:
@@ -23,15 +43,9 @@ async def get_es() -> AsyncElasticsearch:
     if loop_id in POOL:
         return POOL[loop_id]
 
-    log.info("Connection to ES at: %s", settings.ES_URL)
-    es = AsyncElasticsearch(
-        hosts=[settings.ES_URL],
-        # max_retries=10,
-        # retry_on_timeout=True,
-        # sniff_on_connection_fail=True,
-    )
     for retry in range(7):
         try:
+            es = get_es_connection()
             es_ = es.options(request_timeout=5)
             await es_.cluster.health(wait_for_status="yellow")
             POOL[loop_id] = es

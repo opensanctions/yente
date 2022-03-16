@@ -28,13 +28,18 @@ Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) 
 
 The API server has a few settings, which are passed as environment variables. The settings include:
 
-* ``YENTE_ENDPOINT_URL`` the URL which should be used to generate external links back to
+- ``YENTE_ENDPOINT_URL`` the URL which should be used to generate external links back to
   the API server, e.g. ``https://yente.mycompany.com``.
-* ``YENTE_UPDATE_TOKEN`` should be set to a secret string. The token is used with a `POST` request to the `/updatez` endpoint to force an immediate re-indexing of the data.
-* ``YENTE_STATEMENT_API`` can be set to "true" in order to enable the optional statement API. This is not required for entity matching, but can be used to view and debug data provenance in the system and the web site.
-* ``YENTE_SCOPE_DATASET`` can be used to define the main dataset being used. This is
+- ``YENTE_UPDATE_TOKEN`` should be set to a secret string. The token is used with a `POST` request to the `/updatez` endpoint to force an immediate re-indexing of the data.
+- ``YENTE_STATEMENT_API`` can be set to "true" in order to enable the optional statement API. This is not required for entity matching, but can be used to view and debug data provenance in the system and the web site.
+- ``YENTE_SCOPE_DATASET`` can be used to define the main dataset being used. This is
   usually ``default``, but can be set e.g. to ``sanctions`` to load a more specific set
   of data.
+- ``YENTE_ELASTICSEARCH_INDEX_URL``: Elasticsearch URL, defaults to `http://localhost:9200`.
+- ``YENTE_ELASTICSEARCH_INDEX``: Elasticsearch index, defaults to `yente`.
+- ``YENTE_ELASTICSEARCH_INDEX_CLOUD_ID``: If you are using elastic cloud and want to use the ID rather than endpoint URL.
+- ``YENTE_ELASTICSEARCH_INDEX_USERNAME``: Elasticsearch username. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
+- ``YENTE_ELASTICSEARCH_INDEX_PASSWORD``: Elasticsearch password. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 
 ### Development
 
