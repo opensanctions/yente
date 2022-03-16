@@ -132,8 +132,9 @@ async def index_entities(
             await async_bulk(
                 es,
                 docs,
+                yield_ok=False,
                 stats_only=True,
-                chunk_size=1000,
+                chunk_size=500,
                 max_retries=5,
                 refresh=False,
             )
