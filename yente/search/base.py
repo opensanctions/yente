@@ -15,26 +15,23 @@ warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 log = logging.getLogger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
 
-# Get elasticsearch connection.
+
 def get_es_connection() -> AsyncElasticsearch:
+    """Get elasticsearch connection."""
     if settings.ES_CLOUD_ID:
         log.info("Connecting to Elastic Cloud ID: %s", settings.ES_CLOUD_ID)
         return AsyncElasticsearch(
             cloud_id=settings.ES_CLOUD_ID,
-            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD)
+            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD),
         )
-    else:
-        if settings.ES_USERNAME and settings.ES_PASSWORD:
-            log.info("Connection to Elasticsearch (Authenticated) at: %s", settings.ES_URL)
-            return AsyncElasticsearch(
-                hosts=[settings.ES_URL],
-                basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD)
-            )
-        else:
-            log.info("Connection to Elasticsearch (Open) at: %s", settings.ES_URL)
-            return AsyncElasticsearch(
-                hosts=[settings.ES_URL]
-            )
+    elif settings.ES_USERNAME and settings.ES_PASSWORD:
+        log.info("Connection to Elasticsearch (Authenticated) at: %s", settings.ES_URL)
+        return AsyncElasticsearch(
+            hosts=[settings.ES_URL],
+            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD),
+        )
+    return AsyncElasticsearch(hosts=[settings.ES_URL])
+
 
 # @cache
 async def get_es() -> AsyncElasticsearch:
