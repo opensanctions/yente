@@ -58,3 +58,7 @@ Once you've set the ``YENTE_ELASTICSEARCH_URL`` environment variable to point to
 ```bash
 uvicorn yente.app:app --reload
 ```
+
+### License and Support
+
+``yente`` is licensed according to the MIT license terms documented in ``LICENSE``. Using the service in a commercial context may require a [data license for OpenSanctions data](https://www.opensanctions.org/licensing/).

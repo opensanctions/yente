@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 import threading
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, List
 from datetime import datetime
 from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
@@ -79,20 +79,26 @@ async def versioned_index(
             settings=INDEX_SETTINGS,
         )
     except BadRequestError as exc:
-        log.error("Cannot create index: %s" % exc.message, index=next_index)
+        log.warning("Cannot create index: %s" % exc.message, index=next_index)
     try:
         yield next_index
         await es.indices.refresh(index=next_index)
-        await es.indices.forcemerge(index=next_index)
-
         await es.indices.put_alias(index=next_index, name=base_alias)
         log.info("Index is now aliased to: %s" % base_alias, index=next_index)
         indices = await es.cat.indices(format="json")
+        current: List[str] = []
         for spec in indices:
             name = spec.get("index")
-            if name.startswith(f"{base_alias}-") and name < next_index:
-                log.info("Delete existing index: %s" % name, index=name)
-                await es.indices.delete(index=name)
+            if name.startswith(f"{base_alias}-"):
+                current.append(name)
+
+        if len(current) > 1:
+            next_index = max(current)
+            for index in current:
+                if index != next_index:
+                    log.info("Delete existing index: %s" % name, index=index)
+                    await es.indices.delete(index=index)
+            await es.indices.put_alias(index=next_index, name=base_alias)
     except (
         Exception,
         KeyboardInterrupt,
@@ -126,8 +132,9 @@ async def index_entities(
             await async_bulk(
                 es,
                 docs,
+                yield_ok=False,
                 stats_only=True,
-                chunk_size=1000,
+                chunk_size=500,
                 max_retries=5,
                 refresh=False,
             )

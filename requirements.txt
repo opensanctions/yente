@@ -1,12 +1,12 @@
-followthemoney==2.8.3
+followthemoney==2.8.4
 nomenklatura >= 2.0.0, < 3.0.0
 asyncstdlib==3.10.3
 aiocron==1.8
 aiocsv==1.2.1
 aiohttp[speedups]==3.8.1
-elasticsearch[async]==8.0.1
-fastapi==0.74.1
-uvicorn[standard]==0.17.5
+elasticsearch[async]==8.1.0
+fastapi==0.75.0
+uvicorn[standard]==0.17.6
 python-multipart==0.0.5
 email-validator==1.1.3
 structlog==21.5.0
