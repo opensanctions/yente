@@ -88,11 +88,11 @@ DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
 DATA_INDEX = env_str("YENTE_DATA_INDEX", DATA_INDEX)
 SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET", "all")
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
-ES_URL = env_str("YENTE_ES_URL", "http://localhost:9200")
-ES_USERNAME = env_str("YENTE_ES_USERNAME", None)
-ES_PASSWORD = env_str("YENTE_ES_PASSWORD", None)
-ES_CLOUD_ID = env_str("YENTE_ES_CLOUD_ID", None)
-ES_INDEX = env_str("YENTE_ES_INDEX", "yente")
+ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
+ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
+ES_USERNAME = env_str("YENTE_ELASTICSEARCH_USERNAME", None)
+ES_PASSWORD = env_str("YENTE_ELASTICSEARCH_PASSWORD", None)
+ES_CLOUD_ID = env_str("YENTE_ELASTICSEARCH_CLOUD_ID", None)
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
 

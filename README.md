@@ -35,10 +35,11 @@ The API server has a few settings, which are passed as environment variables. Th
 - ``YENTE_SCOPE_DATASET`` can be used to define the main dataset being used. This is
   usually ``default``, but can be set e.g. to ``sanctions`` to load a more specific set
   of data.
-- ``YENTE_ES_URL``: Elasticsearch URL, defaults to `http://localhost:9200`.
-- ``YENTE_ES_CLOUD_ID``: If you are using elastic cloud and want to use the ID rather than endpoint URL.
-- ``YENTE_ES_USERNAME``: Elasticsearch username. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
-- ``YENTE_ES_PASSWORD``: Elasticsearch password. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
+- ``YENTE_ELASTICSEARCH_INDEX_URL``: Elasticsearch URL, defaults to `http://localhost:9200`.
+- ``YENTE_ELASTICSEARCH_INDEX``: Elasticsearch index, defaults to `yente`.
+- ``YENTE_ELASTICSEARCH_INDEX_CLOUD_ID``: If you are using elastic cloud and want to use the ID rather than endpoint URL.
+- ``YENTE_ELASTICSEARCH_INDEX_USERNAME``: Elasticsearch username. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
+- ``YENTE_ELASTICSEARCH_INDEX_PASSWORD``: Elasticsearch password. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 
 ### Development
 
