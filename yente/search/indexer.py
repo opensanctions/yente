@@ -83,22 +83,27 @@ async def versioned_index(
     try:
         yield next_index
         await es.indices.refresh(index=next_index)
-        await es.indices.put_alias(index=next_index, name=base_alias)
-        log.info("Index is now aliased to: %s" % base_alias, index=next_index)
         indices = await es.cat.indices(format="json")
-        current: List[str] = []
-        for spec in indices:
-            name = spec.get("index")
-            if name.startswith(f"{base_alias}-"):
-                current.append(name)
+        current: List[str] = [s.get("index") for s in indices]
+        current = [c for c in current if c.startswith(f"{base_alias}-")]
 
-        if len(current) > 1:
-            next_index = max(current)
-            for index in current:
-                if index != next_index:
-                    log.info("Delete existing index: %s" % name, index=index)
-                    await es.indices.delete(index=index)
-            await es.indices.put_alias(index=next_index, name=base_alias)
+        log.info("Existing indexes", current=current)
+        if len(current) == 0:
+            log.error("No index was created", index=next_index)
+            return
+
+        next_index = max(current)
+        res = await es.indices.put_alias(index=next_index, name=base_alias)
+        if res.meta.status != 200:
+            log.error("Failed to alias next index", index=next_index)
+            return
+
+        log.info("Index is now aliased to: %s" % base_alias, index=next_index)
+
+        for index in current:
+            if index != next_index:
+                log.info("Delete existing index", index=index)
+                await es.indices.delete(index=index)
     except (
         Exception,
         KeyboardInterrupt,
@@ -134,7 +139,7 @@ async def index_entities(
                 docs,
                 yield_ok=False,
                 stats_only=True,
-                chunk_size=500,
+                chunk_size=1000,
                 max_retries=5,
                 refresh=False,
             )
