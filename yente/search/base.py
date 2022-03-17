@@ -19,7 +19,6 @@ POOL: Dict[int, AsyncElasticsearch] = {}
 def get_es_connection() -> AsyncElasticsearch:
     """Get elasticsearch connection."""
     kwargs: Dict[str, Any] = dict(
-        timeout=120,
         request_timeout=120,
         retry_on_timeout=True,
         max_retries=5,
