@@ -1,7 +1,7 @@
 import time
 import asyncio
 import logging
-from typing import Dict
+from typing import Any, Dict
 import warnings
 from asyncstdlib.functools import cache
 from elasticsearch import AsyncElasticsearch
@@ -18,19 +18,21 @@ POOL: Dict[int, AsyncElasticsearch] = {}
 
 def get_es_connection() -> AsyncElasticsearch:
     """Get elasticsearch connection."""
+    kwargs: Dict[str, Any] = dict(
+        timeout=120,
+        request_timeout=120,
+        retry_on_timeout=True,
+        max_retries=5,
+    )
     if settings.ES_CLOUD_ID:
         log.info("Connecting to Elastic Cloud ID: %s", settings.ES_CLOUD_ID)
-        return AsyncElasticsearch(
-            cloud_id=settings.ES_CLOUD_ID,
-            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD),
-        )
-    elif settings.ES_USERNAME and settings.ES_PASSWORD:
-        log.info("Connection to Elasticsearch (Authenticated) at: %s", settings.ES_URL)
-        return AsyncElasticsearch(
-            hosts=[settings.ES_URL],
-            basic_auth=(settings.ES_USERNAME, settings.ES_PASSWORD),
-        )
-    return AsyncElasticsearch(hosts=[settings.ES_URL])
+        kwargs["cloud_id"] = settings.ES_CLOUD_ID
+    else:
+        kwargs["hosts"] = [settings.ES_URL]
+    if settings.ES_USERNAME and settings.ES_PASSWORD:
+        auth = (settings.ES_USERNAME, settings.ES_PASSWORD)
+        kwargs["basic_auth"] = auth
+    return AsyncElasticsearch(**kwargs)
 
 
 # @cache

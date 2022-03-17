@@ -80,41 +80,27 @@ async def versioned_index(
         )
     except BadRequestError as exc:
         log.warning("Cannot create index: %s" % exc.message, index=next_index)
-    try:
-        yield next_index
-        await es.indices.refresh(index=next_index)
-        indices = await es.cat.indices(format="json")
-        current: List[str] = [s.get("index") for s in indices]
-        current = [c for c in current if c.startswith(f"{base_alias}-")]
 
-        log.info("Existing indexes", current=current)
-        if len(current) == 0:
-            log.error("No index was created", index=next_index)
-            return
+    yield next_index
 
-        next_index = max(current)
-        res = await es.indices.put_alias(index=next_index, name=base_alias)
-        if res.meta.status != 200:
-            log.error("Failed to alias next index", index=next_index)
-            return
+    await es.indices.refresh(index=next_index)
+    res = await es.indices.put_alias(index=next_index, name=base_alias)
+    if res.meta.status != 200:
+        log.error("Failed to alias next index", index=next_index)
+        return
 
-        log.info("Index is now aliased to: %s" % base_alias, index=next_index)
+    log.info("Index is now aliased to: %s" % base_alias, index=next_index)
 
-        for index in current:
-            if index != next_index:
-                log.info("Delete existing index", index=index)
-                await es.indices.delete(index=index)
-    except (
-        Exception,
-        KeyboardInterrupt,
-        RuntimeError,
-        SystemExit,
-    ) as exc:
-        log.warning("Error [%r]; deleting partial index" % exc, index=next_index)
-        await close_es()
-        es = await get_es()
-        await es.indices.delete(index=next_index, ignore_unavailable=True)
-        raise
+    indices = await es.cat.indices(format="json")
+    current: List[str] = [s.get("index") for s in indices]
+    current = [c for c in current if c.startswith(f"{base_alias}-")]
+    if len(current) == 0:
+        log.error("No index was created", index=next_index)
+        return
+    for index in current:
+        if index < next_index:
+            log.info("Delete older index", index=index)
+            await es.indices.delete(index=index)
 
 
 async def index_entities(
@@ -140,7 +126,6 @@ async def index_entities(
                 yield_ok=False,
                 stats_only=True,
                 chunk_size=1000,
-                max_retries=5,
                 refresh=False,
             )
 
@@ -166,7 +151,6 @@ async def index_statements(timestamp: datetime, force: bool):
                 docs,
                 stats_only=True,
                 chunk_size=2000,
-                max_retries=5,
                 refresh=False,
             )
 

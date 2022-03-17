@@ -20,7 +20,7 @@ INDEX_SETTINGS = {
             }
         },
     },
-    "index": {"refresh_interval": "-1"},
+    "index": {"refresh_interval": "30s"},
 }
 
 
