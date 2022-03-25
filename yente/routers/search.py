@@ -78,7 +78,7 @@ async def search(
     log.info(
         "Query",
         action="search",
-        query=q,
+        length=len(q),
         dataset=ds.name,
         total=resp.get("total"),
     )
