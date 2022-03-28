@@ -3,7 +3,7 @@ import aiocron
 import structlog
 from structlog.stdlib import BoundLogger
 from fastapi import APIRouter, Query
-from fastapi import HTTPException, BackgroundTasks
+from fastapi import HTTPException
 
 from yente import settings
 from yente.models import HealthzResponse
