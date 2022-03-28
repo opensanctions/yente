@@ -49,28 +49,29 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
                     "names": {
                         "query": value,
                         "lenient": False,
-                        "operator": "AND",
+                        # "operator": "AND",
                         "minimum_should_match": "60%",
                         # "slop": 3,
-                        "fuzziness": 1,
+                        "fuzziness": 1 if fuzzy else 0,
                         # "boost": 3.0,
                     }
                 }
             }
             shoulds.append(query)
-        if prop.type.group is not None:
+        elif prop.type.group is not None:
             if prop.type not in TEXT_TYPES:
                 field = prop.type.group
                 if field not in terms:
                     terms[field] = []
                 terms[field].append(value)
-        texts.append(value)
+        if prop.type in (registry.name, registry.string, registry.address):
+            if len(value) < 100:
+                texts.append(value)
 
     for field, texts in terms.items():
         shoulds.append({"terms": {field: texts}})
     for text in texts:
         shoulds.append({"match_phrase": {"text": text}})
-    # print("XXXX", entity.to_dict())
     return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 
