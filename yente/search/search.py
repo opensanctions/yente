@@ -179,7 +179,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     resp = await es_.search(
         index=settings.ENTITY_INDEX,
         query=filtered,
-        size=settings.MAX_PAGE,
+        size=settings.MAX_RESULTS,
     )
     async for adj, _ in result_entities(resp):
         for prop, value in adj.itervalues():

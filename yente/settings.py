@@ -91,7 +91,9 @@ STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
-MAX_PAGE = 9900
+MAX_PAGE = 500
+MAX_RESULTS = 9999
+MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")

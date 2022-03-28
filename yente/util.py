@@ -50,12 +50,12 @@ def limit_window(limit: Any, offset: Any, default_limit: int = 10) -> Tuple[int,
         num_limit = default_limit
     try:
         num_offset = max(0, int(offset))
-        num_offset = min(settings.MAX_PAGE, num_offset)
+        num_offset = min(settings.MAX_RESULTS, num_offset)
     except (ValueError, TypeError):
         num_offset = 0
     end = num_limit + num_offset
-    if end > settings.MAX_PAGE:
-        num_limit = max(0, settings.MAX_PAGE - num_offset)
+    if end > settings.MAX_RESULTS:
+        num_limit = max(0, settings.MAX_RESULTS - num_offset)
     return num_limit, num_offset
 
 
