@@ -1,4 +1,4 @@
-followthemoney==2.8.5
+followthemoney==2.9.0
 nomenklatura >= 2.0.0, < 3.0.0
 asyncstdlib==3.10.3
 aiocron==1.8
