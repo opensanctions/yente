@@ -95,6 +95,8 @@ MAX_PAGE = 500
 MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 
+SCORE_THRESHOLD = 0.6
+
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")

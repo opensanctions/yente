@@ -81,13 +81,15 @@ def get_freebase_type(schema: Schema) -> FreebaseType:
     }
 
 
-def get_freebase_entity(proxy: Entity, score: float = 0.0) -> FreebaseEntity:
+def get_freebase_entity(
+    proxy: Entity, score: float = 0.0, match: bool = False
+) -> FreebaseEntity:
     return {
         "id": proxy.id,
         "name": proxy.caption,
         "type": [get_freebase_type(proxy.schema)],
         "score": score,
-        "match": False,
+        "match": match,
     }
 
 

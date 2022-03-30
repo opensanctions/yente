@@ -9,7 +9,6 @@ from fastapi import Request
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
-from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
@@ -22,6 +21,7 @@ from yente.search.search import search_entities, result_entities, result_total
 from yente.data import get_freebase_type, get_freebase_types
 from yente.data import get_freebase_entity, get_freebase_property
 from yente.data import get_matchable_schemata
+from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, MATCH_PAGE, get_dataset
 
@@ -117,23 +117,26 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
     limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
-    type = query.get("type", settings.BASE_SCHEMA)
-    proxy = model.make_entity(type)
-    proxy.add("alias", query.get("query"))
+    schema = query.get("type", settings.BASE_SCHEMA)
+    properties = {"alias": [query.get("query")]}
+
     for p in query.get("properties", []):
         prop = model.get_qname(p.get("pid"))
         if prop is None:
             continue
-        try:
-            proxy.add(prop.name, p.get("v"), fuzzy=True)
-        except InvalidData:
-            log.exception("Invalid property is set.")
+        if prop.name not in properties:
+            properties[prop.name] = []
+        properties[prop.name].append(p.get("v"))
+
+    data = {"schema": schema, "properties": properties}
+    proxy = prepare_entity(data)
 
     results = []
-    # log.info("QUERY %r %s", proxy.to_dict(), limit)
     query = entity_query(dataset, proxy, fuzzy=True)
-    resp = await search_entities(query, limit=limit, offset=offset)
-    async for result, score in result_entities(resp):
+    resp = await search_entities(query, limit=limit * 2, offset=offset)
+    results = [r async for r, _ in result_entities(resp)][:limit]
+    results = score_results(proxy, results)
+    for result in results:
         results.append(get_freebase_entity(result, score))
     log.info(
         "Reconcile",

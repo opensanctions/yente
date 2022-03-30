@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
+from nomenklatura.matching.types import FeatureDocs
 
 from yente import settings
 
@@ -24,6 +25,7 @@ EntityResponse.update_forward_refs()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
+    features: Dict[str, float]
     match: bool = False
 
 
@@ -76,6 +78,7 @@ class EntityMatches(ResultsResponse):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
+    model: FeatureDocs
 
 
 class StatementModel(BaseModel):

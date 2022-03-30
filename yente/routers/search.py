@@ -6,6 +6,7 @@ from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from elasticsearch.exceptions import BadRequestError
+from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
@@ -19,6 +20,7 @@ from yente.search.queries import FilterDict
 from yente.search.search import get_entity, query_results
 from yente.search.search import serialize_entity
 from yente.util import limit_window, EntityRedirect
+from yente.scoring import prepare_entity, score_results
 from yente.routers.util import get_dataset
 from yente.routers.util import MATCH_PAGE, PATH_DATASET
 
@@ -95,9 +97,10 @@ async def _match_one(
     data = example.dict()
     data["id"] = "sample"
     data["schema"] = data.pop("schema_", data.pop("schema", None))
-    entity = model.get_proxy(data, cleaned=False)
+    entity = prepare_entity(data)
     query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(query, limit=limit, offset=0, nested=False)
+    results = await query_results(query, limit=limit * 2, offset=0, nested=False)
+    results["results"] = score_results(entity, results["results"])[:limit]
     results["query"] = entity.to_dict()
     log.info("Match", action="match", schema=data["schema"])
     return (name, results)
@@ -180,7 +183,10 @@ async def match(
     if not len(tasks):
         raise HTTPException(400, "No queries provided.")
     responses = await asyncio.gather(*tasks)
-    return {"responses": {n: r for n, r in responses}}
+    return {
+        "responses": {n: r for n, r in responses},
+        "matcher": explain_matcher(),
+    }
 
 
 @router.get(
