@@ -38,8 +38,8 @@ def make_field(type_, copy_to=None, format=None):
 
 
 def make_type_field(type_, copy_to=True):
-    if type_ == registry.date:
-        return make_field("date", copy_to=copy_to, format=DATE_FORMAT)
+    # if type_ == registry.date:
+    #     return make_field("date", copy_to=copy_to, format=DATE_FORMAT)
     strong = type_.group is not None
     field_type = "keyword" if strong else "text"
     if type_ in TEXT_TYPES:

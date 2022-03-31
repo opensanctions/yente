@@ -17,6 +17,7 @@ from yente.data import check_update, get_dataset_entities, get_statements, get_s
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
+from yente.util import expand_dates
 
 log: BoundLogger = structlog.get_logger(__name__)
 
@@ -32,6 +33,7 @@ async def entity_docs(dataset: Dataset, index: str):
         data = entity.to_dict()
         data["canonical_id"] = entity.id
         data["text"] = texts
+        data["dates"] = expand_dates(data.get("dates", []))
         # TODO: add partial dates
 
         entity_id = data.pop("id")
@@ -67,10 +69,10 @@ async def versioned_index(
     exists = await es.indices.exists(index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
-        # await es.indices.delete(index=next_index)
         yield None
         return
 
+    # await es.indices.delete(index=next_index)
     log.info("Create index", index=next_index)
     try:
         await es.indices.create(
