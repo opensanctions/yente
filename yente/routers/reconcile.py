@@ -18,9 +18,9 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
-from yente.data import get_freebase_type, get_freebase_types
-from yente.data import get_freebase_entity, get_freebase_property
-from yente.data import get_matchable_schemata
+from yente.data import get_datasets, get_freebase_type, get_freebase_types
+from yente.data import get_freebase_entity, get_freebase_scored
+from yente.data import get_matchable_schemata, get_freebase_property
 from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, MATCH_PAGE, get_dataset
@@ -116,6 +116,7 @@ async def reconcile_queries(
 async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
+    datasets = await get_datasets()
     limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
     schema = query.get("type", settings.BASE_SCHEMA)
     properties = {"alias": [query.get("query")]}
@@ -130,17 +131,15 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
 
     data = {"schema": schema, "properties": properties}
     proxy = prepare_entity(data)
-
-    results = []
+    log.info("DEBUG", entity=proxy.to_dict())
     query = entity_query(dataset, proxy, fuzzy=True)
-    resp = await search_entities(query, limit=limit * 2, offset=offset)
-    results = [r async for r, _ in result_entities(resp)][:limit]
-    results = score_results(proxy, results)
-    for result in results:
-        results.append(get_freebase_entity(result, score))
+    resp = await search_entities(query, limit=limit, offset=offset)
+    entities = result_entities(resp, datasets)
+    results = [get_freebase_scored(r) for r in score_results(proxy, entities)]
     log.info(
         "Reconcile",
         action="reconcile",
+        best_score=results[0]["score"] if len(results) else 0,
         schema=proxy.schema.name,
         total=result_total(resp),
     )
@@ -169,12 +168,13 @@ async def reconcile_suggest_entity(
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
     ds = await get_dataset(dataset)
+    datasets = await get_datasets()
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
-    async for result, score in result_entities(resp):
-        results.append(get_freebase_entity(result, score))
+    for result in result_entities(resp, datasets):
+        results.append(get_freebase_entity(result))
     log.info(
         "Prefix query",
         action="suggest",

@@ -1,14 +1,15 @@
 import logging
 from elastic_transport import ObjectApiResponse
 from structlog.contextvars import get_contextvars
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, cast
+from typing import AsyncGenerator, Generator
+from typing import Any, Dict, List, Optional, Tuple, cast
 from elasticsearch import TransportError
 from elasticsearch.exceptions import NotFoundError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
-from yente.entity import Entity
+from yente.entity import Datasets, Entity
 from yente.models import TotalSpec
 from yente.search.base import get_es
 from yente.search.queries import filter_query
@@ -23,27 +24,45 @@ def get_opaque_id() -> str:
     return ctx.get("trace_id")
 
 
-def result_entity(datasets, data) -> Tuple[Optional[Entity], float]:
+def result_entity(datasets, data) -> Optional[Entity]:
     source = data.get("_source")
     if source is None:
-        return None, 0.0
+        return None
     source["id"] = data.get("_id")
-    return Entity.from_data(source, datasets), data.get("_score")
+    return Entity.from_os_data(source, datasets)
 
 
 def result_total(result: ObjectApiResponse) -> TotalSpec:
     return cast(TotalSpec, result.get("hits", {}).get("total"))
 
 
-async def result_entities(
-    result: ObjectApiResponse,
-) -> AsyncGenerator[Tuple[Entity, float], None]:
-    datasets = await get_datasets()
-    hits = result.get("hits", {})
+def result_entities(
+    response: ObjectApiResponse, datasets: Datasets
+) -> Generator[Entity, None, None]:
+    hits = response.get("hits", {})
     for hit in hits.get("hits", []):
-        entity, score = result_entity(datasets, hit)
+        entity = result_entity(datasets, hit)
         if entity is not None:
-            yield entity, score
+            yield entity
+
+
+def result_facets(response: ObjectApiResponse, datasets: Datasets):
+    facets = {}
+    for field, agg in response.get("aggregations", {}).items():
+        facets[field] = {"label": field, "values": []}
+        # print(field, agg)
+        for bucket in agg.get("buckets", []):
+            key = bucket.get("key")
+            value = {"name": key, "label": key, "count": bucket.get("doc_count")}
+            if field == "datasets":
+                facets[field]["label"] = "Data sources"
+                value["label"] = datasets[key].title
+            if field in registry.groups:
+                type_ = registry.groups[field]
+                facets[field]["label"] = type_.plural
+                value["label"] = type_.caption(key)
+            facets[field]["values"].append(value)
+    return facets
 
 
 async def search_entities(
@@ -65,51 +84,6 @@ async def search_entities(
         aggregations=aggregations,
     )
     return resp
-
-
-async def query_results(
-    query: Dict[Any, Any],
-    limit: int,
-    nested: bool = False,
-    offset: int = 0,
-    aggregations: Optional[Dict] = None,
-    sort: List[Any] = [],
-):
-    resp = await search_entities(
-        query,
-        limit=limit,
-        offset=offset,
-        aggregations=aggregations,
-        sort=sort,
-    )
-    results = []
-    async for result, score in result_entities(resp):
-        data = await serialize_entity(result, nested=nested)
-        data["score"] = score
-        results.append(data)
-    datasets = await get_datasets()
-    facets = {}
-    for field, agg in resp.get("aggregations", {}).items():
-        facets[field] = {"label": field, "values": []}
-        # print(field, agg)
-        for bucket in agg.get("buckets", []):
-            key = bucket.get("key")
-            value = {"name": key, "label": key, "count": bucket.get("doc_count")}
-            if field == "datasets":
-                facets[field]["label"] = "Data sources"
-                value["label"] = datasets[key].title
-            if field in registry.groups:
-                type_ = registry.groups[field]
-                facets[field]["label"] = type_.plural
-                value["label"] = type_.caption(key)
-            facets[field]["values"].append(value)
-    return {
-        "results": results,
-        "facets": facets,
-        "total": result_total(resp),
-        "limit": limit,
-        "offset": offset,
-    }
 
 
 async def statement_results(
@@ -151,8 +125,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
         _source = data.get("_source")
         if _source.get("canonical_id") != entity_id:
             raise EntityRedirect(_source.get("canonical_id"))
-        entity, _ = result_entity(datasets, data)
-        return entity
+        return result_entity(datasets, data)
     except NotFoundError:
         return None
 
@@ -165,7 +138,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
     if len(entities):
         resp = await es_.mget(index=settings.ENTITY_INDEX, ids=entities)
         for raw in resp.get("docs", []):
-            adj, _ = result_entity(datasets, raw)
+            adj = result_entity(datasets, raw)
             if adj is None:
                 continue
             for prop, value in entity.itervalues():
@@ -181,7 +154,7 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
         query=filtered,
         size=settings.MAX_RESULTS,
     )
-    async for adj, _ in result_entities(resp):
+    for adj in result_entities(resp, datasets):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
                 if prop.reverse is not None:

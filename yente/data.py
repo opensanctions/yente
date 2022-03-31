@@ -4,7 +4,7 @@ import logging
 from banal import as_bool
 from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
-from typing import AsyncGenerator, Dict, List, Set
+from typing import Any, AsyncGenerator, Dict, List, Set
 from asyncstdlib.functools import cache
 from followthemoney import model
 from followthemoney.schema import Schema
@@ -12,8 +12,8 @@ from followthemoney.property import Property
 
 from yente import settings
 from yente.entity import Entity, Dataset, Datasets
-from yente.models import FreebaseType
-from yente.models import FreebaseEntity, FreebaseProperty
+from yente.models import FreebaseType, FreebaseProperty
+from yente.models import FreebaseEntity, FreebaseScoredEntity
 from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)
@@ -81,15 +81,22 @@ def get_freebase_type(schema: Schema) -> FreebaseType:
     }
 
 
-def get_freebase_entity(
-    proxy: Entity, score: float = 0.0, match: bool = False
-) -> FreebaseEntity:
+def get_freebase_entity(proxy: Entity) -> FreebaseEntity:
     return {
         "id": proxy.id,
         "name": proxy.caption,
         "type": [get_freebase_type(proxy.schema)],
-        "score": score,
-        "match": match,
+    }
+
+
+def get_freebase_scored(data: Dict[str, Any]) -> FreebaseScoredEntity:
+    schema = model.get(data["schema"])
+    return {
+        "id": data["id"],
+        "name": data["caption"],
+        "type": [get_freebase_type(schema)],
+        "score": data["score"] * 100,
+        "match": data["match"],
     }
 
 
@@ -114,7 +121,7 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
         async with client.get(dataset.entities_url) as resp:
             async for line in resp.content:
                 data = json.loads(line)
-                entity = Entity.from_data(data, datasets)
+                entity = Entity.from_os_data(data, datasets)
                 if not len(entity.datasets):
                     entity.datasets.add(dataset)
                 yield entity

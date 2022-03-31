@@ -10,15 +10,17 @@ from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
-from yente.entity import Dataset
+from yente.entity import Dataset, Datasets
 from yente.models import EntityExample
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
-from yente.search.search import get_entity, query_results
-from yente.search.search import serialize_entity
+from yente.search.search import get_entity, serialize_entity
+from yente.search.search import search_entities, result_entities
+from yente.search.search import result_facets, result_total
+from yente.data import get_datasets
 from yente.util import limit_window, EntityRedirect
 from yente.scoring import prepare_entity, score_results
 from yente.routers.util import get_dataset
@@ -53,6 +55,7 @@ async def search(
     entity matching, the multi-property matching API should be used instead."""
     limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
+    all_datasets = await get_datasets()
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
@@ -65,18 +68,29 @@ async def search(
         filters["target"] = target
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
-    sorts = parse_sorts(sort)
     try:
-        resp = await query_results(
+        response = await search_entities(
             query,
             limit=limit,
             offset=offset,
-            nested=nested,
             aggregations=aggregations,
-            sort=sorts,
+            sort=parse_sorts(sort),
         )
     except BadRequestError as err:
         raise HTTPException(400, detail=err.message)
+
+    results = []
+    for result in result_entities(response, all_datasets):
+        data = await serialize_entity(result, nested=nested)
+        results.append(data)
+    facets = result_facets(response, all_datasets)
+    resp = {
+        "results": results,
+        "facets": facets,
+        "total": result_total(response),
+        "limit": limit,
+        "offset": offset,
+    }
     log.info(
         "Query",
         action="search",
@@ -88,6 +102,7 @@ async def search(
 
 
 async def _match_one(
+    datasets: Datasets,
     name: str,
     ds: Dataset,
     example: EntityExample,
@@ -99,10 +114,17 @@ async def _match_one(
     data["schema"] = data.pop("schema_", data.pop("schema", None))
     entity = prepare_entity(data)
     query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(query, limit=limit * 2, offset=0, nested=False)
-    results["results"] = score_results(entity, results["results"])[:limit]
-    results["query"] = entity.to_dict()
-    log.info("Match", action="match", schema=data["schema"])
+    try:
+        response = await search_entities(query, limit=limit, offset=0)
+    except BadRequestError as err:
+        raise HTTPException(400, detail=err.message)
+    entities = result_entities(response, datasets)
+    results = {
+        "results": score_results(entity, entities)[:limit],
+        "query": entity.to_dict(),
+        "total": result_total(response),
+    }
+    log.info("Match", action="match", schema=entity.schema.name, total=results["total"])
     return (name, results)
 
 
@@ -176,16 +198,18 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
+    datasets = await get_datasets()
     limit, _ = limit_window(limit, 0, 10)
     tasks = []
     for name, example in match.queries.items():
-        tasks.append(_match_one(name, ds, example, fuzzy, limit))
+        tasks.append(_match_one(datasets, name, ds, example, fuzzy, limit))
     if not len(tasks):
         raise HTTPException(400, "No queries provided.")
     responses = await asyncio.gather(*tasks)
     return {
         "responses": {n: r for n, r in responses},
         "matcher": explain_matcher(),
+        "limit": limit,
     }
 
 

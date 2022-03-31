@@ -1,16 +1,16 @@
-from typing import Any, Dict, List
-from followthemoney import model
+from typing import Any, Dict, Iterable, List
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
-from nomenklatura.entity import CompositeEntity as Entity
 from nomenklatura.matching import compare_scored
 
 from yente import settings
+from yente.entity import Entity
 
 
 def prepare_entity(data: Dict[str, Any]) -> Entity:
     """Generate an entity from user data for matching."""
-    proxy = Entity.from_data(model, data, {}, cleaned=False)
+    data["id"] = "query"
+    proxy = Entity.from_os_data(data, {}, cleaned=False)
 
     # Generate names from name parts
     combine_names(proxy)
@@ -26,22 +26,25 @@ def prepare_entity(data: Dict[str, Any]) -> Entity:
 
 def score_results(
     entity: Entity,
-    results: List[Entity],
+    results: Iterable[Entity],
     threshold: float = settings.SCORE_THRESHOLD,
 ) -> List[Dict[str, Any]]:
     scored: List[Dict[str, Any]] = []
+    matches = 0
     for res in results:
         result = res.to_dict()
         result.update(compare_scored(entity, res))
-        result["match"] = False
+        result["match"] = result["score"] >= threshold
+        if result["match"]:
+            matches += 1
         scored.append(result)
 
     scored = sorted(scored, key=lambda r: r["score"], reverse=True)
 
-    # Set match if the first result meets threshold, and no others:
-    if len(scored) > 0 and scored[0]["score"] >= threshold:
-        scored[0]["match"] = True
-        if len(scored) > 1 and scored[1]["score"] >= threshold:
-            scored[0]["match"] = False
+    # If multiple entities meet the match threshold, it's ambiguous
+    # and we bail out:
+    if matches > 1:
+        for result in scored:
+            result["match"] = False
 
     return scored

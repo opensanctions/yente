@@ -71,14 +71,16 @@ class EntityMatchQuery(BaseModel):
     queries: Dict[str, EntityExample]
 
 
-class EntityMatches(ResultsResponse):
+class EntityMatches(BaseModel):
     results: List[ScoredEntityResponse]
+    total: TotalSpec
     query: EntityExample
 
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
-    model: FeatureDocs
+    matcher: FeatureDocs
+    limit: int
 
 
 class StatementModel(BaseModel):
@@ -115,10 +117,13 @@ class FreebaseProperty(BaseModel):
 class FreebaseEntity(BaseModel):
     id: str = Field(..., example="NK-A7z....")
     name: str = Field(..., example="John Doe")
-    score: Optional[float] = Field(..., example=0.99)
-    match: Optional[bool] = Field(..., example=False)
     description: Optional[str] = Field(None, example="...")
     type: List[FreebaseType]
+
+
+class FreebaseScoredEntity(FreebaseEntity):
+    score: Optional[float] = Field(..., example=0.99)
+    match: Optional[bool] = Field(..., example=False)
 
 
 class FreebaseResponse(BaseModel):
