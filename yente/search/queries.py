@@ -41,6 +41,8 @@ def filter_query(
 def entity_query(dataset: Dataset, entity: EntityProxy):
     shoulds: List[Dict[str, Any]] = []
     for prop, value in entity.itervalues():
+        if not prop.matchable:
+            continue
         if prop.type in TEXT_TYPES:
             is_name = prop.type == registry.name
             query = {

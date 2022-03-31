@@ -180,7 +180,7 @@ class FreebaseManifest(BaseModel):
 
 
 class FreebaseEntityResult(BaseModel):
-    result: List[FreebaseEntity]
+    result: List[FreebaseScoredEntity]
 
 
 FreebaseQueryResult = Dict[str, FreebaseEntityResult]

@@ -131,15 +131,13 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
 
     data = {"schema": schema, "properties": properties}
     proxy = prepare_entity(data)
-    log.info("DEBUG", entity=proxy.to_dict())
-    query = entity_query(dataset, proxy, fuzzy=True)
+    query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
     entities = result_entities(resp, datasets)
     results = [get_freebase_scored(r) for r in score_results(proxy, entities)]
     log.info(
         "Reconcile",
         action="reconcile",
-        best_score=results[0]["score"] if len(results) else 0,
         schema=proxy.schema.name,
         total=result_total(resp),
     )
