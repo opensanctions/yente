@@ -6,21 +6,25 @@ from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from elasticsearch.exceptions import BadRequestError
+from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
-from yente.entity import Dataset
-from yente.models import EntityExample
+from yente.entity import Dataset, Datasets
+from yente.models import EntityExample, ScoredEntityResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
-from yente.search.search import get_entity, query_results
-from yente.search.search import serialize_entity
+from yente.search.search import get_entity, serialize_entity
+from yente.search.search import search_entities, result_entities
+from yente.search.search import result_facets, result_total
+from yente.data import get_datasets
 from yente.util import limit_window, EntityRedirect
+from yente.scoring import prepare_entity, score_results
 from yente.routers.util import get_dataset
-from yente.routers.util import MATCH_PAGE, PATH_DATASET
+from yente.routers.util import PATH_DATASET
 
 log: BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -51,6 +55,7 @@ async def search(
     entity matching, the multi-property matching API should be used instead."""
     limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
+    all_datasets = await get_datasets()
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
@@ -63,18 +68,29 @@ async def search(
         filters["target"] = target
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
-    sorts = parse_sorts(sort)
     try:
-        resp = await query_results(
+        response = await search_entities(
             query,
             limit=limit,
             offset=offset,
-            nested=nested,
             aggregations=aggregations,
-            sort=sorts,
+            sort=parse_sorts(sort),
         )
     except BadRequestError as err:
         raise HTTPException(400, detail=err.message)
+
+    results = []
+    for result in result_entities(response, all_datasets):
+        data = await serialize_entity(result, nested=nested)
+        results.append(data)
+    facets = result_facets(response, all_datasets)
+    resp = {
+        "results": results,
+        "facets": facets,
+        "total": result_total(response),
+        "limit": limit,
+        "offset": offset,
+    }
     log.info(
         "Query",
         action="search",
@@ -83,24 +99,6 @@ async def search(
         total=resp.get("total"),
     )
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
-
-
-async def _match_one(
-    name: str,
-    ds: Dataset,
-    example: EntityExample,
-    fuzzy: bool,
-    limit: int,
-) -> Tuple[str, Dict[str, Any]]:
-    data = example.dict()
-    data["id"] = "sample"
-    data["schema"] = data.pop("schema_", data.pop("schema", None))
-    entity = model.get_proxy(data, cleaned=False)
-    query = entity_query(ds, entity, fuzzy=fuzzy)
-    results = await query_results(query, limit=limit, offset=0, nested=False)
-    results["query"] = entity.to_dict()
-    log.info("Match", action="match", schema=data["schema"])
-    return (name, results)
 
 
 @router.post(
@@ -113,11 +111,14 @@ async def match(
     match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
     limit: int = Query(
-        MATCH_PAGE,
+        settings.MATCH_PAGE,
         title="Number of results to return",
-        lt=settings.MAX_PAGE,
+        lt=settings.MAX_MATCHES,
     ),
-    fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
+    threshold: float = Query(
+        settings.SCORE_THRESHOLD, title="Threshold score for matches"
+    ),
+    cutoff: float = Query(settings.SCORE_CUTOFF, title="Cutoff score for matches"),
 ):
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -173,14 +174,37 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    limit, _ = limit_window(limit, 0, 10)
-    tasks = []
-    for name, example in match.queries.items():
-        tasks.append(_match_one(name, ds, example, fuzzy, limit))
-    if not len(tasks):
-        raise HTTPException(400, "No queries provided.")
-    responses = await asyncio.gather(*tasks)
-    return {"responses": {n: r for n, r in responses}}
+    datasets = await get_datasets()
+    limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+    try:
+        queries = []
+        entities = []
+        for name, example in match.queries.items():
+            data = example.dict()
+            data["schema"] = data.pop("schema_", data.pop("schema", None))
+            entity = prepare_entity(data)
+            query = entity_query(ds, entity)
+            queries.append(search_entities(query, limit=limit))
+            entities.append((name, entity))
+        if not len(queries):
+            raise HTTPException(400, "No queries provided.")
+        results = await asyncio.gather(*queries)
+    except BadRequestError as err:
+        log.exception("Error while running match query.")
+        raise HTTPException(400, detail=err.message)
+
+    responses = {}
+    for (name, entity), response in zip(entities, results):
+        ents = result_entities(response, datasets)
+        scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
+        total = result_total(response)
+        log.info("Match", action="match", schema=entity.schema.name, total=total)
+        responses[name] = {"results": scored, "query": entity.to_dict(), "total": total}
+    return {
+        "responses": responses,
+        "matcher": explain_matcher(),
+        "limit": limit,
+    }
 
 
 @router.get(

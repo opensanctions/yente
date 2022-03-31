@@ -4,7 +4,7 @@ from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
-TEXT_TYPES = (registry.name, registry.address, registry.url)
+TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
     "analysis": {
         "normalizer": {
@@ -38,8 +38,8 @@ def make_field(type_, copy_to=None, format=None):
 
 
 def make_type_field(type_, copy_to=True):
-    if type_ == registry.date:
-        return make_field("date", copy_to=copy_to, format=DATE_FORMAT)
+    # if type_ == registry.date:
+    #     return make_field("date", copy_to=copy_to, format=DATE_FORMAT)
     strong = type_.group is not None
     field_type = "keyword" if strong else "text"
     if type_ in TEXT_TYPES:

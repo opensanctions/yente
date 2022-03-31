@@ -38,40 +38,28 @@ def filter_query(
     return {"bool": {"filter": filterqs, "should": shoulds, "minimum_should_match": 1}}
 
 
-def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = False):
-    terms: Dict[str, List[str]] = {}
-    texts: List[str] = []
+def entity_query(dataset: Dataset, entity: EntityProxy):
     shoulds: List[Dict[str, Any]] = []
     for prop, value in entity.itervalues():
-        if prop.type == registry.name:
+        if not prop.matchable:
+            continue
+        if prop.type in TEXT_TYPES:
+            is_name = prop.type == registry.name
             query = {
                 "match": {
-                    "names": {
+                    prop.type.group: {
                         "query": value,
-                        "lenient": False,
-                        # "operator": "AND",
-                        "minimum_should_match": "60%",
-                        # "slop": 3,
-                        "fuzziness": 1 if fuzzy else 0,
-                        # "boost": 3.0,
+                        "fuzziness": "AUTO" if is_name else 0,
+                        "minimum_should_match": 1,
+                        "boost": 3.0 if is_name else 1.0,
                     }
                 }
             }
             shoulds.append(query)
         elif prop.type.group is not None:
-            if prop.type not in TEXT_TYPES:
-                field = prop.type.group
-                if field not in terms:
-                    terms[field] = []
-                terms[field].append(value)
-        if prop.type in (registry.name, registry.string, registry.address):
-            if len(value) < 100:
-                texts.append(value)
-
-    for field, texts in terms.items():
-        shoulds.append({"terms": {field: texts}})
-    for text in texts:
-        shoulds.append({"match_phrase": {"text": text}})
+            shoulds.append({"term": {prop.type.group: value}})
+        else:
+            shoulds.append({"match_phrase": {"text": value}})
     return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 

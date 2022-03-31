@@ -9,7 +9,6 @@ from fastapi import Request
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
-from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.entity import Dataset
@@ -19,11 +18,12 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
-from yente.data import get_freebase_type, get_freebase_types
-from yente.data import get_freebase_entity, get_freebase_property
-from yente.data import get_matchable_schemata
+from yente.data import get_datasets, get_freebase_type, get_freebase_types
+from yente.data import get_freebase_entity, get_freebase_scored
+from yente.data import get_matchable_schemata, get_freebase_property
+from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
-from yente.routers.util import PATH_DATASET, QUERY_PREFIX, MATCH_PAGE, get_dataset
+from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
 log: BoundLogger = structlog.get_logger(__name__)
@@ -116,25 +116,25 @@ async def reconcile_queries(
 async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
-    limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
-    type = query.get("type", settings.BASE_SCHEMA)
-    proxy = model.make_entity(type)
-    proxy.add("alias", query.get("query"))
+    datasets = await get_datasets()
+    limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
+    schema = query.get("type", settings.BASE_SCHEMA)
+    properties = {"alias": [query.get("query")]}
+
     for p in query.get("properties", []):
         prop = model.get_qname(p.get("pid"))
         if prop is None:
             continue
-        try:
-            proxy.add(prop.name, p.get("v"), fuzzy=True)
-        except InvalidData:
-            log.exception("Invalid property is set.")
+        if prop.name not in properties:
+            properties[prop.name] = []
+        properties[prop.name].append(p.get("v"))
 
-    results = []
-    # log.info("QUERY %r %s", proxy.to_dict(), limit)
-    query = entity_query(dataset, proxy, fuzzy=True)
+    data = {"schema": schema, "properties": properties}
+    proxy = prepare_entity(data)
+    query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
-    async for result, score in result_entities(resp):
-        results.append(get_freebase_entity(result, score))
+    entities = result_entities(resp, datasets)
+    results = [get_freebase_scored(r) for r in score_results(proxy, entities)]
     log.info(
         "Reconcile",
         action="reconcile",
@@ -154,7 +154,7 @@ async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
     limit: int = Query(
-        MATCH_PAGE,
+        settings.MATCH_PAGE,
         description="Number of suggestions to return",
         lte=settings.MAX_PAGE,
     ),
@@ -166,12 +166,13 @@ async def reconcile_suggest_entity(
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
     ds = await get_dataset(dataset)
+    datasets = await get_datasets()
     results = []
     query = prefix_query(ds, prefix)
-    limit, offset = limit_window(limit, 0, MATCH_PAGE)
+    limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
-    async for result, score in result_entities(resp):
-        results.append(get_freebase_entity(result, score))
+    for result in result_entities(resp, datasets):
+        results.append(get_freebase_entity(result))
     log.info(
         "Prefix query",
         action="suggest",
@@ -210,7 +211,7 @@ async def reconcile_suggest_property(
             matches.append(get_freebase_property(prop))
     return {
         "prefix": prefix,
-        "result": matches,
+        "result": matches[: settings.MATCH_PAGE],
     }
 
 
@@ -234,5 +235,5 @@ async def reconcile_suggest_type(
             matches.append(get_freebase_type(schema))
     return {
         "prefix": prefix,
-        "result": matches,
+        "result": matches[: settings.MATCH_PAGE],
     }

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
+from nomenklatura.matching.types import FeatureDocs
 
 from yente import settings
 
@@ -24,6 +25,7 @@ EntityResponse.update_forward_refs()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
+    features: Dict[str, float]
     match: bool = False
 
 
@@ -69,13 +71,16 @@ class EntityMatchQuery(BaseModel):
     queries: Dict[str, EntityExample]
 
 
-class EntityMatches(ResultsResponse):
+class EntityMatches(BaseModel):
     results: List[ScoredEntityResponse]
+    total: TotalSpec
     query: EntityExample
 
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
+    matcher: FeatureDocs
+    limit: int
 
 
 class StatementModel(BaseModel):
@@ -112,10 +117,13 @@ class FreebaseProperty(BaseModel):
 class FreebaseEntity(BaseModel):
     id: str = Field(..., example="NK-A7z....")
     name: str = Field(..., example="John Doe")
-    score: Optional[float] = Field(..., example=0.99)
-    match: Optional[bool] = Field(..., example=False)
     description: Optional[str] = Field(None, example="...")
     type: List[FreebaseType]
+
+
+class FreebaseScoredEntity(FreebaseEntity):
+    score: Optional[float] = Field(..., example=0.99)
+    match: Optional[bool] = Field(..., example=False)
 
 
 class FreebaseResponse(BaseModel):
@@ -172,7 +180,7 @@ class FreebaseManifest(BaseModel):
 
 
 class FreebaseEntityResult(BaseModel):
-    result: List[FreebaseEntity]
+    result: List[FreebaseScoredEntity]
 
 
 FreebaseQueryResult = Dict[str, FreebaseEntityResult]

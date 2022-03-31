@@ -26,8 +26,8 @@ Datasets = Dict[str, Dataset]
 class Entity(CompositeEntity):
     """Entity for sanctions list entries and adjacent objects."""
 
-    def __init__(self, data: Dict[str, Any]):
-        super().__init__(model, data, cleaned=True)
+    def __init__(self, data: Dict[str, Any], cleaned: bool = True):
+        super().__init__(model, data, cleaned=cleaned)
         self._caption: str = data.get("caption")
         self.referents.update(data.get("referents", []))
         self.target: bool = data.get("target", False)
@@ -43,8 +43,12 @@ class Entity(CompositeEntity):
         return data
 
     @classmethod
-    def from_data(cls, data: Dict[str, Any], datasets: Datasets) -> "Entity":
-        obj = cls(data)
-        for dataset in data.get("datasets", []):
-            obj.datasets.add(datasets[dataset])
+    def from_os_data(
+        cls, data: Dict[str, Any], datasets: Datasets, cleaned: bool = True
+    ) -> "Entity":
+        obj = cls(data, cleaned=cleaned)
+        for name in data.get("datasets", []):
+            dataset = datasets.get(name)
+            if dataset is not None:
+                obj.datasets.add(dataset)
         return obj
