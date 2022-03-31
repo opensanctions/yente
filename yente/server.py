@@ -1,3 +1,4 @@
+import os
 from uvicorn import Config, Server
 
 from yente import settings
@@ -6,6 +7,7 @@ from yente.logs import configure_logging
 
 
 if __name__ == "__main__":
+    code_dir = os.path.dirname(__file__)
     server = Server(
         Config(
             app,
@@ -13,6 +15,7 @@ if __name__ == "__main__":
             port=settings.PORT,
             proxy_headers=True,
             reload=settings.DEBUG,
+            reload_dirs=[code_dir],
             debug=settings.DEBUG,
             log_level=settings.LOG_LEVEL,
         ),

@@ -23,7 +23,7 @@ from yente.data import get_freebase_entity, get_freebase_scored
 from yente.data import get_matchable_schemata, get_freebase_property
 from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
-from yente.routers.util import PATH_DATASET, QUERY_PREFIX, MATCH_PAGE, get_dataset
+from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
 log: BoundLogger = structlog.get_logger(__name__)
@@ -117,7 +117,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
     datasets = await get_datasets()
-    limit, offset = limit_window(query.get("limit"), 0, MATCH_PAGE)
+    limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
     schema = query.get("type", settings.BASE_SCHEMA)
     properties = {"alias": [query.get("query")]}
 
@@ -156,7 +156,7 @@ async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
     limit: int = Query(
-        MATCH_PAGE,
+        settings.MATCH_PAGE,
         description="Number of suggestions to return",
         lte=settings.MAX_PAGE,
     ),
@@ -171,7 +171,7 @@ async def reconcile_suggest_entity(
     datasets = await get_datasets()
     results = []
     query = prefix_query(ds, prefix)
-    limit, offset = limit_window(limit, 0, MATCH_PAGE)
+    limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
     for result in result_entities(resp, datasets):
         results.append(get_freebase_entity(result))
@@ -213,7 +213,7 @@ async def reconcile_suggest_property(
             matches.append(get_freebase_property(prop))
     return {
         "prefix": prefix,
-        "result": matches,
+        "result": matches[: settings.MATCH_PAGE],
     }
 
 
@@ -237,5 +237,5 @@ async def reconcile_suggest_type(
             matches.append(get_freebase_type(schema))
     return {
         "prefix": prefix,
-        "result": matches,
+        "result": matches[: settings.MATCH_PAGE],
     }

@@ -15,7 +15,6 @@ PATH_DATASET = Path(
     example=settings.SCOPE_DATASET,
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
-MATCH_PAGE = 5
 
 
 async def get_dataset(name: str) -> Dataset:

@@ -95,7 +95,7 @@ def get_freebase_scored(data: Dict[str, Any]) -> FreebaseScoredEntity:
         "id": data["id"],
         "name": data["caption"],
         "type": [get_freebase_type(schema)],
-        "score": data["score"] * 100,
+        "score": int(data["score"] * 100),
         "match": data["match"],
     }
 

@@ -28,13 +28,17 @@ def score_results(
     entity: Entity,
     results: Iterable[Entity],
     threshold: float = settings.SCORE_THRESHOLD,
+    cutoff: float = 0.0,
 ) -> List[Dict[str, Any]]:
     scored: List[Dict[str, Any]] = []
     matches = 0
     for res in results:
         result = res.to_dict()
         result.update(compare_scored(entity, res))
-        result["match"] = result["score"] >= threshold
+        score = result["score"]
+        if score <= cutoff:
+            continue
+        result["match"] = score >= threshold
         if result["match"]:
             matches += 1
         scored.append(result)

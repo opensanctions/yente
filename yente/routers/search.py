@@ -11,7 +11,7 @@ from followthemoney import model
 
 from yente import settings
 from yente.entity import Dataset, Datasets
-from yente.models import EntityExample
+from yente.models import EntityExample, ScoredEntityResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.search.queries import parse_sorts, text_query, entity_query
@@ -24,7 +24,7 @@ from yente.data import get_datasets
 from yente.util import limit_window, EntityRedirect
 from yente.scoring import prepare_entity, score_results
 from yente.routers.util import get_dataset
-from yente.routers.util import MATCH_PAGE, PATH_DATASET
+from yente.routers.util import PATH_DATASET
 
 log: BoundLogger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -101,33 +101,6 @@ async def search(
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
 
 
-async def _match_one(
-    datasets: Datasets,
-    name: str,
-    ds: Dataset,
-    example: EntityExample,
-    fuzzy: bool,
-    limit: int,
-) -> Tuple[str, Dict[str, Any]]:
-    data = example.dict()
-    data["id"] = "sample"
-    data["schema"] = data.pop("schema_", data.pop("schema", None))
-    entity = prepare_entity(data)
-    query = entity_query(ds, entity, fuzzy=fuzzy)
-    try:
-        response = await search_entities(query, limit=limit, offset=0)
-    except BadRequestError as err:
-        raise HTTPException(400, detail=err.message)
-    entities = result_entities(response, datasets)
-    results = {
-        "results": score_results(entity, entities)[:limit],
-        "query": entity.to_dict(),
-        "total": result_total(response),
-    }
-    log.info("Match", action="match", schema=entity.schema.name, total=results["total"])
-    return (name, results)
-
-
 @router.post(
     "/match/{dataset}",
     summary="Query by example matcher",
@@ -138,11 +111,14 @@ async def match(
     match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
     limit: int = Query(
-        MATCH_PAGE,
+        settings.MATCH_PAGE,
         title="Number of results to return",
-        lt=settings.MAX_PAGE,
+        lt=settings.MAX_MATCHES,
     ),
-    fuzzy: bool = Query(False, title="Enable n-gram matching of partial names"),
+    threshold: float = Query(
+        settings.SCORE_THRESHOLD, title="Threshold score for matches"
+    ),
+    cutoff: float = Query(settings.SCORE_CUTOFF, title="Cutoff score for matches"),
 ):
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -199,15 +175,33 @@ async def match(
     """
     ds = await get_dataset(dataset)
     datasets = await get_datasets()
-    limit, _ = limit_window(limit, 0, 10)
-    tasks = []
-    for name, example in match.queries.items():
-        tasks.append(_match_one(datasets, name, ds, example, fuzzy, limit))
-    if not len(tasks):
-        raise HTTPException(400, "No queries provided.")
-    responses = await asyncio.gather(*tasks)
+    limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+    try:
+        queries = []
+        entities = []
+        for name, example in match.queries.items():
+            data = example.dict()
+            data["schema"] = data.pop("schema_", data.pop("schema", None))
+            entity = prepare_entity(data)
+            query = entity_query(ds, entity)
+            queries.append(search_entities(query, limit=limit))
+            entities.append((name, entity))
+        if not len(queries):
+            raise HTTPException(400, "No queries provided.")
+        results = await asyncio.gather(*queries)
+    except BadRequestError as err:
+        log.exception("Error while running match query.")
+        raise HTTPException(400, detail=err.message)
+
+    responses = {}
+    for (name, entity), response in zip(entities, results):
+        ents = result_entities(response, datasets)
+        scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
+        total = result_total(response)
+        log.info("Match", action="match", schema=entity.schema.name, total=total)
+        responses[name] = {"results": scored, "query": entity.to_dict(), "total": total}
     return {
-        "responses": {n: r for n, r in responses},
+        "responses": responses,
         "matcher": explain_matcher(),
         "limit": limit,
     }

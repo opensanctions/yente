@@ -4,7 +4,7 @@ from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
-TEXT_TYPES = (registry.name, registry.address, registry.url)
+TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
     "analysis": {
         "normalizer": {
