@@ -86,6 +86,7 @@ DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 BASE_SCHEMA = "Thing"
 DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
 DATA_INDEX = env_str("YENTE_DATA_INDEX") or DATA_INDEX
+AUTO_UPDATE = as_bool(env_str("YENTE_AUTO_UPDATE", "true"))
 SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET") or "all"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
