@@ -4,7 +4,7 @@ asyncstdlib==3.10.4
 aiocron==1.8
 aiocsv==1.2.1
 aiohttp[speedups]==3.8.1
-elasticsearch[async]==8.1.1
+elasticsearch[async]==8.1.2
 fastapi==0.75.0
 uvicorn[standard]==0.17.6
 python-multipart==0.0.5
