@@ -18,12 +18,14 @@ router = APIRouter()
 async def regular_update():
     if settings.TESTING:
         return
+    if not settings.AUTO_UPDATE:
+        return
     update_index_threaded()
 
 
 @router.on_event("startup")
 async def startup_event():
-    update_index_threaded()
+    await regular_update()
     router.crontab = aiocron.crontab("*/30 * * * *", func=regular_update)
 
 
