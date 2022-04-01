@@ -17,7 +17,7 @@ HOME_PAGE = "https://www.opensanctions.org"
 EMAIL = "info@opensanctions.org"
 CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
-TITLE = "yente"
+TITLE = env_str("YENTE_TITLE") or "yente"
 DESCRIPTION = """
 The OpenSanctions Match-making API provides tools that help you determine if any
 of the people or companies mentioned in your data are subject to international
