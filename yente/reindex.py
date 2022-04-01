@@ -6,7 +6,7 @@ from yente.logs import configure_logging
 
 async def reindex():
     try:
-        await update_index(force=True)
+        await update_index()
     finally:
         await close_es()
 
