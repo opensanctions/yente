@@ -90,6 +90,7 @@ AUTO_UPDATE = as_bool(env_str("YENTE_AUTO_UPDATE", "true"))
 SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET") or "all"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
+WORKERS = int(env_str("YENTE_WORKERS") or "1")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
 MAX_PAGE = 500
