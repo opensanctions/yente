@@ -176,6 +176,11 @@ async def match(
     ds = await get_dataset(dataset)
     datasets = await get_datasets()
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+
+    if len(match.queries) > settings.MAX_BATCH:
+        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        raise HTTPException(400, detail=msg)
+
     try:
         queries = []
         entities = []

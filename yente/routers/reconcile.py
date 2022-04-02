@@ -106,6 +106,10 @@ async def reconcile_queries(
     except ValueError:
         raise HTTPException(400, detail="Cannot decode query")
 
+    if len(queries) > settings.MAX_BATCH:
+        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        raise HTTPException(400, detail=msg)
+
     tasks = []
     for k, q in queries.items():
         tasks.append(reconcile_query(k, dataset, q))

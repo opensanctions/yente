@@ -94,6 +94,7 @@ WORKERS = int(env_str("YENTE_WORKERS") or "1")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {"Cache-Control": "public; max-age=84600"}
 MAX_PAGE = 500
+MAX_BATCH = 100
 MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 MAX_MATCHES = 10
