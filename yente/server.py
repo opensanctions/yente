@@ -8,8 +8,6 @@ from yente.logs import configure_logging
 
 if __name__ == "__main__":
     # code_dir = os.path.dirname(__file__)
-    if settings.DEBUG:
-        settings.WORKERS = 1
     server = Server(
         Config(
             app,
@@ -20,7 +18,6 @@ if __name__ == "__main__":
             # reload_dirs=[code_dir],
             debug=settings.DEBUG,
             log_level=settings.LOG_LEVEL,
-            workers=settings.WORKERS,
             server_header=False,
         ),
     )
