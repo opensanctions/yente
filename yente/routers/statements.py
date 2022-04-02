@@ -62,6 +62,6 @@ async def statements(
         schema=schema,
     )
     limit, offset = limit_window(limit, offset, 50)
-    sorts = parse_sorts(sort)
+    sorts = parse_sorts(sort, default=None)
     resp = await statement_results(query, limit, offset, sorts)
     return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)

@@ -125,7 +125,7 @@ def statement_query(
     return {"bool": {"filter": filters}}
 
 
-def parse_sorts(sorts: List[str]) -> List[Any]:
+def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
     objs: List[Any] = []
     for sort in sorts:
@@ -134,5 +134,6 @@ def parse_sorts(sorts: List[str]) -> List[Any]:
             sort, order = sort.rsplit(":", 1)
         obj = {sort: {"order": order, "missing": "_last"}}
         objs.append(obj)
-    objs.append("_score")
+    if default is not None:
+        objs.append(default)
     return objs
