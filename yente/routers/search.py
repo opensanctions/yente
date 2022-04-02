@@ -48,7 +48,6 @@ async def search(
     fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
-    nested: bool = Query(False, title="Include adjacent entities in response"),
 ):
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -81,7 +80,7 @@ async def search(
 
     results = []
     for result in result_entities(response, all_datasets):
-        data = await serialize_entity(result, nested=nested)
+        data = await serialize_entity(result)
         results.append(data)
     facets = result_facets(response, all_datasets)
     resp = {
@@ -217,6 +216,7 @@ async def match(
 )
 async def fetch_entity(
     entity_id: str = Path(None, description="ID of the entity to retrieve"),
+    nested: bool = Query(True, title="Include adjacent entities in response"),
 ):
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
@@ -231,6 +231,6 @@ async def fetch_entity(
         return RedirectResponse(url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    data = await serialize_entity(entity, nested=True)
+    data = await serialize_entity(entity, nested=nested)
     log.info(data.get("caption"), action="entity", entity_id=entity_id)
     return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
