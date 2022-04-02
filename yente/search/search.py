@@ -12,7 +12,6 @@ from yente import settings
 from yente.entity import Datasets, Entity
 from yente.models import TotalSpec
 from yente.search.base import get_es
-from yente.search.queries import filter_query
 from yente.data import get_datasets
 from yente.util import EntityRedirect
 
@@ -130,13 +129,20 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
         return None
 
 
-async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity], None]:
+async def get_adjacent(
+    entity: Entity, exclude: List[str]
+) -> AsyncGenerator[Tuple[Property, Entity], None]:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     entities = entity.get_type_values(registry.entity)
+    entities = [e for e in entities if e not in exclude]
     datasets = await get_datasets()
     if len(entities):
-        resp = await es_.mget(index=settings.ENTITY_INDEX, ids=entities)
+        resp = await es_.mget(
+            index=settings.ENTITY_INDEX,
+            ids=entities,
+            realtime=False,
+        )
         for raw in resp.get("docs", []):
             adj = result_entity(datasets, raw)
             if adj is None:
@@ -145,13 +151,16 @@ async def get_adjacent(entity: Entity) -> AsyncGenerator[Tuple[Property, Entity]
                 if prop.type == registry.entity and value == adj.id:
                     yield prop, adj
 
-    # Do we need to query referents here?
-    query = {"term": {"entities": entity.id}}
-    filtered = filter_query([query])
-
+    # Disable scoring by using a filter query
+    query = {
+        "bool": {
+            "filter": [{"term": {registry.entity.group: entity.id}}],
+            "must_not": [{"ids": {"values": exclude}}],
+        }
+    }
     resp = await es_.search(
         index=settings.ENTITY_INDEX,
-        query=filtered,
+        query=query,
         size=settings.MAX_RESULTS,
     )
     for adj in result_entities(resp, datasets):
@@ -170,9 +179,7 @@ async def _to_nested_dict(
     if next_depth < 0:
         return data
     nested: Dict[str, Any] = {}
-    async for prop, adjacent in get_adjacent(entity):
-        if adjacent.id in next_path:
-            continue
+    async for prop, adjacent in get_adjacent(entity, next_path):
         value = await _to_nested_dict(adjacent, next_depth, next_path)
         if prop.name not in nested:
             nested[prop.name] = []

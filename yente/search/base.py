@@ -3,7 +3,6 @@ import asyncio
 import logging
 from typing import Any, Dict
 import warnings
-from asyncstdlib.functools import cache
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import ElasticsearchWarning
 from elasticsearch.exceptions import TransportError, ConnectionError
