@@ -97,7 +97,6 @@ async def statement_results(
     query: Dict[str, Any], limit: int, offset: int, sort: List[Any]
 ) -> Dict[str, Any]:
     es = await get_es()
-    results = []
     es_ = es.options(opaque_id=get_opaque_id())
     resp = await es_.search(
         index=settings.STATEMENT_INDEX,
@@ -106,14 +105,11 @@ async def statement_results(
         from_=offset,
         sort=sort,
     )
-    # count_body = None if "match_all" in query else query
-    # count_await = es.count(body=count_body, index=STATEMENT_INDEX)
-    # resp, totals = await asyncio.gather(search_await, count_await)
-
     hits = resp.get("hits", {})
+    results = []
     for hit in hits.get("hits", []):
-        source = hit.get("_source")
-        source["id"] = hit.get("_id")
+        source = hit.pop("_source", {})
+        source["id"] = hit.pop("_id")
         results.append(source)
     return {
         "results": results,
