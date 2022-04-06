@@ -9,6 +9,7 @@ from fastapi import Request
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
+from elasticsearch import ApiError
 
 from yente import settings
 from yente.entity import Dataset
@@ -137,6 +138,8 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     proxy = prepare_entity(data)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
+    if isinstance(resp, ApiError):
+        raise HTTPException(resp.status_code, detail=resp.message)
     entities = result_entities(resp, datasets)
     results = [get_freebase_scored(r) for r in score_results(proxy, entities)]
     log.info(
@@ -175,6 +178,8 @@ async def reconcile_suggest_entity(
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
+    if isinstance(resp, ApiError):
+        raise HTTPException(resp.status_code, detail=resp.message)
     for result in result_entities(resp, datasets):
         results.append(get_freebase_entity(result))
     log.info(

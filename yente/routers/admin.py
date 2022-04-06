@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from yente import settings
-from yente.models import HealthzResponse
+from yente.models import ErrorResponse, HealthzResponse
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
@@ -39,6 +39,7 @@ async def shutdown_event():
     summary="Health check",
     tags=["System information"],
     response_model=HealthzResponse,
+    responses={500: {"model": ErrorResponse, "description": "Service is not ready"}},
 )
 async def healthz():
     """No-op basic health check. This is used by cluster management systems like
@@ -54,6 +55,7 @@ async def healthz():
     summary="Force an index update",
     tags=["System information"],
     response_model=HealthzResponse,
+    responses={403: {"model": ErrorResponse, "description": "Authorization error."}},
 )
 async def force_update(
     token: str = Query("", title="Update token for authentication"),

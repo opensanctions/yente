@@ -1,10 +1,11 @@
-import logging
-from elastic_transport import ObjectApiResponse
+import structlog
+from structlog.stdlib import BoundLogger
 from structlog.contextvars import get_contextvars
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Union
 from typing import Any, Dict, List, Optional, Tuple, cast
-from elasticsearch import TransportError
+from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
+from elastic_transport import ObjectApiResponse
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -15,7 +16,7 @@ from yente.search.base import get_es
 from yente.data import get_datasets
 from yente.util import EntityRedirect
 
-log = logging.getLogger(__name__)
+log: BoundLogger = structlog.get_logger(__name__)
 
 
 def get_opaque_id() -> str:
@@ -70,19 +71,26 @@ async def search_entities(
     offset: int = 0,
     aggregations: Optional[Dict] = None,
     sort: List[Any] = [],
-) -> ObjectApiResponse:
-    # pprint(query)
+) -> Union[ObjectApiResponse, ApiError]:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
-    resp = await es_.search(
-        index=settings.ENTITY_INDEX,
-        query=query,
-        size=limit,
-        sort=sort,
-        from_=offset,
-        aggregations=aggregations,
-    )
-    return resp
+    try:
+        response = await es_.search(
+            index=settings.ENTITY_INDEX,
+            query=query,
+            size=limit,
+            sort=sort,
+            from_=offset,
+            aggregations=aggregations,
+        )
+        return response
+    except ApiError as error:
+        log.error(
+            f"Search error {error.status_code}: {error.message}",
+            index=settings.ENTITY_INDEX,
+            query=query,
+        )
+        return error
 
 
 async def statement_results(

@@ -5,13 +5,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Path, Query
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
-from elasticsearch.exceptions import BadRequestError
+from elasticsearch import ApiError
 from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
 from yente.entity import Dataset, Datasets
-from yente.models import EntityExample, ScoredEntityResponse
+from yente.models import EntityExample, ErrorResponse, ScoredEntityResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
 from yente.models import EntityResponse, SearchResponse
 from yente.search.queries import parse_sorts, text_query, entity_query
@@ -35,6 +35,7 @@ router = APIRouter()
     summary="Simple entity search",
     tags=["Matching"],
     response_model=SearchResponse,
+    responses={400: {"model": ErrorResponse, "description": "Invalid query"}},
 )
 async def search(
     q: str = Query("", title="Query text"),
@@ -67,16 +68,15 @@ async def search(
         filters["target"] = target
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
-    try:
-        response = await search_entities(
-            query,
-            limit=limit,
-            offset=offset,
-            aggregations=aggregations,
-            sort=parse_sorts(sort),
-        )
-    except BadRequestError as err:
-        raise HTTPException(400, detail=err.message)
+    response = await search_entities(
+        query,
+        limit=limit,
+        offset=offset,
+        aggregations=aggregations,
+        sort=parse_sorts(sort),
+    )
+    if isinstance(response, ApiError):
+        raise HTTPException(response.status_code, detail=response.message)
 
     results = []
     for result in result_entities(response, all_datasets):
@@ -105,6 +105,7 @@ async def search(
     summary="Query by example matcher",
     tags=["Matching"],
     response_model=EntityMatchResponse,
+    responses={400: {"model": ErrorResponse, "description": "Invalid query"}},
 )
 async def match(
     match: EntityMatchQuery,
@@ -180,25 +181,27 @@ async def match(
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
 
-    try:
-        queries = []
-        entities = []
-        for name, example in match.queries.items():
-            data = example.dict()
-            data["schema"] = data.pop("schema_", data.pop("schema", None))
-            entity = prepare_entity(data)
-            query = entity_query(ds, entity)
-            queries.append(search_entities(query, limit=limit))
-            entities.append((name, entity))
-        if not len(queries):
-            raise HTTPException(400, "No queries provided.")
-        results = await asyncio.gather(*queries)
-    except BadRequestError as err:
-        log.exception("Error while running match query.")
-        raise HTTPException(400, detail=err.message)
+    queries = []
+    entities = []
+    for name, example in match.queries.items():
+        data = example.dict()
+        data["schema"] = data.pop("schema_", data.pop("schema", None))
+        entity = prepare_entity(data)
+        query = entity_query(ds, entity)
+        queries.append(search_entities(query, limit=limit))
+        entities.append((name, entity))
+    if not len(queries):
+        raise HTTPException(400, detail="No queries provided.")
+    results = await asyncio.gather(*queries)
 
     responses = {}
     for (name, entity), response in zip(entities, results):
+        if isinstance(response, ApiError):
+            responses[name] = {
+                "status": response.status_code,
+                "detail": response.message,
+            }
+            continue
         ents = result_entities(response, datasets)
         scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
         total = result_total(response)
@@ -212,7 +215,13 @@ async def match(
 
 
 @router.get(
-    "/entities/{entity_id}", tags=["Data access"], response_model=EntityResponse
+    "/entities/{entity_id}",
+    tags=["Data access"],
+    response_model=EntityResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "Entity not found"},
+        307: {"description": "The entity is merged into another ID"},
+    },
 )
 async def fetch_entity(
     entity_id: str = Path(None, description="ID of the entity to retrieve"),

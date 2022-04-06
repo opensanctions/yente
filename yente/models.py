@@ -9,6 +9,14 @@ from yente import settings
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
 
+class ErrorResponse(BaseModel):
+    detail: str
+
+
+class PartialErrorResponse(ErrorResponse):
+    status: int = Field(..., example=400)
+
+
 class EntityResponse(BaseModel):
     id: str = Field(..., example="NK-A7z....")
     caption: str = Field(..., example="John Doe")
@@ -72,13 +80,14 @@ class EntityMatchQuery(BaseModel):
 
 
 class EntityMatches(BaseModel):
+    status: int = Field(200, example=200)
     results: List[ScoredEntityResponse]
     total: TotalSpec
     query: EntityExample
 
 
 class EntityMatchResponse(BaseModel):
-    responses: Dict[str, EntityMatches]
+    responses: Dict[str, Union[EntityMatches, PartialErrorResponse]]
     matcher: FeatureDocs
     limit: int
 
