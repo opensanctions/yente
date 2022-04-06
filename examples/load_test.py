@@ -1,3 +1,4 @@
+import time
 import random
 import logging
 import requests
@@ -5,12 +6,13 @@ from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 
 log = logging.getLogger("load_test")
+session = requests.Session()
 
-# HOST = "https://api-test.opensanctions.org/"
-HOST = "http://localhost:9000/"
+HOST = "https://api-test.opensanctions.org/"
+# HOST = "http://localhost:9000/"
 QUERIES = ["vladimir putin", "hamas", "ukraine", "petr~2 aven", "bla/blubb"]
 
-ENTITY_IDS = set(["Q7747"])
+ENTITY_IDS = set(["Q7747", "Q19077"])
 
 EXAMPLE_1 = {
     "schema": "Person",
@@ -58,9 +60,9 @@ EXAMPLE_3 = {
 
 
 def match_api():
-    BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2, "q3": EXAMPLE_3}}
+    BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2}}
     url = urljoin(HOST, "/match/sanctions")
-    response = requests.post(url, json=BATCH)
+    response = session.post(url, json=BATCH)
     if response.status_code != 200:
         log.error("Failed [%s]: %s", url, response.text)
         return
@@ -74,9 +76,9 @@ def match_api():
 def search_api():
     url = urljoin(HOST, "/search/default")
     q = random.choice(QUERIES)
-    params = {"q": q, "limit": random.randint(0, 400)}
+    params = {"q": q, "limit": random.randint(0, 500)}
     log.info("Query: %s (limit %d)", q, params["limit"])
-    response = requests.get(url, params=params)
+    response = session.get(url, params=params)
     if not response.ok:
         log.error("Failed: %s", url)
         return
@@ -92,16 +94,21 @@ def entity_api():
     entity_id = random.choice(list(ENTITY_IDS))
     url = urljoin(HOST, f"/entities/{entity_id}")
     log.info("Entity: %s", entity_id)
-    requests.get(url)
+    session.get(url)
 
 
-# APIS = [match_api, search_api, entity_api, entity_api]
-APIS = [search_api, entity_api, entity_api]
+APIS = [match_api, search_api, entity_api, entity_api]
+# APIS = [search_api, entity_api, entity_api]
+# APIS = [match_api]
 
 
 def pool_target(num):
     api = random.choice(APIS)
-    api()
+    try:
+        api()
+    except requests.exceptions.ConnectionError as err:
+        log.warning("HTTP error: %s", err)
+        time.sleep(0.1)
 
 
 def load_test():
