@@ -60,7 +60,7 @@ EXAMPLE_3 = {
 
 
 def match_api():
-    BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2}}
+    BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2, "q3": EXAMPLE_3}}
     url = urljoin(HOST, "/match/sanctions")
     response = session.post(url, json=BATCH)
     if response.status_code != 200:
