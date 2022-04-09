@@ -91,7 +91,10 @@ SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET") or "all"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
-CACHE_HEADERS = {"Cache-Control": "public; max-age=3600"}
+CACHE_HEADERS = {
+    "Cache-Control": "public; max-age=3600",
+    "X-Robots-Tag": "none",
+}
 MAX_PAGE = 500
 MAX_BATCH = 100
 MAX_RESULTS = 9999
