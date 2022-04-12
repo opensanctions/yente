@@ -3,7 +3,7 @@ import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
 from urllib.parse import urljoin
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from fastapi import APIRouter, Query, Form
 from fastapi import Request
 from fastapi import HTTPException
@@ -13,7 +13,12 @@ from elasticsearch import ApiError
 
 from yente import settings
 from yente.entity import Dataset
-from yente.models import FreebaseEntitySuggestResponse
+from yente.models import (
+    FreebaseEntity,
+    FreebaseEntitySuggestResponse,
+    FreebaseProperty,
+    FreebaseType,
+)
 from yente.models import FreebasePropertySuggestResponse
 from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
@@ -189,10 +194,7 @@ async def reconcile_suggest_entity(
         dataset=ds.name,
         total=result_total(resp),
     )
-    return {
-        "prefix": prefix,
-        "result": results,
-    }
+    return FreebaseEntitySuggestResponse(prefix=prefix, result=results)
 
 
 @router.get(
@@ -210,7 +212,7 @@ async def reconcile_suggest_property(
     filters in OpenRefine."""
     await get_dataset(dataset)
     schemata = await get_matchable_schemata()
-    matches = []
+    matches: List[FreebaseProperty] = []
     for prop in model.properties:
         if prop.schema not in schemata:
             continue
@@ -218,10 +220,8 @@ async def reconcile_suggest_property(
             continue
         if match_prefix(prefix, prop.name, prop.label):
             matches.append(get_freebase_property(prop))
-    return {
-        "prefix": prefix,
-        "result": matches[: settings.MATCH_PAGE],
-    }
+    result = matches[: settings.MATCH_PAGE]
+    return FreebasePropertySuggestResponse(prefix=prefix, result=result)
 
 
 @router.get(
@@ -238,11 +238,9 @@ async def reconcile_suggest_type(
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
     await get_dataset(dataset)
-    matches = []
+    matches: List[FreebaseType] = []
     for schema in await get_matchable_schemata():
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(get_freebase_type(schema))
-    return {
-        "prefix": prefix,
-        "result": matches[: settings.MATCH_PAGE],
-    }
+    result = matches[: settings.MATCH_PAGE]
+    return FreebaseTypeSuggestResponse(prefix=prefix, result=result)

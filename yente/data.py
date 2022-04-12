@@ -9,6 +9,7 @@ from asyncstdlib.functools import cache
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.property import Property
+from sqlalchemy import desc
 
 from yente import settings
 from yente.entity import Entity, Dataset, Datasets
@@ -74,19 +75,13 @@ async def get_freebase_types() -> List[FreebaseType]:
 
 
 def get_freebase_type(schema: Schema) -> FreebaseType:
-    return {
-        "id": schema.name,
-        "name": schema.plural,
-        "description": schema.description or schema.label,
-    }
+    desc = schema.description or schema.label
+    return FreebaseType(id=schema.name, name=schema.plural, description=desc)
 
 
 def get_freebase_entity(proxy: Entity) -> FreebaseEntity:
-    return {
-        "id": proxy.id,
-        "name": proxy.caption,
-        "type": [get_freebase_type(proxy.schema)],
-    }
+    type_ = [get_freebase_type(proxy.schema)]
+    return FreebaseEntity(id=proxy.id, name=proxy.caption, type=type_)
 
 
 def get_freebase_scored(data: Dict[str, Any]) -> FreebaseScoredEntity:
@@ -101,11 +96,9 @@ def get_freebase_scored(data: Dict[str, Any]) -> FreebaseScoredEntity:
 
 
 def get_freebase_property(prop: Property) -> FreebaseProperty:
-    return {
-        "id": prop.qname,
-        "name": prop.label,
-        "description": prop.description,
-    }
+    return FreebaseProperty(
+        id=prop.qname, name=prop.label, description=prop.description
+    )
 
 
 async def check_update():
