@@ -24,6 +24,7 @@ class EntityResponse(BaseModel):
     properties: EntityProperties = Field(..., example={"name": ["John Doe"]})
     datasets: List[str] = Field([], example=["us_ofac_sdn"])
     referents: List[str] = Field([], example=["ofac-1234"])
+    target: bool = Field(False)
     first_seen: datetime = Field(..., example=datetime.utcnow())
     last_seen: datetime = Field(..., example=datetime.utcnow())
 
@@ -102,7 +103,6 @@ class StatementModel(BaseModel):
     value: str = Field(..., example="John Doe")
     dataset: str = Field(..., example="default")
     target: bool = Field(..., example=True)
-    unique: bool = Field(..., example=False)
     first_seen: datetime
     last_seen: datetime
 

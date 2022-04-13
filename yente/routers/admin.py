@@ -47,7 +47,7 @@ async def healthz():
     ok = await get_index_status()
     if not ok:
         raise HTTPException(500, detail="Index not ready")
-    return {"status": "ok"}
+    return HealthzResponse(status="ok")
 
 
 @router.post(
@@ -74,4 +74,4 @@ async def force_update(
         await update_index(force=True)
     else:
         update_index_threaded(force=True)
-    return {"status": "ok"}
+    return HealthzResponse(status="ok")

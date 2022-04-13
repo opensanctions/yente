@@ -9,7 +9,6 @@ from asyncstdlib.functools import cache
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.property import Property
-from sqlalchemy import desc
 
 from yente import settings
 from yente.entity import Entity, Dataset, Datasets

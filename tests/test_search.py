@@ -89,8 +89,8 @@ def test_search_sorted():
     prev_seen = None
     for res in results:
         if prev_seen is not None:
-            assert res["canonical_id"] <= prev_seen, res
-        prev_seen = res["canonical_id"]
+            assert res["id"] <= prev_seen, res
+        prev_seen = res["id"]
 
 
 def test_search_putin_scope():

@@ -11,7 +11,13 @@ from followthemoney.types import registry
 
 from yente import settings
 from yente.entity import Datasets, Entity
-from yente.models import TotalSpec
+from yente.models import (
+    SearchFacet,
+    SearchFacetItem,
+    StatementModel,
+    StatementResponse,
+    TotalSpec,
+)
 from yente.search.base import get_es
 from yente.data import get_datasets
 from yente.util import EntityRedirect
@@ -33,7 +39,8 @@ def result_entity(datasets, data) -> Optional[Entity]:
 
 
 def result_total(result: ObjectApiResponse) -> TotalSpec:
-    return cast(TotalSpec, result.get("hits", {}).get("total"))
+    spec = result.get("hits", {}).get("total")
+    return TotalSpec(value=spec["value"], relation=spec["relation"])
 
 
 def result_entities(
@@ -47,21 +54,21 @@ def result_entities(
 
 
 def result_facets(response: ObjectApiResponse, datasets: Datasets):
-    facets = {}
+    facets: Dict[str, SearchFacet] = {}
     for field, agg in response.get("aggregations", {}).items():
-        facets[field] = {"label": field, "values": []}
-        # print(field, agg)
+        facet = SearchFacet(label=field, values=[])
         for bucket in agg.get("buckets", []):
             key = bucket.get("key")
-            value = {"name": key, "label": key, "count": bucket.get("doc_count")}
+            value = SearchFacetItem(name=key, label=key, count=bucket.get("doc_count"))
             if field == "datasets":
-                facets[field]["label"] = "Data sources"
-                value["label"] = datasets[key].title
+                facet.label = "Data sources"
+                value.label = datasets[key].title
             if field in registry.groups:
                 type_ = registry.groups[field]
-                facets[field]["label"] = type_.plural
-                value["label"] = type_.caption(key)
-            facets[field]["values"].append(value)
+                facet.label = type_.plural
+                value.label = type_.caption(key) or value.label
+            facet.values.append(value)
+        facets[field] = facet
     return facets
 
 
@@ -95,7 +102,7 @@ async def search_entities(
 
 async def statement_results(
     query: Dict[str, Any], limit: int, offset: int, sort: List[Any]
-) -> Dict[str, Any]:
+) -> StatementResponse:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     resp = await es_.search(
@@ -106,17 +113,17 @@ async def statement_results(
         sort=sort,
     )
     hits = resp.get("hits", {})
-    results = []
+    results: List[StatementModel] = []
     for hit in hits.get("hits", []):
         source = hit.pop("_source", {})
-        source["id"] = hit.pop("_id")
+        source["id"] = hit.get("_id")
         results.append(source)
-    return {
-        "results": results,
-        "total": result_total(resp),
-        "limit": limit,
-        "offset": offset,
-    }
+    return StatementResponse(
+        results=results,
+        total=result_total(resp),
+        limit=limit,
+        offset=offset,
+    )
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:

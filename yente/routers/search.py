@@ -1,19 +1,17 @@
 import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Any, Dict, List, Optional, Tuple
-from fastapi import APIRouter, Path, Query
-from fastapi import HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from typing import Dict, List, Optional, Union
+from fastapi import APIRouter, Path, Query, Response, HTTPException
+from fastapi.responses import RedirectResponse
 from elasticsearch import ApiError
 from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
-from yente.entity import Dataset, Datasets
-from yente.models import EntityExample, ErrorResponse, ScoredEntityResponse
+from yente.models import ErrorResponse, PartialErrorResponse
 from yente.models import EntityMatchQuery, EntityMatchResponse
-from yente.models import EntityResponse, SearchResponse
+from yente.models import EntityResponse, SearchResponse, EntityMatches
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
@@ -38,6 +36,7 @@ router = APIRouter()
     responses={400: {"model": ErrorResponse, "description": "Invalid query"}},
 )
 async def search(
+    response: Response,
     q: str = Query("", title="Query text"),
     dataset: str = PATH_DATASET,
     schema: str = Query(settings.BASE_SCHEMA, title="Types of entities that can match"),
@@ -68,36 +67,36 @@ async def search(
         filters["target"] = target
     query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
-    response = await search_entities(
+    resp = await search_entities(
         query,
         limit=limit,
         offset=offset,
         aggregations=aggregations,
         sort=parse_sorts(sort),
     )
-    if isinstance(response, ApiError):
-        raise HTTPException(response.status_code, detail=response.message)
+    if isinstance(resp, ApiError):
+        raise HTTPException(resp.status_code, detail=resp.message)
 
     results = []
-    for result in result_entities(response, all_datasets):
+    for result in result_entities(resp, all_datasets):
         data = await serialize_entity(result)
         results.append(data)
-    facets = result_facets(response, all_datasets)
-    resp = {
-        "results": results,
-        "facets": facets,
-        "total": result_total(response),
-        "limit": limit,
-        "offset": offset,
-    }
+    output = SearchResponse(
+        results=results,
+        facets=result_facets(resp, all_datasets),
+        total=result_total(resp),
+        limit=limit,
+        offset=offset,
+    )
     log.info(
         "Query",
         action="search",
         length=len(q),
         dataset=ds.name,
-        total=resp.get("total"),
+        total=output.total,
     )
-    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
+    response.headers.update(settings.CACHE_HEADERS)
+    return output
 
 
 @router.post(
@@ -194,24 +193,26 @@ async def match(
         raise HTTPException(400, detail="No queries provided.")
     results = await asyncio.gather(*queries)
 
-    responses = {}
+    responses: Dict[str, Union[PartialErrorResponse, EntityMatches]] = {}
     for (name, entity), response in zip(entities, results):
         if isinstance(response, ApiError):
-            responses[name] = {
-                "status": response.status_code,
-                "detail": response.message,
-            }
+            responses[name] = PartialErrorResponse(
+                status=response.status_code,
+                detail=response.message,
+            )
             continue
         ents = result_entities(response, datasets)
         scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
         total = result_total(response)
         log.info("Match", action="match", schema=entity.schema.name, total=total)
-        responses[name] = {"results": scored, "query": entity.to_dict(), "total": total}
-    return {
-        "responses": responses,
-        "matcher": explain_matcher(),
-        "limit": limit,
-    }
+        responses[name] = EntityMatches(
+            status=200,
+            results=scored,
+            total=total,
+            query=entity.to_dict(),
+        )
+    matcher = explain_matcher()
+    return EntityMatchResponse(responses=responses, matcher=matcher, limit=limit)
 
 
 @router.get(
@@ -224,6 +225,7 @@ async def match(
     },
 )
 async def fetch_entity(
+    response: Response,
     entity_id: str = Path(None, description="ID of the entity to retrieve"),
     nested: bool = Query(True, title="Include adjacent entities in response"),
 ):
@@ -242,4 +244,5 @@ async def fetch_entity(
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=nested)
     log.info(data.get("caption"), action="entity", entity_id=entity_id)
-    return JSONResponse(content=data, headers=settings.CACHE_HEADERS)
+    response.headers.update(settings.CACHE_HEADERS)
+    return data

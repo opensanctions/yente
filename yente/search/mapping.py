@@ -99,7 +99,6 @@ def make_statement_mapping():
         },
         "dataset": {"type": "keyword"},
         "target": {"type": "boolean"},
-        "unique": {"type": "boolean"},
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
     }
