@@ -77,10 +77,9 @@ async def search(
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
 
-    results = []
+    results: List[EntityResponse] = []
     for result in result_entities(resp, all_datasets):
-        data = await serialize_entity(result)
-        results.append(data)
+        results.append(await serialize_entity(result))
     output = SearchResponse(
         results=results,
         facets=result_facets(resp, all_datasets),
@@ -243,6 +242,6 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=nested)
-    log.info(data.get("caption"), action="entity", entity_id=entity_id)
+    log.info(data.caption, action="entity", entity_id=entity_id)
     response.headers.update(settings.CACHE_HEADERS)
     return data

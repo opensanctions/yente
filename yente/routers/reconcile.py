@@ -148,7 +148,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         raise HTTPException(resp.status_code, detail=resp.message)
     entities = result_entities(resp, datasets)
     results = [
-        FreebaseScoredEntity.from_data(r) for r in score_results(proxy, entities)
+        FreebaseScoredEntity.from_scored(r) for r in score_results(proxy, entities)
     ]
     log.info(
         "Reconcile",

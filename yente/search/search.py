@@ -12,6 +12,7 @@ from followthemoney.types import registry
 from yente import settings
 from yente.entity import Datasets, Entity
 from yente.models import (
+    EntityResponse,
     SearchFacet,
     SearchFacetItem,
     StatementModel,
@@ -183,23 +184,23 @@ async def get_adjacent(
 
 async def _to_nested_dict(
     entity: Entity, depth: int, path: List[str]
-) -> Dict[str, Any]:
+) -> EntityResponse:
     next_depth = depth if entity.schema.edge else depth - 1
     next_path = path + [entity.id]
-    data = entity.to_dict()
+    resp = EntityResponse.from_entity(entity)
     if next_depth < 0:
-        return data
+        return resp
     nested: Dict[str, Any] = {}
     async for prop, adjacent in get_adjacent(entity, next_path):
         value = await _to_nested_dict(adjacent, next_depth, next_path)
         if prop.name not in nested:
             nested[prop.name] = []
         nested[prop.name].append(value)
-    data["properties"].update(nested)
-    return data
+    resp.properties.update(nested)
+    return resp
 
 
-async def serialize_entity(entity: Entity, nested: bool = False) -> Dict[str, Any]:
+async def serialize_entity(entity: Entity, nested: bool = False) -> EntityResponse:
     depth = 1 if nested else -1
     return await _to_nested_dict(entity, depth=depth, path=[])
 

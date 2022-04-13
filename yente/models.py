@@ -7,8 +7,10 @@ from followthemoney import model
 from followthemoney.proxy import EntityProxy
 from followthemoney.schema import Schema
 from followthemoney.property import Property
+from nomenklatura.matching.types import MatchingResult
 
 from yente import settings
+from yente.entity import Entity
 
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
@@ -32,6 +34,20 @@ class EntityResponse(BaseModel):
     first_seen: datetime = Field(..., example=datetime.utcnow())
     last_seen: datetime = Field(..., example=datetime.utcnow())
 
+    @classmethod
+    def from_entity(cls, entity: Entity):
+        return cls(
+            id=entity.id,
+            caption=entity.caption,
+            schema=entity.schema.name,
+            properties=entity.properties,
+            datasets=[ds.name for ds in entity.datasets],
+            referents=list(entity.referents),
+            target=entity.target,
+            first_seen=entity.first_seen,
+            last_seen=entity.last_seen,
+        )
+
 
 EntityResponse.update_forward_refs()
 
@@ -40,6 +56,25 @@ class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
     features: Dict[str, float]
     match: bool = False
+
+    @classmethod
+    def from_entity_result(
+        cls, entity: Entity, result: MatchingResult, threshold: float
+    ):
+        return cls(
+            id=entity.id,
+            caption=entity.caption,
+            schema=entity.schema.name,
+            properties=entity.properties,
+            datasets=[ds.name for ds in entity.datasets],
+            referents=list(entity.referents),
+            target=entity.target,
+            first_seen=entity.first_seen,
+            last_seen=entity.last_seen,
+            score=result["score"],
+            match=result["score"] >= threshold,
+            features=result["features"],
+        )
 
 
 class HealthzResponse(BaseModel):
@@ -153,16 +188,16 @@ class FreebaseScoredEntity(FreebaseEntity):
     match: Optional[bool] = Field(..., example=False)
 
     @classmethod
-    def from_data(cls, data: Dict[str, Any]) -> "FreebaseScoredEntity":
-        schema = model.get(data["schema"])
+    def from_scored(cls, data: ScoredEntityResponse) -> "FreebaseScoredEntity":
+        schema = model.get(data.schema_)
         if schema is None:
-            raise RuntimeError("Missing schema: %s" % data["schema"])
+            raise RuntimeError("Missing schema: %s" % data.schema_)
         return cls(
-            id=data["id"],
-            name=data["caption"],
+            id=data.id,
+            name=data.caption,
             type=[FreebaseType.from_schema(schema)],
-            score=data["score"],
-            match=data["match"],
+            score=data.score,
+            match=data.match,
         )
 
 

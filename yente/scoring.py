@@ -5,6 +5,7 @@ from nomenklatura.matching import compare_scored
 
 from yente import settings
 from yente.entity import Entity
+from yente.models import ScoredEntityResponse
 
 
 def prepare_entity(data: Dict[str, Any]) -> Entity:
@@ -29,26 +30,24 @@ def score_results(
     results: Iterable[Entity],
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
-) -> List[Dict[str, Any]]:
-    scored: List[Dict[str, Any]] = []
+) -> List[ScoredEntityResponse]:
+    scored: List[ScoredEntityResponse] = []
     matches = 0
-    for res in results:
-        result = res.to_dict()
-        result.update(compare_scored(entity, res))
-        score = result["score"]
-        if score <= cutoff:
+    for proxy in results:
+        scoring = compare_scored(entity, proxy)
+        result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)
+        if result.score <= cutoff:
             continue
-        result["match"] = score >= threshold
-        if result["match"]:
+        if result.match:
             matches += 1
         scored.append(result)
 
-    scored = sorted(scored, key=lambda r: r["score"], reverse=True)
+    scored = sorted(scored, key=lambda r: r.score, reverse=True)
 
     # If multiple entities meet the match threshold, it's ambiguous
     # and we bail out:
     if matches > 1:
         for result in scored:
-            result["match"] = False
+            result.match = False
 
     return scored
