@@ -17,6 +17,7 @@ from yente.models import (
     FreebaseEntity,
     FreebaseEntitySuggestResponse,
     FreebaseProperty,
+    FreebaseScoredEntity,
     FreebaseType,
 )
 from yente.models import FreebasePropertySuggestResponse
@@ -24,9 +25,7 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
-from yente.data import get_datasets, get_freebase_type, get_freebase_types
-from yente.data import get_freebase_entity, get_freebase_scored
-from yente.data import get_matchable_schemata, get_freebase_property
+from yente.data import get_datasets, get_matchable_schemata
 from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
@@ -57,6 +56,8 @@ async def reconcile(
     if queries is not None:
         return await reconcile_queries(ds, queries)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
+    schemata = await get_matchable_schemata()
+    default_types = [FreebaseType.from_schema(s) for s in schemata]
     return {
         "versions": ["0.2"],
         "name": f"{ds.title} ({settings.TITLE})",
@@ -82,7 +83,7 @@ async def reconcile(
                 "service_path": "/suggest/property",
             },
         },
-        "defaultTypes": await get_freebase_types(),
+        "defaultTypes": default_types,
     }
 
 
@@ -146,7 +147,9 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
     entities = result_entities(resp, datasets)
-    results = [get_freebase_scored(r) for r in score_results(proxy, entities)]
+    results = [
+        FreebaseScoredEntity.from_data(r) for r in score_results(proxy, entities)
+    ]
     log.info(
         "Reconcile",
         action="reconcile",
@@ -186,7 +189,7 @@ async def reconcile_suggest_entity(
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
     for result in result_entities(resp, datasets):
-        results.append(get_freebase_entity(result))
+        results.append(FreebaseEntity.from_proxy(result))
     log.info(
         "Prefix query",
         action="suggest",
@@ -219,7 +222,7 @@ async def reconcile_suggest_property(
         if prop.hidden or prop.type == prop.type == registry.entity:
             continue
         if match_prefix(prefix, prop.name, prop.label):
-            matches.append(get_freebase_property(prop))
+            matches.append(FreebaseProperty.from_prop(prop))
     result = matches[: settings.MATCH_PAGE]
     return FreebasePropertySuggestResponse(prefix=prefix, result=result)
 
@@ -241,6 +244,6 @@ async def reconcile_suggest_type(
     matches: List[FreebaseType] = []
     for schema in await get_matchable_schemata():
         if match_prefix(prefix, schema.name, schema.label):
-            matches.append(get_freebase_type(schema))
+            matches.append(FreebaseType.from_schema(schema))
     result = matches[: settings.MATCH_PAGE]
     return FreebaseTypeSuggestResponse(prefix=prefix, result=result)

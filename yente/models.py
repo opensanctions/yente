@@ -1,8 +1,12 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
 from nomenklatura.matching.types import FeatureDocs
+from followthemoney import model
+from followthemoney.proxy import EntityProxy
+from followthemoney.schema import Schema
+from followthemoney.property import Property
 
 from yente import settings
 
@@ -116,11 +120,20 @@ class FreebaseType(BaseModel):
     name: str = Field(..., example="People")
     description: Optional[str] = Field(None, example="...")
 
+    @classmethod
+    def from_schema(cls, schema: Schema) -> "FreebaseType":
+        desc = schema.description or schema.label
+        return cls(id=schema.name, name=schema.plural, description=desc)
+
 
 class FreebaseProperty(BaseModel):
     id: str = Field(..., example="birthDate")
     name: str = Field(..., example="Date of birth")
     description: Optional[str] = Field(None, example="...")
+
+    @classmethod
+    def from_prop(cls, prop: Property) -> "FreebaseProperty":
+        return cls(id=prop.qname, name=prop.label, description=prop.description)
 
 
 class FreebaseEntity(BaseModel):
@@ -129,10 +142,28 @@ class FreebaseEntity(BaseModel):
     description: Optional[str] = Field(None, example="...")
     type: List[FreebaseType]
 
+    @classmethod
+    def from_proxy(cls, proxy: EntityProxy):
+        type_ = [FreebaseType.from_schema(proxy.schema)]
+        return FreebaseEntity(id=proxy.id, name=proxy.caption, type=type_)
+
 
 class FreebaseScoredEntity(FreebaseEntity):
     score: Optional[float] = Field(..., example=0.99)
     match: Optional[bool] = Field(..., example=False)
+
+    @classmethod
+    def from_data(cls, data: Dict[str, Any]) -> "FreebaseScoredEntity":
+        schema = model.get(data["schema"])
+        if schema is None:
+            raise RuntimeError("Missing schema: %s" % data["schema"])
+        return cls(
+            id=data["id"],
+            name=data["caption"],
+            type=[FreebaseType.from_schema(schema)],
+            score=data["score"],
+            match=data["match"],
+        )
 
 
 class FreebaseResponse(BaseModel):

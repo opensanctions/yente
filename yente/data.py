@@ -68,38 +68,6 @@ async def get_matchable_schemata() -> Set[Schema]:
     return schemata
 
 
-async def get_freebase_types() -> List[FreebaseType]:
-    schemata = await get_matchable_schemata()
-    return [get_freebase_type(s) for s in schemata]
-
-
-def get_freebase_type(schema: Schema) -> FreebaseType:
-    desc = schema.description or schema.label
-    return FreebaseType(id=schema.name, name=schema.plural, description=desc)
-
-
-def get_freebase_entity(proxy: Entity) -> FreebaseEntity:
-    type_ = [get_freebase_type(proxy.schema)]
-    return FreebaseEntity(id=proxy.id, name=proxy.caption, type=type_)
-
-
-def get_freebase_scored(data: Dict[str, Any]) -> FreebaseScoredEntity:
-    schema = model.get(data["schema"])
-    return {
-        "id": data["id"],
-        "name": data["caption"],
-        "type": [get_freebase_type(schema)],
-        "score": data["score"],
-        "match": data["match"],
-    }
-
-
-def get_freebase_property(prop: Property) -> FreebaseProperty:
-    return FreebaseProperty(
-        id=prop.qname, name=prop.label, description=prop.description
-    )
-
-
 async def check_update():
     get_data_index.cache_clear()
     get_datasets.cache_clear()
