@@ -8,6 +8,7 @@ LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
 RUN apt-get -qq -y update \
     && apt-get -qq -y upgrade \
     && apt-get -qq -y install locales ca-certificates curl python3-pip python3-icu python3-crypto \
+    libicu-dev pkg-config \
     && apt-get -qq -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
