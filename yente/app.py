@@ -42,6 +42,8 @@ async def request_middleware(request: Request, call_next):
         if " " in user_id:
             _, user_id = user_id.split(" ", 1)
         user_id = slugify(user_id)
+    if user_id is not None:
+        user_id = user_id[:40]
     trace_id = uuid4().hex
     bind_contextvars(
         user_id=user_id,
