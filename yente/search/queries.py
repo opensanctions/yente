@@ -1,12 +1,11 @@
 import logging
-from pprint import pprint
 from normality import collapse_spaces
-from typing import Any, Dict, List, Set, Union, Optional
+from typing import Any, Dict, List, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
-from yente.entity import Dataset
+from yente.data.dataset import Dataset
 from yente.search.mapping import TEXT_TYPES
 
 log = logging.getLogger(__name__)

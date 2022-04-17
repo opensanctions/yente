@@ -12,7 +12,7 @@ from followthemoney.types import registry
 from elasticsearch import ApiError
 
 from yente import settings
-from yente.entity import Dataset
+from yente.data.dataset import Dataset
 from yente.models import (
     FreebaseEntity,
     FreebaseEntitySuggestResponse,

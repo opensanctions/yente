@@ -10,7 +10,7 @@ from followthemoney.property import Property
 from nomenklatura.matching.types import MatchingResult
 
 from yente import settings
-from yente.entity import Entity
+from yente.data.entity import Entity
 
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 

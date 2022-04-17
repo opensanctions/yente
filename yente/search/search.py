@@ -12,7 +12,8 @@ from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
-from yente.entity import Dataset, Datasets, Entity
+from yente.data.dataset import Dataset, Datasets
+from yente.data.entity import Entity
 from yente.models import (
     EntityResponse,
     SearchFacet,

@@ -4,7 +4,7 @@ from followthemoney.helpers import combine_names
 from nomenklatura.matching import compare_scored
 
 from yente import settings
-from yente.entity import Entity
+from yente.data.entity import Entity
 from yente.models import ScoredEntityResponse
 
 

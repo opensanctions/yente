@@ -3,7 +3,7 @@ from fastapi import Path, Query
 from fastapi import HTTPException
 
 from yente import settings
-from yente.entity import Dataset
+from yente.data.dataset import Dataset
 from yente.data import get_datasets
 
 
