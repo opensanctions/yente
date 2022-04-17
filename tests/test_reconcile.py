@@ -82,13 +82,13 @@ def test_reconcile_suggest_type_no_prefix():
 
 
 def test_reconcile_suggest_type_prefix():
-    resp = client.get("/reconcile/default/suggest/type?prefix=compan")
+    resp = client.get("/reconcile/default/suggest/type?prefix=organ")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
     res = data["result"]
     assert len(res) == 1, data
-    assert res[0]["id"] == "Company", data
+    assert res[0]["id"] == "Organization", data
 
 
 def test_reconcile_suggest_type_prefix_dummy():

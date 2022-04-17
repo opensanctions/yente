@@ -25,9 +25,10 @@ from yente.models import FreebaseTypeSuggestResponse
 from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
-from yente.data import get_datasets, get_matchable_schemata
+from yente.search.search import get_matchable_schemata
 from yente.scoring import prepare_entity, score_results
 from yente.util import match_prefix, limit_window
+from yente.data import get_datasets
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
@@ -56,7 +57,7 @@ async def reconcile(
     if queries is not None:
         return await reconcile_queries(ds, queries)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
-    schemata = await get_matchable_schemata()
+    schemata = await get_matchable_schemata(ds)
     default_types = [FreebaseType.from_schema(s) for s in schemata]
     return {
         "versions": ["0.2"],
@@ -213,8 +214,8 @@ async def reconcile_suggest_property(
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
-    await get_dataset(dataset)
-    schemata = await get_matchable_schemata()
+    ds = await get_dataset(dataset)
+    schemata = await get_matchable_schemata(ds)
     matches: List[FreebaseProperty] = []
     for prop in model.properties:
         if prop.schema not in schemata:
@@ -240,9 +241,9 @@ async def reconcile_suggest_type(
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
-    await get_dataset(dataset)
+    ds = await get_dataset(dataset)
     matches: List[FreebaseType] = []
-    for schema in await get_matchable_schemata():
+    for schema in await get_matchable_schemata(ds):
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(FreebaseType.from_schema(schema))
     result = matches[: settings.MATCH_PAGE]

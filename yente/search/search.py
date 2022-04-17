@@ -1,16 +1,18 @@
 import structlog
 from structlog.stdlib import BoundLogger
 from structlog.contextvars import get_contextvars
-from typing import AsyncGenerator, Generator, Union
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import AsyncGenerator, Generator, Set, Union
+from typing import Any, Dict, List, Optional, Tuple
 from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
 from elastic_transport import ObjectApiResponse
+from followthemoney import model
+from followthemoney.schema import Schema
 from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
-from yente.entity import Datasets, Entity
+from yente.entity import Dataset, Datasets, Entity
 from yente.models import (
     EntityResponse,
     SearchFacet,
@@ -139,6 +141,31 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
         return result_entity(datasets, data)
     except NotFoundError:
         return None
+
+
+async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
+    filter_ = {"terms": {"datasets": dataset.source_names}}
+    facet = "schemata"
+    es = await get_es()
+    es_ = es.options(opaque_id=get_opaque_id())
+    try:
+        response = await es_.search(
+            index=settings.ENTITY_INDEX,
+            query={"bool": {"filter": [filter_]}},
+            size=0,
+            aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},
+        )
+        aggs = response.get("aggregations", {})
+        schemata: Set[Schema] = set()
+        for bucket in aggs.get(facet, {}).get("buckets", []):
+            key = bucket.get("key")
+            schema = model.get(key)
+            if schema is not None and schema.matchable:
+                schemata.update(schema.schemata)
+        return schemata
+    except ApiError as error:
+        log.error("Could not get matchable schema", error=str(error))
+        return set()
 
 
 async def get_adjacent(

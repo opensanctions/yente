@@ -47,6 +47,10 @@ def make_type_field(type_, copy_to=True):
     return make_field(field_type, copy_to=copy_to)
 
 
+def make_keyword():
+    return {"type": "keyword"}
+
+
 def make_entity_mapping(schemata: Iterable[Schema]):
     prop_mapping = {}
     for schema_name in schemata:
@@ -61,11 +65,11 @@ def make_entity_mapping(schemata: Iterable[Schema]):
             prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
 
     mapping = {
-        "canonical_id": make_field("keyword"),
-        "schema": make_field("keyword"),
+        "canonical_id": make_keyword(),
+        "schema": make_keyword(),
         "caption": make_field("keyword", copy_to=["names", "text"]),
-        "datasets": make_field("keyword"),
-        "referents": make_field("keyword"),
+        "datasets": make_keyword(),
+        "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
         "last_seen": make_field("date", format=DATE_FORMAT),
@@ -88,16 +92,16 @@ def make_entity_mapping(schemata: Iterable[Schema]):
 
 def make_statement_mapping():
     mapping = {
-        "canonical_id": {"type": "keyword"},
-        "entity_id": {"type": "keyword"},
-        "prop": {"type": "keyword"},
-        "prop_type": {"type": "keyword"},
-        "schema": {"type": "keyword"},
+        "canonical_id": make_keyword(),
+        "entity_id": make_keyword(),
+        "prop": make_keyword(),
+        "prop_type": make_keyword(),
+        "schema": make_keyword(),
         "value": {
             "type": "keyword",
             "fields": {"text": {"type": "text", "analyzer": "osa-analyzer"}},
         },
-        "dataset": {"type": "keyword"},
+        "dataset": make_keyword(),
         "target": {"type": "boolean"},
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),

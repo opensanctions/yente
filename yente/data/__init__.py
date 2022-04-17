@@ -46,25 +46,6 @@ async def get_scope() -> Dataset:
     return dataset
 
 
-async def get_schemata() -> List[Schema]:
-    # TODO: should this be reflected from the index?
-    schemata: List[Schema] = list()
-    index = await get_data_index()
-    for name in index.get("schemata"):
-        schema = model.get(name)
-        if schema is not None:
-            schemata.append(schema)
-    return schemata
-
-
-async def get_matchable_schemata() -> Set[Schema]:
-    schemata: Set[Schema] = set()
-    for schema in await get_schemata():
-        if schema.matchable:
-            schemata.update(schema.schemata)
-    return schemata
-
-
 async def check_update():
     get_data_index.cache_clear()
     get_datasets.cache_clear()
