@@ -1,5 +1,7 @@
 from typing import Any, Dict
 from followthemoney import model
+from followthemoney.types import registry
+from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
 
 from yente.data.dataset import Datasets
@@ -33,4 +35,22 @@ class Entity(CompositeEntity):
             dataset = datasets.get(name)
             if dataset is not None:
                 obj.datasets.add(dataset)
+        return obj
+
+    @classmethod
+    def from_example(cls, schema: str, properties: Dict[str, Any]) -> "Entity":
+        data = {"id": "example", "schema": schema}
+        obj = cls(data)
+        for prop_name, values in properties.items():
+            obj.add(prop_name, values, cleaned=False, fuzzy=True)
+
+        # Generate names from name parts
+        combine_names(obj)
+
+        # Extract names from IBANs, phone numbers etc.
+        countries = obj.get_type_values(registry.country)
+        for (prop, value) in obj.itervalues():
+            hint = prop.type.country_hint(value)
+            if hint is not None and hint not in countries:
+                obj.add("country", hint, cleaned=True)
         return obj

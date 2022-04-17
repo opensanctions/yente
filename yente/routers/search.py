@@ -19,8 +19,9 @@ from yente.search.search import get_entity, serialize_entity
 from yente.search.search import search_entities, result_entities
 from yente.search.search import result_facets, result_total
 from yente.data import get_datasets
+from yente.data.entity import Entity
 from yente.util import limit_window, EntityRedirect
-from yente.scoring import prepare_entity, score_results
+from yente.scoring import score_results
 from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET
 
@@ -182,9 +183,9 @@ async def match(
     queries = []
     entities = []
     for name, example in match.queries.items():
-        data = example.dict()
-        data["schema"] = data.pop("schema_", data.pop("schema", None))
-        entity = prepare_entity(data)
+        data = example.dict(include={'properties'})
+        schema = data.pop("schema_", data.pop("schema", None))
+        entity = Entity.from_example(schema, data.get("properties", {}))
         query = entity_query(ds, entity)
         queries.append(search_entities(query, limit=limit))
         entities.append((name, entity))

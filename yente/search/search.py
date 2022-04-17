@@ -138,6 +138,8 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
 
 
 async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
+    """Get the set of schema used in this dataset that are matchable or
+    a parent schema to a matchable schema."""
     filter_ = {"terms": {"datasets": dataset.source_names}}
     facet = "schemata"
     es = await get_es()

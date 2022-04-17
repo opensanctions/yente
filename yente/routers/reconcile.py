@@ -12,6 +12,7 @@ from followthemoney.types import registry
 from elasticsearch import ApiError
 
 from yente import settings
+from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data.freebase import (
     FreebaseEntity,
@@ -27,7 +28,7 @@ from yente.data.freebase import (
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
-from yente.scoring import prepare_entity, score_results
+from yente.scoring import score_results
 from yente.util import match_prefix, limit_window
 from yente.data import get_datasets
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
@@ -142,8 +143,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
             properties[prop.name] = []
         properties[prop.name].append(p.get("v"))
 
-    data = {"schema": schema, "properties": properties}
-    proxy = prepare_entity(data)
+    proxy = Entity.from_example(schema, properties)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
     if isinstance(resp, ApiError):
