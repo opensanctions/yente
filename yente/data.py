@@ -1,19 +1,15 @@
 import json
-import asyncio
 import logging
 from banal import as_bool
 from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
-from typing import Any, AsyncGenerator, Dict, List, Set
+from typing import AsyncGenerator, Dict, List, Set
 from asyncstdlib.functools import cache
 from followthemoney import model
 from followthemoney.schema import Schema
-from followthemoney.property import Property
 
 from yente import settings
 from yente.entity import Entity, Dataset, Datasets
-from yente.models import FreebaseType, FreebaseProperty
-from yente.models import FreebaseEntity, FreebaseScoredEntity
 from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)
@@ -51,6 +47,7 @@ async def get_scope() -> Dataset:
 
 
 async def get_schemata() -> List[Schema]:
+    # TODO: should this be reflected from the index?
     schemata: List[Schema] = list()
     index = await get_data_index()
     for name in index.get("schemata"):
@@ -97,13 +94,6 @@ async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
             wrapper = AsyncTextReaderWrapper(resp.content, "utf-8")
             async for row in AsyncDictReader(wrapper):
                 row["target"] = as_bool(row["target"])
-                row["unique"] = as_bool(row["unique"])
                 row["first_seen"] = iso_datetime(row["first_seen"])
                 row["last_seen"] = iso_datetime(row["last_seen"])
                 yield row
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    loop = asyncio.get_event_loop()
-    # loop.run_until_complete(test_get_statements())
