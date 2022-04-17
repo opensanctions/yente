@@ -2,7 +2,8 @@ import time
 import structlog
 from uuid import uuid4
 from normality import slugify
-from typing import cast
+from typing import Optional, cast
+from starlette.requests import Headers
 from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -34,16 +35,21 @@ app.include_router(statements.router)
 app.include_router(admin.router)
 
 
-@app.middleware("http")
-async def request_middleware(request: Request, call_next):
-    start_time = time.time()
-    user_id = request.headers.get("authorization")
+def get_user_id(headers: Headers) -> Optional[str]:
+    user_id = headers.get("authorization")
     if user_id is not None:
         if " " in user_id:
             _, user_id = user_id.split(" ", 1)
         user_id = slugify(user_id)
     if user_id is not None:
         user_id = user_id[:40]
+    return user_id
+
+
+@app.middleware("http")
+async def request_middleware(request: Request, call_next):
+    start_time = time.time()
+    user_id = get_user_id(request.headers)
     trace_id = uuid4().hex
     bind_contextvars(
         user_id=user_id,
