@@ -12,7 +12,7 @@ from followthemoney import model
 from followthemoney.schema import Schema
 
 from yente import settings
-from yente.entity import Dataset
+from yente.data.dataset import Dataset
 from yente.data import check_update, get_dataset_entities, get_statements, get_scope
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping

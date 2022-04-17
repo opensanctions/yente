@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from yente import settings
-from yente.models import ErrorResponse, HealthzResponse
+from yente.data.common import ErrorResponse, HealthzResponse
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es

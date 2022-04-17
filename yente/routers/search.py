@@ -9,9 +9,9 @@ from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
-from yente.models import ErrorResponse, PartialErrorResponse
-from yente.models import EntityMatchQuery, EntityMatchResponse
-from yente.models import EntityResponse, SearchResponse, EntityMatches
+from yente.data.common import ErrorResponse, PartialErrorResponse
+from yente.data.common import EntityMatchQuery, EntityMatchResponse
+from yente.data.common import EntityResponse, SearchResponse, EntityMatches
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict

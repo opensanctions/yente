@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from yente import settings
-from yente.models import ErrorResponse, StatementResponse
+from yente.data.common import ErrorResponse, StatementResponse
 from yente.search.queries import statement_query, parse_sorts
 from yente.search.search import statement_results
 from yente.util import limit_window

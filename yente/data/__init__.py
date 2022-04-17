@@ -3,13 +3,12 @@ import logging
 from banal import as_bool
 from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
-from typing import AsyncGenerator, Dict, List, Set
+from typing import AsyncGenerator, Dict
 from asyncstdlib.functools import cache
-from followthemoney import model
-from followthemoney.schema import Schema
 
 from yente import settings
-from yente.entity import Entity, Dataset, Datasets
+from yente.data.entity import Entity
+from yente.data.dataset import Dataset, Datasets
 from yente.util import AsyncTextReaderWrapper, iso_datetime
 
 log = logging.getLogger(__name__)

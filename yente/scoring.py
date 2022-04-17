@@ -5,7 +5,7 @@ from nomenklatura.matching import compare_scored
 
 from yente import settings
 from yente.data.entity import Entity
-from yente.models import ScoredEntityResponse
+from yente.data.common import ScoredEntityResponse
 
 
 def prepare_entity(data: Dict[str, Any]) -> Entity:

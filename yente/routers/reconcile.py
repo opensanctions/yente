@@ -13,16 +13,17 @@ from elasticsearch import ApiError
 
 from yente import settings
 from yente.data.dataset import Dataset
-from yente.models import (
+from yente.data.freebase import (
     FreebaseEntity,
-    FreebaseEntitySuggestResponse,
     FreebaseProperty,
     FreebaseScoredEntity,
     FreebaseType,
+    FreebaseEntitySuggestResponse,
+    FreebasePropertySuggestResponse,
+    FreebaseTypeSuggestResponse,
+    FreebaseManifest,
+    FreebaseQueryResult,
 )
-from yente.models import FreebasePropertySuggestResponse
-from yente.models import FreebaseTypeSuggestResponse
-from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
