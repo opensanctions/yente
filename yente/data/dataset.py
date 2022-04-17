@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
 
-from yente.util import iso_datetime
+from yente.data.util import iso_datetime
 
 
 class Dataset(NomenklaturaDataset):

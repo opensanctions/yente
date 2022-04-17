@@ -17,7 +17,7 @@ from yente.data import check_update, get_dataset_entities, get_statements, get_s
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
-from yente.util import expand_dates
+from yente.data.util import expand_dates
 
 log: BoundLogger = structlog.get_logger(__name__)
 
@@ -48,11 +48,10 @@ async def entity_docs(dataset: Dataset, index: str):
 
 async def statement_docs(index: str):
     idx = 0
-    async for row in get_statements():
+    async for stmt in get_statements():
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d statements..." % idx, index=index)
-        stmt_id = row.pop("id")
-        yield {"_index": index, "_id": stmt_id, "_source": row}
+        yield stmt.to_doc(index)
         idx += 1
 
 
@@ -152,7 +151,7 @@ async def index_statements(timestamp: datetime, force: bool):
                 es,
                 docs,
                 stats_only=True,
-                chunk_size=2000,
+                chunk_size=1000,
                 refresh=False,
             )
 
@@ -162,7 +161,8 @@ async def update_index(force=False):
     scope = await get_scope()
     schemata = list(model)
     log.info("Index update check", next_ts=scope.last_export)
-    await index_entities(scope, schemata, scope.last_export, force)
+    # await index_entities(scope, schemata, scope.last_export, force)
+    force = True
     await index_statements(scope.last_export, force)
     log.info("Index update complete.", next_ts=scope.last_export)
 

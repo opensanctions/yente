@@ -125,21 +125,3 @@ class EntityMatchResponse(BaseModel):
     responses: Dict[str, Union[EntityMatches, PartialErrorResponse]]
     matcher: FeatureDocs
     limit: int
-
-
-class StatementModel(BaseModel):
-    id: str = Field(..., example="0000ad52d4d91a8...")
-    entity_id: str = Field(..., example="ofac-1234")
-    canonical_id: str = Field(..., example="NK-1234")
-    prop: str = Field(..., example="alias")
-    prop_type: str = Field(..., example="name")
-    schema_: str = Field(..., example="LegalEntity", alias="schema")
-    value: str = Field(..., example="John Doe")
-    dataset: str = Field(..., example="default")
-    target: bool = Field(..., example=True)
-    first_seen: datetime
-    last_seen: datetime
-
-
-class StatementResponse(ResultsResponse):
-    results: List[StatementModel]

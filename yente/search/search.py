@@ -18,10 +18,9 @@ from yente.data.common import (
     EntityResponse,
     SearchFacet,
     SearchFacetItem,
-    StatementModel,
-    StatementResponse,
     TotalSpec,
 )
+from yente.data.statements import StatementModel, StatementResponse
 from yente.search.base import get_es
 from yente.data import get_datasets
 from yente.util import EntityRedirect
@@ -116,14 +115,8 @@ async def statement_results(
         from_=offset,
         sort=sort,
     )
-    hits = resp.get("hits", {})
-    results: List[StatementModel] = []
-    for hit in hits.get("hits", []):
-        source = hit.pop("_source", {})
-        source["id"] = hit.get("_id")
-        results.append(source)
     return StatementResponse(
-        results=results,
+        results=StatementModel.from_search(resp),
         total=result_total(resp),
         limit=limit,
         offset=offset,

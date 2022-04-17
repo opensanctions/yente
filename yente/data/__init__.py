@@ -1,6 +1,5 @@
 import json
 import logging
-from banal import as_bool
 from aiohttp import ClientSession, ClientTimeout
 from aiocsv import AsyncDictReader
 from typing import AsyncGenerator, Dict
@@ -9,7 +8,8 @@ from asyncstdlib.functools import cache
 from yente import settings
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset, Datasets
-from yente.util import AsyncTextReaderWrapper, iso_datetime
+from yente.data.statements import StatementModel
+from yente.util import AsyncTextReaderWrapper
 
 log = logging.getLogger(__name__)
 http_timeout = ClientTimeout(
@@ -64,7 +64,7 @@ async def get_dataset_entities(dataset: Dataset) -> AsyncGenerator[Entity, None]
                 yield entity
 
 
-async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
+async def get_statements() -> AsyncGenerator[StatementModel, None]:
     index = await get_data_index()
     url = index.get("statements_url")
     if url is None:
@@ -73,7 +73,4 @@ async def get_statements() -> AsyncGenerator[Dict[str, str], None]:
         async with client.get(url) as resp:
             wrapper = AsyncTextReaderWrapper(resp.content, "utf-8")
             async for row in AsyncDictReader(wrapper):
-                row["target"] = as_bool(row["target"])
-                row["first_seen"] = iso_datetime(row["first_seen"])
-                row["last_seen"] = iso_datetime(row["last_seen"])
-                yield row
+                yield StatementModel.from_row(row)
