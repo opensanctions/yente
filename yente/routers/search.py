@@ -183,9 +183,7 @@ async def match(
     queries = []
     entities = []
     for name, example in match.queries.items():
-        data = example.dict(include={'properties'})
-        schema = data.pop("schema_", data.pop("schema", None))
-        entity = Entity.from_example(schema, data.get("properties", {}))
+        entity = Entity.from_example(example.schema_, example.properties)
         query = entity_query(ds, entity)
         queries.append(search_entities(query, limit=limit))
         entities.append((name, entity))
