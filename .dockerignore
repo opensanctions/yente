@@ -1,0 +1,7 @@
+.git
+*.egg-info
+.envrc
+.mypy_cache
+.pytest_cache
+.github
+examples
