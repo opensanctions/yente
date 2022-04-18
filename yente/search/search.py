@@ -1,6 +1,5 @@
 import structlog
 from structlog.stdlib import BoundLogger
-from structlog.contextvars import get_contextvars
 from typing import AsyncGenerator, Generator, Set, Union
 from typing import Any, Dict, List, Optional, Tuple
 from elasticsearch import TransportError, ApiError
@@ -20,17 +19,11 @@ from yente.data.common import (
     SearchFacetItem,
     TotalSpec,
 )
-from yente.data.statements import StatementModel, StatementResponse
-from yente.search.base import get_es
+from yente.search.base import get_es, get_opaque_id
 from yente.data import get_datasets
 from yente.util import EntityRedirect
 
 log: BoundLogger = structlog.get_logger(__name__)
-
-
-def get_opaque_id() -> str:
-    ctx = get_contextvars()
-    return ctx.get("trace_id")
 
 
 def result_entity(datasets, data) -> Optional[Entity]:
@@ -101,26 +94,6 @@ async def search_entities(
             query=query,
         )
         return error
-
-
-async def statement_results(
-    query: Dict[str, Any], limit: int, offset: int, sort: List[Any]
-) -> StatementResponse:
-    es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
-    resp = await es_.search(
-        index=settings.STATEMENT_INDEX,
-        query=query,
-        size=limit,
-        from_=offset,
-        sort=sort,
-    )
-    return StatementResponse(
-        results=StatementModel.from_search(resp),
-        total=result_total(resp),
-        limit=limit,
-        offset=offset,
-    )
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:

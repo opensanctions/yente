@@ -135,20 +135,6 @@ def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
     return aggs
 
 
-def statement_query(
-    dataset=Optional[Dataset], **kwargs: Optional[Union[str, bool]]
-) -> Dict[str, Any]:
-    filters = []
-    if dataset is not None:
-        filters.append({"terms": {"dataset": dataset.source_names}})
-    for field, value in kwargs.items():
-        if value is not None:
-            filters.append({"term": {field: value}})
-    if not len(filters):
-        return {"match_all": {}}
-    return {"bool": {"filter": filters}}
-
-
 def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
     objs: List[Any] = []

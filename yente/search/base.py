@@ -3,6 +3,7 @@ import asyncio
 import logging
 from typing import Any, Dict
 import warnings
+from structlog.contextvars import get_contextvars
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import ElasticsearchWarning
 from elasticsearch.exceptions import TransportError, ConnectionError
@@ -13,6 +14,11 @@ warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 
 log = logging.getLogger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
+
+
+def get_opaque_id() -> str:
+    ctx = get_contextvars()
+    return ctx.get("trace_id")
 
 
 def get_es_connection() -> AsyncElasticsearch:

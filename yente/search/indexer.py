@@ -161,8 +161,7 @@ async def update_index(force=False):
     scope = await get_scope()
     schemata = list(model)
     log.info("Index update check", next_ts=scope.last_export)
-    # await index_entities(scope, schemata, scope.last_export, force)
-    force = True
+    await index_entities(scope, schemata, scope.last_export, force)
     await index_statements(scope.last_export, force)
     log.info("Index update complete.", next_ts=scope.last_export)
 
