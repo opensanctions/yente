@@ -32,6 +32,14 @@ If you run the container in a cluster management system like Kubernetes, you wil
 
 By default, `yente` will query `data.opensanctions.org` every 30 minutes to check for an updated build of the database. If an updated version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
 
+You can change this behaviour in two ways:
+
+* Edit the [crontab](https://crontab.guru/) specification for `schedule` in your `manifest.yml` (see below) in order to run the auto-update process at a different interval. Setting the `schedule` to `null` will disable automatic data updates entirely.
+
+* If you wish to manually run an indexing process, you can do so by calling the script `yente/reindex.py` in the application. For example, in a docker-compose based environment, the full command would be: `docker-compose run app python3 yente/reindex.py`.
+
+OpenSanctions uses these two options in conjunction in order to move reindexing to a separate Kubernetes CronJob that allows for stricter resource management.
+
 ## Settings
 
 The API server has a few operations-related settings, which are passed as environment variables. The settings include:
@@ -46,7 +54,7 @@ The API server has a few operations-related settings, which are passed as enviro
 - ``YENTE_ELASTICSEARCH_USERNAME``: Elasticsearch username. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 - ``YENTE_ELASTICSEARCH_PASSWORD``: Elasticsearch password. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 
-### Adding custom datasets
+### Adding custom datasets (`manifest.yml`)
 
 
 
@@ -62,19 +70,15 @@ Statement data support is experimental and may be moved to a separate API server
 
 ## Development
 
-`yente` is implemented in asynchronous, typed Python using the FastAPI framework. 
-
-If you are fine working on the package while it is running Docker, use the Docker shell:
+`yente` is implemented in asynchronous, typed Python using the FastAPI framework. We're happy to see any bug fixes, improvements or extensions from the community. For local development without Docker, install the package into a fresh virtual Python environment like this:
 
 ```bash
-make shell
-```
-
-For development without Docker, install the Python package like this:
-
-```bash
+git clone https://github.com/opensanctions/yente.git
+cd yente
 pip install -e .
 ```
+
+This will install a broad range of dependencies, including `numpy`, `scikit-learn` and `pyicu`, which are binary packages that may require a local build environment. For `pyicu` in particular, refer to the [package documentation](https://pypi.org/project/PyICU/).
 
 ### Running the server
 
