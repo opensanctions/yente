@@ -1,21 +1,63 @@
-from typing import Any, Dict, Optional
+from functools import cached_property
+from pydantic import BaseModel, AnyHttpUrl
+from typing import AsyncGenerator, Dict, List, Optional, Set
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
 
-from yente.data.util import iso_datetime
+from yente.data.entity import Entity
+from yente.data.loader import load_json_lines
+
+
+class DatasetManifest(BaseModel):
+    name: str
+    title: str
+    url: Optional[AnyHttpUrl]
+    version: Optional[str]
+    namespace: bool = False
+    children: List[str] = []
 
 
 class Dataset(NomenklaturaDataset):
-    def __init__(self, data: Dict[str, Any]):
-        name = data.get("name")
-        super().__init__(name=name, title=data.get("title"))
-        self.last_export = iso_datetime(data["last_export"])
+    def __init__(self, index: "Datasets", manifest: DatasetManifest):
+        # TODO: validate dataset name
+        super().__init__(name=manifest.name, title=manifest.title)
+        self.index = index
+        self.manifest = manifest
+        self.version = manifest.version
+        self.is_loadable = self.manifest.url is not None
 
-        self.entities_url: Optional[str] = data.get("entities_url")
-        for resource in data.get("resources", []):
-            if resource.get("path") == "entities.ftm.json":
-                self.entities_url = resource.get("url")
+    @cached_property
+    def children(self) -> Set["Dataset"]:
+        children: Set["Dataset"] = set()
+        for child_name in self.manifest.children:
+            children.add(self.index[child_name])
+        return children
 
-        self.source_names = data.get("sources", [name])
+    @cached_property
+    def datasets(self) -> Set["Dataset"]:
+        datasets: Set["Dataset"] = set([self])
+        for child in self.children:
+            datasets.update(child.datasets)
+        return datasets
+
+    @property
+    def dataset_names(self) -> List[str]:
+        return [d.name for d in self.datasets]
+
+    async def entities_from_url(self) -> AsyncGenerator[Entity, None]:
+        url = str(self.manifest.url)
+        async for data in load_json_lines(url):
+            entity = Entity.from_os_data(data, self.index)
+            # TODO: set last_seen, first_seen
+            if not len(entity.datasets):
+                entity.datasets.add(self)
+            yield entity
+
+    async def entities(self) -> AsyncGenerator[Entity, None]:
+        # TODO: support for mappings
+        # TODO: support for namespaces
+        if self.manifest.url is not None:
+            async for entity in self.entities_from_url():
+                yield entity
 
 
 Datasets = Dict[str, Dataset]

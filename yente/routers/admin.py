@@ -18,8 +18,6 @@ router = APIRouter()
 async def regular_update():
     if settings.TESTING:
         return
-    if not settings.AUTO_UPDATE:
-        return
     update_index_threaded()
 
 

@@ -2,7 +2,6 @@ import structlog
 from fastapi import Path, Query
 from fastapi import HTTPException
 
-from yente import settings
 from yente.data.dataset import Dataset
 from yente.data import get_datasets
 
@@ -10,9 +9,9 @@ from yente.data import get_datasets
 log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
 
 PATH_DATASET = Path(
-    settings.SCOPE_DATASET,
+    "default",
     description="Data source or collection name",
-    example=settings.SCOPE_DATASET,
+    example="default",
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
 

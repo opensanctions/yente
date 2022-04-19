@@ -12,7 +12,7 @@ def statement_query(
 ) -> Dict[str, Any]:
     filters = []
     if dataset is not None:
-        filters.append({"terms": {"dataset": dataset.source_names}})
+        filters.append({"terms": {"dataset": dataset.dataset_names}})
     for field, value in kwargs.items():
         if value is not None:
             filters.append({"term": {field: value}})

@@ -1,10 +1,11 @@
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from followthemoney import model
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
 
-from yente.data.dataset import Datasets
+if TYPE_CHECKING:
+    from yente.data.dataset import Datasets
 
 
 class Entity(CompositeEntity):
@@ -28,7 +29,7 @@ class Entity(CompositeEntity):
 
     @classmethod
     def from_os_data(
-        cls, data: Dict[str, Any], datasets: Datasets, cleaned: bool = True
+        cls, data: Dict[str, Any], datasets: "Datasets", cleaned: bool = True
     ) -> "Entity":
         obj = cls(data, cleaned=cleaned)
         for name in data.get("datasets", []):

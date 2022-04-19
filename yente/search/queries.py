@@ -21,7 +21,7 @@ def filter_query(
 ):
     filterqs = []
     if dataset is not None:
-        filterqs.append({"terms": {"datasets": dataset.source_names}})
+        filterqs.append({"terms": {"datasets": dataset.dataset_names}})
     if schema is not None:
         schemata = schema.matchable_schemata
         schemata.add(schema)

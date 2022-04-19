@@ -1,11 +1,25 @@
 from banal import as_bool
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from elastic_transport import ObjectApiResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AnyHttpUrl
 
 from yente.data.common import ResultsResponse
+from yente.data.loader import load_csv_rows
 from yente.data.util import iso_datetime
+
+
+class StatementManifest(BaseModel):
+    name: str
+    url: AnyHttpUrl
+    version: Optional[str]
+
+    async def load(self) -> AsyncGenerator["StatementModel", None]:
+        async for row in load_csv_rows(str(self.url)):
+            row["target"] = as_bool(row["target"])
+            row["first_seen"] = iso_datetime(row["first_seen"])
+            row["last_seen"] = iso_datetime(row["last_seen"])
+            yield StatementModel.parse_obj(row)
 
 
 class StatementModel(BaseModel):
@@ -25,22 +39,6 @@ class StatementModel(BaseModel):
         data = self.dict(exclude={"id", "schema_"})
         data["schema"] = self.schema_
         return {"_index": index, "_id": self.id, "_source": data}
-
-    @classmethod
-    def from_row(cls, row: Dict[str, str]):
-        return cls(
-            id=row["id"],
-            entity_id=row["entity_id"],
-            canonical_id=row["canonical_id"],
-            prop=row["prop"],
-            prop_type=row["prop_type"],
-            schema=row["schema"],
-            value=row["value"],
-            dataset=row["dataset"],
-            target=as_bool(row["target"]),
-            first_seen=iso_datetime(row["first_seen"]),
-            last_seen=iso_datetime(row["last_seen"]),
-        )
 
     @classmethod
     def from_search(cls, response: ObjectApiResponse) -> List["StatementModel"]:

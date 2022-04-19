@@ -1,0 +1,5 @@
+schedule: "*/30 * * * *"
+external:
+  url: "https://data.opensanctions.org/datasets/latest/index.json"
+  scope: wd_curated
+datasets: []
