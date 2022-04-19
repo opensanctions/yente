@@ -56,7 +56,58 @@ The API server has a few operations-related settings, which are passed as enviro
 
 ### Adding custom datasets (`manifest.yml`)
 
+With factory settings, `yente` will index and expose all datasets published by OpenSanctions every time they change (by polling an index file every 30 minutes). You can change this behaviour in several ways:
 
+* Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.).
+* Change the update interval (`schedule`) to check less frequently, e.g. only once a month.
+* Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
+
+Such configuration is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a Docker volume mount or a Kubernetes ConfigMap). An example manifest file might look like this:
+
+```yaml
+# Schedule is a crontab specification. Set it to `null` to disable automatic updates
+# entirely:
+schedule: "*/30 * * * *"
+# Import external dataset specifications from OpenSanctions. This will fetch the dataset
+# metadata from the given index and make them available to yente.
+external:
+  # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch OpenSanctions data
+  # for a particular day:
+  url: "https://data.opensanctions.org/datasets/latest/index.json"
+  # Limit the dataset scope of the entities which will be indexed into yente. Useful
+  # values include `default`, `sanctions` or `peps`.
+  scope: all
+# The next section begins to specify non-OpenSanctions datasets that should be exposed
+# in the API:
+datasets:
+  # Example A: fetch a public dataset from a URL and include it in the default search
+  # scope defined upstream in OpenSanctions:
+  - name: offshoreleaks
+    title: ICIJ OffshoreLeaks
+    url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
+    # children:
+    #   - all
+    #   - offshore
+  # Example B: a local dataset from a path that is visible within the container used
+  # to run the service:
+  - name: blocklist
+    title: Customer Blocklist
+    path: /data/customer-blocklist.json
+    # Incrementing the version will force a re-indexing of the data. It must be
+    # given as a monotonic increasing number.
+    version: "20220419001"
+  # Example C: a combined collection that allows querying all entities in its member
+  # datasets at the same time:
+  - name: full
+    title: Full index
+    datasets:
+      - offshoreleaks
+      - blocklist
+      # include OpenSanctions collections:
+      - sanctions
+```
+
+In order for `yente` to import a custom dataset, it must be formatted as a line-based feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings). This allows reading data from a CSV file or SQL database and converting each row into entities.
 
 ### Using the Statement API
 
