@@ -105,6 +105,12 @@ async def versioned_index(
 async def index_entities(dataset: Dataset, force: bool):
     es = await get_es()
     version = dataset.version or settings.INDEX_VERSION
+    log.info(
+        "Indexing entities",
+        name=dataset.name,
+        url=dataset.manifest.url,
+        version=version,
+    )
     schemata = list(model.schemata.values())
     mapping = make_entity_mapping(schemata)
     async with versioned_index(

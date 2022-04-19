@@ -1,4 +1,4 @@
-schedule: "*/30 * * * *"
+schedule: null
 external:
   url: "https://data.opensanctions.org/datasets/latest/index.json"
   scope: wd_curated
