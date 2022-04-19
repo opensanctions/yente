@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from pathlib import Path
+from normality import slugify
+from pydantic import BaseModel, FileUrl, parse_obj_as, validator
 from functools import cached_property
 from typing import AsyncGenerator, Dict, List, Optional, Set
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
@@ -10,15 +12,29 @@ from yente.data.loader import URL, load_json_lines
 class DatasetManifest(BaseModel):
     name: str
     title: str
+    path: Optional[Path]
     url: Optional[URL]
     version: Optional[str]
     namespace: bool = False
     children: List[str] = []
 
+    @validator("name")
+    def name_is_slug(cls, v):
+        norm = slugify(v, sep="_")
+        if v != norm:
+            raise ValueError("invalid dataset name (try: %s)" % norm)
+        return v
+
+    @validator("url", always=True)
+    def url_from_path(cls, v, values):
+        if v is None and values["path"] is not None:
+            file_url = values["path"].resolve().as_uri()
+            v = parse_obj_as(FileUrl, file_url)
+        return v
+
 
 class Dataset(NomenklaturaDataset):
     def __init__(self, index: "Datasets", manifest: DatasetManifest):
-        # TODO: validate dataset name
         super().__init__(name=manifest.name, title=manifest.title)
         self.index = index
         self.manifest = manifest

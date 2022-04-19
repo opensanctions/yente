@@ -24,6 +24,7 @@ setup(
             "mypy",
             "pytest",
             "pytest-cov",
+            "pytest-asyncio",
             "flake8>=2.6.0",
             "black",
         ],
