@@ -2,20 +2,20 @@ from banal import as_bool
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from elastic_transport import ObjectApiResponse
-from pydantic import BaseModel, Field, AnyHttpUrl
+from pydantic import BaseModel, Field
 
 from yente.data.common import ResultsResponse
-from yente.data.loader import load_csv_rows
+from yente.data.loader import URL, load_csv_rows
 from yente.data.util import iso_datetime
 
 
 class StatementManifest(BaseModel):
     name: str
-    url: AnyHttpUrl
+    url: URL
     version: Optional[str]
 
     async def load(self) -> AsyncGenerator["StatementModel", None]:
-        async for row in load_csv_rows(str(self.url)):
+        async for row in load_csv_rows(self.url):
             row["target"] = as_bool(row["target"])
             row["first_seen"] = iso_datetime(row["first_seen"])
             row["last_seen"] = iso_datetime(row["last_seen"])

@@ -6,7 +6,7 @@ from pydantic import BaseModel, AnyHttpUrl
 from yente import settings
 from yente.data.dataset import DatasetManifest
 from yente.data.statements import StatementManifest
-from yente.data.loader import http_timeout
+from yente.data.loader import URL, http_timeout
 from yente.data.util import iso_to_version
 
 
@@ -49,8 +49,6 @@ class ExternalManifest(BaseModel):
 
 class Manifest(BaseModel):
     schedule: Optional[str] = None
-    statements_url: Optional[AnyHttpUrl] = None
-    statements_version: Optional[str] = None
     external: Optional[ExternalManifest] = None
     datasets: List[DatasetManifest] = []
     statements: List[StatementManifest] = []

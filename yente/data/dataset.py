@@ -1,16 +1,16 @@
+from pydantic import BaseModel
 from functools import cached_property
-from pydantic import BaseModel, AnyHttpUrl
 from typing import AsyncGenerator, Dict, List, Optional, Set
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
 
 from yente.data.entity import Entity
-from yente.data.loader import load_json_lines
+from yente.data.loader import URL, load_json_lines
 
 
 class DatasetManifest(BaseModel):
     name: str
     title: str
-    url: Optional[AnyHttpUrl]
+    url: Optional[URL]
     version: Optional[str]
     namespace: bool = False
     children: List[str] = []
@@ -44,8 +44,9 @@ class Dataset(NomenklaturaDataset):
         return [d.name for d in self.datasets]
 
     async def entities_from_url(self) -> AsyncGenerator[Entity, None]:
-        url = str(self.manifest.url)
-        async for data in load_json_lines(url):
+        if self.manifest.url is None:
+            return
+        async for data in load_json_lines(self.manifest.url):
             entity = Entity.from_os_data(data, self.index)
             # TODO: set last_seen, first_seen
             if not len(entity.datasets):
