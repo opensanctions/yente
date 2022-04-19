@@ -107,7 +107,7 @@ datasets:
       - sanctions
 ```
 
-In order for `yente` to import a custom dataset, it must be formatted as a line-based feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings). This allows reading data from a CSV file or SQL database and converting each row into entities.
+In order for `yente` to import a custom dataset, it must be formatted as a line-based feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) and the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
 
 ### Using the Statement API
 
