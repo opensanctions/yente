@@ -16,7 +16,8 @@ class DatasetManifest(BaseModel):
     url: Optional[URL]
     version: Optional[str]
     namespace: bool = False
-    children: List[str] = []
+    datasets: List[str] = []
+    collections: List[str] = []
 
     @validator("name")
     def name_is_slug(cls, v):
@@ -44,8 +45,11 @@ class Dataset(NomenklaturaDataset):
     @cached_property
     def children(self) -> Set["Dataset"]:
         children: Set["Dataset"] = set()
-        for child_name in self.manifest.children:
+        for child_name in self.manifest.datasets:
             children.add(self.index[child_name])
+        for other in self.index.values():
+            if self.name in other.manifest.collections:
+                children.add(other)
         return children
 
     @cached_property
