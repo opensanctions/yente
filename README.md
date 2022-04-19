@@ -62,7 +62,9 @@ With factory settings, `yente` will index and expose all datasets published by O
 * Change the update interval (`schedule`) to check less frequently, e.g. only once a month.
 * Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
 
-Defining these configuration options is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
+Side note: A **dataset** in `yente` contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
+
+Defining extra configuration options is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
 
 ```yaml
 # Schedule is a crontab specification. Set it to `null` to disable automatic updates
