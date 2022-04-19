@@ -54,15 +54,15 @@ The API server has a few operations-related settings, which are passed as enviro
 - ``YENTE_ELASTICSEARCH_USERNAME``: Elasticsearch username. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 - ``YENTE_ELASTICSEARCH_PASSWORD``: Elasticsearch password. **Required** if connection using ``YENTE_ES_CLOUD_ID``.
 
-### Adding custom datasets (`manifest.yml`)
+### Adding custom datasets
 
-With factory settings, `yente` will index and expose all datasets published by OpenSanctions every time they change (by polling an index file every 30 minutes). You can change this behaviour in several ways:
+With factory settings, `yente` will index and expose all datasets published by OpenSanctions every time they change (by polling an index file every 30 minutes). By adding a *manifest file*, you can change this behaviour in several ways:
 
 * Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.).
 * Change the update interval (`schedule`) to check less frequently, e.g. only once a month.
 * Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
 
-Such configuration is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a Docker volume mount or a Kubernetes ConfigMap). An example manifest file might look like this:
+Defining these configuration options is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
 
 ```yaml
 # Schedule is a crontab specification. Set it to `null` to disable automatic updates
