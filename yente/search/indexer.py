@@ -103,7 +103,9 @@ async def versioned_index(
 
 
 async def index_entities(dataset: Dataset, force: bool):
+    """Index entities in a particular dataset, with versioning of the index."""
     es = await get_es()
+    # Versioning defaults to the software version instead of a data update date:
     version = dataset.version or settings.INDEX_VERSION
     log.info(
         "Indexing entities",

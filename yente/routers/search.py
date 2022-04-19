@@ -237,7 +237,7 @@ async def fetch_entity(
         entity = await get_entity(entity_id)
     except EntityRedirect as redir:
         url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
-        return RedirectResponse(url=url)
+        return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(entity, nested=nested)
