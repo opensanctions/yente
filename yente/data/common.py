@@ -72,7 +72,7 @@ class ScoredEntityResponse(EntityResponse):
         )
 
 
-class HealthzResponse(BaseModel):
+class StatusResponse(BaseModel):
     status: str = "ok"
 
 

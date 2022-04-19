@@ -36,6 +36,8 @@ app.include_router(admin.router)
 
 
 def get_user_id(headers: Headers) -> Optional[str]:
+    """Get the user identifiers from headers. User identifiers are just
+    telemetry tools, not authorization mechanisms."""
     user_id = headers.get("authorization")
     if user_id is not None:
         if " " in user_id:
