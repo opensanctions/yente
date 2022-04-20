@@ -1,28 +1,9 @@
-from typing import Any, Dict, Iterable, List
-from followthemoney.types import registry
-from followthemoney.helpers import combine_names
+from typing import Iterable, List
 from nomenklatura.matching import compare_scored
 
 from yente import settings
-from yente.entity import Entity
-from yente.models import ScoredEntityResponse
-
-
-def prepare_entity(data: Dict[str, Any]) -> Entity:
-    """Generate an entity from user data for matching."""
-    data["id"] = "query"
-    proxy = Entity.from_os_data(data, {}, cleaned=False)
-
-    # Generate names from name parts
-    combine_names(proxy)
-
-    # Extract names from IBANs, phone numbers etc.
-    countries = proxy.get_type_values(registry.country)
-    for (prop, value) in proxy.itervalues():
-        hint = prop.type.country_hint(value)
-        if hint is not None and hint not in countries:
-            proxy.add("country", hint, cleaned=True)
-    return proxy
+from yente.data.entity import Entity
+from yente.data.common import ScoredEntityResponse
 
 
 def score_results(

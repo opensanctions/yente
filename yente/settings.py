@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Optional
 from banal import as_bool
 from os import environ as env
@@ -83,12 +84,13 @@ TAGS = [
 TESTING = False
 DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
+MANIFEST = Path(__file__).parent / "../manifests/default.yml"
+MANIFEST = Path(env_str("YENTE_MANIFEST") or MANIFEST).resolve()
+if not MANIFEST.is_file():
+    raise RuntimeError("Manifest file does not exist: %s" % MANIFEST)
+
 BASE_SCHEMA = "Thing"
-DATA_INDEX = "https://data.opensanctions.org/datasets/latest/index.json"
-DATA_INDEX = env_str("YENTE_DATA_INDEX") or DATA_INDEX
-AUTO_UPDATE = as_bool(env_str("YENTE_AUTO_UPDATE", "true"))
-SCOPE_DATASET = env_str("YENTE_SCOPE_DATASET") or "all"
-STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
+STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "true"))
 PORT = int(env_str("YENTE_PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {
@@ -107,12 +109,13 @@ SCORE_CUTOFF = 0.10
 
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
-ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ES_USERNAME = env_str("YENTE_ELASTICSEARCH_USERNAME")
 ES_PASSWORD = env_str("YENTE_ELASTICSEARCH_PASSWORD")
 ES_CLOUD_ID = env_str("YENTE_ELASTICSEARCH_CLOUD_ID")
+ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
+INDEX_VERSION = "".join([v.zfill(2) for v in VERSION.split(".")])
 
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO

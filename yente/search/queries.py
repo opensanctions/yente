@@ -1,12 +1,11 @@
 import logging
-from pprint import pprint
 from normality import collapse_spaces
-from typing import Any, Dict, List, Set, Union, Optional
+from typing import Any, Dict, List, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
-from yente.entity import Dataset
+from yente.data.dataset import Dataset
 from yente.search.mapping import TEXT_TYPES
 
 log = logging.getLogger(__name__)
@@ -22,7 +21,7 @@ def filter_query(
 ):
     filterqs = []
     if dataset is not None:
-        filterqs.append({"terms": {"datasets": dataset.source_names}})
+        filterqs.append({"terms": {"datasets": dataset.dataset_names}})
     if schema is not None:
         schemata = schema.matchable_schemata
         schemata.add(schema)
@@ -134,20 +133,6 @@ def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
     for field in fields:
         aggs[field] = {"terms": {"field": field, "size": 1000}}
     return aggs
-
-
-def statement_query(
-    dataset=Optional[Dataset], **kwargs: Optional[Union[str, bool]]
-) -> Dict[str, Any]:
-    filters = []
-    if dataset is not None:
-        filters.append({"terms": {"dataset": dataset.source_names}})
-    for field, value in kwargs.items():
-        if value is not None:
-            filters.append({"term": {field: value}})
-    if not len(filters):
-        return {"match_all": {}}
-    return {"bool": {"filter": filters}}
 
 
 def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:

@@ -1,18 +1,15 @@
 import pytest
-import asyncio
 from uuid import uuid4
-
+from pathlib import Path
 from fastapi.testclient import TestClient
 
-
 from yente import settings
-from yente.search.base import get_es, close_es
 from yente.app import app
 
 
 run_id = uuid4().hex
 settings.TESTING = True
-settings.SCOPE_DATASET = "wd_curated"
+settings.MANIFEST = Path(__file__).parent / "../manifests/tests.yml"
 settings.UPDATE_TOKEN = "test"
 settings.ES_INDEX = f"yente-test-{run_id}"
 settings.ENTITY_INDEX = f"{settings.ES_INDEX}-entities"

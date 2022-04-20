@@ -6,7 +6,8 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from yente import settings
-from yente.models import ErrorResponse, HealthzResponse
+from yente.data import get_manifest
+from yente.data.common import ErrorResponse, StatusResponse
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
@@ -18,15 +19,15 @@ router = APIRouter()
 async def regular_update():
     if settings.TESTING:
         return
-    if not settings.AUTO_UPDATE:
-        return
     update_index_threaded()
 
 
 @router.on_event("startup")
 async def startup_event():
+    manifest = await get_manifest()
     await regular_update()
-    router.crontab = aiocron.crontab("*/30 * * * *", func=regular_update)
+    if manifest.schedule is not None:
+        router.crontab = aiocron.crontab(manifest.schedule, func=regular_update)
 
 
 @router.on_event("shutdown")
@@ -38,7 +39,7 @@ async def shutdown_event():
     "/healthz",
     summary="Health check",
     tags=["System information"],
-    response_model=HealthzResponse,
+    response_model=StatusResponse,
     responses={500: {"model": ErrorResponse, "description": "Service is not ready"}},
 )
 async def healthz():
@@ -47,14 +48,14 @@ async def healthz():
     ok = await get_index_status()
     if not ok:
         raise HTTPException(500, detail="Index not ready")
-    return HealthzResponse(status="ok")
+    return StatusResponse(status="ok")
 
 
 @router.post(
     "/updatez",
     summary="Force an index update",
     tags=["System information"],
-    response_model=HealthzResponse,
+    response_model=StatusResponse,
     responses={403: {"model": ErrorResponse, "description": "Authorization error."}},
 )
 async def force_update(
@@ -74,4 +75,4 @@ async def force_update(
         await update_index(force=True)
     else:
         update_index_threaded(force=True)
-    return HealthzResponse(status="ok")
+    return StatusResponse(status="ok")

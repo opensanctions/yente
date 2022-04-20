@@ -12,22 +12,25 @@ from followthemoney.types import registry
 from elasticsearch import ApiError
 
 from yente import settings
-from yente.entity import Dataset
-from yente.models import (
+from yente.data.entity import Entity
+from yente.data.dataset import Dataset
+from yente.data.freebase import (
     FreebaseEntity,
-    FreebaseEntitySuggestResponse,
     FreebaseProperty,
     FreebaseScoredEntity,
     FreebaseType,
+    FreebaseEntitySuggestResponse,
+    FreebasePropertySuggestResponse,
+    FreebaseTypeSuggestResponse,
+    FreebaseManifest,
+    FreebaseQueryResult,
 )
-from yente.models import FreebasePropertySuggestResponse
-from yente.models import FreebaseTypeSuggestResponse
-from yente.models import FreebaseManifest, FreebaseQueryResult
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
-from yente.data import get_datasets, get_matchable_schemata
-from yente.scoring import prepare_entity, score_results
+from yente.search.search import get_matchable_schemata
+from yente.scoring import score_results
 from yente.util import match_prefix, limit_window
+from yente.data import get_datasets
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
@@ -56,7 +59,7 @@ async def reconcile(
     if queries is not None:
         return await reconcile_queries(ds, queries)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
-    schemata = await get_matchable_schemata()
+    schemata = await get_matchable_schemata(ds)
     default_types = [FreebaseType.from_schema(s) for s in schemata]
     return {
         "versions": ["0.2"],
@@ -127,7 +130,6 @@ async def reconcile_queries(
 async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
-    datasets = await get_datasets()
     limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
     schema = query.get("type", settings.BASE_SCHEMA)
     properties = {"alias": [query.get("query")]}
@@ -140,13 +142,12 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
             properties[prop.name] = []
         properties[prop.name].append(p.get("v"))
 
-    data = {"schema": schema, "properties": properties}
-    proxy = prepare_entity(data)
+    proxy = Entity.from_example(schema, properties)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
-    entities = result_entities(resp, datasets)
+    entities = result_entities(resp)
     results = [
         FreebaseScoredEntity.from_scored(r) for r in score_results(proxy, entities)
     ]
@@ -154,7 +155,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         "Reconcile",
         action="reconcile",
         schema=proxy.schema.name,
-        total=result_total(resp),
+        total=result_total(resp).value,
     )
     return name, {"result": results}
 
@@ -181,14 +182,13 @@ async def reconcile_suggest_entity(
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
     ds = await get_dataset(dataset)
-    datasets = await get_datasets()
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
-    for result in result_entities(resp, datasets):
+    for result in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
         "Prefix query",
@@ -213,8 +213,8 @@ async def reconcile_suggest_property(
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
-    await get_dataset(dataset)
-    schemata = await get_matchable_schemata()
+    ds = await get_dataset(dataset)
+    schemata = await get_matchable_schemata(ds)
     matches: List[FreebaseProperty] = []
     for prop in model.properties:
         if prop.schema not in schemata:
@@ -240,9 +240,9 @@ async def reconcile_suggest_type(
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
-    await get_dataset(dataset)
+    ds = await get_dataset(dataset)
     matches: List[FreebaseType] = []
-    for schema in await get_matchable_schemata():
+    for schema in await get_matchable_schemata(ds):
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(FreebaseType.from_schema(schema))
     result = matches[: settings.MATCH_PAGE]

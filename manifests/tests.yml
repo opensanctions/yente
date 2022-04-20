@@ -1,0 +1,8 @@
+schedule: null
+external:
+  url: "https://data.opensanctions.org/datasets/latest/index.json"
+  scope: wd_curated
+datasets:
+  - name: parteispenden
+    title: German political party donations
+    path: tests/fixtures/donations.ijson

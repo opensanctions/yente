@@ -13,7 +13,7 @@ setup(
     license="MIT",
     author="OpenSanctions",
     author_email="info@opensanctions.org",
-    packages=find_packages(exclude=["examples", "test"]),
+    packages=find_packages(exclude=["examples", "tests"]),
     namespace_packages=[],
     extras_require={
         "dev": [
@@ -24,6 +24,7 @@ setup(
             "mypy",
             "pytest",
             "pytest-cov",
+            "pytest-asyncio",
             "flake8>=2.6.0",
             "black",
         ],
