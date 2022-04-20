@@ -26,12 +26,12 @@ from yente.util import EntityRedirect
 log: BoundLogger = structlog.get_logger(__name__)
 
 
-def result_entity(datasets, data) -> Optional[Entity]:
+def result_entity(data) -> Optional[Entity]:
     source = data.get("_source")
     if source is None:
         return None
     source["id"] = data.get("_id")
-    return Entity.from_os_data(source, datasets)
+    return Entity.from_dict(model, source)
 
 
 def result_total(result: ObjectApiResponse) -> TotalSpec:
@@ -39,12 +39,10 @@ def result_total(result: ObjectApiResponse) -> TotalSpec:
     return TotalSpec(value=spec["value"], relation=spec["relation"])
 
 
-def result_entities(
-    response: ObjectApiResponse, datasets: Datasets
-) -> Generator[Entity, None, None]:
+def result_entities(response: ObjectApiResponse) -> Generator[Entity, None, None]:
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
-        entity = result_entity(datasets, hit)
+        entity = result_entity(hit)
         if entity is not None:
             yield entity
 
@@ -98,16 +96,21 @@ async def search_entities(
 
 async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
-    datasets = await get_datasets()
     try:
         es_ = es.options(opaque_id=get_opaque_id())
-        data = await es_.get(index=settings.ENTITY_INDEX, id=entity_id)
-        _source = data.get("_source")
-        if _source.get("canonical_id") != entity_id:
-            raise EntityRedirect(_source.get("canonical_id"))
-        return result_entity(datasets, data)
+        query = {"bool": {"filter": [{"ids": {"values": [entity_id]}}]}}
+        response = await es_.search(index=settings.ENTITY_INDEX, query=query, size=10)
+        hits = response.get("hits", {})
+        for hit in hits.get("hits", []):
+            _source = hit.get("_source")
+            if _source.get("canonical_id") != entity_id:
+                raise EntityRedirect(_source.get("canonical_id"))
+            entity = result_entity(hit)
+            if entity is not None:
+                return entity
     except NotFoundError:
-        return None
+        pass
+    return None
 
 
 async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
@@ -144,7 +147,6 @@ async def get_adjacent(
     es_ = es.options(opaque_id=get_opaque_id())
     entities = entity.get_type_values(registry.entity)
     entities = [e for e in entities if e not in exclude]
-    datasets = await get_datasets()
     if len(entities):
         resp = await es_.mget(
             index=settings.ENTITY_INDEX,
@@ -152,7 +154,7 @@ async def get_adjacent(
             realtime=False,
         )
         for raw in resp.get("docs", []):
-            adj = result_entity(datasets, raw)
+            adj = result_entity(raw)
             if adj is None:
                 continue
             for prop, value in entity.itervalues():
@@ -171,7 +173,7 @@ async def get_adjacent(
         query=query,
         size=settings.MAX_RESULTS,
     )
-    for adj in result_entities(resp, datasets):
+    for adj in result_entities(resp):
         for prop, value in adj.itervalues():
             if prop.type == registry.entity and value == entity.id:
                 if prop.reverse is not None:

@@ -4,6 +4,8 @@ from pydantic import BaseModel, FileUrl, parse_obj_as, validator
 from functools import cached_property
 from typing import AsyncGenerator, Dict, List, Optional, Set
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
+from followthemoney import model
+from followthemoney.namespace import Namespace
 
 from yente.data.entity import Entity
 from yente.data.loader import URL, load_json_lines
@@ -15,7 +17,7 @@ class DatasetManifest(BaseModel):
     path: Optional[Path]
     url: Optional[URL]
     version: Optional[str]
-    namespace: bool = False
+    namespace: bool = True
     datasets: List[str] = []
     collections: List[str] = []
 
@@ -41,6 +43,7 @@ class Dataset(NomenklaturaDataset):
         self.manifest = manifest
         self.version = manifest.version
         self.is_loadable = self.manifest.url is not None
+        self.ns = Namespace(manifest.name) if manifest.namespace else None
 
     @cached_property
     def children(self) -> Set["Dataset"]:
@@ -63,22 +66,19 @@ class Dataset(NomenklaturaDataset):
     def dataset_names(self) -> List[str]:
         return [d.name for d in self.datasets]
 
-    async def entities_from_url(self) -> AsyncGenerator[Entity, None]:
+    async def entities(self) -> AsyncGenerator[Entity, None]:
         if self.manifest.url is None:
             return
+        datasets = set(self.dataset_names)
         async for data in load_json_lines(self.manifest.url):
-            entity = Entity.from_os_data(data, self.index)
+            entity = Entity.from_dict(model, data)
+            entity.datasets = entity.datasets.intersection(datasets)
             # TODO: set last_seen, first_seen
             if not len(entity.datasets):
-                entity.datasets.add(self)
+                entity.datasets.add(self.name)
+            if self.ns is not None:
+                entity = self.ns.apply(entity)
             yield entity
-
-    async def entities(self) -> AsyncGenerator[Entity, None]:
-        # TODO: support for mappings
-        # TODO: support for namespaces
-        if self.manifest.url is not None:
-            async for entity in self.entities_from_url():
-                yield entity
 
 
 Datasets = Dict[str, Dataset]

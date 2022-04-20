@@ -79,7 +79,7 @@ async def search(
         raise HTTPException(resp.status_code, detail=resp.message)
 
     results: List[EntityResponse] = []
-    for result in result_entities(resp, all_datasets):
+    for result in result_entities(resp):
         results.append(await serialize_entity(result))
     output = SearchResponse(
         results=results,
@@ -93,7 +93,7 @@ async def search(
         action="search",
         length=len(q),
         dataset=ds.name,
-        total=output.total,
+        total=output.total.value,
     )
     response.headers.update(settings.CACHE_HEADERS)
     return output
@@ -173,7 +173,6 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    datasets = await get_datasets()
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
 
     if len(match.queries) > settings.MAX_BATCH:
@@ -199,10 +198,10 @@ async def match(
                 detail=response.message,
             )
             continue
-        ents = result_entities(response, datasets)
+        ents = result_entities(response)
         scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
         total = result_total(response)
-        log.info("Match", action="match", schema=entity.schema.name, total=total)
+        log.info("Match", action="match", schema=entity.schema.name, total=total.value)
         responses[name] = EntityMatches(
             status=200,
             results=scored,

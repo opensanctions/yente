@@ -130,7 +130,6 @@ async def reconcile_queries(
 async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
-    datasets = await get_datasets()
     limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
     schema = query.get("type", settings.BASE_SCHEMA)
     properties = {"alias": [query.get("query")]}
@@ -148,7 +147,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     resp = await search_entities(query, limit=limit, offset=offset)
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
-    entities = result_entities(resp, datasets)
+    entities = result_entities(resp)
     results = [
         FreebaseScoredEntity.from_scored(r) for r in score_results(proxy, entities)
     ]
@@ -156,7 +155,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         "Reconcile",
         action="reconcile",
         schema=proxy.schema.name,
-        total=result_total(resp),
+        total=result_total(resp).value,
     )
     return name, {"result": results}
 
@@ -183,14 +182,13 @@ async def reconcile_suggest_entity(
     Searches are conducted based on name and text content, using all matchable
     entities in the system index."""
     ds = await get_dataset(dataset)
-    datasets = await get_datasets()
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
     if isinstance(resp, ApiError):
         raise HTTPException(resp.status_code, detail=resp.message)
-    for result in result_entities(resp, datasets):
+    for result in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
         "Prefix query",
