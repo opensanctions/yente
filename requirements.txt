@@ -2,12 +2,12 @@ followthemoney==2.9.1
 nomenklatura==2.2.7
 asyncstdlib==3.10.4
 aiocron==1.8
-aiocsv==1.2.1
+aiocsv==1.2.2
 aiofiles==0.8.0
 types-aiofiles==0.8.8
 aiohttp[speedups]==3.8.1
 elasticsearch[async]==8.1.2
-fastapi==0.75.1
+fastapi==0.75.2
 uvicorn[standard]==0.17.6
 python-multipart==0.0.5
 email-validator==1.1.3
