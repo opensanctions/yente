@@ -3,6 +3,8 @@ from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
 
+from yente import settings
+
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
 TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
@@ -20,7 +22,11 @@ INDEX_SETTINGS = {
             }
         },
     },
-    "index": {"refresh_interval": "5s"},
+    "index": {
+        "refresh_interval": "5s",
+        "auto_expand_replicas": "0-all",
+        "number_of_shards": settings.ES_SHARDS,
+    },
 }
 
 
