@@ -1,9 +1,13 @@
+import structlog
+from structlog.stdlib import BoundLogger
 from typing import Any, Dict, cast
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
+
+log: BoundLogger = structlog.get_logger(__name__)
 
 
 class Entity(CompositeEntity):
@@ -29,6 +33,9 @@ class Entity(CompositeEntity):
         data = {"id": "example", "schema": schema}
         obj = cls(model, data)
         for prop_name, values in properties.items():
+            if prop_name not in obj.schema.properties:
+                log.warning("Invalid reconcile property", prop=prop_name, values=values)
+                continue
             obj.add(prop_name, values, cleaned=False, fuzzy=True)
 
         # Generate names from name parts

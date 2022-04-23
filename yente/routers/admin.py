@@ -1,4 +1,3 @@
-import asyncio
 import aiocron
 import structlog
 from structlog.stdlib import BoundLogger

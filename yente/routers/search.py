@@ -93,7 +93,7 @@ async def search(
         action="search",
         length=len(q),
         dataset=ds.name,
-        total=output.total.value,
+        results=output.total.value,
     )
     response.headers.update(settings.CACHE_HEADERS)
     return output
@@ -201,7 +201,12 @@ async def match(
         ents = result_entities(response)
         scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
         total = result_total(response)
-        log.info("Match", action="match", schema=entity.schema.name, total=total.value)
+        log.info(
+            "Match",
+            action="match",
+            schema=entity.schema.name,
+            results=total.value,
+        )
         responses[name] = EntityMatches(
             status=200,
             results=scored,

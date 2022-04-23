@@ -1,9 +1,8 @@
 import structlog
 from structlog.stdlib import BoundLogger
 from typing import List, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 
 from yente import settings
 from yente.data.statements import StatementResponse
@@ -27,6 +26,7 @@ router = APIRouter()
     },
 )
 async def statements(
+    response: Response,
     dataset: Optional[str] = Query(None, title="Filter by dataset"),
     entity_id: Optional[str] = Query(None, title="Filter by source entity ID"),
     canonical_id: Optional[str] = Query(None, title="Filter by normalised entity ID"),
@@ -68,4 +68,12 @@ async def statements(
     limit, offset = limit_window(limit, offset, 50)
     sorts = parse_sorts(sort, default=None)
     resp = await statement_results(query, limit, offset, sorts)
-    return JSONResponse(content=resp, headers=settings.CACHE_HEADERS)
+    response.headers.update(settings.CACHE_HEADERS)
+    log.info(
+        "Statements",
+        action="statements",
+        canonical_id=canonical_id,
+        dataset=dataset,
+        results=resp.total.value,
+    )
+    return resp
