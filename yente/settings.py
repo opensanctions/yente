@@ -90,7 +90,7 @@ if not MANIFEST.is_file():
     raise RuntimeError("Manifest file does not exist: %s" % MANIFEST)
 
 BASE_SCHEMA = "Thing"
-STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "true"))
+STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {

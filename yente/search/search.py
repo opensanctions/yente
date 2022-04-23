@@ -148,15 +148,13 @@ async def get_adjacent(
     entities = entity.get_type_values(registry.entity)
     entities = [e for e in entities if e not in exclude]
     if len(entities):
-        resp = await es_.mget(
+        query = {"bool": {"filter": [{"ids": {"values": entities}}]}}
+        resp = await es_.search(
             index=settings.ENTITY_INDEX,
-            ids=entities,
-            realtime=False,
+            query=query,
+            size=settings.MAX_RESULTS,
         )
-        for raw in resp.get("docs", []):
-            adj = result_entity(raw)
-            if adj is None:
-                continue
+        for adj in result_entities(resp):
             for prop, value in entity.itervalues():
                 if prop.type == registry.entity and value == adj.id:
                     yield prop, adj

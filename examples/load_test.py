@@ -12,7 +12,7 @@ HOST = "https://api-test.opensanctions.org/"
 # HOST = "http://localhost:9000/"
 QUERIES = ["vladimir putin", "hamas", "ukraine", "petr~2 aven", "bla/blubb"]
 
-ENTITY_IDS = set(["Q7747", "Q19077"])
+ENTITY_IDS = set(["Q7747", "Q19077", "Q154797"])
 
 EXAMPLE_1 = {
     "schema": "Person",
