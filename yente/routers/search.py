@@ -15,9 +15,9 @@ from yente.data.common import EntityResponse, SearchResponse, EntityMatches
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
-from yente.search.search import get_entity, serialize_entity
-from yente.search.search import search_entities, result_entities
-from yente.search.search import result_facets, result_total
+from yente.search.search import get_entity, search_entities
+from yente.search.search import result_entities, result_facets, result_total
+from yente.search.nested import serialize_entity
 from yente.data import get_datasets
 from yente.data.entity import Entity
 from yente.util import limit_window, EntityRedirect

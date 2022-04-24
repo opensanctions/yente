@@ -1,26 +1,19 @@
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import AsyncGenerator, Generator, Set, Union
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Generator, Set, Union
+from typing import Any, Dict, List, Optional
 from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
 from elastic_transport import ObjectApiResponse
 from followthemoney import model
 from followthemoney.schema import Schema
-from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
 from yente.data.dataset import Dataset, Datasets
 from yente.data.entity import Entity
-from yente.data.common import (
-    EntityResponse,
-    SearchFacet,
-    SearchFacetItem,
-    TotalSpec,
-)
+from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.search.base import get_es, get_opaque_id
-from yente.data import get_datasets
 from yente.util import EntityRedirect
 
 log: BoundLogger = structlog.get_logger(__name__)
@@ -138,67 +131,6 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
     except ApiError as error:
         log.error("Could not get matchable schema", error=str(error))
         return set()
-
-
-async def get_adjacent(
-    entity: Entity, exclude: List[str]
-) -> AsyncGenerator[Tuple[Property, Entity], None]:
-    es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
-    entities = entity.get_type_values(registry.entity)
-    entities = [e for e in entities if e not in exclude]
-    if len(entities):
-        query = {"bool": {"filter": [{"ids": {"values": entities}}]}}
-        resp = await es_.search(
-            index=settings.ENTITY_INDEX,
-            query=query,
-            size=settings.MAX_RESULTS,
-        )
-        for adj in result_entities(resp):
-            for prop, value in entity.itervalues():
-                if prop.type == registry.entity and value == adj.id:
-                    yield prop, adj
-
-    # Disable scoring by using a filter query
-    query = {
-        "bool": {
-            "filter": [{"term": {registry.entity.group: entity.id}}],
-            "must_not": [{"ids": {"values": exclude}}],
-        }
-    }
-    resp = await es_.search(
-        index=settings.ENTITY_INDEX,
-        query=query,
-        size=settings.MAX_RESULTS,
-    )
-    for adj in result_entities(resp):
-        for prop, value in adj.itervalues():
-            if prop.type == registry.entity and value == entity.id:
-                if prop.reverse is not None:
-                    yield prop.reverse, adj
-
-
-async def _to_nested_dict(
-    entity: Entity, depth: int, path: List[str]
-) -> EntityResponse:
-    next_depth = depth if entity.schema.edge else depth - 1
-    next_path = path + [entity.id]
-    resp = EntityResponse.from_entity(entity)
-    if next_depth < 0:
-        return resp
-    nested: Dict[str, Any] = {}
-    async for prop, adjacent in get_adjacent(entity, next_path):
-        value = await _to_nested_dict(adjacent, next_depth, next_path)
-        if prop.name not in nested:
-            nested[prop.name] = []
-        nested[prop.name].append(value)
-    resp.properties.update(nested)
-    return resp
-
-
-async def serialize_entity(entity: Entity, nested: bool = False) -> EntityResponse:
-    depth = 1 if nested else -1
-    return await _to_nested_dict(entity, depth=depth, path=[])
 
 
 async def get_index_status() -> bool:
