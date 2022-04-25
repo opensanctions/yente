@@ -1,6 +1,6 @@
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Optional, Dict, List, Tuple, Union
+from typing import Optional, Dict, List, Set, Tuple, Union
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -12,49 +12,38 @@ from yente.search.search import result_entities
 
 log: BoundLogger = structlog.get_logger(__name__)
 
+Value = Union[str, EntityResponse]
 Entities = Dict[str, Optional[Entity]]
-Inverted = Dict[str, List[Tuple[Property, str]]]
+Inverted = Dict[str, Set[Tuple[Property, str]]]
+
+
+def nest_value(
+    entity_id: str, entities: Entities, inverted: Inverted, path: List[str]
+) -> Value:
+    entity = entities.get(entity_id)
+    if entity_id in path or entity is None:
+        return entity_id
+    next_path = path + [entity.id]
+    return nest_entity(entity, entities, inverted, next_path)
 
 
 def nest_entity(
-    entity: Entity,
-    entities: Entities,
-    inverted: Inverted,
-    path: List[str] = [],
+    entity: Entity, entities: Entities, inverted: Inverted, path: List[str]
 ) -> EntityResponse:
     serialized = EntityResponse.from_entity(entity)
-    props: Dict[str, List[Union[str, EntityResponse]]] = {}
-    value: Union[str, EntityResponse] = ""
-    next_path = path + [entity.id]
+    props: Dict[str, List[Value]] = {}
     for (prop, value) in inverted.get(entity.id, []):
-        if prop.reverse is None or value in next_path:
+        if value in path or len(path) > 1:
             continue
-        value_entity = entities.get(value)
-        if value_entity is not None:
-            value = nest_entity(
-                value_entity,
-                entities,
-                inverted,
-                path=next_path,
-            )
-        props.setdefault(prop.reverse.name, [])
-        props[prop.reverse.name].append(value)
+        invert = nest_value(value, entities, inverted, path)
+        props.setdefault(prop.name, [])
+        props[prop.name].append(invert)
     for prop in entity.iterprops():
         if prop.type != registry.entity:
             continue
-        nested = []
+        nested: List[Value] = []
         for value in entity.pop(prop):
-            if value in next_path:
-                continue
-            value_entity = entities.get(value)
-            if value_entity is not None:
-                value = nest_entity(
-                    value_entity,
-                    entities,
-                    inverted,
-                    path=next_path,
-                )
-            nested.append(value)
+            nested.append(nest_value(value, entities, inverted, path))
         props[prop.name] = nested
     serialized.properties.update(props)
     return serialized
@@ -63,10 +52,10 @@ def nest_entity(
 async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse:
     if not nested:
         return EntityResponse.from_entity(root)
-    entities: Entities = {root.id: root}
     inverted: Inverted = {}
     reverse = [root.id]
 
+    entities: Entities = {root.id: root}
     for forward_id in root.get_type_values(registry.entity):
         entities.setdefault(forward_id, None)
 
@@ -89,9 +78,6 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                 "must_not": [{"ids": {"values": seen_entities}}],
             }
         }
-        # from pprint import pprint
-        # pprint(query)
-
         resp = await es_.search(
             index=settings.ENTITY_INDEX,
             query=query,
@@ -103,22 +89,17 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
             entities[adj.id] = adj
 
             # TODO: not sure this is needed:
-            if adj.schema.edge:
-                reverse.append(adj.id)
+            # if adj.schema.edge:
+            #     reverse.append(adj.id)
 
             for prop, value in adj.itervalues():
                 if prop.type != registry.entity:
                     continue
-                # if entities.get(value) is None:
-                #     entities[value] = None
                 if adj.schema.edge:
                     entities.setdefault(value, None)
 
-                inverted.setdefault(value, [])
-                inverted[value].append((prop, adj.id))
+                inverted.setdefault(value, set())
+                if prop.reverse is not None:
+                    inverted[value].add((prop.reverse, adj.id))
 
-    for ent in entities.values():
-        if ent.schema.name == "Sanction":
-            print("SANC", ent)
-
-    return nest_entity(root, entities, inverted)
+    return nest_entity(root, entities, inverted, [root.id])
