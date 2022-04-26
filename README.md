@@ -1,10 +1,10 @@
 # yente
 
-`yente` is the OpenSanctions match-making API. The service exposes endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/). 
+`yente` is the OpenSanctions match-making API. The service exposes HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies and vessels that are subject to international sanctions. 
 
 The API is built to provide access to OpenSanctions data, it can also be used to search and match other data, such as the [ICIJ OffshoreLeaks](https://github.com/opensanctions/icij-offshoreleaks/blob/master/README.md).
 
-While `yente` powers the [OpenSanctions API](https://api.opensanctions.org), it can also be run on-premises in KYC contexts so that no customer data leaves the deployment context. The software is distributed as a Docker image with a `docker-compose.yml` that also provisions the requisite ElasticSearch index.
+While `yente` powers the [OpenSanctions API](https://api.opensanctions.org), it can also be run on-premises as a KYC appliance so that no customer data leaves the deployment context. The software is distributed as a Docker image with a pre-defined `docker-compose.yml` configuration that also provisions the requisite ElasticSearch index.
 
 * [Documentation](https://www.opensanctions.org/docs/api/)
   * [OpenAPI/ReDoc specification](https://api.opensanctions.org)
@@ -16,7 +16,7 @@ While `yente` powers the [OpenSanctions API](https://api.opensanctions.org), it 
 
 *Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) if you prefer to use this API as a hosted service (SaaS).*
 
-In order to use `yente` on your own servers, we recommend you use `docker-compose` (or another Docker orchestration tool) to pull and run the pre-built containers. For example, you can download the `docker-compose.yml` in this repository and use it to boot an instance of the system:
+In order to deploy `yente` on your own servers, we recommend you use `docker-compose` (or another Docker orchestration tool) to pull and run the pre-built containers. For example, you can download the `docker-compose.yml` in the repository and use it to boot an instance of the system:
 
 ```bash
 mkdir -p yente && cd yente
@@ -26,19 +26,19 @@ docker-compose up
 
 This will make the service available on Port 8000 of the local machine.
 
-If you run the container in a cluster management system like Kubernetes, you will need to run both of the containers defined in the compose file (the API and ElasticSearch instance). You will also need to assign the API container network policy permissions to fetch data from `data.opensanctions.org` once every hour so that it can update itself.
+If you run the container in a cluster management system like Kubernetes, you will need to run both of the services defined in the compose file (the API and ElasticSearch instance). You may also need to assign the API container network policy permissions to fetch data from `data.opensanctions.org` once every hour so that it can update itself.
 
 ### Managing data updates
 
-By default, `yente` will query `data.opensanctions.org` every 30 minutes to check for an updated build of the database. If an updated version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
+By default, `yente` will check for an updated build of the OpenSanctions database published at `data.opensanctions.org` every 30 minutes. If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
 
 You can change this behaviour in two ways:
 
 * Edit the [crontab](https://crontab.guru/) specification for `schedule` in your `manifest.yml` (see below) in order to run the auto-update process at a different interval. Setting the `schedule` to `null` will disable automatic data updates entirely.
 
-* If you wish to manually run an indexing process, you can do so by calling the script `yente/reindex.py` in the application. For example, in a docker-compose based environment, the full command would be: `docker-compose run app python3 yente/reindex.py`.
+* If you wish to manually run an indexing process, you can do so by calling the script `yente/reindex.py`. This command must be invoked inside the application container. For example, in a docker-compose based environment, the full command would be: `docker-compose run app python3 yente/reindex.py`.
 
-OpenSanctions uses these two options in conjunction in order to move reindexing to a separate Kubernetes CronJob that allows for stricter resource management.
+The production settings for api.ppensanctions.org use these two options in conjunction to move reindexing to a separate Kubernetes CronJob that allows for stricter resource management.
 
 ## Settings
 
@@ -56,15 +56,15 @@ The API server has a few operations-related settings, which are passed as enviro
 
 ### Adding custom datasets
 
-With factory settings, `yente` will index and expose all datasets published by OpenSanctions every time they change (by polling an index file every 30 minutes). By adding a *manifest file*, you can change this behaviour in several ways:
+The default configuration of `yente` will index and expose the datasets published by OpenSanctions every time they change. By adding a *manifest file*, you can change this behaviour in several ways:
 
-* Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.).
+* Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.) that you wish to vet alongside the OpenSanctions data.
 * Change the update interval (`schedule`) to check less frequently, e.g. only once a month.
 * Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
 
 Side note: A **dataset** in `yente` contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
 
-Defining extra configuration options is handled by a custom YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
+Defining these extra indexing options is handled via a YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
 
 ```yaml
 # Schedule is a crontab specification. Set it to `null` to disable automatic updates
@@ -73,8 +73,8 @@ schedule: "*/30 * * * *"
 # Import external dataset specifications from OpenSanctions. This will fetch the dataset
 # metadata from the given index and make them available to yente.
 external:
-  # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch OpenSanctions data
-  # for a particular day:
+  # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch historical
+  # OpenSanctions data for a particular day:
   url: "https://data.opensanctions.org/datasets/latest/index.json"
   # Limit the dataset scope of the entities which will be indexed into yente. Useful
   # values include `default`, `sanctions` or `peps`.
@@ -116,7 +116,7 @@ datasets:
       - sanctions
 ```
 
-In order for `yente` to import a custom dataset, it must be formatted as a line-based feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) and the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
+In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) using the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
 
 ### Using the Statement API
 
@@ -126,7 +126,7 @@ The primary goal of the API is to serve entity-based data, but it also supports 
 
 Because indexing and exposing the statement data makes no sense for on-premises deployments, it is disabled by default. You can use the environment variable ``YENTE_STATEMENT_API`` in order to enable the `/statements` endpoint.
 
-Statement data support is experimental and may be moved to a separate API server in the future.
+**WARNING:** The statement API is experimental and may be moved to a separate code base in the future.
 
 ## Development
 

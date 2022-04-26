@@ -13,7 +13,7 @@ services:
       - cluster.name=opensanctions-index
       - discovery.type=single-node
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
         soft: -1
@@ -42,9 +42,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 3s
     deploy:
       mode: replicated
+      # Run multiple instances for better scale:
       replicas: 1
       restart_policy:
         condition: on-failure

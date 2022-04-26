@@ -33,7 +33,7 @@ class EntityResponse(BaseModel):
     def from_entity(cls, entity: Entity):
         return cls(
             id=entity.id,
-            caption=entity.caption,
+            caption=entity._caption,
             schema=entity.schema.name,
             properties=entity.properties,
             datasets=list(entity.datasets),

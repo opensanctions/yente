@@ -26,8 +26,7 @@ sanctions, known to be involved in criminal activity, or if they are politically
 exposed people.
 
 **IMPORTANT: This open source API is intended to be operated on-premises in your
-infrastructure. The online version exists as a demo and does not provide any data
-protection or uptime guarantees. Read below on deploying your own instance.**
+infrastructure. Read below on deploying your own instance.**
 
 In this service, there is support for the following operations:
 
