@@ -1,6 +1,7 @@
 import structlog
 from structlog.stdlib import BoundLogger
 from typing import Optional, Dict, List, Set, Tuple, Union
+from elasticsearch import ApiError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -78,11 +79,19 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                 "must_not": [{"ids": {"values": seen_entities}}],
             }
         }
-        resp = await es_.search(
-            index=settings.ENTITY_INDEX,
-            query=query,
-            size=settings.MAX_RESULTS,
-        )
+        try:
+            resp = await es_.search(
+                index=settings.ENTITY_INDEX,
+                query=query,
+                size=settings.MAX_RESULTS,
+            )
+        except ApiError as error:
+            log.error(
+                f"Nested search error {error.status_code}: {error.message}",
+                index=settings.ENTITY_INDEX,
+                query=query,
+            )
+            break
 
         reverse = []
         for adj in result_entities(resp):
