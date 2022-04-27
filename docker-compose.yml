@@ -1,8 +1,7 @@
 version: "3.9"
 services:
-
   index:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.1.3
     expose:
       - "9200"
     ports:
@@ -13,13 +12,14 @@ services:
       - cluster.name=opensanctions-index
       - discovery.type=single-node
       - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
         soft: -1
         hard: -1
     volumes:
-      - index-data:/usr/share/elasticsearch/data
+      - index-os-data:/usr/share/elasticsearch/data
     deploy:
       placement:
         max_replicas_per_node: 1
@@ -54,4 +54,4 @@ services:
         window: 120s
 
 volumes:
-  index-data: null
+  index-os-data: null
