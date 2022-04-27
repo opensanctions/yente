@@ -4,6 +4,7 @@ from typing import Optional
 from banal import as_bool
 from os import environ as env
 from normality import stringify
+from datetime import datetime
 
 
 def env_str(name: str, default: Optional[str] = None) -> Optional[str]:
@@ -119,3 +120,6 @@ INDEX_VERSION = "".join([v.zfill(2) for v in VERSION.split(".")])
 
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
+
+# Used to pad out first_seen, last_seen on static collections
+RUN_TIME = datetime.utcnow().isoformat()[:19]

@@ -73,7 +73,6 @@ class Dataset(NomenklaturaDataset):
         async for data in load_json_lines(self.manifest.url):
             entity = Entity.from_dict(model, data)
             entity.datasets = entity.datasets.intersection(datasets)
-            # TODO: set last_seen, first_seen
             if not len(entity.datasets):
                 entity.datasets.add(self.name)
             if self.ns is not None:

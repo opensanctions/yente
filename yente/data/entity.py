@@ -1,11 +1,13 @@
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, cast
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
+
+from yente import settings
 
 log: BoundLogger = structlog.get_logger(__name__)
 
@@ -17,8 +19,12 @@ class Entity(CompositeEntity):
         super().__init__(model, data, cleaned=cleaned)
         self._caption = cast(str, data.get("caption")) or self.caption
         self.target = cast(bool, data.get("target", False))
-        self.first_seen: str = data.get("first_seen")
-        self.last_seen: str = data.get("last_seen")
+
+        # Not sure that impugning this is a good idea, to be seen:
+        first_seen = cast(Optional[str], data.get("first_seen"))
+        last_seen = cast(Optional[str], data.get("last_seen"))
+        self.first_seen: str = first_seen or last_seen or settings.RUN_TIME
+        self.last_seen: str = last_seen or self.first_seen
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()

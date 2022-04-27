@@ -1,7 +1,7 @@
 import asyncio
 import structlog
 import threading
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
@@ -50,6 +50,13 @@ async def statement_docs(manifest: StatementManifest, index: str):
             log.info("Index: %d statements..." % idx, index=index)
         yield stmt.to_doc(index)
         idx += 1
+
+
+def make_version(version: Optional[str]) -> str:
+    full_version = settings.INDEX_VERSION
+    if version is not None:
+        full_version = f"{full_version}-{version}"
+    return full_version
 
 
 @asynccontextmanager
@@ -106,7 +113,7 @@ async def index_entities(dataset: Dataset, force: bool):
     """Index entities in a particular dataset, with versioning of the index."""
     es = await get_es()
     # Versioning defaults to the software version instead of a data update date:
-    version = dataset.version or settings.INDEX_VERSION
+    version = make_version(dataset.version)
     log.info(
         "Indexing entities",
         name=dataset.name,
@@ -140,7 +147,7 @@ async def index_statements(manifest: StatementManifest, force: bool):
         log.warning("Statement API is disabled, not indexing statements.")
         return
 
-    version = manifest.version or settings.INDEX_VERSION
+    version = make_version(manifest.version)
     log.info(
         "Indexing statements",
         name=manifest.name,
