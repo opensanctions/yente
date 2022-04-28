@@ -12,7 +12,7 @@ from followthemoney import model
 from yente import settings
 from yente.data.dataset import Dataset
 from yente.data.manifest import StatementManifest
-from yente.data import check_update, get_datasets, get_manifest
+from yente.data import refresh_manifest, get_datasets, get_manifest
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
@@ -176,7 +176,7 @@ async def index_statements(manifest: StatementManifest, force: bool):
 
 
 async def update_index(force=False):
-    await check_update()
+    await refresh_manifest()
     manifest = await get_manifest()
     datasets = await get_datasets()
     log.info("Index update check")

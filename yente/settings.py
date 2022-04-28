@@ -88,6 +88,7 @@ MANIFEST = Path(__file__).parent / "../manifests/default.yml"
 MANIFEST = Path(env_str("YENTE_MANIFEST") or MANIFEST).resolve()
 if not MANIFEST.is_file():
     raise RuntimeError("Manifest file does not exist: %s" % MANIFEST)
+MANIFEST_CRONTAB = env_str("YENTE_MANIFEST_CRONTAB")
 
 BASE_SCHEMA = "Thing"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))

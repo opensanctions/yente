@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from yente import settings
-from yente.data import get_manifest
+from yente.data import get_manifest, refresh_manifest
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
@@ -25,8 +25,13 @@ async def regular_update():
 async def startup_event():
     manifest = await get_manifest()
     await regular_update()
+    if settings.MANIFEST_CRONTAB:
+        router.cron_refresh = aiocron.crontab(
+            settings.MANIFEST_CRONTAB,
+            func=refresh_manifest,
+        )
     if manifest.schedule is not None:
-        router.crontab = aiocron.crontab(manifest.schedule, func=regular_update)
+        router.cron_update = aiocron.crontab(manifest.schedule, func=regular_update)
 
 
 @router.on_event("shutdown")

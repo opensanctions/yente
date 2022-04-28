@@ -1,10 +1,11 @@
-import logging
+import structlog
+from structlog.stdlib import BoundLogger
 from asyncstdlib.functools import cache
 
 from yente.data.manifest import Manifest
 from yente.data.dataset import Dataset, Datasets
 
-log = logging.getLogger(__name__)
+log: BoundLogger = structlog.get_logger(__name__)
 
 
 @cache
@@ -22,6 +23,7 @@ async def get_datasets() -> Datasets:
     return datasets
 
 
-async def check_update():
+async def refresh_manifest():
+    log.info("Refreshing manifest metadata...")
     get_manifest.cache_clear()
     get_datasets.cache_clear()
