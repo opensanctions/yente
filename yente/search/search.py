@@ -49,7 +49,10 @@ def result_facets(response: ObjectApiResponse, datasets: Datasets):
             value = SearchFacetItem(name=key, label=key, count=bucket.get("doc_count"))
             if field == "datasets":
                 facet.label = "Data sources"
-                value.label = datasets[key].title
+                try:
+                    value.label = datasets[key].title
+                except KeyError:
+                    value.label = key
             if field in registry.groups:
                 type_ = registry.groups[field]
                 facet.label = type_.plural
