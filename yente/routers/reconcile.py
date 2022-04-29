@@ -155,7 +155,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         "Reconcile",
         action="reconcile",
         schema=proxy.schema.name,
-        total=result_total(resp).value,
+        results=result_total(resp).value,
     )
     return name, {"result": results}
 
@@ -195,7 +195,7 @@ async def reconcile_suggest_entity(
         action="suggest",
         length=len(prefix),
         dataset=ds.name,
-        total=result_total(resp),
+        results=result_total(resp).value,
     )
     return FreebaseEntitySuggestResponse(prefix=prefix, result=results)
 
