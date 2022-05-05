@@ -6,5 +6,6 @@ datasets:
   - name: offshoreleaks
     title: ICIJ OffshoreLeaks
     url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
+    version: "20220503"
     collections:
       - all
