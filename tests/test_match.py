@@ -51,6 +51,19 @@ def test_match_putin():
     assert res0["id"] == "Q7747", res0
 
 
+def test_match_no_schema():
+    query = {"queries": {"fail": {"properties": {"name": "Banana"}}}}
+    resp = client.post("/match/default", json=query)
+    assert resp.status_code == 422, resp.text
+
+    query = {"queries": {"fail": {"schema": "xxx", "properties": {"name": "Banana"}}}}
+    resp = client.post("/match/default", json=query)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["responses"]["fail"]
+    assert res["status"] == 400, res
+
+
 def test_match_ermakov():
     query = {"queries": {"ermakov": ERMAKOV}}
     resp = client.post("/match/default", json=query)

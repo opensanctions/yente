@@ -181,16 +181,24 @@ async def match(
 
     queries = []
     entities = []
+    responses: Dict[str, Union[PartialErrorResponse, EntityMatches]] = {}
+
     for name, example in match.queries.items():
-        entity = Entity.from_example(example.schema_, example.properties)
-        query = entity_query(ds, entity)
+        try:
+            entity = Entity.from_example(example.schema_, example.properties)
+            query = entity_query(ds, entity)
+        except Exception as exc:
+            responses[name] = PartialErrorResponse(
+                status=400,
+                detail=str(exc),
+            )
+            continue
         queries.append(search_entities(query, limit=limit))
         entities.append((name, entity))
-    if not len(queries):
+    if not len(queries) and not len(responses):
         raise HTTPException(400, detail="No queries provided.")
     results = await asyncio.gather(*queries)
 
-    responses: Dict[str, Union[PartialErrorResponse, EntityMatches]] = {}
     for (name, entity), response in zip(entities, results):
         if isinstance(response, ApiError):
             responses[name] = PartialErrorResponse(
