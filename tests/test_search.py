@@ -126,6 +126,9 @@ def test_search_range_offset():
 
 
 def test_search_range_limit():
+    res = client.get("/search/default?limit=10000&q=putin")
+    assert res.status_code == 422, res
+
     res = client.get("/search/default?limit=500&q=putin")
     assert res.status_code == 200, res
     data = res.json()
