@@ -69,6 +69,7 @@ def match_api():
     responses = response.json().get("responses")
     log.info("Match: %s", len(BATCH))
     for resp in responses.values():
+        # print(list(resp.keys()))
         for result in resp.get("results", []):
             ENTITY_IDS.add(result["id"])
 

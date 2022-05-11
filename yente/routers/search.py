@@ -44,8 +44,8 @@ async def search(
     countries: List[str] = Query([], title="Filter by country code"),
     topics: List[str] = Query([], title="Filter by entity topics"),
     datasets: List[str] = Query([], title="Filter by data sources"),
-    limit: int = Query(10, title="Number of results to return", lte=settings.MAX_PAGE),
-    offset: int = Query(0, title="Start at result", lte=settings.MAX_OFFSET),
+    limit: int = Query(10, title="Number of results to return", le=settings.MAX_PAGE),
+    offset: int = Query(0, title="Start at result", le=settings.MAX_OFFSET),
     fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
@@ -112,7 +112,7 @@ async def match(
     limit: int = Query(
         settings.MATCH_PAGE,
         title="Number of results to return",
-        lt=settings.MAX_MATCHES,
+        le=settings.MAX_MATCHES,
     ),
     threshold: float = Query(
         settings.SCORE_THRESHOLD, title="Threshold score for matches"

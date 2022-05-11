@@ -172,7 +172,7 @@ async def reconcile_suggest_entity(
     limit: int = Query(
         settings.MATCH_PAGE,
         description="Number of suggestions to return",
-        lte=settings.MAX_PAGE,
+        le=settings.MAX_PAGE,
     ),
 ):
     """Suggest an entity based on a text query. This is functionally very

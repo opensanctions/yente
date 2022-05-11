@@ -38,12 +38,12 @@ async def statements(
     limit: int = Query(
         50,
         title="Number of results to return",
-        lte=settings.MAX_PAGE,
+        le=settings.MAX_PAGE,
     ),
     offset: int = Query(
         0,
         title="Number of results to skip before returning them",
-        lte=settings.MAX_OFFSET,
+        le=settings.MAX_OFFSET,
     ),
 ):
     """Access raw entity data as statements.
