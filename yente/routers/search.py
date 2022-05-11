@@ -188,6 +188,7 @@ async def match(
             entity = Entity.from_example(example.schema_, example.properties)
             query = entity_query(ds, entity)
         except Exception as exc:
+            log.warning("Cannot parse example entity", error=str(exc))
             responses[name] = PartialErrorResponse(
                 status=400,
                 detail=str(exc),
@@ -201,6 +202,7 @@ async def match(
 
     for (name, entity), response in zip(entities, results):
         if isinstance(response, ApiError):
+            log.warning("Cannot run match query", error=str(response))
             responses[name] = PartialErrorResponse(
                 status=response.status_code,
                 detail=response.message,
