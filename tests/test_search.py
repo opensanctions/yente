@@ -121,15 +121,12 @@ def test_search_offset():
 
 
 def test_search_range_offset():
-    res = client.get("/search/default?offset=100000&q=putin")
-    assert res.status_code == 200, res
-    data = res.json()
-    assert data["offset"] < 10000, data
-    assert data["limit"] == 0, data
+    res = client.get("/search/default?offset=9999&q=putin")
+    assert res.status_code == 422, res
 
 
 def test_search_range_limit():
-    res = client.get("/search/default?limit=100000&q=putin")
+    res = client.get("/search/default?limit=500&q=putin")
     assert res.status_code == 200, res
     data = res.json()
     assert data["limit"] < 10000, data
