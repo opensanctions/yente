@@ -1,6 +1,6 @@
 import structlog
 from structlog.stdlib import BoundLogger
-from typing import Optional, Dict, List, Set, Tuple, Union
+from typing import Dict, List, Set, Tuple, Union
 from elasticsearch import ApiError
 from followthemoney.property import Property
 from followthemoney.types import registry
@@ -14,7 +14,7 @@ from yente.search.search import result_entities
 log: BoundLogger = structlog.get_logger(__name__)
 
 Value = Union[str, EntityResponse]
-Entities = Dict[str, Optional[Entity]]
+Entities = Dict[str, Entity]
 Inverted = Dict[str, Set[Tuple[Property, str]]]
 
 
@@ -57,8 +57,7 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
     reverse = [root.id]
 
     entities: Entities = {root.id: root}
-    for forward_id in root.get_type_values(registry.entity):
-        entities.setdefault(forward_id, None)
+    next_entities = set(root.get_type_values(registry.entity))
 
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
@@ -66,9 +65,10 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
         shoulds = []
         if len(reverse):
             shoulds.append({"terms": {"entities": reverse}})
-        next_entities = [i for (i, e) in entities.items() if e is None]
+
         if len(next_entities):
-            shoulds.append({"ids": {"values": next_entities}})
+            shoulds.append({"ids": {"values": list(next_entities)}})
+
         if not len(shoulds):
             break
         seen_entities = [i for (i, e) in entities.items() if e is not None]
@@ -94,18 +94,15 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
             break
 
         reverse = []
+        next_entities.clear()
         for adj in result_entities(resp):
             entities[adj.id] = adj
-
-            # TODO: not sure this is needed:
-            # if adj.schema.edge:
-            #     reverse.append(adj.id)
 
             for prop, value in adj.itervalues():
                 if prop.type != registry.entity:
                     continue
-                if adj.schema.edge:
-                    entities.setdefault(value, None)
+                if adj.schema.edge and value not in entities:
+                    next_entities.add(value)
 
                 inverted.setdefault(value, set())
                 if prop.reverse is not None:
