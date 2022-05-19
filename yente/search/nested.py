@@ -18,34 +18,38 @@ Entities = Dict[str, Entity]
 Inverted = Dict[str, Set[Tuple[Property, str]]]
 
 
-def nest_value(
-    entity_id: str, entities: Entities, inverted: Inverted, path: List[str]
-) -> Value:
-    entity = entities.get(entity_id)
-    if entity_id in path or entity is None:
-        return entity_id
-    next_path = path + [entity.id]
-    return nest_entity(entity, entities, inverted, next_path)
-
-
 def nest_entity(
-    entity: Entity, entities: Entities, inverted: Inverted, path: List[str]
+    entity: Entity, entities: Entities, inverted: Inverted, path: Set[str]
 ) -> EntityResponse:
-    serialized = EntityResponse.from_entity(entity)
     props: Dict[str, List[Value]] = {}
-    for (prop, value) in inverted.get(entity.id, []):
-        if value in path or len(path) > 1:
+    next_path = set([entity.id]).union(path)
+
+    # Find other entities pointing to the one we're processing:
+    for (prop, adj_id) in inverted.get(entity.id, {}):
+        if adj_id in path or len(path) > 1:
             continue
-        invert = nest_value(value, entities, inverted, path)
-        props.setdefault(prop.name, [])
-        props[prop.name].append(invert)
+        adj = entities.get(adj_id)
+        if adj is not None:
+            nested = nest_entity(adj, entities, inverted, next_path)
+            props.setdefault(prop.name, [])
+            props[prop.name].append(nested)
+
+    # Expand nested entities:
     for prop in entity.iterprops():
         if prop.type != registry.entity:
             continue
-        nested: List[Value] = []
+        values: List[Value] = []
         for value in entity.pop(prop):
-            nested.append(nest_value(value, entities, inverted, path))
-        props[prop.name] = nested
+            if value in path:
+                continue
+            adj = entities.get(value)
+            if adj is not None:
+                nested = nest_entity(adj, entities, inverted, next_path)
+                values.append(nested)
+            else:
+                values.append(value)
+        props[prop.name] = values
+    serialized = EntityResponse.from_entity(entity)
     serialized.properties.update(props)
     return serialized
 
@@ -71,12 +75,11 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
 
         if not len(shoulds):
             break
-        seen_entities = [i for (i, e) in entities.items() if e is not None]
         query = {
             "bool": {
                 "should": shoulds,
                 "minimum_should_match": 1,
-                "must_not": [{"ids": {"values": seen_entities}}],
+                "must_not": [{"ids": {"values": list(entities.keys())}}],
             }
         }
         try:
@@ -108,4 +111,4 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                 if prop.reverse is not None:
                     inverted[value].add((prop.reverse, adj.id))
 
-    return nest_entity(root, entities, inverted, [root.id])
+    return nest_entity(root, entities, inverted, set())

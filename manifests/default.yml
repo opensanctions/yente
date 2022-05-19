@@ -3,9 +3,10 @@ external:
   url: "https://data.opensanctions.org/datasets/latest/index.json"
   scope: all
 datasets:
-  - name: offshoreleaks
-    title: ICIJ OffshoreLeaks
-    url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
-    version: "20220503"
-    collections:
-      - all
+  []
+  # - name: offshoreleaks
+  #   title: ICIJ OffshoreLeaks
+  #   url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
+  #   version: "20220503"
+  #   collections:
+  #     - all

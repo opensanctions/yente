@@ -35,7 +35,7 @@ class EntityResponse(BaseModel):
             id=entity.id,
             caption=entity._caption,
             schema=entity.schema.name,
-            properties=entity.properties,
+            properties=dict(entity.properties),
             datasets=list(entity.datasets),
             referents=list(entity.referents),
             target=entity.target,
