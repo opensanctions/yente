@@ -21,3 +21,17 @@ def test_entity_fetch():
     fam = props["familyPerson"][0]
     assert isinstance(fam, dict), fam
     assert fam["schema"] == "Family", fam
+
+    for fam in props["familyPerson"]:
+        famprops = fam["properties"]
+        assert len(famprops["relative"]) > 0, famprops
+        for rel in famprops["relative"]:
+            if isinstance(rel, dict):
+                assert rel["id"] != data["id"], rel
+            else:
+                assert rel != data["id"], rel
+        for rel in famprops.get("relative", []):
+            if isinstance(rel, dict):
+                assert rel["id"] != data["id"], rel
+            else:
+                assert rel != data["id"], rel

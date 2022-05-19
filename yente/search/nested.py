@@ -49,6 +49,8 @@ def nest_entity(
             else:
                 values.append(value)
         props[prop.name] = values
+        if not len(values):
+            props.pop(prop.name)
     serialized = EntityResponse.from_entity(entity)
     serialized.properties.update(props)
     return serialized
