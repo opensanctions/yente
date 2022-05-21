@@ -1,3 +1,4 @@
+import json
 import structlog
 from structlog.stdlib import BoundLogger
 from typing import Generator, Set, Union
@@ -82,10 +83,10 @@ async def search_entities(
         )
         return response
     except ApiError as error:
-        log.error(
+        log.warning(
             f"Search error {error.status_code}: {error.message}",
             index=settings.ENTITY_INDEX,
-            query=query,
+            query_json=json.dumps(query),
         )
         return error
 
