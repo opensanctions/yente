@@ -113,7 +113,7 @@ async def reconcile_queries(
     # multiple requests in one query
     try:
         queries = json.loads(data)
-    except ValueError:
+    except (TypeError, ValueError):
         raise HTTPException(400, detail="Cannot decode query")
 
     if len(queries) > settings.MAX_BATCH:
