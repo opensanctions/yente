@@ -8,3 +8,7 @@ datasets:
     title: ICIJ OffshoreLeaks
     url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
     version: "20220526"
+  - name: external_gleif
+    title: GLEIF Concatenated Data File
+    url: https://data.opensanctions.org/contrib/gleif/gleif.json
+    version: "20220527"
