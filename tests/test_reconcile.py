@@ -12,12 +12,12 @@ def test_reconcile_metadata():
 
 
 def test_reconcile_post():
-    queries = {"mutti": {"query": "Angela Merkel"}}
+    queries = {"mutti": {"query": "Yevgeny Popov"}}
     resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["mutti"]["result"]
-    assert res[0]["id"] == "Q567", res
+    assert res[0]["id"] == "Q18634850", res
 
 
 def test_reconcile_suggest_entity_no_prefix():
@@ -34,7 +34,7 @@ def test_reconcile_suggest_entity_prefix():
     res = resp.json()["result"]
     assert len(res) > 0, res
     assert "Q7747" == res[0]["id"], res
-    assert "Vladimir Putin" == res[0]["name"], res
+    assert "Vladimir" in res[0]["name"], res
 
 
 def test_reconcile_suggest_entity_prefix_dummy():
