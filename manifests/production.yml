@@ -11,4 +11,4 @@ datasets:
   - name: external_gleif
     title: GLEIF Concatenated Data File
     url: https://data.opensanctions.org/contrib/gleif/gleif.json
-    version: "20220527"
+    version: "20220530"
