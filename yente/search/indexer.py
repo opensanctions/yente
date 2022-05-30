@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk
+from elasticsearch.helpers import async_bulk, BulkIndexError
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 
@@ -87,7 +87,12 @@ async def versioned_index(
     except BadRequestError as exc:
         log.warning("Cannot create index: %s" % exc.message, index=next_index)
 
-    yield next_index
+    try:
+        yield next_index
+    except Exception as exc:
+        log.exception("Indexing error: %s" % exc)
+        await es.indices.delete(index=next_index)
+        return
 
     await es.indices.refresh(index=next_index)
     res = await es.indices.put_alias(index=next_index, name=alias)

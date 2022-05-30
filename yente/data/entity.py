@@ -17,12 +17,12 @@ class Entity(CompositeEntity):
 
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
-        self._caption = cast(str, data.get("caption")) or self.caption
-        self.target = cast(bool, data.get("target", False))
+        self._caption: str = data.get("caption") or self.caption
+        self.target: bool = data.get("target", False)
 
         # Not sure that impugning this is a good idea, to be seen:
-        first_seen = cast(Optional[str], data.get("first_seen"))
-        last_seen = cast(Optional[str], data.get("last_seen"))
+        first_seen: Optional[str] = data.get("first_seen")
+        last_seen: Optional[str] = data.get("last_seen")
         self.first_seen: str = first_seen or last_seen or settings.RUN_TIME
         self.last_seen: str = last_seen or self.first_seen
 
