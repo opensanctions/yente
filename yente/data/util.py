@@ -8,14 +8,6 @@ from typing import AsyncGenerator, List
 from yente import settings
 
 
-http_timeout = ClientTimeout(
-    total=settings.HTTP_TIMEOUT,
-    connect=settings.HTTP_TIMEOUT,
-    sock_read=settings.HTTP_TIMEOUT,
-    sock_connect=settings.HTTP_TIMEOUT,
-)
-
-
 def iso_datetime(value: str) -> datetime:
     """Parse a second-precision ISO date time string."""
     return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
@@ -38,6 +30,7 @@ def expand_dates(dates: List[str]):
 
 @asynccontextmanager
 async def http_session() -> AsyncGenerator[ClientSession, None]:
+    http_timeout = ClientTimeout(total=settings.HTTP_TIMEOUT)
     async with ClientSession(timeout=http_timeout, trust_env=True) as client:
         yield client
 

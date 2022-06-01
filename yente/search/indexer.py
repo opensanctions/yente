@@ -142,7 +142,7 @@ async def index_entities(dataset: Dataset, force: bool):
                 docs,
                 yield_ok=False,
                 stats_only=True,
-                chunk_size=1000,
+                chunk_size=500,
                 refresh=False,
             )
 
