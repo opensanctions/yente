@@ -39,7 +39,7 @@ def nest_entity(
         if prop.type != registry.entity:
             continue
         values: List[Value] = []
-        for value in entity.pop(prop):
+        for value in entity.get(prop):
             if value in path:
                 continue
             adj = entities.get(value)
