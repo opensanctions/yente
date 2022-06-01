@@ -107,6 +107,7 @@ MATCH_PAGE = 5
 
 SCORE_THRESHOLD = 0.70
 SCORE_CUTOFF = 0.10
+HTTP_TIMEOUT = 600
 
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")

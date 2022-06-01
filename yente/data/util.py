@@ -1,7 +1,19 @@
 import codecs
 from datetime import datetime
 from prefixdate.precision import Precision
-from typing import List
+from contextlib import asynccontextmanager
+from aiohttp import ClientSession, ClientTimeout
+from typing import AsyncGenerator, List
+
+from yente import settings
+
+
+http_timeout = ClientTimeout(
+    total=settings.HTTP_TIMEOUT,
+    connect=settings.HTTP_TIMEOUT,
+    sock_read=settings.HTTP_TIMEOUT,
+    sock_connect=settings.HTTP_TIMEOUT,
+)
 
 
 def iso_datetime(value: str) -> datetime:
@@ -22,6 +34,12 @@ def expand_dates(dates: List[str]):
             if len(date) > prec.value:
                 expanded.add(date[: prec.value])
     return list(expanded)
+
+
+@asynccontextmanager
+async def http_session() -> AsyncGenerator[ClientSession, None]:
+    async with ClientSession(timeout=http_timeout, trust_env=True) as client:
+        yield client
 
 
 class AsyncTextReaderWrapper:

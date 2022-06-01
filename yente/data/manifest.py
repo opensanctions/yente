@@ -1,13 +1,11 @@
 import yaml
-from aiohttp import ClientSession
 from typing import List, Optional
 from pydantic import BaseModel, AnyHttpUrl
 
 from yente import settings
 from yente.data.dataset import DatasetManifest
 from yente.data.statements import StatementManifest
-from yente.data.loader import URL, http_timeout
-from yente.data.util import iso_to_version
+from yente.data.util import http_session, iso_to_version
 
 
 class ExternalManifest(BaseModel):
@@ -21,7 +19,7 @@ class ExternalManifest(BaseModel):
 
     async def fetch(self, manifest: "Manifest") -> None:
         assert self.type == "opensanctions"
-        async with ClientSession(timeout=http_timeout, trust_env=True) as client:
+        async with http_session() as client:
             async with client.get(self.url) as resp:
                 data = await resp.json()
 
