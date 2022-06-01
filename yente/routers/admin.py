@@ -24,13 +24,13 @@ async def regular_update():
 @router.on_event("startup")
 async def startup_event():
     manifest = await get_manifest()
-    await regular_update()
     if settings.MANIFEST_CRONTAB:
         router.cron_refresh = aiocron.crontab(
             settings.MANIFEST_CRONTAB,
             func=refresh_manifest,
         )
     if manifest.schedule is not None:
+        await regular_update()
         router.cron_update = aiocron.crontab(manifest.schedule, func=regular_update)
 
 
