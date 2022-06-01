@@ -21,7 +21,7 @@ class ExternalManifest(BaseModel):
 
     async def fetch(self, manifest: "Manifest") -> None:
         assert self.type == "opensanctions"
-        async with ClientSession(timeout=http_timeout) as client:
+        async with ClientSession(timeout=http_timeout, trust_env=True) as client:
             async with client.get(self.url) as resp:
                 data = await resp.json()
 
