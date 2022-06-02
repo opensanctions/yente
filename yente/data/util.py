@@ -30,13 +30,13 @@ def expand_dates(dates: List[str]):
 
 @asynccontextmanager
 async def http_session() -> AsyncGenerator[ClientSession, None]:
-    http_timeout = ClientTimeout(
-        total=settings.HTTP_TIMEOUT,
+    timeout = ClientTimeout(
+        total=settings.HTTP_TIMEOUT * 100.0,
         connect=None,
         sock_connect=None,
         sock_read=None,
     )
-    async with ClientSession(timeout=http_timeout, trust_env=True) as client:
+    async with ClientSession(timeout=timeout, trust_env=True) as client:
         yield client
 
 
