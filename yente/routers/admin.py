@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from yente import settings
 from yente.data import get_manifest, refresh_manifest
 from yente.data.common import ErrorResponse, StatusResponse
+from yente.data.manifest import Manifest
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
@@ -53,6 +54,17 @@ async def healthz():
     if not ok:
         raise HTTPException(500, detail="Index not ready")
     return StatusResponse(status="ok")
+
+
+@router.get(
+    "/manifest",
+    summary="Dataset manifest",
+    tags=["System information"],
+    response_model=Manifest,
+)
+async def manifest():
+    """Return the service manifest, including the list of all indexed datasets."""
+    return await get_manifest()
 
 
 @router.post(

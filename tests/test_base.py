@@ -20,6 +20,14 @@ def test_healthz_with_user():
     assert res.headers["x-user-id"] == "banana", res.headers
 
 
+def test_manifest():
+    res = client.get("/manifest")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert "datasets" in data
+    assert "schedule" in data
+
+
 def test_updatez_get():
     res = client.get("/updatez")
     assert res.status_code == 405, res.text
