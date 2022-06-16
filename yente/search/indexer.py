@@ -185,11 +185,13 @@ async def update_index(force=False):
     manifest = await get_manifest()
     datasets = await get_datasets()
     log.info("Index update check")
+    indexers = []
     for dataset in datasets.values():
         if dataset.is_loadable:
-            await index_entities(dataset, force)
+            indexers.append(index_entities(dataset, force))
     for stmt in manifest.statements:
-        await index_statements(stmt, force)
+        indexers.append(index_statements(stmt, force))
+    await asyncio.gather(*indexers, return_exceptions=True)
     log.info("Index update complete.")
 
 
