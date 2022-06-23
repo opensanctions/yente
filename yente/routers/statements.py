@@ -1,10 +1,9 @@
-import structlog
-from structlog.stdlib import BoundLogger
 from typing import List, Optional
 from fastapi import APIRouter, Query, Response
 from fastapi import HTTPException
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.statements import StatementResponse
 from yente.data.common import ErrorResponse
 from yente.search.queries import parse_sorts
@@ -12,7 +11,7 @@ from yente.search.statements import statement_results, statement_query
 from yente.util import limit_window
 from yente.routers.util import get_dataset
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 router = APIRouter()
 
 

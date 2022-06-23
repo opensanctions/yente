@@ -8,7 +8,7 @@ from followthemoney import model
 from followthemoney.namespace import Namespace
 
 from yente.data.entity import Entity
-from yente.data.loader import URL, fetch_url, load_json_lines
+from yente.data.loader import URL, cached_url, load_json_lines
 
 
 class DatasetManifest(BaseModel):
@@ -71,8 +71,7 @@ class Dataset(NomenklaturaDataset):
             return
         datasets = set(self.dataset_names)
         base_name = f"{self.name}-{self.version}.json"
-        path = await fetch_url(self.manifest.url, base_name)
-        try:
+        async with cached_url(self.manifest.url, base_name) as path:
             async for data in load_json_lines(path):
                 entity = Entity.from_dict(model, data)
                 entity.datasets = entity.datasets.intersection(datasets)
@@ -81,8 +80,6 @@ class Dataset(NomenklaturaDataset):
                 if self.ns is not None:
                     entity = self.ns.apply(entity)
                 yield entity
-        finally:
-            path.unlink(missing_ok=True)
 
 
 Datasets = Dict[str, Dataset]

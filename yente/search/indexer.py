@@ -1,8 +1,6 @@
 import asyncio
-import structlog
 import threading
 from typing import Any, Dict, List, Optional
-from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
@@ -10,6 +8,7 @@ from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.manifest import StatementManifest
 from yente.data import refresh_manifest, get_datasets, get_manifest
@@ -18,7 +17,7 @@ from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
 from yente.data.util import expand_dates
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 
 
 async def entity_docs(dataset: Dataset, index: str):

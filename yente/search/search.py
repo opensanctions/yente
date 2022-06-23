@@ -1,6 +1,4 @@
 import json
-import structlog
-from structlog.stdlib import BoundLogger
 from typing import Generator, Set, Union
 from typing import Any, Dict, List, Optional
 from elasticsearch import TransportError, ApiError
@@ -11,13 +9,14 @@ from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.dataset import Dataset, Datasets
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.search.base import get_es, get_opaque_id
 from yente.util import EntityRedirect
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 
 
 def result_entity(data) -> Optional[Entity]:

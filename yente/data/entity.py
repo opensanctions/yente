@@ -1,6 +1,4 @@
-import structlog
-from structlog.stdlib import BoundLogger
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
@@ -8,8 +6,9 @@ from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
 
 from yente import settings
+from yente.logs import get_logger
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 
 
 class Entity(CompositeEntity):

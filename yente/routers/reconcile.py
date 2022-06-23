@@ -1,7 +1,5 @@
 import json
 import asyncio
-import structlog
-from structlog.stdlib import BoundLogger
 from urllib.parse import urljoin
 from typing import Any, Dict, List, Optional, Union
 from fastapi import APIRouter, Query, Form
@@ -12,6 +10,7 @@ from followthemoney.types import registry
 from elasticsearch import ApiError
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data.freebase import (
@@ -34,7 +33,7 @@ from yente.data import get_datasets
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 router = APIRouter()
 
 

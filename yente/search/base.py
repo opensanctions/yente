@@ -1,18 +1,18 @@
 import time
 import asyncio
-import logging
-from typing import Any, Dict
 import warnings
+from typing import Any, Dict
 from structlog.contextvars import get_contextvars
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import ElasticsearchWarning
 from elasticsearch.exceptions import TransportError, ConnectionError
 
 from yente import settings
+from yente.logs import get_logger
 
 warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
 
 
@@ -29,7 +29,7 @@ def get_es_connection() -> AsyncElasticsearch:
         max_retries=5,
     )
     if settings.ES_CLOUD_ID:
-        log.info("Connecting to Elastic Cloud ID: %s", settings.ES_CLOUD_ID)
+        log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
         kwargs["cloud_id"] = settings.ES_CLOUD_ID
     else:
         kwargs["hosts"] = [settings.ES_URL]

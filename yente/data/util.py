@@ -38,20 +38,3 @@ async def http_session() -> AsyncGenerator[ClientSession, None]:
     )
     async with ClientSession(timeout=timeout, trust_env=True) as client:
         yield client
-
-
-class AsyncTextReaderWrapper:
-    # from: https://github.com/MKuranowski/aiocsv/issues/2#issuecomment-706554973
-    def __init__(self, obj, encoding, errors="strict"):
-        self.obj = obj
-
-        decoder_factory = codecs.getincrementaldecoder(encoding)
-        self.decoder = decoder_factory(errors)
-
-    async def read(self, size):
-        raw_data = await self.obj.read(size)
-
-        if not raw_data:
-            return self.decoder.decode(b"", final=True)
-
-        return self.decoder.decode(raw_data, final=False)

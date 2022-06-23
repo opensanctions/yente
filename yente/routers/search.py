@@ -1,6 +1,4 @@
 import asyncio
-import structlog
-from structlog.stdlib import BoundLogger
 from typing import Dict, List, Optional, Union
 from fastapi import APIRouter, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
@@ -9,6 +7,7 @@ from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.common import ErrorResponse, PartialErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse
 from yente.data.common import EntityResponse, SearchResponse, EntityMatches
@@ -25,7 +24,7 @@ from yente.scoring import score_results
 from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 router = APIRouter()
 
 

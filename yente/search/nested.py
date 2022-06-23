@@ -1,17 +1,16 @@
-import structlog
-from structlog.stdlib import BoundLogger
 from typing import Dict, List, Set, Tuple, Union
 from elasticsearch import ApiError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
 from yente.search.base import get_es, get_opaque_id
 from yente.search.search import result_entities
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 
 Value = Union[str, EntityResponse]
 Entities = Dict[str, Entity]

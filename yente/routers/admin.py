@@ -1,10 +1,9 @@
 import aiocron
-import structlog
-from structlog.stdlib import BoundLogger
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from yente import settings
+from yente.logs import get_logger
 from yente.data import get_manifest, refresh_manifest
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.manifest import Manifest
@@ -12,7 +11,7 @@ from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
 
-log: BoundLogger = structlog.get_logger(__name__)
+log = get_logger(__name__)
 router = APIRouter()
 
 

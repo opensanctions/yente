@@ -12,6 +12,10 @@ from structlog.stdlib import BoundLogger, LoggerFactory
 from yente import settings
 
 
+def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+    return structlog.get_logger(name)
+
+
 def configure_logging(level=logging.INFO):
     """Configure log levels and structured logging"""
     shared_processors = [

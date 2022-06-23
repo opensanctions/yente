@@ -5,7 +5,7 @@ from elastic_transport import ObjectApiResponse
 from pydantic import BaseModel, Field
 
 from yente.data.common import ResultsResponse
-from yente.data.loader import URL, fetch_url, load_csv_rows
+from yente.data.loader import URL, cached_url, load_csv_rows
 from yente.data.util import iso_datetime
 
 
@@ -16,15 +16,12 @@ class StatementManifest(BaseModel):
 
     async def load(self) -> AsyncGenerator["StatementModel", None]:
         base_name = f"{self.name}-{self.version}.csv"
-        path = await fetch_url(self.url, base_name)
-        try:
+        async with cached_url(self.url, base_name) as path:
             async for row in load_csv_rows(path):
                 row["target"] = as_bool(row["target"])
                 row["first_seen"] = iso_datetime(row["first_seen"])
                 row["last_seen"] = iso_datetime(row["last_seen"])
                 yield StatementModel.parse_obj(row)
-        finally:
-            path.unlink(missing_ok=True)
 
 
 class StatementModel(BaseModel):

@@ -1,5 +1,4 @@
 import time
-import structlog
 from uuid import uuid4
 from normality import slugify
 from typing import Optional, cast
@@ -11,9 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from structlog.contextvars import clear_contextvars, bind_contextvars
 
 from yente import settings
+from yente.logs import get_logger
 from yente.routers import reconcile, search, statements, admin
 
-log: structlog.stdlib.BoundLogger = structlog.get_logger("yente")
+log = get_logger("yente")
 app = FastAPI(
     title=settings.TITLE,
     description=settings.DESCRIPTION,

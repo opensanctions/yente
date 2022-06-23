@@ -1,4 +1,3 @@
-import logging
 from normality import collapse_spaces
 from typing import Any, Dict, List, Union, Optional
 from followthemoney.schema import Schema
@@ -7,8 +6,6 @@ from followthemoney.types import registry
 
 from yente.data.dataset import Dataset
 from yente.search.mapping import TEXT_TYPES
-
-log = logging.getLogger(__name__)
 
 FilterDict = Dict[str, Union[bool, str, List[str]]]
 
