@@ -5,10 +5,7 @@ from yente.logs import configure_logging
 
 
 async def reindex():
-    try:
-        await update_index()
-    finally:
-        await close_es()
+    await update_index(force=True)
 
 
 if __name__ == "__main__":

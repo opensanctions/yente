@@ -90,6 +90,8 @@ if not MANIFEST.is_file():
     raise RuntimeError("Manifest file does not exist: %s" % MANIFEST)
 MANIFEST_CRONTAB = env_str("YENTE_MANIFEST_CRONTAB")
 
+DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
+
 BASE_SCHEMA = "Thing"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")

@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from structlog.stdlib import BoundLogger
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk, BulkIndexError
+from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 
@@ -68,50 +68,52 @@ async def versioned_index(
     mapping: Dict[str, Any],
     force: bool = False,
 ):
-    dataset_prefix = f"{alias}-{dataset}"
-    next_index = f"{dataset_prefix}-{version}"
-    exists = await es.indices.exists(index=next_index)
-    if exists.body and not force:
-        log.info("Index is up to date.", index=next_index)
-        yield None
-        return
-
-    # await es.indices.delete(index=next_index)
-    log.info("Create index", index=next_index)
     try:
-        await es.indices.create(
-            index=next_index,
-            mappings=mapping,
-            settings=INDEX_SETTINGS,
-        )
-    except BadRequestError as exc:
-        log.warning("Cannot create index: %s" % exc.message, index=next_index)
+        dataset_prefix = f"{alias}-{dataset}"
+        next_index = f"{dataset_prefix}-{version}"
+        exists = await es.indices.exists(index=next_index)
+        if exists.body and not force:
+            log.info("Index is up to date.", index=next_index)
+            yield None
+            return
 
-    try:
-        yield next_index
-    except Exception as exc:
-        log.exception("Indexing error: %s" % exc)
-        await es.indices.delete(index=next_index)
-        return
+        # await es.indices.delete(index=next_index)
+        log.info("Create index", index=next_index)
+        try:
+            await es.indices.create(
+                index=next_index,
+                mappings=mapping,
+                settings=INDEX_SETTINGS,
+            )
+        except BadRequestError as exc:
+            log.warning("Cannot create index: %s" % exc.message, index=next_index)
 
-    await es.indices.refresh(index=next_index)
-    res = await es.indices.put_alias(index=next_index, name=alias)
-    if res.meta.status != 200:
-        log.error("Failed to alias next index", index=next_index)
-        return
+        try:
+            yield next_index
+        except Exception as exc:
+            log.exception("Indexing error: %s" % exc)
+            await es.indices.delete(index=next_index)
+            return
 
-    log.info("Index is now aliased to: %s" % alias, index=next_index)
+        await es.indices.refresh(index=next_index)
+        res = await es.indices.put_alias(index=next_index, name=alias)
+        if res.meta.status != 200:
+            log.error("Failed to alias next index", index=next_index)
+            return
 
-    indices = await es.cat.indices(format="json")
-    current: List[str] = [s.get("index") for s in indices]
-    current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
-    if len(current) == 0:
-        log.error("No index was created", index=next_index)
-        return
-    for index in current:
-        if index < next_index:
-            log.info("Delete older index", index=index)
-            await es.indices.delete(index=index)
+        log.info("Index is now aliased to: %s" % alias, index=next_index)
+        indices = await es.cat.indices(format="json")
+        current: List[str] = [s.get("index") for s in indices]
+        current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
+        if len(current) == 0:
+            log.error("No index was created", index=next_index)
+            return
+        for index in current:
+            if index < next_index:
+                log.info("Delete older index", index=index)
+                await es.indices.delete(index=index)
+    finally:
+        await es.close()
 
 
 async def index_entities(dataset: Dataset, force: bool):
@@ -181,24 +183,26 @@ async def index_statements(manifest: StatementManifest, force: bool):
 
 
 async def update_index(force=False):
-    await refresh_manifest()
-    manifest = await get_manifest()
-    datasets = await get_datasets()
-    log.info("Index update check")
-    indexers = []
-    for dataset in datasets.values():
-        if dataset.is_loadable:
-            indexers.append(index_entities(dataset, force))
-    for stmt in manifest.statements:
-        indexers.append(index_statements(stmt, force))
-    await asyncio.gather(*indexers, return_exceptions=True)
-    log.info("Index update complete.")
+    try:
+        await refresh_manifest()
+        manifest = await get_manifest()
+        datasets = await get_datasets()
+        log.info("Index update check")
+        indexers = []
+        for dataset in datasets.values():
+            if dataset.is_loadable:
+                indexers.append(index_entities(dataset, force))
+        for stmt in manifest.statements:
+            indexers.append(index_statements(stmt, force))
+        await asyncio.gather(*indexers, return_exceptions=True)
+        log.info("Index update complete.")
+    finally:
+        await close_es()
 
 
 def update_index_threaded(force=False):
     async def update_in_thread():
         await update_index(force=force)
-        await close_es()
 
     thread = threading.Thread(
         target=asyncio.run,
