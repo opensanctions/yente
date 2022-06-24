@@ -89,7 +89,7 @@ async def versioned_index(
 
         try:
             yield next_index
-        except Exception as exc:
+        except (KeyboardInterrupt, OSError, Exception) as exc:
             log.exception("Indexing error: %s" % exc)
             await es.indices.delete(index=next_index)
             return

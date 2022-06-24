@@ -4,7 +4,7 @@ from yente.logs import configure_logging
 
 
 async def reindex():
-    await update_index(force=True)
+    await update_index()
 
 
 if __name__ == "__main__":
