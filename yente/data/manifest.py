@@ -55,6 +55,9 @@ class Manifest(BaseModel):
 
     @classmethod
     async def load(cls) -> "Manifest":
+        if not settings.MANIFEST.is_file():
+            msg = "Manifest file does not exist: %s" % settings.MANIFEST
+            raise RuntimeError(msg)
         with open(settings.MANIFEST, "r") as fh:
             data = yaml.safe_load(fh)
         manifest = cls.parse_obj(data)
