@@ -1,9 +1,9 @@
-from asyncstdlib import contextmanager
 import orjson
 import aiofiles
 from pathlib import Path
 from aiocsv import AsyncDictReader
 from pydantic import AnyHttpUrl, FileUrl
+from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Union
 
 from yente import settings
@@ -17,14 +17,13 @@ BUFFER = 10 * 1024 * 1024
 log = get_logger(__name__)
 
 
-@contextmanager
+@asynccontextmanager
 async def cached_url(url: URL, base_name: str) -> AsyncGenerator[Path, None]:
     if isinstance(url, FileUrl):
         if url.path is None:
             raise ValueError("Invalid path: %s" % url)
         yield Path(url.path).resolve()
         return
-
     out_path = settings.DATA_PATH.joinpath(base_name)
     try:
         async with http_session() as client:
