@@ -24,7 +24,7 @@ def get_opaque_id() -> str:
 def get_es_connection() -> AsyncElasticsearch:
     """Get elasticsearch connection."""
     kwargs: Dict[str, Any] = dict(
-        timeout=settings.HTTP_TIMEOUT,
+        request_timeout=settings.HTTP_TIMEOUT,
         retry_on_timeout=True,
         max_retries=10,
     )

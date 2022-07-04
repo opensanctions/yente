@@ -60,7 +60,7 @@ def test_search_facet_countries():
 
 
 def test_search_no_targets():
-    res = client.get("/search/default?target=false")
+    res = client.get("/search/default?schema=LegalEntity&target=false")
     assert res.status_code == 200, res
     data = res.json()
     assert "results" in data, data
@@ -71,7 +71,7 @@ def test_search_no_targets():
 
 
 def test_search_targets():
-    res = client.get("/search/default?target=true")
+    res = client.get("/search/default?schema=LegalEntity&target=true")
     assert res.status_code == 200, res
     data = res.json()
     assert "results" in data, data
