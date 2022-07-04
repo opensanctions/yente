@@ -181,7 +181,7 @@ async def index_statements(manifest: StatementManifest, force: bool):
             )
 
 
-async def update_index(force=False):
+async def update_index(force: bool = False) -> None:
     try:
         await refresh_manifest()
         manifest = await get_manifest()
@@ -193,13 +193,13 @@ async def update_index(force=False):
                 indexers.append(index_entities(dataset, force))
         for stmt in manifest.statements:
             indexers.append(index_statements(stmt, force))
-        await asyncio.gather(*indexers, return_exceptions=True)
+        await asyncio.gather(*indexers)
         log.info("Index update complete.")
     finally:
         await close_es()
 
 
-def update_index_threaded(force=False):
+def update_index_threaded(force: bool = False) -> None:
     async def update_in_thread():
         await update_index(force=force)
 

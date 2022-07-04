@@ -107,7 +107,7 @@ MATCH_PAGE = 5
 
 SCORE_THRESHOLD = 0.70
 SCORE_CUTOFF = 0.10
-HTTP_TIMEOUT = 6000.0
+HTTP_TIMEOUT = 3600.0
 
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
@@ -118,7 +118,7 @@ ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS") or "1")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 STATEMENT_INDEX = f"{ES_INDEX}-statements"
-INDEX_VERSION = "".join([v.zfill(2) for v in VERSION.split(".")])
+INDEX_VERSION = "1"
 
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO

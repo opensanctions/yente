@@ -24,9 +24,9 @@ def get_opaque_id() -> str:
 def get_es_connection() -> AsyncElasticsearch:
     """Get elasticsearch connection."""
     kwargs: Dict[str, Any] = dict(
-        request_timeout=settings.HTTP_TIMEOUT,
+        timeout=settings.HTTP_TIMEOUT,
         retry_on_timeout=True,
-        max_retries=5,
+        max_retries=10,
     )
     if settings.ES_CLOUD_ID:
         log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
