@@ -45,7 +45,7 @@ async def entity_docs(dataset: Dataset, index: str):
 async def statement_docs(manifest: StatementManifest, index: str):
     idx = 0
     async for stmt in manifest.load():
-        if idx % 1000 == 0 and idx > 0:
+        if idx % 10000 == 0 and idx > 0:
             log.info("Index: %d statements..." % idx, index=index)
         yield stmt.to_doc(index)
         idx += 1
@@ -54,7 +54,7 @@ async def statement_docs(manifest: StatementManifest, index: str):
 def make_version(version: Optional[str]) -> str:
     full_version = settings.INDEX_VERSION
     if version is not None:
-        full_version = f"{full_version}-{version}"
+        full_version = f"{full_version}{version}"
     return full_version
 
 
@@ -108,8 +108,8 @@ async def versioned_index(
             log.error("No index was created", index=next_index)
             return
         for index in current:
-            if index < next_index:
-                log.info("Delete older index", index=index)
+            if index != next_index:
+                log.info("Delete other index", index=index)
                 await es.indices.delete(index=index)
     finally:
         await es.close()
@@ -143,7 +143,7 @@ async def index_entities(dataset: Dataset, force: bool):
                 docs,
                 yield_ok=False,
                 stats_only=True,
-                chunk_size=500,
+                chunk_size=5000,
                 refresh=False,
             )
 
@@ -176,7 +176,7 @@ async def index_statements(manifest: StatementManifest, force: bool):
                 es,
                 docs,
                 stats_only=True,
-                chunk_size=1000,
+                chunk_size=5000,
                 refresh=False,
             )
 
