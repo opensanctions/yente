@@ -23,6 +23,7 @@ async def regular_update():
 
 @router.on_event("startup")
 async def startup_event():
+    await get_index_status()
     manifest = await get_manifest()
     if settings.MANIFEST_CRONTAB:
         router.cron_refresh = aiocron.crontab(
@@ -49,9 +50,6 @@ async def shutdown_event():
 async def healthz():
     """No-op basic health check. This is used by cluster management systems like
     Kubernetes to verify the service is responsive."""
-    ok = await get_index_status()
-    if not ok:
-        raise HTTPException(500, detail="Index not ready")
     return StatusResponse(status="ok")
 
 

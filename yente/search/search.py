@@ -141,7 +141,11 @@ async def get_index_status() -> bool:
     try:
         es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
         health = await es_.cluster.health()
-        return health.get("status") in ("yellow", "green")
+        status = health.get("status")
+        if status not in ("yellow", "green"):
+            log.warning("ElasticSearch is not in green state")
+            return False
+        return True
     except TransportError as te:
         log.error(f"Healthz status failure: {te}")
         return False
