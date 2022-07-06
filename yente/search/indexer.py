@@ -67,58 +67,53 @@ async def versioned_index(
     mapping: Dict[str, Any],
     force: bool = False,
 ):
+    dataset_prefix = f"{alias}-{dataset}"
+    next_index = f"{dataset_prefix}-{version}"
+    exists = await es.indices.exists(index=next_index)
+    if exists.body and not force:
+        log.info("Index is up to date.", index=next_index)
+        yield None
+        return
+
+    # await es.indices.delete(index=next_index)
+    log.info("Create index", index=next_index)
     try:
-        dataset_prefix = f"{alias}-{dataset}"
-        next_index = f"{dataset_prefix}-{version}"
-        exists = await es.indices.exists(index=next_index)
-        if exists.body and not force:
-            log.info("Index is up to date.", index=next_index)
-            yield None
-            return
+        await es.indices.create(
+            index=next_index,
+            mappings=mapping,
+            settings=INDEX_SETTINGS,
+        )
+    except BadRequestError as exc:
+        log.warning("Cannot create index: %s" % exc.message, index=next_index)
 
-        # await es.indices.delete(index=next_index)
-        log.info("Create index", index=next_index)
-        try:
-            await es.indices.create(
-                index=next_index,
-                mappings=mapping,
-                settings=INDEX_SETTINGS,
-            )
-        except BadRequestError as exc:
-            log.warning("Cannot create index: %s" % exc.message, index=next_index)
+    try:
+        yield next_index
+    except (KeyboardInterrupt, OSError, Exception) as exc:
+        log.exception("Indexing error: %s" % exc)
+        await es.indices.delete(index=next_index)
+        return
 
-        try:
-            yield next_index
-        except (KeyboardInterrupt, OSError, Exception) as exc:
-            log.exception("Indexing error: %s" % exc)
-            await es.indices.delete(index=next_index)
-            return
+    await es.indices.refresh(index=next_index)
+    res = await es.indices.put_alias(index=next_index, name=alias)
+    if res.meta.status != 200:
+        log.error("Failed to alias next index", index=next_index)
+        return
 
-        es_long = es.options(request_timeout=300)
-        await es_long.indices.refresh(index=next_index)
-        res = await es.indices.put_alias(index=next_index, name=alias)
-        if res.meta.status != 200:
-            log.error("Failed to alias next index", index=next_index)
-            return
-
-        log.info("Index is now aliased to: %s" % alias, index=next_index)
-        indices = await es.cat.indices(format="json")
-        current: List[str] = [s.get("index") for s in indices]
-        current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
-        if len(current) == 0:
-            log.error("No index was created", index=next_index)
-            return
-        for index in current:
-            if index != next_index:
-                log.info("Delete other index", index=index)
-                await es.indices.delete(index=index)
-    finally:
-        await es.close()
+    log.info("Index is now aliased to: %s" % alias, index=next_index)
+    indices = await es.cat.indices(format="json")
+    current: List[str] = [s.get("index") for s in indices]
+    current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
+    if len(current) == 0:
+        log.error("No index was created", index=next_index)
+        return
+    for index in current:
+        if index != next_index:
+            log.info("Delete other index", index=index)
+            await es.indices.delete(index=index)
 
 
-async def index_entities(dataset: Dataset, force: bool):
+async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool):
     """Index entities in a particular dataset, with versioning of the index."""
-    es = await get_es()
     # Versioning defaults to the software version instead of a data update date:
     version = make_version(dataset.version)
     log.info(
@@ -139,18 +134,12 @@ async def index_entities(dataset: Dataset, force: bool):
     ) as next_index:
         if next_index is not None:
             docs = entity_docs(dataset, next_index)
-            await async_bulk(
-                es,
-                docs,
-                request_timeout=90,
-                yield_ok=False,
-                stats_only=True,
-                chunk_size=1000,
-                refresh="false",
-            )
+            await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
 
 
-async def index_statements(manifest: StatementManifest, force: bool):
+async def index_statements(
+    es: AsyncElasticsearch, manifest: StatementManifest, force: bool
+):
     if not settings.STATEMENT_API:
         log.warning("Statement API is disabled, not indexing statements.")
         return
@@ -162,7 +151,6 @@ async def index_statements(manifest: StatementManifest, force: bool):
         url=manifest.url,
         version=version,
     )
-    es = await get_es()
     mapping = make_statement_mapping()
     async with versioned_index(
         es,
@@ -174,18 +162,12 @@ async def index_statements(manifest: StatementManifest, force: bool):
     ) as next_index:
         if next_index is not None:
             docs = statement_docs(manifest, next_index)
-            await async_bulk(
-                es,
-                docs,
-                request_timeout=90,
-                yield_ok=False,
-                stats_only=True,
-                chunk_size=2000,
-                refresh=False,
-            )
+            await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
 
 
 async def update_index(force: bool = False) -> None:
+    es_ = await get_es()
+    es = es_.options(request_timeout=300)
     try:
         await refresh_manifest()
         manifest = await get_manifest()
@@ -194,12 +176,13 @@ async def update_index(force: bool = False) -> None:
         indexers = []
         for dataset in datasets.values():
             if dataset.is_loadable:
-                indexers.append(index_entities(dataset, force))
+                indexers.append(index_entities(es, dataset, force))
         for stmt in manifest.statements:
-            indexers.append(index_statements(stmt, force))
+            indexers.append(index_statements(es, stmt, force))
         await asyncio.gather(*indexers)
         log.info("Index update complete.")
     finally:
+        await es.close()
         await close_es()
 
 
