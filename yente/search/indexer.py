@@ -143,8 +143,8 @@ async def index_entities(dataset: Dataset, force: bool):
                 docs,
                 yield_ok=False,
                 stats_only=True,
-                chunk_size=5000,
-                refresh=False,
+                chunk_size=1000,
+                refresh="false",
             )
 
 
@@ -175,8 +175,9 @@ async def index_statements(manifest: StatementManifest, force: bool):
             await async_bulk(
                 es,
                 docs,
+                yield_ok=False,
                 stats_only=True,
-                chunk_size=5000,
+                chunk_size=2000,
                 refresh=False,
             )
 
