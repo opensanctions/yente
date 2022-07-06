@@ -47,4 +47,3 @@ async def load_csv_rows(path: Path) -> AsyncGenerator[Dict[str, str], None]:
     async with aiofiles.open(path, "r", encoding="utf8") as fh:
         async for row in AsyncDictReader(fh):
             yield row
-    return

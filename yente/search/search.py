@@ -139,8 +139,9 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
 async def get_index_status() -> bool:
     es = await get_es()
     try:
-        es_ = es.options(request_timeout=10, opaque_id=get_opaque_id())
+        es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
         health = await es_.cluster.health()
         return health.get("status") in ("yellow", "green")
-    except TransportError:
+    except TransportError as te:
+        log.error(f"Healthz status failure: {te}")
         return False

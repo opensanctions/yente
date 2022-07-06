@@ -1,11 +1,8 @@
-import codecs
 from datetime import datetime
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
 from typing import AsyncGenerator, List
-
-from yente import settings
 
 
 def iso_datetime(value: str) -> datetime:
@@ -31,7 +28,7 @@ def expand_dates(dates: List[str]):
 @asynccontextmanager
 async def http_session() -> AsyncGenerator[ClientSession, None]:
     timeout = ClientTimeout(
-        total=settings.HTTP_TIMEOUT * 100.0,
+        total=3600,
         connect=None,
         sock_connect=None,
         sock_read=None,

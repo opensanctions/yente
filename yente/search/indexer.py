@@ -94,7 +94,8 @@ async def versioned_index(
             await es.indices.delete(index=next_index)
             return
 
-        await es.indices.refresh(index=next_index)
+        es_long = es.options(request_timeout=300)
+        await es_long.indices.refresh(index=next_index)
         res = await es.indices.put_alias(index=next_index, name=alias)
         if res.meta.status != 200:
             log.error("Failed to alias next index", index=next_index)
@@ -141,6 +142,7 @@ async def index_entities(dataset: Dataset, force: bool):
             await async_bulk(
                 es,
                 docs,
+                request_timeout=90,
                 yield_ok=False,
                 stats_only=True,
                 chunk_size=1000,
@@ -175,6 +177,7 @@ async def index_statements(manifest: StatementManifest, force: bool):
             await async_bulk(
                 es,
                 docs,
+                request_timeout=90,
                 yield_ok=False,
                 stats_only=True,
                 chunk_size=2000,
