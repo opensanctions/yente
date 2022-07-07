@@ -39,7 +39,7 @@ class Entity(CompositeEntity):
         obj = cls(model, data)
         for prop_name, values in properties.items():
             if prop_name not in obj.schema.properties:
-                log.warning("Invalid reconcile property", prop=prop_name, values=values)
+                log.warning("Invalid example property", prop=prop_name, values=values)
                 continue
             obj.add(prop_name, values, cleaned=False, fuzzy=True)
 

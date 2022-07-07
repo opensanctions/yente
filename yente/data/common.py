@@ -14,10 +14,6 @@ class ErrorResponse(BaseModel):
     detail: str
 
 
-class PartialErrorResponse(ErrorResponse):
-    status: int = Field(..., example=400)
-
-
 class EntityResponse(BaseModel):
     id: str = Field(..., example="NK-A7z....")
     caption: str = Field(..., example="John Doe")
@@ -122,6 +118,6 @@ class EntityMatches(BaseModel):
 
 
 class EntityMatchResponse(BaseModel):
-    responses: Dict[str, Union[EntityMatches, PartialErrorResponse]]
+    responses: Dict[str, EntityMatches]
     matcher: FeatureDocs
     limit: int

@@ -10,6 +10,7 @@ from followthemoney.types import registry
 from elasticsearch import ApiError
 
 from yente import settings
+from yente.data.common import ErrorResponse
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
@@ -29,7 +30,6 @@ from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window
-from yente.data import get_datasets
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
@@ -42,6 +42,10 @@ router = APIRouter()
     summary="Reconciliation info",
     tags=["Reconciliation"],
     response_model=Union[FreebaseManifest, FreebaseQueryResult],
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid query"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
 )
 async def reconcile(
     request: Request,
@@ -94,6 +98,10 @@ async def reconcile(
     summary="Reconciliation queries",
     tags=["Reconciliation"],
     response_model=FreebaseQueryResult,
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid query"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
 )
 async def reconcile_post(
     dataset: str = PATH_DATASET,
@@ -144,14 +152,12 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     proxy = Entity.from_example(schema, properties)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
-    if isinstance(resp, ApiError):
-        raise HTTPException(resp.status_code, detail=resp.message)
     entities = result_entities(resp)
     results = [
         FreebaseScoredEntity.from_scored(r) for r in score_results(proxy, entities)
     ]
     log.info(
-        "Reconcile",
+        f"/reconcile/{dataset.name}",
         action="reconcile",
         schema=proxy.schema.name,
         results=result_total(resp).value,
@@ -164,6 +170,9 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
     summary="Suggest entity",
     tags=["Reconciliation"],
     response_model=FreebaseEntitySuggestResponse,
+    responses={
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
 )
 async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
@@ -185,12 +194,10 @@ async def reconcile_suggest_entity(
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
     resp = await search_entities(query, limit=limit, offset=offset)
-    if isinstance(resp, ApiError):
-        raise HTTPException(resp.status_code, detail=resp.message)
     for result in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
-        "Prefix query",
+        f"/reconcile/{ds.name}/suggest/entity",
         action="suggest",
         length=len(prefix),
         dataset=ds.name,

@@ -1,9 +1,11 @@
 import json
+from asyncio import Semaphore
 from typing import Generator, Set, Union
 from typing import Any, Dict, List, Optional
 from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
 from elastic_transport import ObjectApiResponse
+from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
@@ -17,6 +19,7 @@ from yente.search.base import get_es, get_opaque_id
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)
+semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
 
 def result_entity(data) -> Optional[Entity]:
@@ -68,26 +71,30 @@ async def search_entities(
     offset: int = 0,
     aggregations: Optional[Dict] = None,
     sort: List[Any] = [],
-) -> Union[ObjectApiResponse, ApiError]:
+) -> ObjectApiResponse:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     try:
-        response = await es_.search(
-            index=settings.ENTITY_INDEX,
-            query=query,
-            size=limit,
-            sort=sort,
-            from_=offset,
-            aggregations=aggregations,
-        )
-        return response
-    except ApiError as error:
+        async with semaphore:
+            response = await es_.search(
+                index=settings.ENTITY_INDEX,
+                query=query,
+                size=limit,
+                sort=sort,
+                from_=offset,
+                aggregations=aggregations,
+            )
+            return response
+    except TransportError as te:
+        log.error(f"Transport: {te.message}", index=settings.ENTITY_INDEX)
+        raise HTTPException(status_code=500, detail=te.message)
+    except ApiError as ae:
         log.warning(
-            f"Search error {error.status_code}: {error.message}",
+            f"API error {ae.status_code}: {str(ae)}",
             index=settings.ENTITY_INDEX,
             query_json=json.dumps(query),
         )
-        return error
+        raise HTTPException(status_code=ae.status_code, detail=ae.message)
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:
@@ -95,7 +102,12 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     try:
         es_ = es.options(opaque_id=get_opaque_id())
         query = {"bool": {"filter": [{"ids": {"values": [entity_id]}}]}}
-        response = await es_.search(index=settings.ENTITY_INDEX, query=query, size=10)
+        async with semaphore:
+            response = await es_.search(
+                index=settings.ENTITY_INDEX,
+                query=query,
+                size=2,
+            )
         hits = response.get("hits", {})
         for hit in hits.get("hits", []):
             _source = hit.get("_source")
@@ -106,6 +118,13 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
                 return entity
     except NotFoundError:
         pass
+    except TransportError as te:
+        log.error(f"Transport: {te.message}", index=settings.ENTITY_INDEX)
+        raise HTTPException(status_code=500, detail=te.message)
+    except ApiError as ae:
+        msg = f"API error {ae.status_code}: {str(ae)}"
+        log.warning(msg, index=settings.ENTITY_INDEX)
+        raise HTTPException(status_code=ae.status_code, detail=ae.message)
     return None
 
 

@@ -58,14 +58,10 @@ def test_match_no_schema():
 
     query = {"queries": {"fail": {"schema": "xxx", "properties": {"name": "Banana"}}}}
     resp = client.post("/match/default", json=query)
-    assert resp.status_code == 200, resp.text
-    data = resp.json()
-    res = data["responses"]["fail"]
-    assert res["status"] == 400, res
+    assert resp.status_code == 400, resp.text
 
 
 def test_match_ermakov():
     query = {"queries": {"ermakov": ERMAKOV}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text
-    data = resp.json()

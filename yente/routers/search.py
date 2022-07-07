@@ -1,14 +1,13 @@
 import asyncio
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
-from elasticsearch import ApiError
 from nomenklatura.matching import explain_matcher
 from followthemoney import model
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.common import ErrorResponse, PartialErrorResponse
+from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse
 from yente.data.common import EntityResponse, SearchResponse, EntityMatches
 from yente.search.queries import parse_sorts, text_query, entity_query
@@ -33,7 +32,10 @@ router = APIRouter()
     summary="Simple entity search",
     tags=["Matching"],
     response_model=SearchResponse,
-    responses={400: {"model": ErrorResponse, "description": "Invalid query"}},
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid query"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
 )
 async def search(
     response: Response,
@@ -74,9 +76,6 @@ async def search(
         aggregations=aggregations,
         sort=parse_sorts(sort),
     )
-    if isinstance(resp, ApiError):
-        raise HTTPException(resp.status_code, detail=resp.message)
-
     results: List[EntityResponse] = []
     for result in result_entities(resp):
         results.append(await serialize_entity(result))
@@ -88,7 +87,7 @@ async def search(
         offset=offset,
     )
     log.info(
-        "Query",
+        f"/search/{ds.name}",
         action="search",
         length=len(q),
         dataset=ds.name,
@@ -103,7 +102,10 @@ async def search(
     summary="Query by example matcher",
     tags=["Matching"],
     response_model=EntityMatchResponse,
-    responses={400: {"model": ErrorResponse, "description": "Invalid query"}},
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid query"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
 )
 async def match(
     match: EntityMatchQuery,
@@ -180,7 +182,7 @@ async def match(
 
     queries = []
     entities = []
-    responses: Dict[str, Union[PartialErrorResponse, EntityMatches]] = {}
+    responses: Dict[str, EntityMatches] = {}
 
     for name, example in match.queries.items():
         try:
@@ -188,11 +190,10 @@ async def match(
             query = entity_query(ds, entity)
         except Exception as exc:
             log.warning("Cannot parse example entity", error=str(exc))
-            responses[name] = PartialErrorResponse(
-                status=400,
-                detail=str(exc),
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot parse example entity: {exc}",
             )
-            continue
         queries.append(search_entities(query, limit=limit))
         entities.append((name, entity))
     if not len(queries) and not len(responses):
@@ -200,18 +201,11 @@ async def match(
     results = await asyncio.gather(*queries)
 
     for (name, entity), response in zip(entities, results):
-        if isinstance(response, ApiError):
-            log.warning("Cannot run match query", error=str(response))
-            responses[name] = PartialErrorResponse(
-                status=response.status_code,
-                detail=response.message,
-            )
-            continue
         ents = result_entities(response)
         scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
         total = result_total(response)
         log.info(
-            "Match",
+            f"/match/{ds.name}",
             action="match",
             schema=entity.schema.name,
             results=total.value,
@@ -231,8 +225,9 @@ async def match(
     tags=["Data access"],
     response_model=EntityResponse,
     responses={
-        404: {"model": ErrorResponse, "description": "Entity not found"},
         307: {"description": "The entity is merged into another ID"},
+        404: {"model": ErrorResponse, "description": "Entity not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
     },
 )
 async def fetch_entity(
