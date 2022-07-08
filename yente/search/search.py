@@ -24,7 +24,7 @@ semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
 def result_entity(data) -> Optional[Entity]:
     source = data.get("_source")
-    if source is None:
+    if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
     return Entity.from_dict(model, source)
