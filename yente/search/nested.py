@@ -1,5 +1,7 @@
+import json
+from fastapi import HTTPException
 from typing import Dict, List, Set, Tuple, Union
-from elasticsearch import ApiError
+from elasticsearch import ApiError, TransportError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -7,7 +9,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
-from yente.search.base import get_es, get_opaque_id
+from yente.search.base import get_es, get_opaque_id, semaphore
 from yente.search.search import result_entities
 
 log = get_logger(__name__)
@@ -83,19 +85,21 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                 "must_not": [{"ids": {"values": list(entities.keys())}}],
             }
         }
+
         try:
-            resp = await es_.search(
-                index=settings.ENTITY_INDEX,
-                query=query,
-                size=settings.MAX_RESULTS,
-            )
-        except ApiError as error:
+            async with semaphore:
+                resp = await es_.search(
+                    index=settings.ENTITY_INDEX,
+                    query=query,
+                    size=settings.MAX_RESULTS,
+                )
+        except ApiError as ae:
             log.error(
-                f"Nested search error {error.status_code}: {error.message}",
+                f"Nested search error {ae.status_code}: {ae.message}",
                 index=settings.ENTITY_INDEX,
-                query=query,
+                query_json=json.dumps(query),
             )
-            break
+            raise HTTPException(status_code=500, detail="Error retrieving entity")
 
         reverse = []
         next_entities.clear()

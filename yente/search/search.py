@@ -1,5 +1,4 @@
 import json
-from asyncio import Semaphore
 from typing import Generator, Set, Union
 from typing import Any, Dict, List, Optional
 from elasticsearch import TransportError, ApiError
@@ -15,11 +14,10 @@ from yente.logs import get_logger
 from yente.data.dataset import Dataset, Datasets
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
-from yente.search.base import get_es, get_opaque_id
+from yente.search.base import get_es, get_opaque_id, semaphore
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)
-semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
 
 def result_entity(data) -> Optional[Entity]:
@@ -85,9 +83,6 @@ async def search_entities(
                 aggregations=aggregations,
             )
             return response
-    except TransportError as te:
-        log.error(f"Transport: {te.message}", index=settings.ENTITY_INDEX)
-        raise HTTPException(status_code=500, detail=te.message)
     except ApiError as ae:
         log.warning(
             f"API error {ae.status_code}: {str(ae)}",
@@ -118,9 +113,6 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
                 return entity
     except NotFoundError:
         pass
-    except TransportError as te:
-        log.error(f"Transport: {te.message}", index=settings.ENTITY_INDEX)
-        raise HTTPException(status_code=500, detail=te.message)
     except ApiError as ae:
         msg = f"API error {ae.status_code}: {str(ae)}"
         log.warning(msg, index=settings.ENTITY_INDEX)
@@ -136,12 +128,13 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     try:
-        response = await es_.search(
-            index=settings.ENTITY_INDEX,
-            query={"bool": {"filter": [filter_]}},
-            size=0,
-            aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},
-        )
+        async with semaphore:
+            response = await es_.search(
+                index=settings.ENTITY_INDEX,
+                query={"bool": {"filter": [filter_]}},
+                size=0,
+                aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},
+            )
         aggs = response.get("aggregations", {})
         schemata: Set[Schema] = set()
         for bucket in aggs.get(facet, {}).get("buckets", []):

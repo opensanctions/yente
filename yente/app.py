@@ -1,5 +1,6 @@
 import time
 from uuid import uuid4
+from elasticsearch import ApiError, TransportError
 from normality import slugify
 from typing import Optional, cast
 from starlette.requests import Headers
@@ -80,3 +81,15 @@ async def request_middleware(request: Request, call_next):
     )
     clear_contextvars()
     return response
+
+
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError):
+    log.error(f"Search error {exc.status_code}: {exc.message}")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+
+
+@app.exception_handler(TransportError)
+async def transport_error_handler(request: Request, exc: TransportError):
+    log.error(f"Transport: {exc.message}")
+    return JSONResponse(status_code=500, content={"detail": exc.message})

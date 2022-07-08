@@ -14,6 +14,7 @@ warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 
 log = get_logger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
+semaphore = asyncio.Semaphore(settings.QUERY_CONCURRENCY)
 
 
 def get_opaque_id() -> str:
