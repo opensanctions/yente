@@ -43,7 +43,7 @@ Further reading:
 
 * [Install and deployment](https://github.com/opensanctions/yente/blob/main/README.md)
 * Intro to the [entity data model](https://www.opensanctions.org/docs/entities/)
-* Tutorial: [Using the matching API to do KYC-style checks](/articles/2022-02-01-matching-api/)
+* Tutorial: [Using the matching API to do KYC-style checks](https://www.opensanctions.org/articles/2022-02-01-matching-api/)
 * [Data dictionary](https://opensanctions.org/reference/)
 * Advanced: [statement-based data model](https://www.opensanctions.org/docs/statements/)
 """
