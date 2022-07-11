@@ -3,22 +3,22 @@ external:
   url: "https://data.opensanctions.org/datasets/latest/index.json"
   scope: all
 datasets:
-  # []
-  - name: external_offshoreleaks
-    title: ICIJ OffshoreLeaks
-    url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
-    version: "20220503"
-    collections:
-      - all
-  - name: external_gleif
-    title: GLEIF Concatenated Data File
-    url: https://data.opensanctions.org/contrib/gleif/gleif.json
-    version: "20220616"
-    collections:
-      - all
-  - name: external_gb_coh_psc
-    title: Companies House (UK) Persons with Significant Control
-    url: https://data.opensanctions.org/contrib/gb_coh_psc/psc.json
-    version: "20220616"
-    collections:
-      - all
+  []
+  # - name: external_offshoreleaks
+  #   title: ICIJ OffshoreLeaks
+  #   url: https://data.opensanctions.org/contrib/icij-offshoreleaks/full-oldb.json
+  #   version: "20220503"
+  #   collections:
+  #     - all
+  # - name: external_gleif
+  #   title: GLEIF Concatenated Data File
+  #   url: https://data.opensanctions.org/contrib/gleif/gleif.json
+  #   version: "20220616"
+  #   collections:
+  #     - all
+  # - name: external_gb_coh_psc
+  #   title: Companies House (UK) Persons with Significant Control
+  #   url: https://data.opensanctions.org/contrib/gb_coh_psc/psc.json
+  #   version: "20220616"
+  #   collections:
+  #     - all
