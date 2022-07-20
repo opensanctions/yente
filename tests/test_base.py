@@ -20,6 +20,13 @@ def test_healthz_with_user():
     assert res.headers["x-user-id"] == "banana", res.headers
 
 
+def test_readyz():
+    res = client.get("/readyz")
+    assert res.status_code == 200, res
+    assert res.json().get("status") == "ok", res
+    assert "x-trace-id" in res.headers
+
+
 def test_manifest():
     res = client.get("/manifest")
     assert res.status_code == 200, res

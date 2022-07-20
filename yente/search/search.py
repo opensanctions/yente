@@ -148,16 +148,16 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
         return set()
 
 
-async def get_index_status() -> bool:
+async def get_index_status(index: Optional[str] = None) -> bool:
     es = await get_es()
     try:
         es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
-        health = await es_.cluster.health()
+        health = await es_.cluster.health(index=index)
         status = health.get("status")
         if status not in ("yellow", "green"):
             log.warning("ElasticSearch is not in green state")
             return False
         return True
-    except TransportError as te:
-        log.error(f"Healthz status failure: {te}")
+    except Exception as e:
+        log.error(f"ElasticSearch status failure: {e}")
         return False
