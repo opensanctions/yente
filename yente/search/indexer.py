@@ -84,7 +84,10 @@ async def versioned_index(
             settings=INDEX_SETTINGS,
         )
     except BadRequestError as exc:
-        log.warning("Cannot create index: %s" % exc.message, index=next_index)
+        log.warning(
+            "Cannot create index: %s" % exc.message,
+            index=next_index,
+        )
 
     try:
         yield next_index
