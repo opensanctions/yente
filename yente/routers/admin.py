@@ -52,6 +52,21 @@ async def healthz():
     Kubernetes to verify the service is responsive."""
     return StatusResponse(status="ok")
 
+@router.get(
+    "/readyz",
+    summary="Search index check",
+    tags=["System information"],
+    response_model=StatusResponse,
+    responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
+)
+async def readyz():
+    """Search index health check. This is used to know if the service has completed its index building."""
+    ok = await get_index_status(index=settings.ENTITY_INDEX)
+    if ok:
+        return StatusResponse(status="ok")
+    else:
+        raise HTTPException(503, detail="Index not ready.")
+
 
 @router.get(
     "/manifest",
