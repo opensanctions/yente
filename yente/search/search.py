@@ -1,7 +1,7 @@
 import json
 from typing import Generator, Set, Union
 from typing import Any, Dict, List, Optional
-from elasticsearch import TransportError, ApiError
+from elasticsearch import ConnectionTimeout, TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
 from elastic_transport import ObjectApiResponse
 from fastapi import HTTPException
@@ -152,12 +152,12 @@ async def get_index_status(index: Optional[str] = None) -> bool:
     es = await get_es()
     try:
         es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
-        health = await es_.cluster.health(index=index)
+        health = await es_.cluster.health(index=index, timeout=0)
         status = health.get("status")
         if status not in ("yellow", "green"):
-            log.warning("ElasticSearch is not in green state")
+            log.warning("Index is not in green state")
             return False
         return True
-    except Exception as e:
-        log.error(f"ElasticSearch status failure: {e}")
+    except (ApiError, TransportError) as te:
+        log.error(f"Search status failure: {te}")
         return False

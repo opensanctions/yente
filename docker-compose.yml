@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   index:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.1.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.3.2
     expose:
       - "9200"
     ports:
