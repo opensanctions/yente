@@ -1,20 +1,20 @@
-followthemoney==3.0.1
+followthemoney==3.0.2
 nomenklatura==2.5.1
 asyncstdlib==3.10.5
 aiocron==1.8
 aiocsv==1.2.2
 aiofiles==0.8.0
-types-aiofiles==0.8.9
+types-aiofiles==0.8.10
 aiohttp[speedups]==3.8.1
 elasticsearch[async]==8.3.1
-fastapi==0.78.0
+fastapi==0.79.0
 uvicorn[standard]==0.18.2
 python-multipart==0.0.5
 email-validator==1.2.1
-structlog==21.5.0
+structlog==22.1.0
 pyicu==2.9
 tzdata==2022.1
-orjson==3.7.3
+orjson==3.7.7
 text-unidecode==1.3
 
 normality==2.3.3
