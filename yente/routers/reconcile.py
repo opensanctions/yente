@@ -56,7 +56,7 @@ async def reconcile(
     to bulk match entities against the system using an end-user application like
     [OpenRefine](https://openrefine.org).
 
-    Tutorial: [Using OpenRefine to match entities in a spreadsheet](/articles/2022-01-10-openrefine-reconciliation/).
+    Tutorial: [Using OpenRefine to match entities in a spreadsheet](https://www.opensanctions.org/articles/2022-01-10-openrefine-reconciliation/).
     """
     ds = await get_dataset(dataset)
     if queries is not None:
