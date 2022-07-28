@@ -1,3 +1,4 @@
+import fingerprints
 from datetime import datetime
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
@@ -22,6 +23,16 @@ def expand_dates(dates: List[str]):
         for prec in (Precision.DAY, Precision.MONTH, Precision.YEAR):
             if len(date) > prec.value:
                 expanded.add(date[: prec.value])
+    return list(expanded)
+
+
+def expand_names(names: List[str]):
+    """Expand names into normalized version."""
+    expanded = set(names)
+    for name in names:
+        fp = fingerprints.generate(name)
+        if fp is not None:
+            expanded.add(fp)
     return list(expanded)
 
 
