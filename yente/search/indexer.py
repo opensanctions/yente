@@ -1,11 +1,13 @@
 import asyncio
 import threading
+from pprint import pprint
 from typing import Any, Dict, List, Optional
 from contextlib import asynccontextmanager
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
+from followthemoney.types import registry, DateType, NameType
 
 from yente import settings
 from yente.logs import get_logger
@@ -15,7 +17,7 @@ from yente.data import refresh_manifest, get_datasets, get_manifest
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
 from yente.search.mapping import INDEX_SETTINGS
-from yente.data.util import expand_dates
+from yente.data.util import expand_dates, expand_names
 
 log = get_logger(__name__)
 
@@ -31,7 +33,10 @@ async def entity_docs(dataset: Dataset, index: str):
         data = entity.to_dict()
         data["canonical_id"] = entity.id
         data["text"] = texts
-        data["dates"] = expand_dates(data.get("dates", []))
+        dates = entity.get_type_values(registry.date, matchable=True)
+        data[DateType.group] = expand_dates(dates)
+        names = entity.get_type_values(registry.name, matchable=True)
+        data[NameType.group] = expand_names(names)
         entity_id = data.pop("id")
         yield {"_index": index, "_id": entity_id, "_source": data}
 

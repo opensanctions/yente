@@ -1,4 +1,5 @@
 import fingerprints
+from normality import WS
 from datetime import datetime
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
@@ -26,13 +27,24 @@ def expand_dates(dates: List[str]):
     return list(expanded)
 
 
-def expand_names(names: List[str]):
+def expand_names(names: List[str]) -> List[str]:
     """Expand names into normalized version."""
     expanded = set(names)
     for name in names:
         fp = fingerprints.generate(name)
         if fp is not None:
             expanded.add(fp)
+    return list(expanded)
+
+
+def tokenize_names(names: List[str]) -> List[str]:
+    expanded = set()
+    for name in names:
+        name = name.lower()
+        expanded.update(name.split(WS))
+        fp = fingerprints.generate(name)
+        if fp is not None:
+            expanded.update(fp.split(WS))
     return list(expanded)
 
 

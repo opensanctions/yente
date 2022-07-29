@@ -36,18 +36,15 @@ def make_field(type_, copy_to=None, format=None):
         spec["normalizer"] = "osa-normalizer"
     if type_ == "text":
         spec["analyzer"] = "osa-analyzer"
-    if copy_to is not None and copy_to is not False:
+    if copy_to is not None:
         spec["copy_to"] = copy_to
     if format is not None:
         spec["format"] = format
     return spec
 
 
-def make_type_field(type_, copy_to=True):
-    # if type_ == registry.date:
-    #     return make_field("date", copy_to=copy_to, format=DATE_FORMAT)
-    strong = type_.group is not None
-    field_type = "keyword" if strong else "text"
+def make_type_field(type_, copy_to=None):
+    field_type = "keyword" if type_.group else "text"
     if type_ in TEXT_TYPES:
         field_type = "text"
     return make_field(field_type, copy_to=copy_to)
@@ -66,7 +63,7 @@ def make_entity_mapping(schemata: Iterable[Schema]):
             if prop.stub:
                 continue
             copy_to = ["text"]
-            if prop.type.group is not None:
+            if prop.type.group is not None and prop.matchable:
                 copy_to.append(prop.type.group)
             prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
 
@@ -82,13 +79,17 @@ def make_entity_mapping(schemata: Iterable[Schema]):
         "first_seen": make_field("date", format=DATE_FORMAT),
         "properties": {"dynamic": "strict", "properties": prop_mapping},
     }
+
     for t in registry.groups.values():
         if t.group is None:
             continue
-        mapping[t.group] = make_type_field(t, copy_to="text")
+        if t.group in mapping:
+            raise RuntimeError("Double mapping field: %s" % t.group)
+        mapping[t.group] = make_type_field(t)
 
     drop_fields = [t.group for t in registry.groups.values()]
     drop_fields.append("text")
+    drop_fields.remove(registry.name.group)
     return {
         "dynamic": "strict",
         "properties": mapping,

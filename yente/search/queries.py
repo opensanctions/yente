@@ -5,6 +5,7 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
 from yente.data.dataset import Dataset
+from yente.data.util import tokenize_names
 from yente.search.mapping import TEXT_TYPES
 
 FilterDict = Dict[str, Union[bool, str, List[str]]]
@@ -38,40 +39,18 @@ def filter_query(
 
 def names_query(entity: EntityProxy) -> List[Dict[str, Any]]:
     names = entity.get_type_values(registry.name, matchable=True)
-    # When there are a limited number of names, try fuzzy matching in the
-    # index:
-    if len(names) < 5:
-        shoulds = []
-        for name in names:
-            query = {
-                "match": {
-                    registry.name.group: {
-                        "query": name,
-                        "fuzziness": "AUTO",
-                        "minimum_should_match": 1,
-                        "boost": 3.0,
-                    }
-                }
-            }
-            shoulds.append(query)
-        return shoulds
-    # Deduplicate names before making them a match query. This is a hack to
-    # work around a low default for `query.bool.max_clause_count` in Elastic
-    # cloud. I'm not sure if overall it's an improvement to the query perf or
-    # recall on entity matching.
-    normalized_ = [collapse_spaces(n.lower()) for n in names]
-    normalized = set([n for n in normalized_ if n is not None])
-    # This query is non-fuzzy:
-    query = {
-        "match": {
-            registry.name.group: {
-                "query": " ".join(normalized),
-                "minimum_should_match": 1,
-                "boost": 3.0,
-            }
+    name = registry.name.pick(names)
+    match = {
+        registry.name.group: {
+            "query": name,
+            "fuzziness": "AUTO",
+            "boost": 1.0,
         }
     }
-    return [query]
+    shoulds = [{"match": match}]
+    for token in tokenize_names(names):
+        shoulds.append({"term": {registry.name.group: {"value": token, "boost": 3.0}}})
+    return shoulds
 
 
 def entity_query(dataset: Dataset, entity: EntityProxy):
