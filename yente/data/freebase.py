@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
 from followthemoney import model
@@ -116,7 +116,3 @@ class FreebaseManifest(BaseModel):
 
 class FreebaseEntityResult(BaseModel):
     result: List[FreebaseScoredEntity]
-
-
-class FreebaseQueryResult(BaseModel):
-    __root__: Dict[str, FreebaseEntityResult]
