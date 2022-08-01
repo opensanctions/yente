@@ -23,7 +23,7 @@ async def get_datasets() -> Datasets:
     return datasets
 
 
-async def refresh_manifest():
+async def refresh_manifest() -> None:
     log.info("Refreshing manifest metadata...")
     get_manifest.cache_clear()
     get_datasets.cache_clear()

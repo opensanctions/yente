@@ -17,7 +17,7 @@ def iso_to_version(value: str) -> str:
     return dt.strftime("%Y%m%d%H%M%S")
 
 
-def expand_dates(dates: List[str]):
+def expand_dates(dates: List[str]) -> List[str]:
     """Expand a date into less precise versions of itself."""
     expanded = set(dates)
     for date in dates:

@@ -16,3 +16,11 @@ api: build services
 
 test:
 	pytest -v tests/unit
+
+integration:
+	pytest -v tests/integration
+
+typecheck:
+	mypy --strict yente
+
+check: typecheck integration test

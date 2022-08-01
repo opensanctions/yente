@@ -39,7 +39,7 @@ app.include_router(admin.router)
 def get_user_id(headers: Headers) -> Optional[str]:
     """Get the user identifiers from headers. User identifiers are just
     telemetry tools, not authorization mechanisms."""
-    user_id = headers.get("authorization")
+    user_id: Optional[str] = headers.get("authorization")
     if user_id is not None:
         if " " in user_id:
             _, user_id = user_id.split(" ", 1)
@@ -50,7 +50,7 @@ def get_user_id(headers: Headers) -> Optional[str]:
 
 
 @app.middleware("http")
-async def request_middleware(request: Request, call_next):
+async def request_middleware(request: Request, call_next) -> Response:
     start_time = time.time()
     user_id = get_user_id(request.headers)
     trace_id = uuid4().hex
@@ -84,12 +84,12 @@ async def request_middleware(request: Request, call_next):
 
 
 @app.exception_handler(ApiError)
-async def api_error_handler(request: Request, exc: ApiError):
+async def api_error_handler(request: Request, exc: ApiError) -> Response:
     log.error(f"Search error {exc.status_code}: {exc.message}")
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.exception_handler(TransportError)
-async def transport_error_handler(request: Request, exc: TransportError):
+async def transport_error_handler(request: Request, exc: TransportError) -> Response:
     log.error(f"Transport: {exc.message}")
     return JSONResponse(status_code=500, content={"detail": exc.message})

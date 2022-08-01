@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from banal import as_bool
 from os import environ as env
 from normality import stringify
@@ -48,7 +48,7 @@ Further reading:
 * Advanced: [statement-based data model](https://www.opensanctions.org/docs/statements/)
 """
 
-TAGS = [
+TAGS: List[Dict[str, Any]] = [
     {
         "name": "Matching",
         "description": "Services that enable driving a user-facing entity search or"

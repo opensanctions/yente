@@ -4,11 +4,11 @@ from yente import settings
 
 
 class EntityRedirect(Exception):
-    def __init__(self, canonical_id):
+    def __init__(self, canonical_id: str) -> None:
         self.canonical_id = canonical_id
 
 
-def match_prefix(prefix: str, *labels: Optional[str]):
+def match_prefix(prefix: str, *labels: Optional[str]) -> bool:
     prefix = prefix.lower().strip()
     if not len(prefix):
         return False

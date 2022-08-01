@@ -1,7 +1,7 @@
 import orjson
 import aiofiles
 from pathlib import Path
-from aiocsv import AsyncDictReader
+from aiocsv import AsyncDictReader  # type: ignore
 from pydantic import AnyHttpUrl, FileUrl
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Union

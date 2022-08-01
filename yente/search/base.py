@@ -1,7 +1,7 @@
 import time
 import asyncio
 import warnings
-from typing import Any, Dict
+from typing import cast, Any, Dict
 from structlog.contextvars import get_contextvars
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.exceptions import ElasticsearchWarning
@@ -19,7 +19,7 @@ semaphore = asyncio.Semaphore(settings.QUERY_CONCURRENCY)
 
 def get_opaque_id() -> str:
     ctx = get_contextvars()
-    return ctx.get("trace_id")
+    return cast(str, ctx.get("trace_id"))
 
 
 def get_es_connection() -> AsyncElasticsearch:
@@ -60,7 +60,7 @@ async def get_es() -> AsyncElasticsearch:
     raise RuntimeError("Cannot connect to ElasticSearch")
 
 
-async def close_es():
+async def close_es() -> None:
     loop = asyncio.get_running_loop()
     loop_id = hash(loop)
     es = POOL.pop(loop_id, None)

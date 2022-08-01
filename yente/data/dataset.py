@@ -22,14 +22,14 @@ class DatasetManifest(BaseModel):
     collections: List[str] = []
 
     @validator("name")
-    def name_is_slug(cls, v):
+    def name_is_slug(cls, v: str) -> str:
         norm = slugify(v, sep="_")
         if v != norm:
             raise ValueError("invalid dataset name (try: %s)" % norm)
         return v
 
     @validator("url", always=True)
-    def url_from_path(cls, v, values):
+    def url_from_path(cls, v: str, values: Dict[str, str]) -> str:
         if v is None and values["path"] is not None:
             file_url = values["path"].resolve().as_uri()
             v = parse_obj_as(FileUrl, file_url)

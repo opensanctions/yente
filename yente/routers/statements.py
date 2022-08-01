@@ -44,7 +44,7 @@ async def statements(
         title="Number of results to skip before returning them",
         le=settings.MAX_OFFSET,
     ),
-):
+) -> StatementResponse:
     """Access raw entity data as statements.
 
     Read [statement-based data model](https://www.opensanctions.org/docs/statements/)
