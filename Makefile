@@ -13,3 +13,6 @@ services:
 
 api: build services
 	docker-compose up --remove-orphans app
+
+test:
+	pytest -v tests/unit

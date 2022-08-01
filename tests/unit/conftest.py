@@ -9,7 +9,7 @@ from yente.app import app
 
 run_id = uuid4().hex
 settings.TESTING = True
-settings.MANIFEST = Path(__file__).parent / "../manifests/tests.yml"
+settings.MANIFEST = Path(__file__).parent / "../fixtures/manifest.yml"
 settings.UPDATE_TOKEN = "test"
 settings.ES_INDEX = f"yente-test-{run_id}"
 settings.ENTITY_INDEX = f"{settings.ES_INDEX}-entities"

@@ -39,7 +39,7 @@ jobs:
           pip freeze
       - name: Run pytest
         run: |
-          pytest -v
+          pytest -v tests/unit
 
   build:
     runs-on: ubuntu-latest
