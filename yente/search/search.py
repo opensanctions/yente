@@ -20,20 +20,20 @@ from yente.util import EntityRedirect
 log = get_logger(__name__)
 
 
-def result_entity(data) -> Optional[Entity]:
-    source = data.get("_source")
+def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
+    source: Optional[Dict[str, Any]] = data.get("_source")
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
     return Entity.from_dict(model, source)
 
 
-def result_total(result: ObjectApiResponse) -> TotalSpec:
-    spec = result.get("hits", {}).get("total")
+def result_total(result: ObjectApiResponse[Any]) -> TotalSpec:
+    spec: Dict[str, Union[int, str]] = result.get("hits", {}).get("total")
     return TotalSpec(value=spec["value"], relation=spec["relation"])
 
 
-def result_entities(response: ObjectApiResponse) -> Generator[Entity, None, None]:
+def result_entities(response: ObjectApiResponse[Any]) -> Generator[Entity, None, None]:
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
         entity = result_entity(hit)
@@ -41,12 +41,18 @@ def result_entities(response: ObjectApiResponse) -> Generator[Entity, None, None
             yield entity
 
 
-def result_facets(response: ObjectApiResponse, datasets: Datasets):
+def result_facets(
+    response: ObjectApiResponse[Any], datasets: Datasets
+) -> Dict[str, SearchFacet]:
     facets: Dict[str, SearchFacet] = {}
-    for field, agg in response.get("aggregations", {}).items():
+    aggs: Dict[str, Dict[str, Any]] = response.get("aggregations", {})
+    for field, agg in aggs.items():
         facet = SearchFacet(label=field, values=[])
-        for bucket in agg.get("buckets", []):
-            key = bucket.get("key")
+        buckets: List[Dict[str, Any]] = agg.get("buckets", [])
+        for bucket in buckets:
+            key: Optional[str] = bucket.get("key")
+            if key is None:
+                continue
             value = SearchFacetItem(name=key, label=key, count=bucket.get("doc_count"))
             if field == "datasets":
                 facet.label = "Data sources"
@@ -64,12 +70,12 @@ def result_facets(response: ObjectApiResponse, datasets: Datasets):
 
 
 async def search_entities(
-    query: Dict[Any, Any],
+    query: Dict[str, Any],
     limit: int = 5,
     offset: int = 0,
-    aggregations: Optional[Dict] = None,
+    aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
-) -> ObjectApiResponse:
+) -> ObjectApiResponse[Any]:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     try:

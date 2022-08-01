@@ -1,9 +1,12 @@
-from typing import Iterable
+from typing import Any, Dict, Iterable, List, Optional, Union
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
+from followthemoney.types.common import PropertyType
 
 from yente import settings
+
+MappingProperty = Dict[str, Union[List[str], str]]
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy"
 TEXT_TYPES = (registry.name, registry.address)
@@ -30,8 +33,10 @@ INDEX_SETTINGS = {
 }
 
 
-def make_field(type_, copy_to=None, format=None):
-    spec = {"type": type_}
+def make_field(
+    type_: str, copy_to: Optional[List[str]] = None, format: Optional[str] = None
+) -> MappingProperty:
+    spec: MappingProperty = {"type": type_}
     if type_ == "keyword":
         spec["normalizer"] = "osa-normalizer"
     if type_ == "text":
@@ -43,19 +48,21 @@ def make_field(type_, copy_to=None, format=None):
     return spec
 
 
-def make_type_field(type_, copy_to=None):
+def make_type_field(
+    type_: PropertyType, copy_to: Optional[List[str]] = None
+) -> MappingProperty:
     field_type = "keyword" if type_.group else "text"
     if type_ in TEXT_TYPES:
         field_type = "text"
     return make_field(field_type, copy_to=copy_to)
 
 
-def make_keyword():
+def make_keyword() -> MappingProperty:
     return {"type": "keyword"}
 
 
-def make_entity_mapping(schemata: Iterable[Schema]):
-    prop_mapping = {}
+def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
+    prop_mapping: Dict[str, MappingProperty] = {}
     for schema_name in schemata:
         schema = model.get(schema_name)
         assert schema is not None, schema_name
@@ -97,7 +104,7 @@ def make_entity_mapping(schemata: Iterable[Schema]):
     }
 
 
-def make_statement_mapping():
+def make_statement_mapping() -> Dict[str, Any]:
     mapping = {
         "canonical_id": make_keyword(),
         "entity_id": make_keyword(),

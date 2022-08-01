@@ -3,7 +3,7 @@ from yente.search.indexer import update_index
 from yente.logs import configure_logging
 
 
-async def reindex():
+async def reindex() -> None:
     await update_index()
 
 

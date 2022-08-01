@@ -9,15 +9,16 @@ from yente.data.util import tokenize_names
 from yente.search.mapping import TEXT_TYPES
 
 FilterDict = Dict[str, Union[bool, str, List[str]]]
+Clause = Dict[str, Any]
 
 
 def filter_query(
-    shoulds,
+    shoulds: List[Clause],
     dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
-):
-    filterqs = []
+) -> Clause:
+    filterqs: List[Clause] = []
     if dataset is not None:
         filterqs.append({"terms": {"datasets": dataset.dataset_names}})
     if schema is not None:
@@ -37,7 +38,7 @@ def filter_query(
     return {"bool": {"filter": filterqs, "should": shoulds, "minimum_should_match": 1}}
 
 
-def names_query(entity: EntityProxy) -> List[Dict[str, Any]]:
+def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     name = registry.name.pick(names)
     match = {
@@ -53,8 +54,8 @@ def names_query(entity: EntityProxy) -> List[Dict[str, Any]]:
     return shoulds
 
 
-def entity_query(dataset: Dataset, entity: EntityProxy):
-    shoulds: List[Dict[str, Any]] = []
+def entity_query(dataset: Dataset, entity: EntityProxy) -> Clause:
+    shoulds: List[Clause] = []
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
@@ -76,10 +77,10 @@ def text_query(
     query: str,
     filters: FilterDict = {},
     fuzzy: bool = False,
-):
+) -> Clause:
 
     if not len(query.strip()):
-        should = {"match_all": {}}
+        should: Clause = {"match_all": {}}
     else:
         should = {
             "query_string": {
@@ -96,16 +97,16 @@ def text_query(
 def prefix_query(
     dataset: Dataset,
     prefix: str,
-):
+) -> Clause:
     if not len(prefix.strip()):
-        should = {"match_none": {}}
+        should: Clause = {"match_none": {}}
     else:
         should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
     return filter_query([should], dataset=dataset)
 
 
-def facet_aggregations(fields: List[str] = []) -> Dict[str, Any]:
-    aggs = {}
+def facet_aggregations(fields: List[str] = []) -> Clause:
+    aggs: Clause = {}
     for field in fields:
         aggs[field] = {"terms": {"field": field, "size": 1000}}
     return aggs

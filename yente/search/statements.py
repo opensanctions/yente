@@ -8,9 +8,9 @@ from yente.search.search import result_total
 
 
 def statement_query(
-    dataset=Optional[Dataset], **kwargs: Optional[Union[str, bool]]
+    dataset: Optional[Dataset] = None, **kwargs: Union[None, str, bool]
 ) -> Dict[str, Any]:
-    filters = []
+    filters: List[Dict[str, Any]] = []
     if dataset is not None:
         filters.append({"terms": {"dataset": dataset.dataset_names}})
     for field, value in kwargs.items():

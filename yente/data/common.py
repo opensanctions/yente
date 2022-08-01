@@ -26,7 +26,7 @@ class EntityResponse(BaseModel):
     last_seen: datetime = Field(..., example=datetime.utcnow())
 
     @classmethod
-    def from_entity(cls, entity: Entity):
+    def from_entity(cls, entity: Entity) -> "EntityResponse":
         return cls(
             id=entity.id,
             caption=entity._caption,
@@ -51,7 +51,7 @@ class ScoredEntityResponse(EntityResponse):
     @classmethod
     def from_entity_result(
         cls, entity: Entity, result: MatchingResult, threshold: float
-    ):
+    ) -> "ScoredEntityResponse":
         return cls(
             id=entity.id,
             caption=entity.caption,

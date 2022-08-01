@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 from fastapi import APIRouter, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from nomenklatura.matching import explain_matcher
@@ -50,7 +50,7 @@ async def search(
     fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
-):
+) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead."""
@@ -119,7 +119,7 @@ async def match(
         settings.SCORE_THRESHOLD, title="Threshold score for matches"
     ),
     cutoff: float = Query(settings.SCORE_CUTOFF, title="Cutoff score for matches"),
-):
+) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
     formatted like those returned by the API.
@@ -234,7 +234,7 @@ async def fetch_entity(
     response: Response,
     entity_id: str = Path(None, description="ID of the entity to retrieve"),
     nested: bool = Query(True, title="Include adjacent entities in response"),
-):
+) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
     passport, sanction and associated entities) included.

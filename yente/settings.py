@@ -5,6 +5,7 @@ from banal import as_bool
 from os import environ as env
 from normality import stringify
 from datetime import datetime
+from aiocron import Cron  # type: ignore
 
 
 def env_str(name: str, default: Optional[str] = None) -> Optional[str]:
@@ -87,6 +88,9 @@ DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 MANIFEST = Path(__file__).parent.parent / "manifests/default.yml"
 MANIFEST = Path(env_str("YENTE_MANIFEST") or MANIFEST).resolve()
 MANIFEST_CRONTAB = env_str("YENTE_MANIFEST_CRONTAB")
+
+CRON_UPDATE: Optional[Cron] = None
+CRON_REFRESH: Optional[Cron] = None
 
 DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 

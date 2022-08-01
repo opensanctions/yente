@@ -1,13 +1,12 @@
 import json
 import asyncio
 from urllib.parse import urljoin
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from fastapi import APIRouter, Query, Form
 from fastapi import Request
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
-from elasticsearch import ApiError
 
 from yente import settings
 from yente.data.common import ErrorResponse
@@ -16,6 +15,10 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data.freebase import (
     FreebaseEntity,
+    FreebaseEntityResult,
+    FreebaseManifestPreview,
+    FreebaseManifestSuggest,
+    FreebaseManifestSuggestType,
     FreebaseProperty,
     FreebaseScoredEntity,
     FreebaseType,
@@ -41,7 +44,6 @@ router = APIRouter()
     "/reconcile/{dataset}",
     summary="Reconciliation info",
     tags=["Reconciliation"],
-    response_model=Union[FreebaseManifest, FreebaseQueryResult],
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
@@ -51,7 +53,7 @@ async def reconcile(
     request: Request,
     queries: Optional[str] = None,
     dataset: str = PATH_DATASET,
-):
+) -> Union[FreebaseManifest, FreebaseQueryResult]:
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
     [OpenRefine](https://openrefine.org).
@@ -63,34 +65,30 @@ async def reconcile(
         return await reconcile_queries(ds, queries)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
     schemata = await get_matchable_schemata(ds)
-    default_types = [FreebaseType.from_schema(s) for s in schemata]
-    return {
-        "versions": ["0.2"],
-        "name": f"{ds.title} ({settings.TITLE})",
-        "identifierSpace": "https://opensanctions.org/reference/#schema",
-        "schemaSpace": "https://opensanctions.org/reference/#schema",
-        "view": {"url": ("https://opensanctions.org/entities/{{id}}/")},
-        "preview": {
-            "url": "https://opensanctions.org/entities/preview/{{id}}/",
-            "width": 430,
-            "height": 300,
-        },
-        "suggest": {
-            "entity": {
-                "service_url": base_url,
-                "service_path": "/suggest/entity",
-            },
-            "type": {
-                "service_url": base_url,
-                "service_path": "/suggest/type",
-            },
-            "property": {
-                "service_url": base_url,
-                "service_path": "/suggest/property",
-            },
-        },
-        "defaultTypes": default_types,
-    }
+    return FreebaseManifest(
+        versions=["0.2"],
+        name=f"{ds.title} ({settings.TITLE})",
+        identifierSpace="https://opensanctions.org/reference/#schema",
+        schemaSpace="https://opensanctions.org/reference/#schema",
+        view={"url": ("https://opensanctions.org/entities/{{id}}/")},
+        preview=FreebaseManifestPreview(
+            url="https://opensanctions.org/entities/preview/{{id}}/",
+            width=430,
+            height=600,
+        ),
+        suggest=FreebaseManifestSuggest(
+            entity=FreebaseManifestSuggestType(
+                service_url=base_url, service_path="/suggest/entity"
+            ),
+            type=FreebaseManifestSuggestType(
+                service_url=base_url, service_path="/suggest/type"
+            ),
+            property=FreebaseManifestSuggestType(
+                service_url=base_url, service_path="/suggest/property"
+            ),
+        ),
+        defaultTypes=[FreebaseType.from_schema(s) for s in schemata],
+    )
 
 
 @router.post(
@@ -106,7 +104,7 @@ async def reconcile(
 async def reconcile_post(
     dataset: str = PATH_DATASET,
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
-):
+) -> FreebaseQueryResult:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     ds = await get_dataset(dataset)
@@ -116,7 +114,7 @@ async def reconcile_post(
 async def reconcile_queries(
     dataset: Dataset,
     data: str,
-):
+) -> FreebaseQueryResult:
     # multiple requests in one query
     try:
         queries = json.loads(data)
@@ -131,10 +129,12 @@ async def reconcile_queries(
     for k, q in queries.items():
         tasks.append(reconcile_query(k, dataset, q))
     results = await asyncio.gather(*tasks)
-    return {k: r for (k, r) in results}
+    return FreebaseQueryResult(__root__={k: r for (k, r) in results})
 
 
-async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
+async def reconcile_query(
+    name: str, dataset: Dataset, query: Dict[str, Any]
+) -> Tuple[str, FreebaseEntityResult]:
     """Reconcile operation for a single query."""
     # log.info("Reconcile: %r", query)
     limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
@@ -162,7 +162,7 @@ async def reconcile_query(name: str, dataset: Dataset, query: Dict[str, Any]):
         schema=proxy.schema.name,
         results=result_total(resp).value,
     )
-    return name, {"result": results}
+    return name, FreebaseEntityResult(result=results)
 
 
 @router.get(
@@ -182,7 +182,7 @@ async def reconcile_suggest_entity(
         description="Number of suggestions to return",
         le=settings.MAX_PAGE,
     ),
-):
+) -> FreebaseEntitySuggestResponse:
     """Suggest an entity based on a text query. This is functionally very
     similar to the basic search API, but returns data in the structure assumed
     by the community specification.
@@ -215,7 +215,7 @@ async def reconcile_suggest_entity(
 async def reconcile_suggest_property(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
-):
+) -> FreebasePropertySuggestResponse:
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
@@ -242,7 +242,7 @@ async def reconcile_suggest_property(
 async def reconcile_suggest_type(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
-):
+) -> FreebaseTypeSuggestResponse:
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""

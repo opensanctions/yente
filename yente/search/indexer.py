@@ -1,18 +1,21 @@
 import asyncio
 import threading
 from pprint import pprint
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from contextlib import asynccontextmanager
+from elastic_transport import ObjectApiResponse
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
-from followthemoney.types import registry, DateType, NameType
+from followthemoney.types import registry
+from followthemoney.types.date import DateType
+from followthemoney.types.name import NameType
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.manifest import StatementManifest
+from yente.data.statements import StatementManifest
 from yente.data import refresh_manifest, get_datasets, get_manifest
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping, make_statement_mapping
@@ -22,7 +25,9 @@ from yente.data.util import expand_dates, expand_names
 log = get_logger(__name__)
 
 
-async def entity_docs(dataset: Dataset, index: str):
+async def entity_docs(
+    dataset: Dataset, index: str
+) -> AsyncGenerator[Dict[str, Any], None]:
     idx = 0
     async for entity in dataset.entities():
         if idx % 1000 == 0 and idx > 0:
@@ -47,7 +52,9 @@ async def entity_docs(dataset: Dataset, index: str):
             yield {"_index": index, "_id": referent, "_source": body}
 
 
-async def statement_docs(manifest: StatementManifest, index: str):
+async def statement_docs(
+    manifest: StatementManifest, index: str
+) -> AsyncGenerator[Dict[str, Any], None]:
     idx = 0
     async for stmt in manifest.load():
         if idx % 10000 == 0 and idx > 0:
@@ -71,7 +78,7 @@ async def versioned_index(
     version: str,
     mapping: Dict[str, Any],
     force: bool = False,
-):
+) -> AsyncGenerator[Optional[str], None]:
     dataset_prefix = f"{alias}-{dataset}"
     next_index = f"{dataset_prefix}-{version}"
     exists = await es.indices.exists(index=next_index)
@@ -108,7 +115,7 @@ async def versioned_index(
         return
 
     log.info("Index is now aliased to: %s" % alias, index=next_index)
-    indices = await es.cat.indices(format="json")
+    indices: Any = await es.cat.indices(format="json")
     current: List[str] = [s.get("index") for s in indices]
     current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
     if len(current) == 0:
@@ -120,7 +127,7 @@ async def versioned_index(
             await es.indices.delete(index=index)
 
 
-async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool):
+async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
     # Versioning defaults to the software version instead of a data update date:
     version = make_version(dataset.version)
@@ -147,7 +154,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool):
 
 async def index_statements(
     es: AsyncElasticsearch, manifest: StatementManifest, force: bool
-):
+) -> None:
     if not settings.STATEMENT_API:
         log.warning("Statement API is disabled, not indexing statements.")
         return
@@ -195,7 +202,7 @@ async def update_index(force: bool = False) -> None:
 
 
 def update_index_threaded(force: bool = False) -> None:
-    async def update_in_thread():
+    async def update_in_thread() -> None:
         await update_index(force=force)
 
     thread = threading.Thread(

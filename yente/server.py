@@ -1,4 +1,4 @@
-from uvicorn import Config, Server
+from uvicorn import Config, Server  # type: ignore
 
 from yente import settings
 from yente.app import app

@@ -18,10 +18,11 @@ class StatementManifest(BaseModel):
         base_name = f"{self.name}-{self.version}.csv"
         async with cached_url(self.url, base_name) as path:
             async for row in load_csv_rows(path):
-                row["target"] = as_bool(row["target"])
-                row["first_seen"] = iso_datetime(row["first_seen"])
-                row["last_seen"] = iso_datetime(row["last_seen"])
-                yield StatementModel.parse_obj(row)
+                obj: Dict[str, Any] = dict(row)
+                obj["target"] = as_bool(row["target"])
+                obj["first_seen"] = iso_datetime(row["first_seen"])
+                obj["last_seen"] = iso_datetime(row["last_seen"])
+                yield StatementModel.parse_obj(obj)
 
 
 class StatementModel(BaseModel):
@@ -43,9 +44,9 @@ class StatementModel(BaseModel):
         return {"_index": index, "_id": self.id, "_source": data}
 
     @classmethod
-    def from_search(cls, response: ObjectApiResponse) -> List["StatementModel"]:
+    def from_search(cls, response: ObjectApiResponse[Any]) -> List["StatementModel"]:
         results: List[StatementModel] = []
-        hits = response.get("hits", {})
+        hits: Dict[str, List[Dict[str, Any]]] = response.get("hits", {})
         for hit in hits.get("hits", []):
             source = hit["_source"]
             stmt = cls(

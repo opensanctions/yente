@@ -38,7 +38,7 @@ class FreebaseEntity(BaseModel):
     type: List[FreebaseType]
 
     @classmethod
-    def from_proxy(cls, proxy: EntityProxy):
+    def from_proxy(cls, proxy: EntityProxy) -> "FreebaseEntity":
         type_ = [FreebaseType.from_schema(proxy.schema)]
         return FreebaseEntity(id=proxy.id, name=proxy.caption, type=type_)
 
@@ -118,4 +118,5 @@ class FreebaseEntityResult(BaseModel):
     result: List[FreebaseScoredEntity]
 
 
-FreebaseQueryResult = Dict[str, FreebaseEntityResult]
+class FreebaseQueryResult(BaseModel):
+    __root__: Dict[str, FreebaseEntityResult]

@@ -1,4 +1,4 @@
-import aiocron
+import aiocron  # type: ignore
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
@@ -15,28 +15,28 @@ log = get_logger(__name__)
 router = APIRouter()
 
 
-async def regular_update():
+async def regular_update() -> None:
     if settings.TESTING:
         return
     update_index_threaded()
 
 
 @router.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     await get_index_status()
     manifest = await get_manifest()
     if settings.MANIFEST_CRONTAB:
-        router.cron_refresh = aiocron.crontab(
+        settings.CRON_REFRESH = aiocron.crontab(
             settings.MANIFEST_CRONTAB,
             func=refresh_manifest,
         )
     if manifest.schedule is not None:
         await regular_update()
-        router.cron_update = aiocron.crontab(manifest.schedule, func=regular_update)
+        settings.CRON_UPDATE = aiocron.crontab(manifest.schedule, func=regular_update)
 
 
 @router.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event() -> None:
     await close_es()
 
 
@@ -47,7 +47,7 @@ async def shutdown_event():
     response_model=StatusResponse,
     responses={500: {"model": ErrorResponse, "description": "Service is not ready"}},
 )
-async def healthz():
+async def healthz() -> StatusResponse:
     """No-op basic health check. This is used by cluster management systems like
     Kubernetes to verify the service is responsive."""
     return StatusResponse(status="ok")
@@ -60,7 +60,7 @@ async def healthz():
     response_model=StatusResponse,
     responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
 )
-async def readyz():
+async def readyz() -> StatusResponse:
     """Search index health check. This is used to know if the service has completed its index building."""
     ok = await get_index_status(index=settings.ENTITY_INDEX)
     if not ok:
@@ -74,7 +74,7 @@ async def readyz():
     tags=["System information"],
     response_model=Manifest,
 )
-async def manifest():
+async def manifest() -> Manifest:
     """Return the service manifest, including the list of all indexed datasets."""
     return await get_manifest()
 
@@ -89,7 +89,7 @@ async def manifest():
 async def force_update(
     token: str = Query("", title="Update token for authentication"),
     sync: bool = Query(False, title="Wait until indexing is complete"),
-):
+) -> StatusResponse:
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""
     if (

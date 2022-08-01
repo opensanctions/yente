@@ -3,9 +3,10 @@ from uuid import uuid4
 from elasticsearch import ApiError, TransportError
 from normality import slugify
 from typing import Optional, cast
-from starlette.requests import Headers
 from fastapi import FastAPI
 from fastapi import Request, Response
+from starlette.datastructures import Headers
+from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from structlog.contextvars import clear_contextvars, bind_contextvars
@@ -50,7 +51,9 @@ def get_user_id(headers: Headers) -> Optional[str]:
 
 
 @app.middleware("http")
-async def request_middleware(request: Request, call_next) -> Response:
+async def request_middleware(
+    request: Request, call_next: RequestResponseEndpoint
+) -> Response:
     start_time = time.time()
     user_id = get_user_id(request.headers)
     trace_id = uuid4().hex
@@ -60,7 +63,7 @@ async def request_middleware(request: Request, call_next) -> Response:
         client_ip=request.client.host,
     )
     try:
-        response = cast(Response, await call_next(request))
+        response = await call_next(request)
     except Exception as exc:
         log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
