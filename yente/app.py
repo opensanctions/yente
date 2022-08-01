@@ -57,10 +57,11 @@ async def request_middleware(
     start_time = time.time()
     user_id = get_user_id(request.headers)
     trace_id = uuid4().hex
+    client_ip = request.client.host if request.client else "127.0.0.1"
     bind_contextvars(
         user_id=user_id,
         trace_id=trace_id,
-        client_ip=request.client.host,
+        client_ip=client_ip,
     )
     try:
         response = await call_next(request)
