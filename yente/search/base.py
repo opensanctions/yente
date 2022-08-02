@@ -29,6 +29,10 @@ def get_es_connection() -> AsyncElasticsearch:
         retry_on_timeout=True,
         max_retries=10,
     )
+    if settings.ES_SNIFF:
+        kwargs["sniff_on_start"] = True
+        kwargs["sniffer_timeout"] = 60
+        kwargs["sniff_on_connection_fail"] = True
     if settings.ES_CLOUD_ID:
         log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
         kwargs["cloud_id"] = settings.ES_CLOUD_ID
@@ -40,14 +44,13 @@ def get_es_connection() -> AsyncElasticsearch:
     return AsyncElasticsearch(**kwargs)
 
 
-# @cache
 async def get_es() -> AsyncElasticsearch:
     loop = asyncio.get_running_loop()
     loop_id = hash(loop)
     if loop_id in POOL:
         return POOL[loop_id]
 
-    for retry in range(7):
+    for retry in range(2, 9):
         try:
             es = get_es_connection()
             es_ = es.options(request_timeout=5)
