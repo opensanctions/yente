@@ -93,6 +93,7 @@ CRON_UPDATE: Optional[Cron] = None
 CRON_REFRESH: Optional[Cron] = None
 
 DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
+RESOURCES_PATH = Path(__file__).parent.joinpath('resources')
 
 BASE_SCHEMA = "Thing"
 STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))

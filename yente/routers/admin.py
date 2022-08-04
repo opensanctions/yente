@@ -1,6 +1,7 @@
 import aiocron  # type: ignore
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
+from starlette.responses import FileResponse
 
 from yente import settings
 from yente.logs import get_logger
@@ -104,3 +105,13 @@ async def force_update(
     else:
         update_index_threaded(force=True)
     return StatusResponse(status="ok")
+
+
+@router.get(
+    "/favicon.ico",
+    summary="Browser tab bar icon",
+    include_in_schema=False,
+)
+async def favicon() -> FileResponse:
+    """Browser tab bar icon."""
+    return FileResponse(settings.RESOURCES_PATH / 'favicon.ico')
