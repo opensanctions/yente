@@ -1,15 +1,17 @@
-from normality import collapse_spaces
 from typing import Any, Dict, List, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
+from followthemoney.types.name import NameType
 
 from yente.data.dataset import Dataset
-from yente.data.util import tokenize_names
+from yente.data.util import tokenize_names, pick_names
 from yente.search.mapping import TEXT_TYPES
 
 FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
+
+NAMES_FIELD = NameType.group or 'names'
 
 
 def filter_query(
@@ -38,19 +40,21 @@ def filter_query(
     return {"bool": {"filter": filterqs, "should": shoulds, "minimum_should_match": 1}}
 
 
-def names_query(entity: EntityProxy) -> List[Clause]:
+def names_query(entity: EntityProxy, field: str = NAMES_FIELD) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
-    name = registry.name.pick(names)
-    match = {
-        registry.name.group: {
-            "query": name,
-            "fuzziness": "AUTO",
-            "boost": 1.0,
+    shoulds = []
+    for name in pick_names(names, limit=5):
+        match = {
+            field: {
+                "query": name,
+                "fuzziness": "AUTO",
+                "minimum_should_match": "70%",
+                "boost": 3.0,
+            }
         }
-    }
-    shoulds = [{"match": match}]
+        shoulds.append({"match": match})
     for token in tokenize_names(names):
-        shoulds.append({"term": {registry.name.group: {"value": token, "boost": 3.0}}})
+        shoulds.append({"term": {field: {"value": token}}})
     return shoulds
 
 
