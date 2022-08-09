@@ -41,6 +41,7 @@ def expand_names(names: List[str]) -> List[str]:
 
 
 def tokenize_names(names: List[str]) -> Set[str]:
+    """Get a unique set of tokens present in the given set of names."""
     expanded = set()
     for name in names:
         name = name.lower()
