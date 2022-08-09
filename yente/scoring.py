@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from nomenklatura.matching import compare_scored
 
 from yente import settings
@@ -11,6 +11,7 @@ def score_results(
     results: Iterable[Entity],
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
+    limit: Optional[int] = None,
 ) -> List[ScoredEntityResponse]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
@@ -24,6 +25,8 @@ def score_results(
         scored.append(result)
 
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
+    if limit is not None:
+        scored = scored[:limit]
 
     # If multiple entities meet the match threshold, it's ambiguous
     # and we bail out:

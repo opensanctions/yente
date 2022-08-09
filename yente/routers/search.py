@@ -194,7 +194,7 @@ async def match(
                 status_code=400,
                 detail=f"Cannot parse example entity: {exc}",
             )
-        queries.append(search_entities(query, limit=limit))
+        queries.append(search_entities(query, limit=limit * 3))
         entities.append((name, entity))
     if not len(queries) and not len(responses):
         raise HTTPException(400, detail="No queries provided.")
@@ -202,7 +202,7 @@ async def match(
 
     for (name, entity), response in zip(entities, results):
         ents = result_entities(response)
-        scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff)
+        scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff, limit=limit)
         total = result_total(response)
         log.info(
             f"/match/{ds.name}",

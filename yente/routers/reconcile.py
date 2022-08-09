@@ -149,7 +149,7 @@ async def reconcile_query(
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
     entities = result_entities(resp)
-    scoreds = [s for s in score_results(proxy, entities)]
+    scoreds = [s for s in score_results(proxy, entities, limit=limit)]
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]
     log.info(
         f"/reconcile/{dataset.name}",
