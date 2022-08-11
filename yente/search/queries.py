@@ -11,7 +11,7 @@ from yente.search.mapping import TEXT_TYPES
 FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
 
-NAMES_FIELD = NameType.group or 'names'
+NAMES_FIELD = NameType.group or "names"
 
 
 def filter_query(

@@ -34,9 +34,9 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       YENTE_ELASTICSEARCH_URL: http://index:9200
-      YENTE_STATEMENT_API: 'false'
+      YENTE_STATEMENT_API: "false"
       # Set this to a randomly generated string to enable the /updatez API:
-      YENTE_UPDATE_TOKEN: ''
+      YENTE_UPDATE_TOKEN: ""
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/healthz" ]
       interval: 30s

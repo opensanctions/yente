@@ -4,25 +4,29 @@ import requests
 from urllib.parse import urljoin
 
 
-DATASET = 'default'
+DATASET = "default"
+
 
 @pytest.fixture(scope="session")
 def service_url() -> str:
-    port = os.environ.get('YENTE_PORT', '8000') 
-    url = 'http://localhost:%s' % port
-    url = os.environ.get('YENTE_INTEGRATION_URL', url)
+    port = os.environ.get("YENTE_PORT", "8000")
+    url = "http://localhost:%s" % port
+    url = os.environ.get("YENTE_INTEGRATION_URL", url)
     return url
+
 
 @pytest.fixture(scope="session")
 def search_url(service_url) -> str:
-    return urljoin(service_url, '/search/%s' % DATASET)
+    return urljoin(service_url, "/search/%s" % DATASET)
+
 
 @pytest.fixture(scope="session")
 def match_url(service_url) -> str:
-    return urljoin(service_url, '/match/%s' % DATASET)
+    return urljoin(service_url, "/match/%s" % DATASET)
+
 
 @pytest.fixture(scope="session")
 def http() -> str:
     session = requests.Session()
-    session.headers['Authorization'] = 'Token integration-test'
+    session.headers["Authorization"] = "Token integration-test"
     return session

@@ -31,7 +31,7 @@ class ExternalManifest(BaseModel):
                 title=ds["title"],
                 version=iso_to_version(ds["last_export"]),
                 namespace=self.namespace,
-                collections=ds.get('collections', []),
+                collections=ds.get("collections", []),
                 datasets=datasets,
             )
             if dataset.name == self.scope:

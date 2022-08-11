@@ -70,7 +70,7 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
             if prop.stub:
                 continue
             copy_to = ["text"]
-            # Do not copy properties which have been specifically 
+            # Do not copy properties which have been specifically
             # excluded from matchable types:
             excluded = prop.type.matchable and not prop.matchable
             # Some types (like topics) are not matchable, but we still want

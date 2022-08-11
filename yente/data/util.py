@@ -62,14 +62,15 @@ def _compare_distance(left: str, right: str) -> int:
     dist: int = distance(left[:250], right[:250])
     return dist
 
-def pick_names(names: List[str], limit: int=3) -> List[str]:
+
+def pick_names(names: List[str], limit: int = 3) -> List[str]:
     """Try to pick a few non-overlapping names to search for when matching
-    an entity. The problem here is that if we receive an API query for an 
+    an entity. The problem here is that if we receive an API query for an
     entity with hundreds of aliases, it becomes prohibitively expensive to
     search. This function decides which ones should be queried as pars pro
     toto in the index before the Python comparison algo later checks all of
     them.
-    
+
     This is a bit over the top and will come back to haunt me."""
     if len(names) <= limit:
         return names
@@ -90,12 +91,11 @@ def pick_names(names: List[str], limit: int=3) -> List[str]:
             candidates[cand] = 0
             for pick in picked:
                 candidates[cand] += _compare_distance(pick, cand)
-        
+
         pick, _ = sorted(candidates.items(), key=lambda c: c[1], reverse=True)[0]
         picked.append(pick)
 
     return picked
-
 
 
 @asynccontextmanager

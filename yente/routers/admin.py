@@ -114,4 +114,4 @@ async def force_update(
 )
 async def favicon() -> FileResponse:
     """Browser tab bar icon."""
-    return FileResponse(settings.RESOURCES_PATH / 'favicon.ico')
+    return FileResponse(settings.RESOURCES_PATH / "favicon.ico")

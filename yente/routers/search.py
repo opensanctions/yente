@@ -202,7 +202,9 @@ async def match(
 
     for (name, entity), response in zip(entities, results):
         ents = result_entities(response)
-        scored = score_results(entity, ents, threshold=threshold, cutoff=cutoff, limit=limit)
+        scored = score_results(
+            entity, ents, threshold=threshold, cutoff=cutoff, limit=limit
+        )
         total = result_total(response)
         log.info(
             f"/match/{ds.name}",

@@ -80,7 +80,7 @@ def test_search_facet_countries():
 def test_search_facet_topics():
     res = client.get("/search/default?topics=sanction")
     assert res.status_code == 200, res
-    sanctioned = res.json()['total']['value']
+    sanctioned = res.json()["total"]["value"]
     assert sanctioned > 0, sanctioned
 
     res = client.get("/search/default")
