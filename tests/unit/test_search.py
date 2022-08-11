@@ -49,6 +49,24 @@ def test_search_filter_countries_remove():
     assert len(results) == 0, results
 
 
+def test_search_facet_datasets_default():
+    res = client.get("/search/default")
+    assert res.status_code == 200, res
+    datasets = res.json()["facets"]["datasets"]
+    names = [c["name"] for c in datasets["values"]]
+    assert "eu_fsf" in names, names
+    assert "parteispenden" not in names, names
+
+
+def test_search_facet_datasets_spenden():
+    res = client.get("/search/parteispenden")
+    assert res.status_code == 200, res
+    datasets = res.json()["facets"]["datasets"]
+    names = [c["name"] for c in datasets["values"]]
+    assert "eu_fsf" not in names, names
+    assert "parteispenden" in names, names
+
+
 def test_search_facet_countries():
     res = client.get("/search/default?q=vladimir putin&countries=ru")
     assert res.status_code == 200, res
@@ -57,6 +75,19 @@ def test_search_facet_countries():
     assert "ru" in names, names
     assert "ke" not in names, names
     assert "lb" not in names, names
+
+
+def test_search_facet_topics():
+    res = client.get("/search/default?topics=sanction")
+    assert res.status_code == 200, res
+    sanctioned = res.json()['total']['value']
+    assert sanctioned > 0, sanctioned
+
+    res = client.get("/search/default")
+    assert res.status_code == 200, res
+    topics = res.json()["facets"]["topics"]
+    names = [c["name"] for c in topics["values"]]
+    assert "sanction" in names, names
 
 
 def test_search_no_targets():

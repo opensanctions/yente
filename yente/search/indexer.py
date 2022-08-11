@@ -1,9 +1,7 @@
 import asyncio
 import threading
-from pprint import pprint
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from contextlib import asynccontextmanager
-from elastic_transport import ObjectApiResponse
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import BadRequestError

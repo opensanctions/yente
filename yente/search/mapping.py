@@ -70,14 +70,19 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
             if prop.stub:
                 continue
             copy_to = ["text"]
-            if prop.type.group is not None and prop.matchable:
+            # Do not copy properties which have been specifically 
+            # excluded from matchable types:
+            excluded = prop.type.matchable and not prop.matchable
+            # Some types (like topics) are not matchable, but we still want
+            # to facet on them.
+            if prop.type.group is not None and not excluded:
                 copy_to.append(prop.type.group)
             prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
 
     mapping = {
         "canonical_id": make_keyword(),
         "schema": make_keyword(),
-        "caption": make_field("keyword", copy_to=["names", "text"]),
+        "caption": make_field("keyword"),
         "datasets": make_keyword(),
         "referents": make_keyword(),
         "target": make_field("boolean"),
