@@ -6,7 +6,7 @@ from Levenshtein import distance  # type: ignore
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
-from typing import AsyncGenerator, Dict, List, Set, cast
+from typing import AsyncGenerator, Dict, List, Optional, Set, cast
 from followthemoney.types import registry
 
 
@@ -30,11 +30,16 @@ def expand_dates(dates: List[str]) -> List[str]:
     return list(expanded)
 
 
+@lru_cache(maxsize=500)
+def fingerprint_name(name: str) -> Optional[str]:
+    return fingerprints.generate(name)
+
+
 def expand_names(names: List[str]) -> List[str]:
     """Expand names into normalized version."""
     expanded = set(names)
     for name in names:
-        fp = fingerprints.generate(name)
+        fp = fingerprint_name(name)
         if fp is not None:
             expanded.add(fp)
     return list(expanded)
@@ -46,7 +51,7 @@ def tokenize_names(names: List[str]) -> Set[str]:
     for name in names:
         name = name.lower()
         expanded.update(name.split(WS))
-        fp = fingerprints.generate(name)
+        fp = fingerprint_name(name)
         if fp is not None:
             expanded.update(fp.split(WS))
     return expanded
@@ -54,7 +59,7 @@ def tokenize_names(names: List[str]) -> Set[str]:
 
 @lru_cache(maxsize=500)
 def _compare_distance(left: str, right: str) -> int:
-    dist: int = distance(left.lower()[:250], right.lower()[:250])
+    dist: int = distance(left[:250], right[:250])
     return dist
 
 def pick_names(names: List[str], limit: int=3) -> List[str]:
@@ -69,6 +74,8 @@ def pick_names(names: List[str], limit: int=3) -> List[str]:
     if len(names) <= limit:
         return names
     picked: List[str] = []
+    fingerprinted_ = [fingerprint_name(n) for n in names]
+    names = [n for n in fingerprinted_ if n is not None]
     # Centroid:
     picked_name = registry.name.pick(names)
     if picked_name is not None:
