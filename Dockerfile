@@ -30,4 +30,4 @@ COPY . /app
 RUN pip install --no-cache-dir -q -e /app
 
 USER app:app
-CMD ["python3", "yente/server.py"]
+CMD ["yente", "serve"]

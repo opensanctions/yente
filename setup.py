@@ -29,5 +29,10 @@ setup(
             "black",
         ],
     },
+    entry_points={
+        "console_scripts": [
+            "yente = yente.cli:cli",
+        ],
+    },
     zip_safe=False,
 )
