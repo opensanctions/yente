@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq libicu-dev
           pip install -q pyicu
-          pip install -q -r requirements.txt
+          pip install -q -e ".[dev]"
       - name: Run integration tests
         run: |
           make integration-test
@@ -44,7 +44,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq libicu-dev
           pip install -q pyicu
-          pip install -q -r requirements.txt
+          pip install -q -e ".[dev]"
       - name: Run integration tests
         run: |
           make integration-test
