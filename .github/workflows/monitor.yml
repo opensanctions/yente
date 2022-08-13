@@ -27,3 +27,24 @@ jobs:
       - name: Run integration tests
         run: |
           make integration-test
+  check-test:
+    runs-on: ubuntu-latest
+    env:
+      YENTE_INTEGRATION_URL: "http://api-test.opensanctions.org/"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y -qq libicu-dev
+          pip install -q pyicu
+          pip install -q -r requirements.txt
+      - name: Run integration tests
+        run: |
+          make integration-test
