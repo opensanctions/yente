@@ -1,3 +1,4 @@
+import yaml
 import orjson
 import aiofiles
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Any, AsyncGenerator, Dict, Union
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.util import http_session
+from yente.data.util import http_session, resolve_url_type
 
 ENCODING = "utf-"
 URL = Union[AnyHttpUrl, FileUrl]
@@ -35,6 +36,18 @@ async def cached_url(url: URL, base_name: str) -> AsyncGenerator[Path, None]:
         yield out_path
     finally:
         out_path.unlink(missing_ok=True)
+
+
+async def load_yaml_url(url: str) -> Any:
+    url_ = resolve_url_type(url)
+    if isinstance(url_, Path):
+        async with aiofiles.open(url_, "r") as fh:
+            data = await fh.read()
+    else:
+        async with http_session() as client:
+            async with client.get(url) as resp:
+                data = await resp.text()
+    return yaml.safe_load(data)
 
 
 async def load_json_lines(path: Path) -> AsyncGenerator[Any, None]:
