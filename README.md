@@ -64,7 +64,7 @@ The default configuration of `yente` will index and expose the datasets publishe
 
 Side note: A **dataset** in `yente` contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
 
-Defining these extra indexing options is handled via a YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). An example manifest might look like this:
+Defining these extra indexing options is handled via a YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). The manifest file can also be configured as a HTTP/HTTPS URL which the yente application will download upon startup. An example manifest might look like this:
 
 ```yaml
 # Schedule is a crontab specification. Set it to `null` to disable automatic updates
