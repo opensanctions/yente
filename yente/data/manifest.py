@@ -1,27 +1,25 @@
-import yaml
 from typing import List, Optional
-from pydantic import BaseModel, AnyHttpUrl
+from pydantic import BaseModel
 
 from yente import settings
 from yente.data.dataset import DatasetManifest
+from yente.data.loader import load_yaml_url
 from yente.data.statements import StatementManifest
-from yente.data.util import http_session, iso_to_version
+from yente.data.util import iso_to_version
 
 
 class ExternalManifest(BaseModel):
     """OpenSanctions is not one dataset but a whole collection, so this
     side-loads it into the yente dataset archive."""
 
-    url: AnyHttpUrl
+    url: str
     type: str = "opensanctions"
     scope: str
     namespace: bool = False
 
     async def fetch(self, manifest: "Manifest") -> None:
         assert self.type == "opensanctions"
-        async with http_session() as client:
-            async with client.get(self.url) as resp:
-                data = await resp.json()
+        data = await load_yaml_url(self.url)
 
         for ds in data["datasets"]:
             datasets = ds.get("sources", [])
@@ -56,11 +54,7 @@ class Manifest(BaseModel):
 
     @classmethod
     async def load(cls) -> "Manifest":
-        if not settings.MANIFEST.is_file():
-            msg = "Manifest file does not exist: %s" % settings.MANIFEST
-            raise RuntimeError(msg)
-        with open(settings.MANIFEST, "r") as fh:
-            data = yaml.safe_load(fh)
+        data = await load_yaml_url(settings.MANIFEST)
         manifest = cls.parse_obj(data)
         if manifest.external is not None:
             await manifest.external.fetch(manifest)

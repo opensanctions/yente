@@ -85,8 +85,8 @@ TAGS: List[Dict[str, Any]] = [
 TESTING = False
 DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
-MANIFEST = Path(__file__).parent.parent / "manifests/default.yml"
-MANIFEST = Path(env_str("YENTE_MANIFEST") or MANIFEST).resolve()
+MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
+MANIFEST = env_str("YENTE_MANIFEST") or str(MANIFEST_DEFAULT_PATH)
 MANIFEST_CRONTAB = env_str("YENTE_MANIFEST_CRONTAB")
 
 CRON_UPDATE: Optional[Cron] = None

@@ -1,4 +1,6 @@
+from pathlib import Path
 from functools import lru_cache
+from urllib.parse import urlparse
 import fingerprints
 from normality import WS
 from datetime import datetime
@@ -6,7 +8,7 @@ from Levenshtein import distance  # type: ignore
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
-from typing import AsyncGenerator, Dict, List, Optional, Set, cast
+from typing import AsyncGenerator, Dict, List, Optional, Set, Union
 from followthemoney.types import registry
 
 
@@ -96,6 +98,19 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
         picked.append(pick)
 
     return picked
+
+
+def resolve_url_type(url: str) -> Union[Path, str]:
+    """Check if a given path is local or remote and return a parsed form."""
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    if scheme in ('http', 'https'):
+        return url
+    if parsed.path:
+        path = Path(parsed.path).resolve()
+        if path.exists():
+            return path
+    raise RuntimeError("Cannot open resource: %s" % url)
 
 
 @asynccontextmanager
