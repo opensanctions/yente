@@ -4,10 +4,12 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from followthemoney.types.name import NameType
 
+from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.util import tokenize_names, pick_names
 from yente.search.mapping import TEXT_TYPES
 
+log = get_logger(__name__)
 FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
 
@@ -90,11 +92,13 @@ def text_query(
             "query_string": {
                 "query": query,
                 "fields": ["names^3", "text"],
-                "default_operator": "and",
+                "default_operator": "AND",
                 "fuzziness": "AUTO" if fuzzy else 0,
+                "analyzer": "osa-analyzer",
                 "lenient": fuzzy,
             }
         }
+        # log.info("Query", should=should)
     return filter_query([should], dataset=dataset, schema=schema, filters=filters)
 
 
