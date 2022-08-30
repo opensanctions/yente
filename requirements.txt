@@ -4,7 +4,7 @@ asyncstdlib==3.10.5
 aiocron==1.8
 aiocsv==1.2.2
 aiofiles==0.8.0
-types-aiofiles==0.8.10
+types-aiofiles==0.8.11
 aiohttp[speedups]==3.8.1
 elasticsearch[async]==8.4.0
 fastapi==0.81.0
