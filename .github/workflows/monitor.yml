@@ -9,7 +9,7 @@ jobs:
   check-prod:
     runs-on: ubuntu-latest
     env:
-      YENTE_INTEGRATION_URL: "http://api.opensanctions.org/"
+      YENTE_INTEGRATION_URL: "https://api.opensanctions.org/"
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -30,7 +30,7 @@ jobs:
   check-test:
     runs-on: ubuntu-latest
     env:
-      YENTE_INTEGRATION_URL: "http://api-test.opensanctions.org/"
+      YENTE_INTEGRATION_URL: "https://api-test.opensanctions.org/"
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
