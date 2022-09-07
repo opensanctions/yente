@@ -20,6 +20,6 @@ click==8.0.4
 
 normality==2.4.0
 languagecodes==1.1.1
-countrynames==1.13.3
+countrynames==1.14.0
 fingerprints==1.0.3
 pantomime==0.5.1
