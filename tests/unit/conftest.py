@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from yente import settings
-from yente.app import app
+from yente.app import create_app
 
 
 run_id = uuid4().hex
@@ -17,6 +17,7 @@ settings.ENTITY_INDEX = f"{settings.ES_INDEX}-entities"
 settings.STATEMENT_INDEX = f"{settings.ES_INDEX}-statements"
 settings.STATEMENT_API = False
 
+app = create_app()
 client = TestClient(app)
 
 

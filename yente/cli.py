@@ -4,7 +4,7 @@ from typing import Any
 from uvicorn import Config, Server  # type: ignore
 
 from yente import settings
-from yente.app import app
+from yente.app import create_app
 from yente.logs import configure_logging, get_logger
 from yente.search.base import get_es
 from yente.search.indexer import update_index
@@ -20,6 +20,7 @@ def cli() -> None:
 
 @cli.command("serve", help="Run uvicorn and serve requests")
 def serve() -> None:
+    app = create_app()
     server = Server(
         Config(
             app,

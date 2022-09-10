@@ -16,25 +16,6 @@ from yente.logs import get_logger
 from yente.routers import reconcile, search, statements, admin
 
 log = get_logger("yente")
-app = FastAPI(
-    title=settings.TITLE,
-    description=settings.DESCRIPTION,
-    version=settings.VERSION,
-    contact=settings.CONTACT,
-    openapi_tags=settings.TAGS,
-    redoc_url="/",
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.include_router(search.router)
-app.include_router(reconcile.router)
-app.include_router(statements.router)
-app.include_router(admin.router)
 
 
 def get_user_id(headers: Headers) -> Optional[str]:
@@ -50,7 +31,6 @@ def get_user_id(headers: Headers) -> Optional[str]:
     return user_id
 
 
-@app.middleware("http")
 async def request_middleware(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
@@ -87,13 +67,38 @@ async def request_middleware(
     return response
 
 
-@app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError) -> Response:
     log.error(f"Search error {exc.status_code}: {exc.message}")
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
-@app.exception_handler(TransportError)
 async def transport_error_handler(request: Request, exc: TransportError) -> Response:
     log.error(f"Transport: {exc.message}")
     return JSONResponse(status_code=500, content={"detail": exc.message})
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title=settings.TITLE,
+        description=settings.DESCRIPTION,
+        version=settings.VERSION,
+        contact=settings.CONTACT,
+        openapi_tags=settings.TAGS,
+        redoc_url="/",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.middleware("http")(request_middleware)
+    app.include_router(search.router)
+    app.include_router(reconcile.router)
+    app.include_router(statements.router)
+    app.include_router(admin.router)
+
+    app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(TransportError, transport_error_handler)
+    return app
