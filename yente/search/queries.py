@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, Generator, List, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
@@ -120,15 +120,21 @@ def facet_aggregations(fields: List[str] = []) -> Clause:
     return aggs
 
 
-def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:
-    """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
-    objs: List[Any] = []
+def iter_sorts(sorts: List[str]) -> Generator[Tuple[str, str], None, None]:
     for sort in sorts:
         order = "asc"
         if ":" in sort:
             sort, order = sort.rsplit(":", 1)
-        obj = {sort: {"order": order, "missing": "_last"}}
-        objs.append(obj)
+        if order not in ["asc", "desc"]:
+            order = "asc"
+        yield sort, order
+
+
+def parse_sorts(sorts: List[str], default: Optional[str] = "_score") -> List[Any]:
+    """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
+    objs: List[Any] = []
+    for sort, order in iter_sorts(sorts):
+        objs.append({sort: {"order": order, "missing": "_last"}})
     if default is not None:
         objs.append(default)
     return objs

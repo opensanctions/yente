@@ -1,0 +1,3 @@
+include README.md
+include yente/py.typed
+include yente/resources/favicon.ico

@@ -46,6 +46,16 @@ jobs:
       - name: Run pytest
         run: |
           pytest -v tests/unit
+      # - name: Build a distribution
+      #   run: |
+      #     python setup.py sdist bdist_wheel
+      # - name: Publish a Python distribution to PyPI
+      #   if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+      #   uses: pypa/gh-action-pypi-publish@master
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.pypi_password }}
+      #     skip_existing: true
 
   build:
     runs-on: ubuntu-latest
