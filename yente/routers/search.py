@@ -108,6 +108,7 @@ async def search(
     },
 )
 async def match(
+    response: Response,
     match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
     limit: int = Query(
@@ -200,12 +201,12 @@ async def match(
         raise HTTPException(400, detail="No queries provided.")
     results = await asyncio.gather(*queries)
 
-    for (name, entity), response in zip(entities, results):
-        ents = result_entities(response)
+    for (name, entity), resp in zip(entities, results):
+        ents = result_entities(resp)
         scored = score_results(
             entity, ents, threshold=threshold, cutoff=cutoff, limit=limit
         )
-        total = result_total(response)
+        total = result_total(resp)
         log.info(
             f"/match/{ds.name}",
             action="match",
@@ -219,6 +220,7 @@ async def match(
             query=entity.to_dict(),
         )
     matcher = explain_matcher()
+    response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(responses=responses, matcher=matcher, limit=limit)
 
 

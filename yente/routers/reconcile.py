@@ -3,7 +3,7 @@ import asyncio
 from urllib.parse import urljoin
 from typing import Any, Coroutine, Dict, List, Tuple
 from fastapi import APIRouter, Query, Form
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
@@ -99,13 +99,16 @@ async def reconcile(
     },
 )
 async def reconcile_post(
+    response: Response,
     dataset: str = PATH_DATASET,
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
 ) -> Dict[str, FreebaseEntityResult]:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     ds = await get_dataset(dataset)
-    return await reconcile_queries(ds, queries)
+    resp = await reconcile_queries(ds, queries)
+    response.headers["x-batch-size"] = str(len(resp))
+    return resp
 
 
 async def reconcile_queries(
