@@ -22,13 +22,13 @@ CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
 TITLE = env_str("YENTE_TITLE") or "yente"
 DESCRIPTION = """
-The OpenSanctions Match-making API provides tools that help you determine if any
-of the people or companies mentioned in your data are subject to international
-sanctions, known to be involved in criminal activity, or if they are politically
-exposed people.
+The yente API provides endpoints that help you determine if any of the people or
+companies mentioned in your data are subject to international sanctions, known
+to be involved in criminal activity, or if they are politically exposed people.
 
-**IMPORTANT: This open source API is intended to be operated on-premises in your
-infrastructure. Read below on deploying your own instance.**
+`yente` is the open source basis for the OpenSanctions SaaS API. Its matching
+and entity retrieval functionality is identical to the hosted API, but it does
+not include functionality for metered accounting of API requests.
 
 In this service, there is support for the following operations:
 
@@ -42,11 +42,11 @@ control.
 
 Further reading:
 
+* [Self-hosted OpenSanctions](https://www.opensanctions.org/docs/self-hosted/)
 * [Install and deployment](https://github.com/opensanctions/yente/blob/main/README.md)
 * Intro to the [entity data model](https://www.opensanctions.org/docs/entities/)
 * Tutorial: [Using the matching API to do KYC-style checks](https://www.opensanctions.org/articles/2022-02-01-matching-api/)
 * [Data dictionary](https://opensanctions.org/reference/)
-* Advanced: [statement-based data model](https://www.opensanctions.org/docs/statements/)
 """
 
 TAGS: List[Dict[str, Any]] = [
@@ -96,7 +96,6 @@ DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 
 BASE_SCHEMA = "Thing"
-STATEMENT_API = as_bool(env_str("YENTE_STATEMENT_API", "false"))
 PORT = int(env_str("YENTE_PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {
@@ -123,7 +122,6 @@ ES_SNIFF = as_bool(env_str("YENTE_ELASTICSEARCH_SNIFF") or "false")
 ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS") or "1")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
-STATEMENT_INDEX = f"{ES_INDEX}-statements"
 INDEX_VERSION = "002"
 
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))

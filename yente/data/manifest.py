@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from yente import settings
 from yente.data.dataset import DatasetManifest
 from yente.data.loader import load_yaml_url
-from yente.data.statements import StatementManifest
 from yente.data.util import iso_to_version
 
 
@@ -38,19 +37,11 @@ class ExternalManifest(BaseModel):
                         dataset.url = resource["url"]
             manifest.datasets.append(dataset)
 
-        stmt = StatementManifest(
-            name=self.type,
-            url=data["statements_url"],
-            version=iso_to_version(data["run_time"]),
-        )
-        manifest.statements.append(stmt)
-
 
 class Manifest(BaseModel):
     schedule: Optional[str] = None
     external: Optional[ExternalManifest] = None
     datasets: List[DatasetManifest] = []
-    statements: List[StatementManifest] = []
 
     @classmethod
     async def load(cls) -> "Manifest":

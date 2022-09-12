@@ -1,7 +1,7 @@
 import json
 from typing import Generator, Set, Union
 from typing import Any, Dict, List, Optional
-from elasticsearch import ConnectionTimeout, TransportError, ApiError
+from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
 from elastic_transport import ObjectApiResponse
 from fastapi import HTTPException
