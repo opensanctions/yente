@@ -62,6 +62,11 @@ async def reconcile(
     ds = await get_dataset(dataset)
     base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
     schemata = await get_matchable_schemata(ds)
+    # Pass on query string (useful for API keys)
+    query_string = request.url.query.strip()
+    if len(query_string):
+        query_string = f"?{query_string}"
+
     return FreebaseManifest(
         versions=["0.2"],
         name=f"{ds.title} ({settings.TITLE})",
@@ -75,13 +80,13 @@ async def reconcile(
         ),
         suggest=FreebaseManifestSuggest(
             entity=FreebaseManifestSuggestType(
-                service_url=base_url, service_path="/suggest/entity"
+                service_url=base_url, service_path=f"/suggest/entity{query_string}"
             ),
             type=FreebaseManifestSuggestType(
-                service_url=base_url, service_path="/suggest/type"
+                service_url=base_url, service_path=f"/suggest/type{query_string}"
             ),
             property=FreebaseManifestSuggestType(
-                service_url=base_url, service_path="/suggest/property"
+                service_url=base_url, service_path=f"/suggest/property{query_string}"
             ),
         ),
         defaultTypes=[FreebaseType.from_schema(s) for s in schemata],
