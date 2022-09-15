@@ -7,7 +7,7 @@ aiofiles==22.1.0
 types-aiofiles==22.1.0
 aiohttp[speedups]==3.8.1
 elasticsearch[async]==8.4.1
-fastapi==0.83.0
+fastapi==0.84.0
 uvicorn[standard]==0.18.3
 python-multipart==0.0.5
 email-validator==1.2.1
