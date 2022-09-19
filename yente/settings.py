@@ -52,7 +52,7 @@ Further reading:
 TAGS: List[Dict[str, Any]] = [
     {
         "name": "Matching",
-        "description": "Services that enable driving a user-facing entity search or"
+        "description": "Endpoints for conducting a user-facing entity search or"
         "matching a local data store against the given dataset.",
         "externalDocs": {
             "description": "Data dictionary",
@@ -68,14 +68,18 @@ TAGS: List[Dict[str, Any]] = [
         "name": "Data access",
         "description": "Endpoints for fetching data from the API, either related to "
         "individual entities, or for bulk data access in various forms.",
+        "externalDocs": {
+            "description": "Data dictionary",
+            "url": "https://opensanctions.org/reference/",
+        },
     },
     {
         "name": "Reconciliation",
         "description": "The Reconciliation Service provides four separate endpoints"
         "that work in concert to implement the data matching API used by OpenRefine, "
-        "Wikidata and several other services and utilities. Point ",
+        "Wikidata and several other services and utilities.",
         "externalDocs": {
-            "description": "Community specification",
+            "description": "W3C Community API specification",
             "url": "https://reconciliation-api.github.io/specs/latest/",
         },
     },

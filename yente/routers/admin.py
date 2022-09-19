@@ -72,7 +72,7 @@ async def readyz() -> StatusResponse:
 @router.get(
     "/manifest",
     summary="Dataset manifest",
-    tags=["System information"],
+    tags=["Data access"],
     response_model=Manifest,
 )
 async def manifest() -> Manifest:

@@ -55,7 +55,10 @@ async def reconcile(
 ) -> FreebaseManifest:
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
-    [OpenRefine](https://openrefine.org).
+    [OpenRefine](https://openrefine.org). The reconciliation API uses the same
+    search and matching functions as the matching API and will also produce 
+    scores that reflect additional properties like country or date of birth, if
+    specified. 
 
     Tutorial: [Using OpenRefine to match entities in a spreadsheet](https://www.opensanctions.org/articles/2022-01-10-openrefine-reconciliation/).
     """

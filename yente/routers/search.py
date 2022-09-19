@@ -53,7 +53,11 @@ async def search(
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
-    entity matching, the multi-property matching API should be used instead."""
+    entity matching, the multi-property matching API should be used instead.
+    
+    Search queries can use the [ElasticSearch Query string syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
+    to perform field-specific searches, wildcard and fuzzy searches.
+    """
     limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
     all_datasets = await get_datasets()
@@ -241,7 +245,9 @@ async def fetch_entity(
 ) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
-    passport, sanction and associated entities) included.
+    passport, sanction and associated entities) included. If the entity ID
+    has been merged into a different canonical entity, an HTTP redirect will
+    be triggered.
 
     Intro: [entity data model](https://www.opensanctions.org/docs/entities/).
     """
