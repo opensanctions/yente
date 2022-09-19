@@ -28,5 +28,6 @@ def match_url(service_url) -> str:
 @pytest.fixture(scope="session")
 def http() -> str:
     session = requests.Session()
-    session.headers["Authorization"] = "Token integration-test"
+    api_key = os.environ.get("YENTE_INTEGRATION_API_KEY", "none")
+    session.headers["Authorization"] = f"ApiKey {api_key}"
     return session

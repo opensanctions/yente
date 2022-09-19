@@ -13,10 +13,9 @@ from followthemoney.types.name import NameType
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.statements import StatementManifest
 from yente.data import refresh_manifest, get_datasets, get_manifest
 from yente.search.base import get_es, close_es
-from yente.search.mapping import make_entity_mapping, make_statement_mapping
+from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
 from yente.data.util import expand_dates, expand_names
 
@@ -48,17 +47,6 @@ async def entity_docs(
                 continue
             body = {"canonical_id": entity.id}
             yield {"_index": index, "_id": referent, "_source": body}
-
-
-async def statement_docs(
-    manifest: StatementManifest, index: str
-) -> AsyncGenerator[Dict[str, Any], None]:
-    idx = 0
-    async for stmt in manifest.load():
-        if idx % 10000 == 0 and idx > 0:
-            log.info("Index: %d statements..." % idx, index=index)
-        yield stmt.to_doc(index)
-        idx += 1
 
 
 def make_version(version: Optional[str]) -> str:
@@ -150,34 +138,6 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
             await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
 
 
-async def index_statements(
-    es: AsyncElasticsearch, manifest: StatementManifest, force: bool
-) -> None:
-    if not settings.STATEMENT_API:
-        log.warning("Statement API is disabled, not indexing statements.")
-        return
-
-    version = make_version(manifest.version)
-    log.info(
-        "Indexing statements",
-        name=manifest.name,
-        url=manifest.url,
-        version=version,
-    )
-    mapping = make_statement_mapping()
-    async with versioned_index(
-        es,
-        settings.STATEMENT_INDEX,
-        manifest.name,
-        version,
-        mapping,
-        force=force,
-    ) as next_index:
-        if next_index is not None:
-            docs = statement_docs(manifest, next_index)
-            await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
-
-
 async def update_index(force: bool = False) -> None:
     es_ = await get_es()
     es = es_.options(request_timeout=300)
@@ -190,8 +150,6 @@ async def update_index(force: bool = False) -> None:
         for dataset in datasets.values():
             if dataset.is_loadable:
                 indexers.append(index_entities(es, dataset, force))
-        for stmt in manifest.statements:
-            indexers.append(index_statements(es, stmt, force))
         await asyncio.gather(*indexers)
         log.info("Index update complete.")
     finally:

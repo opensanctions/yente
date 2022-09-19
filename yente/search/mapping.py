@@ -107,25 +107,3 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "properties": mapping,
         "_source": {"excludes": drop_fields},
     }
-
-
-def make_statement_mapping() -> Dict[str, Any]:
-    mapping = {
-        "canonical_id": make_keyword(),
-        "entity_id": make_keyword(),
-        "prop": make_keyword(),
-        "prop_type": make_keyword(),
-        "schema": make_keyword(),
-        "value": {
-            "type": "keyword",
-            "fields": {"text": {"type": "text", "analyzer": "osa-analyzer"}},
-        },
-        "dataset": make_keyword(),
-        "target": {"type": "boolean"},
-        "last_seen": make_field("date", format=DATE_FORMAT),
-        "first_seen": make_field("date", format=DATE_FORMAT),
-    }
-    return {
-        "dynamic": "strict",
-        "properties": mapping,
-    }

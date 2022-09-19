@@ -1,11 +1,12 @@
 # yente
 
-`yente` is the OpenSanctions match-making API. The service exposes HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies and vessels that are subject to international sanctions. 
+`yente` is an open source data match-making API. The service exposes HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies and vessels that are subject to international sanctions. 
 
 The API is built to provide access to OpenSanctions data, it can also be used to search and match other data, such as the [ICIJ OffshoreLeaks](https://github.com/opensanctions/icij-offshoreleaks/blob/master/README.md).
 
-While `yente` powers the [OpenSanctions API](https://api.opensanctions.org), it can also be run on-premises as a KYC appliance so that no customer data leaves the deployment context. The software is distributed as a Docker image with a pre-defined `docker-compose.yml` configuration that also provisions the requisite ElasticSearch index.
+While `yente` is the open source core code base for the [OpenSanctions API](https://api.opensanctions.org), it can also be run on-premises as a KYC appliance so that no customer data leaves the deployment context. The software is distributed as a Docker image with a pre-defined `docker-compose.yml` configuration that also provisions the requisite ElasticSearch index.
 
+* [Self-hosted OpenSanctions API](https://www.opensanctions.org/docs/self-hosted/)
 * [Documentation](https://www.opensanctions.org/docs/api/)
   * [OpenAPI/ReDoc specification](https://api.opensanctions.org)
   * [Matching system](https://www.opensanctions.org/matcher/)
@@ -14,7 +15,7 @@ While `yente` powers the [OpenSanctions API](https://api.opensanctions.org), it 
 
 ## Usage
 
-*Please [contact the OpenSanctions team](https://www.opensanctions.org/contact/) if you prefer to use this API as a hosted service (SaaS).*
+**If you prefer a hosted (Software-as-a-Service, SaaS) API, check out the [OpenSanctions API](https://www.opensanctions.org/docs/api/).**
 
 In order to deploy `yente` on your own servers, we recommend you use `docker-compose` (or another Docker orchestration tool) to pull and run the pre-built containers. For example, you can download the `docker-compose.yml` in the repository and use it to boot an instance of the system:
 
@@ -117,16 +118,6 @@ datasets:
 ```
 
 In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) using the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
-
-### Using the Statement API
-
-The primary goal of the API is to serve entity-based data, but it also supports an endpoint to browse OpenSanctions data in its [statement-based form](https://www.opensanctions.org/docs/statements/). This exists in order to provide a backend for the [raw data explorer](https://www.opensanctions.org/statements/) on the OpenSanctions.org site.
-
-**NOTE:** If you wish to fetch statements data in bulk, download the [CSV export](https://www.opensanctions.org/docs/statements/) instead of using this endpoint.
-
-Because indexing and exposing the statement data makes no sense for on-premises deployments, it is disabled by default. You can use the environment variable ``YENTE_STATEMENT_API`` in order to enable the `/statements` endpoint.
-
-**WARNING:** The statement API is experimental and may be moved to a separate code base in the future.
 
 ## Development
 

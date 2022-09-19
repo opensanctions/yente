@@ -2,7 +2,6 @@ import yaml
 import orjson
 import aiofiles
 from pathlib import Path
-from aiocsv import AsyncDictReader  # type: ignore
 from pydantic import AnyHttpUrl, FileUrl
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Union
@@ -54,9 +53,3 @@ async def load_json_lines(path: Path) -> AsyncGenerator[Any, None]:
     async with aiofiles.open(path, "rb") as fh:
         async for line in fh:
             yield orjson.loads(line)
-
-
-async def load_csv_rows(path: Path) -> AsyncGenerator[Dict[str, str], None]:
-    async with aiofiles.open(path, "r", encoding="utf8") as fh:
-        async for row in AsyncDictReader(fh):
-            yield row
