@@ -42,19 +42,18 @@ async def search(
     q: str = Query("", title="Query text"),
     dataset: str = PATH_DATASET,
     schema: str = Query(settings.BASE_SCHEMA, title="Types of entities that can match"),
-    countries: List[str] = Query([], title="Filter by country code"),
+    countries: List[str] = Query([], title="Filter by country codes"),
     topics: List[str] = Query([], title="Filter by entity topics"),
     datasets: List[str] = Query([], title="Filter by data sources"),
     limit: int = Query(10, title="Number of results to return", le=settings.MAX_PAGE),
     offset: int = Query(0, title="Start at result", le=settings.MAX_OFFSET),
-    fuzzy: bool = Query(False, title="Enable fuzzy matching"),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead.
-    
+
     Search queries can use the [ElasticSearch Query string syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
     to perform field-specific searches, wildcard and fuzzy searches.
     """
@@ -71,7 +70,7 @@ async def search(
     }
     if target is not None:
         filters["target"] = target
-    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
+    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=True)
     aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await search_entities(
         query,
@@ -121,9 +120,13 @@ async def match(
         le=settings.MAX_MATCHES,
     ),
     threshold: float = Query(
-        settings.SCORE_THRESHOLD, title="Threshold score for matches"
+        settings.SCORE_THRESHOLD,
+        title="Score threshold for results to be considered matches",
     ),
-    cutoff: float = Query(settings.SCORE_CUTOFF, title="Cutoff score for matches"),
+    cutoff: float = Query(
+        settings.SCORE_CUTOFF,
+        title="Lower bound of score for results to be returned at all",
+    ),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each

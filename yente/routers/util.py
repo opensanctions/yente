@@ -7,7 +7,7 @@ from yente.data import get_datasets
 
 PATH_DATASET = Path(
     "default",
-    description="Data source or collection name",
+    description="Data source or collection name to be queries",
     example="default",
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")

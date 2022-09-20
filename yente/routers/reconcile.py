@@ -41,7 +41,7 @@ router = APIRouter()
 
 @router.get(
     "/reconcile/{dataset}",
-    summary="Reconciliation info",
+    summary="Reconciliation manifest",
     tags=["Reconciliation"],
     response_model=FreebaseManifest,
     responses={
@@ -56,9 +56,9 @@ async def reconcile(
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
     [OpenRefine](https://openrefine.org). The reconciliation API uses the same
-    search and matching functions as the matching API and will also produce 
+    search and matching functions as the matching API and will also produce
     scores that reflect additional properties like country or date of birth, if
-    specified. 
+    specified.
 
     Tutorial: [Using OpenRefine to match entities in a spreadsheet](https://www.opensanctions.org/articles/2022-01-10-openrefine-reconciliation/).
     """
