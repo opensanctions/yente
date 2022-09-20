@@ -105,6 +105,7 @@ async def reconcile(
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
+    include_in_schema=False,
 )
 async def reconcile_post(
     response: Response,
@@ -179,6 +180,7 @@ async def reconcile_query(
     responses={
         500: {"model": ErrorResponse, "description": "Server error"},
     },
+    include_in_schema=False,
 )
 async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
@@ -217,6 +219,7 @@ async def reconcile_suggest_entity(
     summary="Suggest property",
     tags=["Reconciliation"],
     response_model=FreebasePropertySuggestResponse,
+    include_in_schema=False,
 )
 async def reconcile_suggest_property(
     dataset: str = PATH_DATASET,
@@ -244,6 +247,7 @@ async def reconcile_suggest_property(
     summary="Suggest type (schema)",
     tags=["Reconciliation"],
     response_model=FreebaseTypeSuggestResponse,
+    include_in_schema=False,
 )
 async def reconcile_suggest_type(
     dataset: str = PATH_DATASET,

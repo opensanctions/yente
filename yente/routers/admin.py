@@ -62,7 +62,8 @@ async def healthz() -> StatusResponse:
     responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
 )
 async def readyz() -> StatusResponse:
-    """Search index health check. This is used to know if the service has completed its index building."""
+    """Search index health check. This is used to know if the service has completed
+    its index building."""
     ok = await get_index_status(index=settings.ENTITY_INDEX)
     if not ok:
         raise HTTPException(503, detail="Index not ready.")
@@ -76,7 +77,11 @@ async def readyz() -> StatusResponse:
     response_model=Manifest,
 )
 async def manifest() -> Manifest:
-    """Return the service manifest, including the list of all indexed datasets."""
+    """Return the service manifest, which includes a list of all indexed datasets.
+
+    The manifest is the configuration file of the yente service. It specifies what
+    data sources are included, and how often they should be loaded.
+    """
     return await get_manifest()
 
 

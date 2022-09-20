@@ -41,12 +41,18 @@ async def search(
     response: Response,
     q: str = Query("", title="Query text"),
     dataset: str = PATH_DATASET,
-    schema: str = Query(settings.BASE_SCHEMA, title="Types of entities that can match"),
+    schema: str = Query(
+        settings.BASE_SCHEMA, title="Types of entities that can match the search"
+    ),
     countries: List[str] = Query([], title="Filter by country codes"),
-    topics: List[str] = Query([], title="Filter by entity topics"),
+    topics: List[str] = Query(
+        [], title="Filter by entity topics (e.g. sanction, role.pep)"
+    ),
     datasets: List[str] = Query([], title="Filter by data sources"),
     limit: int = Query(10, title="Number of results to return", le=settings.MAX_PAGE),
-    offset: int = Query(0, title="Start at result", le=settings.MAX_OFFSET),
+    offset: int = Query(
+        0, title="Start at result with given offset", le=settings.MAX_OFFSET
+    ),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
 ) -> SearchResponse:
@@ -236,7 +242,7 @@ async def match(
     tags=["Data access"],
     response_model=EntityResponse,
     responses={
-        307: {"description": "The entity is merged into another ID"},
+        307: {"description": "The entity was merged into another ID"},
         404: {"model": ErrorResponse, "description": "Entity not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
@@ -244,7 +250,10 @@ async def match(
 async def fetch_entity(
     response: Response,
     entity_id: str = Path(None, description="ID of the entity to retrieve"),
-    nested: bool = Query(True, title="Include adjacent entities in response"),
+    nested: bool = Query(
+        True,
+        title="Include adjacent entities (e.g. addresses, family, subsidiaries) in response",
+    ),
 ) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent

@@ -11,7 +11,7 @@ EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
 
 class ErrorResponse(BaseModel):
-    detail: str
+    detail: str = Field(..., example="Detailed error message")
 
 
 class EntityResponse(BaseModel):
@@ -73,24 +73,24 @@ class StatusResponse(BaseModel):
 
 
 class SearchFacetItem(BaseModel):
-    name: str
-    label: str
-    count: int = 1
+    name: str = Field(..., example="ru")
+    label: str = Field(..., example="Russia")
+    count: int = Field(1, example=42)
 
 
 class SearchFacet(BaseModel):
-    label: str
+    label: str = Field(..., example="Countries")
     values: List[SearchFacetItem]
 
 
 class TotalSpec(BaseModel):
-    value: int
-    relation: str
+    value: int = Field(..., example=42)
+    relation: str = Field("eq", example="eq")
 
 
 class ResultsResponse(BaseModel):
-    limit: int
-    offset: int = 0
+    limit: int = Field(..., example=20)
+    offset: int = Field(0, example=0)
     total: TotalSpec
 
 
@@ -120,4 +120,4 @@ class EntityMatches(BaseModel):
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
     matcher: FeatureDocs
-    limit: int
+    limit: int = Field(..., example=5)
