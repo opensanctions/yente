@@ -73,11 +73,11 @@ async def reconcile(
     return FreebaseManifest(
         versions=["0.2"],
         name=f"{ds.title} ({settings.TITLE})",
-        identifierSpace="https://opensanctions.org/reference/#schema",
-        schemaSpace="https://opensanctions.org/reference/#schema",
-        view={"url": ("https://opensanctions.org/entities/{{id}}/")},
+        identifierSpace="https://www.opensanctions.org/reference/#schema",
+        schemaSpace="https://www.opensanctions.org/reference/#schema",
+        view={"url": ("https://www.opensanctions.org/entities/{{id}}/")},
         preview=FreebaseManifestPreview(
-            url="https://opensanctions.org/entities/preview/{{id}}/",
+            url="https://www.opensanctions.org/entities/preview/{{id}}/",
             width=430,
             height=600,
         ),

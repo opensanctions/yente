@@ -8,7 +8,8 @@ def test_reconcile_metadata():
     resp = client.get("/reconcile/default")
     assert resp.status_code == 200, resp.text
     data = resp.json()
-    assert "opensanctions.org" in data["identifierSpace"], data
+    url = "https://wwww.opensanctions.org"
+    assert data["identifierSpace"].startswith(url), data
     assert len(data["defaultTypes"]) > 3, data
     assert "suggest" in data, data
 
