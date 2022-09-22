@@ -5,7 +5,7 @@ aiocron==1.8
 aiocsv==1.2.2
 aiofiles==22.1.0
 types-aiofiles==22.1.0
-aiohttp[speedups]==3.8.2
+aiohttp[speedups]==3.8.3
 elasticsearch[async]==8.4.2
 fastapi==0.85.0
 uvicorn[standard]==0.18.3
