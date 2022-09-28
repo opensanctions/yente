@@ -1,0 +1,286 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: info@opensanctions.org
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yente
+  labels:
+    app: yente
+spec:
+  selector:
+    app: yente
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+---
+# Supposes you have an ingress, and ideally cert-manager installed on your
+# cluster. You should also consider running the service internally to the
+# cluster without exposing it on an ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: yente-ingress
+  annotations:
+    # you need to configure letsencrypt for your cluster:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    acme.cert-manager.io/http01-edit-in-place: "true"
+  labels:
+    app: opensanctions
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.opensanctions.org
+      secretName: tls-api.opensanctions.org
+  rules:
+    - host: api.opensanctions.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: yente
+                port:
+                  number: 8000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: yente-manifest
+data:
+  manifest.yml: |
+    schedule: null
+    external:
+      url: "https://data.opensanctions.org/datasets/latest/index.json"
+      scope: all
+    datasets: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yente
+  labels:
+    app: yente
+  annotations:
+    "cluster-autoscaler.kubernetes.io/safe-to-evict": "true"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 60%
+  selector:
+    matchLabels:
+      app: yente
+  template:
+    metadata:
+      labels:
+        app: yente
+      annotations:
+        deploy: "v1"
+    spec:
+      containers:
+        - name: yente
+          image: ghcr.io/opensanctions/yente:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              memory: 300Mi
+              cpu: 200m
+            limits:
+              memory: 300Mi
+              cpu: 200m
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - mountPath: /app/manifests/production.yml
+              name: manifest-volume
+              subPath: manifest.yml
+            - mountPath: /tmp
+              name: tmp-volume
+          env:
+            - name: YENTE_TITLE
+              value: "OpenSanctions API"
+            - name: YENTE_LOG_JSON
+              value: "true"
+            - name: YENTE_UPDATE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: api-test-secrets
+                  key: update-token
+            - name: YENTE_ELASTICSEARCH_URL
+              value: http://yente-index-es-default:9200
+            - name: YENTE_MANIFEST
+              value: /app/manifests/production.yml
+            - name: YENTE_MANIFEST_CRONTAB
+              value: "*/30 * * * *"
+            - name: YENTE_ELASTICSEARCH_INDEX
+              value: "yente"
+            - name: FORWARDED_ALLOW_IPS
+              value: "*"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 15
+      volumes:
+        - name: manifest-volume
+          configMap:
+            name: yente-manifest
+        - name: tmp-volume
+          emptyDir: {}
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: yente-pdb
+spec:
+  maxUnavailable: 60%
+  selector:
+    matchLabels:
+      app: yente
+---
+# This separates the re-indexing job from the API workers so that a crash in the
+# API service can never lead to a failure to re-index.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: yente-indexer
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            deploy: "v1"
+        spec:
+          containers:
+            - name: yente
+              image: ghcr.io/opensanctions/yente:latest
+              imagePullPolicy: Always
+              command:
+                - yente
+                - reindex
+              resources:
+                requests:
+                  memory: 300M
+                  cpu: 400m
+                limits:
+                  memory: 300M
+                  cpu: 400m
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+              volumeMounts:
+                - mountPath: /app/manifests/production.yml
+                  name: manifest-volume
+                  subPath: manifest.yml
+                - mountPath: /tmp
+                  name: tmp-volume
+              env:
+                - name: YENTE_LOG_JSON
+                  value: "true"
+                - name: YENTE_ELASTICSEARCH_URL
+                  value: http://yente-index-es-default:9200
+                - name: YENTE_MANIFEST
+                  value: /app/manifests/production.yml
+                - name: YENTE_ELASTICSEARCH_INDEX
+                  value: "prod"
+          restartPolicy: OnFailure
+          volumes:
+            - name: manifest-volume
+              configMap:
+                name: yente-manifest
+            - name: tmp-volume
+              emptyDir: {}
+---
+# Use the ElasticSearch Kubernetes Operator:
+#
+# helm upgrade --install elastic-operator elastic/eck-operator \
+# 		--namespace elastic-system --create-namespace
+#
+# kubectl port-forward service/yente-index-es-http 9200 9200
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: yente-index
+spec:
+  version: 8.2.2
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  nodeSets:
+    - name: default
+      count: 3
+      config:
+        node.store.allow_mmap: false
+        xpack.security.enabled: false
+        # xpack.security.authc:
+        #   anonymous:
+        #     username: anonymous
+        #     roles: superuser
+        #     authz_exception: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 1500Mi
+                  cpu: 2000m
+                limits:
+                  memory: 1500Mi
+                  cpu: 2000m
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+            storageClassName: premium-rwo
+  podDisruptionBudget:
+    spec:
+      minAvailable: 2
+      selector:
+        matchLabels:
+          elasticsearch.k8s.elastic.co/cluster-name: yente-index
