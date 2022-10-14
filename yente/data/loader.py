@@ -4,7 +4,7 @@ import aiofiles
 from pathlib import Path
 from pydantic import AnyHttpUrl, FileUrl
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, Union
+from typing import Any, AsyncGenerator, Dict, Tuple, Union
 
 from yente import settings
 from yente.logs import get_logger
@@ -17,24 +17,19 @@ BUFFER = 10 * 1024 * 1024
 log = get_logger(__name__)
 
 
-@asynccontextmanager
-async def cached_url(url: URL, base_name: str) -> AsyncGenerator[Path, None]:
+async def get_url_path(url: URL, base_name: str) -> Tuple[Path, bool]:
     if isinstance(url, FileUrl):
         if url.path is None:
             raise ValueError("Invalid path: %s" % url)
-        yield Path(url.path).resolve()
-        return
+        return Path(url.path).resolve(), True
     out_path = settings.DATA_PATH.joinpath(base_name)
-    try:
-        async with http_session() as client:
-            log.info("Fetching data", url=url, path=out_path.as_uri())
-            async with client.get(str(url)) as resp:
-                async with aiofiles.open(out_path, "wb") as outfh:
-                    while chunk := await resp.content.read(BUFFER):
-                        await outfh.write(chunk)
-        yield out_path
-    finally:
-        out_path.unlink(missing_ok=True)
+    async with http_session() as client:
+        log.info("Fetching data", url=url, path=out_path.as_posix())
+        async with client.get(str(url)) as resp:
+            async with aiofiles.open(out_path, "wb") as outfh:
+                while chunk := await resp.content.read(BUFFER):
+                    await outfh.write(chunk)
+    return out_path, True
 
 
 async def load_yaml_url(url: str) -> Any:
