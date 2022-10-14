@@ -80,7 +80,6 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
             prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
 
     mapping = {
-        "canonical_id": make_keyword(),
         "schema": make_keyword(),
         "caption": make_field("keyword"),
         "datasets": make_keyword(),

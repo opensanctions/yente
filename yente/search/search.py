@@ -102,7 +102,15 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     try:
         es_ = es.options(opaque_id=get_opaque_id())
-        query = {"bool": {"filter": [{"ids": {"values": [entity_id]}}]}}
+        query = {
+            "bool": {
+                "should": [
+                    {"ids": {"values": [entity_id]}},
+                    {"term": {"referents": {"value": entity_id}}},
+                ],
+                "minimum_should_match": 1,
+            }
+        }
         async with semaphore:
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
@@ -111,9 +119,8 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
             )
         hits = response.get("hits", {})
         for hit in hits.get("hits", []):
-            _source = hit.get("_source")
-            if _source.get("canonical_id") != entity_id:
-                raise EntityRedirect(_source.get("canonical_id"))
+            if hit.get("_id") != entity_id:
+                raise EntityRedirect(hit.get("_id"))
             entity = result_entity(hit)
             if entity is not None:
                 return entity
