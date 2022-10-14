@@ -113,15 +113,15 @@ def test_search_targets():
 
 
 def test_search_sorted():
-    res = client.get("/search/default?sort=canonical_id:desc")
+    res = client.get("/search/default?sort=first_seen:desc")
     data = res.json()
     assert "results" in data, data
     results = data.get("results")
     prev_seen = None
     for res in results:
         if prev_seen is not None:
-            assert res["id"] <= prev_seen, res
-        prev_seen = res["id"]
+            assert res["first_seen"] <= prev_seen, res
+        prev_seen = res["first_seen"]
 
 
 def test_search_putin_scope():
