@@ -55,6 +55,7 @@ async def search(
     ),
     sort: List[str] = Query([], title="Sorting criteria"),
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
+    fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -76,7 +77,7 @@ async def search(
     }
     if target is not None:
         filters["target"] = target
-    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=True)
+    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy)
     aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await search_entities(
         query,
