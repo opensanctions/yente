@@ -1,7 +1,7 @@
 import click
 import asyncio
 from typing import Any
-from uvicorn import Config, Server  # type: ignore
+from uvicorn import Config, Server
 
 from yente import settings
 from yente.app import create_app
@@ -27,9 +27,9 @@ def serve() -> None:
             host="0.0.0.0",
             port=settings.PORT,
             proxy_headers=True,
-            # reload=settings.DEBUG,
+            reload=settings.DEBUG,
             # reload_dirs=[code_dir],
-            debug=settings.DEBUG,
+            # debug=settings.DEBUG,
             log_level=settings.LOG_LEVEL,
             server_header=False,
         ),

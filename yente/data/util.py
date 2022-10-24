@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import fingerprints
 from normality import WS
 from datetime import datetime
-from Levenshtein import distance  # type: ignore
+from Levenshtein import distance
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
@@ -104,7 +104,7 @@ def resolve_url_type(url: str) -> Union[Path, str]:
     """Check if a given path is local or remote and return a parsed form."""
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
-    if scheme in ('http', 'https'):
+    if scheme in ("http", "https"):
         return url
     if parsed.path:
         path = Path(parsed.path).resolve()
