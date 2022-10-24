@@ -36,7 +36,6 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get install -y -qq libicu-dev
-          pip install -q pyicu
           pip install -q -r requirements.txt
           pip install -q -e ".[dev]"
           pip freeze
