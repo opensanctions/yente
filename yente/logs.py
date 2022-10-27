@@ -43,7 +43,9 @@ def configure_logging(level: int = logging.INFO) -> None:
     else:
         formatter = ProcessorFormatter(
             foreign_pre_chain=shared_processors,
-            processor=ConsoleRenderer(),
+            processor=ConsoleRenderer(
+                exception_formatter=structlog.dev.plain_traceback
+            ),
         )
 
     processors = shared_processors + [
