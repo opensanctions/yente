@@ -91,11 +91,11 @@ async def search_entities(
             return response
     except ApiError as ae:
         log.warning(
-            f"API error {ae.status_code}: {str(ae)}",
+            f"API error {ae.status_code}: {ae.message}",
             index=settings.ENTITY_INDEX,
             query_json=json.dumps(query),
         )
-        raise HTTPException(status_code=ae.status_code, detail=ae.message)
+        raise HTTPException(status_code=ae.status_code, detail=ae.body)
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:

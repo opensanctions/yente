@@ -85,7 +85,6 @@ def text_query(
     fuzzy: bool = False,
     simple: bool = False,
 ) -> Clause:
-
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
     elif simple:
@@ -94,7 +93,6 @@ def text_query(
                 "query": query,
                 "fields": ["names^3", "text"],
                 "default_operator": "AND",
-                "fuzziness": "AUTO" if fuzzy else 0,
                 "analyzer": "osa-analyzer",
                 "lenient": True,
             }
