@@ -21,6 +21,8 @@ def test_search_no_query():
 def test_search_invalid_query():
     res = client.get("/search/default?q=invalid/query")
     assert res.status_code == 400, res
+    res = client.get("/search/default?q=invalid/query&simple=true")
+    assert res.status_code == 200, res
 
 
 def test_search_filter_schema_invalid():

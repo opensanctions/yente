@@ -83,10 +83,22 @@ def text_query(
     query: str,
     filters: FilterDict = {},
     fuzzy: bool = False,
+    simple: bool = False,
 ) -> Clause:
 
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
+    elif simple:
+        should = {
+            "simple_query_string": {
+                "query": query,
+                "fields": ["names^3", "text"],
+                "default_operator": "AND",
+                "fuzziness": "AUTO" if fuzzy else 0,
+                "analyzer": "osa-analyzer",
+                "lenient": True,
+            }
+        }
     else:
         should = {
             "query_string": {
@@ -95,7 +107,7 @@ def text_query(
                 "default_operator": "AND",
                 "fuzziness": "AUTO" if fuzzy else 0,
                 "analyzer": "osa-analyzer",
-                "lenient": fuzzy,
+                "lenient": True,
             }
         }
         # log.info("Query", should=should)
