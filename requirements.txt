@@ -1,4 +1,4 @@
-followthemoney==3.0.5
+followthemoney==3.0.8
 nomenklatura==2.5.9
 asyncstdlib==3.10.5
 aiocron==1.8
