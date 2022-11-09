@@ -1,8 +1,10 @@
+import os
 import requests
 from pprint import pprint
 
 # The OpenSanctions service API. This endpoint will only do sanctions checks.
 URL = "https://api.opensanctions.org/match/sanctions"
+API_KEY = os.environ.get("OPENSANCTIONS_API_KEY")
 
 # A query for a person with a specific name and birth date. Note multiple names given
 # in different alphabets:
@@ -28,7 +30,8 @@ EXAMPLE_2 = {
 BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2}}
 
 # Send the batch off to the API and raise an exception for a non-OK response code.
-response = requests.post(URL, json=BATCH)
+headers = {"Authorization": f"Apikey {API_KEY}"}
+response = requests.post(URL, json=BATCH, headers=headers)
 response.raise_for_status()
 
 responses = response.json().get("responses")
