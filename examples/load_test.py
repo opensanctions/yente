@@ -1,3 +1,4 @@
+import os
 import time
 import random
 import logging
@@ -11,6 +12,10 @@ session = requests.Session()
 
 HOST = "https://api-test.opensanctions.org/"
 # HOST = "http://localhost:9000/"
+API_KEY = os.environ.get("OPENSANCTIONS_API_KEY")
+if API_KEY:
+    session.headers["Authorization"] = f"Apikey {API_KEY}"
+
 QUERIES = ["vladimir putin", "hamas", "ukraine", "petr~2 aven", "bla/blubb"]
 
 ENTITY_IDS = set(["Q7747", "Q19077", "Q154797"])
