@@ -21,4 +21,4 @@ normality==2.4.0
 languagecodes==1.1.1
 countrynames==1.14.1
 fingerprints==1.0.3
-pantomime==0.5.1
+pantomime==0.5.3
