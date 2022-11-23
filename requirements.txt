@@ -1,5 +1,5 @@
 followthemoney==3.1.0
-nomenklatura==2.6.3
+nomenklatura==2.6.6
 asyncstdlib==3.10.5
 aiocron==1.8
 aiocsv==1.2.3
