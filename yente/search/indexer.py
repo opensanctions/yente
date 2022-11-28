@@ -12,7 +12,7 @@ from followthemoney.types.name import NameType
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data import refresh_manifest, get_datasets, get_manifest
+from yente.data import refresh_manifest, get_catalog
 from yente.search.base import get_es, close_es
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
@@ -113,11 +113,10 @@ async def update_index(force: bool = False) -> None:
     es = es_.options(request_timeout=300)
     try:
         await refresh_manifest()
-        manifest = await get_manifest()
-        datasets = await get_datasets()
+        catalog = await get_catalog()
         log.info("Index update check")
         indexers = []
-        for dataset in datasets.values():
+        for dataset in catalog.datasets:
             if dataset.is_loadable:
                 indexers.append(index_entities(es, dataset, force))
         await asyncio.gather(*indexers)

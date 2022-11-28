@@ -4,6 +4,7 @@ from pydantic import BaseModel, FileUrl, parse_obj_as, validator
 from functools import cached_property
 from typing import AsyncGenerator, Dict, List, Optional, Set
 from nomenklatura.dataset import Dataset as NomenklaturaDataset
+from nomenklatura.dataset import DataCatalog
 from followthemoney import model
 from followthemoney.namespace import Namespace
 
@@ -37,8 +38,8 @@ class DatasetManifest(BaseModel):
 
 
 class Dataset(NomenklaturaDataset):
-    def __init__(self, index: "Datasets", manifest: DatasetManifest):
-        super().__init__(name=manifest.name, title=manifest.title)
+    def __init__(self, catalog: DataCatalog, manifest: DatasetManifest):
+        super().__init__({"name": manifest.name, "title": manifest.title})
         self.index = index
         self.manifest = manifest
         self.version = manifest.version
@@ -80,9 +81,6 @@ class Dataset(NomenklaturaDataset):
             if self.ns is not None:
                 entity = self.ns.apply(entity)
             yield entity
-        
+
         if not keep_data:
             data_path.unlink(missing_ok=True)
-
-
-Datasets = Dict[str, Dataset]

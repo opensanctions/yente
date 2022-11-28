@@ -1,9 +1,10 @@
 import structlog
 from structlog.stdlib import BoundLogger
 from asyncstdlib.functools import cache
+from nomenklatura.dataset import DataCatalog
 
 from yente.data.manifest import Manifest
-from yente.data.dataset import Dataset, Datasets
+from yente.data.dataset import Dataset
 
 log: BoundLogger = structlog.get_logger(__name__)
 
@@ -14,16 +15,15 @@ async def get_manifest() -> Manifest:
 
 
 @cache
-async def get_datasets() -> Datasets:
+async def get_catalog() -> DataCatalog[Dataset]:
     manifest = await get_manifest()
-    datasets: Datasets = {}
+    catalog = DataCatalog(Dataset, {})
     for dmf in manifest.datasets:
-        dataset = Dataset(datasets, dmf)
-        datasets[dataset.name] = dataset
-    return datasets
+        catalog.make_dataset(dmf)
+    return catalog
 
 
 async def refresh_manifest() -> None:
     log.info("Refreshing manifest metadata...")
     get_manifest.cache_clear()
-    get_datasets.cache_clear()
+    get_catalog.cache_clear()
