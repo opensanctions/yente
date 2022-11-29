@@ -5,8 +5,9 @@ from starlette.responses import FileResponse
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data import get_manifest, refresh_manifest
+from yente.data import get_catalog, get_manifest, refresh_manifest
 from yente.data.common import ErrorResponse, StatusResponse
+from yente.data.common import DataCatalogModel
 from yente.data.manifest import Manifest
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
@@ -71,18 +72,24 @@ async def readyz() -> StatusResponse:
 
 
 @router.get(
-    "/manifest",
-    summary="Dataset manifest",
+    "/catalog",
+    summary="Data catalog",
     tags=["Data access"],
-    response_model=Manifest,
+    response_model=DataCatalogModel,
 )
-async def manifest() -> Manifest:
+@router.get(
+    "/manifest",
+    response_model=DataCatalogModel,
+    include_in_schema=False,
+)
+async def catalog() -> DataCatalogModel:
     """Return the service manifest, which includes a list of all indexed datasets.
 
     The manifest is the configuration file of the yente service. It specifies what
     data sources are included, and how often they should be loaded.
     """
-    return await get_manifest()
+    catalog = await get_catalog()
+    return DataCatalogModel.parse_obj(catalog.to_dict())
 
 
 @router.post(

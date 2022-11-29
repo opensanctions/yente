@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 from pydantic import BaseModel, Field
 from nomenklatura.matching.types import FeatureDocs
 from nomenklatura.matching.types import MatchingResult
@@ -121,3 +121,18 @@ class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
     matcher: FeatureDocs
     limit: int = Field(..., example=5)
+
+
+class DatasetModel(BaseModel):
+    name: str
+    title: str
+    summary: Optional[str]
+    url: Optional[str]
+    load: bool
+    entities_url: Optional[str]
+    version: str
+    children: List[str]
+
+
+class DataCatalogModel(BaseModel):
+    datasets: List[DatasetModel]

@@ -1,7 +1,8 @@
 schedule: "*/30 * * * *"
-external:
-  url: "https://data.opensanctions.org/datasets/latest/index.json"
-  scope: all
+catalogs:
+  - url: "https://data.opensanctions.org/datasets/latest/index.json"
+    scope: all
+    resource_name: entities.ftm.json
 datasets:
   []
   # - name: external_offshoreleaks

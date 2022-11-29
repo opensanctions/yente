@@ -41,21 +41,14 @@ async def entity_docs(
         yield {"_index": index, "_id": entity_id, "_source": data}
 
 
-def make_version(version: Optional[str]) -> str:
-    full_version = settings.INDEX_VERSION
-    if version is not None:
-        full_version = f"{full_version}{version}"
-    return full_version
-
-
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
     # Versioning defaults to the software version instead of a data update date:
-    version = make_version(dataset.version)
+    version = f"{settings.INDEX_VERSION}{dataset.version}"
     log.info(
         "Indexing entities",
         name=dataset.name,
-        url=dataset.manifest.url,
+        url=dataset.entities_url,
         version=version,
     )
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
@@ -117,7 +110,7 @@ async def update_index(force: bool = False) -> None:
         log.info("Index update check")
         indexers = []
         for dataset in catalog.datasets:
-            if dataset.is_loadable:
+            if dataset.load:
                 indexers.append(index_entities(es, dataset, force))
         await asyncio.gather(*indexers)
         log.info("Index update complete.")
