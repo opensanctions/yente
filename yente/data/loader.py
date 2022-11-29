@@ -2,34 +2,32 @@ import yaml
 import orjson
 import aiofiles
 from pathlib import Path
-from pydantic import AnyHttpUrl, FileUrl
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, Tuple, Union
+from urllib.parse import urlparse
+from typing import Any, AsyncGenerator, Tuple, Union
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data.util import http_session, resolve_url_type
 
-ENCODING = "utf-"
-URL = Union[AnyHttpUrl, FileUrl]
 BUFFER = 10 * 1024 * 1024
 
 log = get_logger(__name__)
 
 
-async def get_url_path(url: URL, base_name: str) -> Tuple[Path, bool]:
-    if isinstance(url, FileUrl):
-        if url.path is None:
+async def get_url_path(url: str, base_name: str) -> Path:
+    parsed = urlparse(url)
+    if parsed.scheme.lower() == "file":
+        if parsed.path is None:
             raise ValueError("Invalid path: %s" % url)
-        return Path(url.path).resolve(), True
+        return Path(parsed.path).resolve()
     out_path = settings.DATA_PATH.joinpath(base_name)
     async with http_session() as client:
         log.info("Fetching data", url=url, path=out_path.as_posix())
-        async with client.get(str(url)) as resp:
+        async with client.get(url) as resp:
             async with aiofiles.open(out_path, "wb") as outfh:
                 while chunk := await resp.content.read(BUFFER):
                     await outfh.write(chunk)
-    return out_path, True
+    return out_path
 
 
 async def load_yaml_url(url: str) -> Any:

@@ -73,13 +73,14 @@ Defining these extra indexing options is handled via a YAML file you can supply 
 schedule: "*/30 * * * *"
 # Import external dataset specifications from OpenSanctions. This will fetch the dataset
 # metadata from the given index and make them available to yente.
-external:
-  # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch historical
-  # OpenSanctions data for a particular day:
-  url: "https://data.opensanctions.org/datasets/latest/index.json"
-  # Limit the dataset scope of the entities which will be indexed into yente. Useful
-  # values include `default`, `sanctions` or `peps`.
-  scope: all
+catalogs:
+  - # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch historical
+    # OpenSanctions data for a particular day:
+    url: "https://data.opensanctions.org/datasets/latest/index.json"
+    # Limit the dataset scope of the entities which will be indexed into yente. Useful
+    # values include `default`, `sanctions` or `peps`.
+    scope: all
+    resource_name: entities.ftm.json
 # The next section begins to specify non-OpenSanctions datasets that should be exposed
 # in the API:
 datasets:

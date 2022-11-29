@@ -22,6 +22,7 @@ setup(
             "wheel>=0.29.0",
             "twine",
             "mypy",
+            "httpx",
             "pytest",
             "pytest-cov",
             "pytest-asyncio",

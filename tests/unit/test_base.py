@@ -22,7 +22,7 @@ def test_manifest():
     assert res.status_code == 200, res
     data = res.json()
     assert "datasets" in data
-    assert "schedule" in data
+    assert len(data["datasets"]) > 5
 
 
 def test_updatez_get():

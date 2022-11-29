@@ -16,7 +16,7 @@ from yente.search.queries import FilterDict
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import serialize_entity
-from yente.data import get_datasets
+from yente.data import get_catalog
 from yente.data.entity import Entity
 from yente.util import limit_window, EntityRedirect
 from yente.scoring import score_results
@@ -67,7 +67,7 @@ async def search(
     """
     limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
-    all_datasets = await get_datasets()
+    catalog = await get_catalog()
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
@@ -92,7 +92,7 @@ async def search(
         results.append(await serialize_entity(result))
     output = SearchResponse(
         results=results,
-        facets=result_facets(resp, all_datasets),
+        facets=result_facets(resp, catalog),
         total=result_total(resp),
         limit=limit,
         offset=offset,

@@ -1,52 +1,46 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 from yente import settings
-from yente.data.dataset import DatasetManifest
+from yente.data.dataset import Dataset
 from yente.data.loader import load_yaml_url
-from yente.data.util import iso_to_version
 
 
-class ExternalManifest(BaseModel):
+class CatalogManifest(BaseModel):
     """OpenSanctions is not one dataset but a whole collection, so this
     side-loads it into the yente dataset archive."""
 
     url: str
-    type: str = "opensanctions"
-    scope: str
-    namespace: bool = False
+    scope: Optional[str] = None
+    namespace: Optional[bool] = None
+    resource_name: Optional[str] = None
+    resource_type: Optional[str] = None
 
     async def fetch(self, manifest: "Manifest") -> None:
-        assert self.type == "opensanctions"
         data = await load_yaml_url(self.url)
 
         for ds in data["datasets"]:
-            datasets = ds.get("sources", [])
-            datasets.extend(ds.get("externals", []))
-            dataset = DatasetManifest(
-                name=ds["name"],
-                title=ds["title"],
-                version=iso_to_version(ds["last_export"]),
-                namespace=self.namespace,
-                collections=ds.get("collections", []),
-                datasets=datasets,
-            )
-            if dataset.name == self.scope:
-                for resource in ds["resources"]:
-                    if resource["path"] == "entities.ftm.json":
-                        dataset.url = resource["url"]
-            manifest.datasets.append(dataset)
+            if self.scope is not None:
+                ds["load"] = self.scope == ds["name"]
+            if self.namespace is not None:
+                ds["namesapce"] = self.namespace
+            if self.resource_name is not None:
+                ds["resource_name"] = self.resource_name
+            if self.resource_type is not None:
+                ds["resource_type"] = self.resource_type
+            manifest.datasets.append(ds)
 
 
 class Manifest(BaseModel):
     schedule: Optional[str] = None
-    external: Optional[ExternalManifest] = None
-    datasets: List[DatasetManifest] = []
+    catalogs: List[CatalogManifest] = []
+    datasets: List[Dict[str, Any]] = []
 
     @classmethod
     async def load(cls) -> "Manifest":
         data = await load_yaml_url(settings.MANIFEST)
         manifest = cls.parse_obj(data)
-        if manifest.external is not None:
-            await manifest.external.fetch(manifest)
+        for catalog in manifest.catalogs:
+            await catalog.fetch(manifest)
+        # TODO: load remote metadata from a `metadata_url` on each dataset?
         return manifest

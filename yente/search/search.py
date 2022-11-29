@@ -8,10 +8,11 @@ from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
+from nomenklatura.dataset import DataCatalog
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.dataset import Dataset, Datasets
+from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.search.base import get_es, get_opaque_id, semaphore
@@ -42,7 +43,7 @@ def result_entities(response: ObjectApiResponse[Any]) -> Generator[Entity, None,
 
 
 def result_facets(
-    response: ObjectApiResponse[Any], datasets: Datasets
+    response: ObjectApiResponse[Any], catalog: DataCatalog[Dataset]
 ) -> Dict[str, SearchFacet]:
     facets: Dict[str, SearchFacet] = {}
     aggs: Dict[str, Dict[str, Any]] = response.get("aggregations", {})
@@ -57,7 +58,7 @@ def result_facets(
             if field == "datasets":
                 facet.label = "Data sources"
                 try:
-                    value.label = datasets[key].title
+                    value.label = catalog.require(key).title
                 except KeyError:
                     value.label = key
             if field in registry.groups:

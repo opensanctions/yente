@@ -1,25 +1,14 @@
+import fingerprints
 from pathlib import Path
 from functools import lru_cache
 from urllib.parse import urlparse
-import fingerprints
 from normality import WS
-from datetime import datetime
 from Levenshtein import distance
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
 from typing import AsyncGenerator, Dict, List, Optional, Set, Union
 from followthemoney.types import registry
-
-
-def iso_datetime(value: str) -> datetime:
-    """Parse a second-precision ISO date time string."""
-    return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
-
-
-def iso_to_version(value: str) -> str:
-    dt = iso_datetime(value)
-    return dt.strftime("%Y%m%d%H%M%S")
 
 
 def expand_dates(dates: List[str]) -> List[str]:

@@ -3,8 +3,9 @@ import pytest
 
 from .conftest import client
 
-from yente.data import get_datasets, get_manifest
+from yente.data import get_catalog, get_manifest
 from yente.data.util import resolve_url_type
+
 
 @pytest.mark.asyncio
 async def test_manifest():
@@ -15,20 +16,20 @@ async def test_manifest():
 
 @pytest.mark.asyncio
 async def test_local_dataset():
-    datasets = await get_datasets()
-    ds = datasets["parteispenden"]
+    catalog = await get_catalog()
+    ds = catalog.require("parteispenden")
     entities = [e async for e in ds.entities()]
     assert len(entities) > 10, entities
 
 
 def test_resolve_url_type():
-    out = resolve_url_type('http://banana.com/bla.txt')
+    out = resolve_url_type("http://banana.com/bla.txt")
     assert isinstance(out, str)
     out = resolve_url_type(__file__)
     assert isinstance(out, Path)
 
     with pytest.raises(RuntimeError):
-        resolve_url_type('ftp://banana.com/bla.txt')
+        resolve_url_type("ftp://banana.com/bla.txt")
 
     with pytest.raises(RuntimeError):
-        resolve_url_type('/no/such/path.csv')
+        resolve_url_type("/no/such/path.csv")
