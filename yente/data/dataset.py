@@ -16,7 +16,7 @@ from yente.logs import get_logger
 from yente.data.loader import get_url_path, load_json_lines
 
 log = get_logger(__name__)
-BOOT_TIME = datetime_iso(datetime.utcnow()) or "static"
+BOOT_TIME = datetime_iso(datetime.utcnow())
 
 
 class Dataset(NKDataset):
@@ -28,8 +28,8 @@ class Dataset(NKDataset):
         super().__init__(catalog, data)
 
         if self.version is None:
-            ts = data.get("last_export", BOOT_TIME).replace("T", " ")
-            self.version = iso_to_version(ts)
+            ts = data.get("last_export", BOOT_TIME)
+            self.version = iso_to_version(ts) or "static"
 
         self.load = as_bool(data.get("load"), True)
         self.entities_url = self._get_entities_url(data)
