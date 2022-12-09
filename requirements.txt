@@ -6,7 +6,7 @@ aiocsv==1.2.3
 aiofiles==22.1.0
 types-aiofiles==22.1.0.4
 aiohttp[speedups]==3.8.3
-elasticsearch[async]==8.5.2
+elasticsearch[async]==8.5.3
 fastapi==0.88.0
 uvicorn[standard]==0.20.0
 python-multipart==0.0.5
