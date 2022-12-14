@@ -18,7 +18,9 @@ async def request_middleware(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     start_time = time.time()
-    trace_id = uuid4().hex
+    trace_id = request.headers.get("x-trace-id")
+    if trace_id is None:
+        trace_id = uuid4().hex
     client_ip = request.client.host if request.client else "127.0.0.1"
     bind_contextvars(
         trace_id=trace_id,
