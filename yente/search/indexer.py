@@ -76,12 +76,12 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     )
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
     next_index = f"{dataset_prefix}-{version}"
-    data_path = await get_url_path(dataset.entities_url, f"{next_index}.json")
-
     exists = await es.indices.exists(index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
         return
+
+    data_path = await get_url_path(dataset.entities_url, f"{next_index}.json")
 
     # await es.indices.delete(index=next_index)
     log.info("Create index", index=next_index)
