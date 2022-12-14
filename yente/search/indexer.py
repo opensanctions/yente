@@ -70,7 +70,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     version = f"{settings.INDEX_VERSION}{dataset.version}"
     log.info(
         "Indexing entities",
-        name=dataset.name,
+        dataset=dataset.name,
         url=dataset.entities_url,
         version=version,
     )
