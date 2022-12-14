@@ -1,8 +1,9 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk
+from elasticsearch.helpers import async_bulk, BulkIndexError
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 from followthemoney.types import registry
@@ -11,9 +12,11 @@ from followthemoney.types.name import NameType
 
 from yente import settings
 from yente.logs import get_logger
+from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import refresh_manifest, get_catalog
-from yente.search.base import get_es, close_es
+from yente.data.loader import get_url_path, load_json_lines
+from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
 from yente.data.util import expand_dates, expand_names
@@ -21,28 +24,48 @@ from yente.data.util import expand_dates, expand_names
 log = get_logger(__name__)
 
 
-async def entity_docs(
-    dataset: Dataset, index: str
+async def entity_docs_from_path(
+    dataset: Dataset, index: str, data_path: Path
 ) -> AsyncGenerator[Dict[str, Any], None]:
+    datasets = set(dataset.dataset_names)
     idx = 0
-    async for entity in dataset.entities():
+    async for data in load_json_lines(data_path):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
         idx += 1
 
+        entity = Entity.from_dict(model, data)
+        entity.datasets = entity.datasets.intersection(datasets)
+        if not len(entity.datasets):
+            entity.datasets.add(dataset.name)
+        if dataset.ns is not None:
+            entity = dataset.ns.apply(entity)
+
         texts = entity.pop("indexText")
-        data = entity.to_dict()
-        data["text"] = texts
-        dates = entity.get_type_values(registry.date, matchable=True)
-        data[DateType.group] = expand_dates(dates)
-        names = entity.get_type_values(registry.name, matchable=True)
-        data[NameType.group] = expand_names(names)
-        entity_id = data.pop("id")
-        yield {"_index": index, "_id": entity_id, "_source": data}
+        doc = entity.to_full_dict(matchable=True)
+        doc["text"] = texts
+        doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
+        doc[NameType.group] = expand_names(doc.pop(NameType.group, []))
+        entity_id = doc.pop("id")
+        yield {"_index": index, "_id": entity_id, "_source": doc}
+
+
+async def index_entities_rate_limit(
+    es: AsyncElasticsearch, dataset: Dataset, force: bool
+) -> None:
+    async with index_semaphore:
+        await index_entities(es, dataset, force=force)
 
 
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
+    if not dataset.load:
+        log.debug("Dataset is not loadable", dataset=dataset.name)
+        return
+    if dataset.entities_url is None:
+        log.warning("Cannot identify resource with FtM entities", dataset=dataset.name)
+        return
+
     # Versioning defaults to the software version instead of a data update date:
     version = f"{settings.INDEX_VERSION}{dataset.version}"
     log.info(
@@ -53,6 +76,8 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     )
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
     next_index = f"{dataset_prefix}-{version}"
+    data_path = await get_url_path(dataset.entities_url, f"{next_index}.json")
+
     exists = await es.indices.exists(index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
@@ -75,9 +100,9 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         )
 
     try:
-        docs = entity_docs(dataset, next_index)
+        docs = entity_docs_from_path(dataset, next_index, data_path)
         await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
-    except (KeyboardInterrupt, OSError, Exception) as exc:
+    except (BulkIndexError, KeyboardInterrupt, OSError, Exception) as exc:
         log.exception("Indexing error: %s" % exc)
         await es.indices.delete(index=next_index)
         return
@@ -110,8 +135,7 @@ async def update_index(force: bool = False) -> None:
         log.info("Index update check")
         indexers = []
         for dataset in catalog.datasets:
-            if dataset.load:
-                indexers.append(index_entities(es, dataset, force))
+            indexers.append(index_entities_rate_limit(es, dataset, force))
         await asyncio.gather(*indexers)
         log.info("Index update complete.")
     finally:

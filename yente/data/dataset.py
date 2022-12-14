@@ -2,7 +2,7 @@ from pathlib import Path
 from banal import as_bool
 from normality import slugify
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Optional, Any
+from typing import Dict, Optional, Any
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
 from nomenklatura.dataset.util import type_check, type_require
@@ -11,9 +11,7 @@ from followthemoney import model
 from followthemoney.types import registry
 from followthemoney.namespace import Namespace
 
-from yente.data.entity import Entity
 from yente.logs import get_logger
-from yente.data.loader import get_url_path, load_json_lines
 
 log = get_logger(__name__)
 BOOT_TIME = datetime_iso(datetime.utcnow())
@@ -59,21 +57,3 @@ class Dataset(NKDataset):
         data["entities_url"] = self.entities_url
         data["namespace"] = self.ns is not None
         return data
-
-    async def entities(self) -> AsyncGenerator[Entity, None]:
-        if not self.load:
-            return
-        if self.entities_url is None:
-            log.warning("Cannot identify resource with FtM entities", dataset=self.name)
-            return
-        datasets = set(self.dataset_names)
-        base_name = f"{self.name}-{self.version}.json"
-        data_path = await get_url_path(self.entities_url, base_name)
-        async for data in load_json_lines(data_path):
-            entity = Entity.from_dict(model, data)
-            entity.datasets = entity.datasets.intersection(datasets)
-            if not len(entity.datasets):
-                entity.datasets.add(self.name)
-            if self.ns is not None:
-                entity = self.ns.apply(entity)
-            yield entity

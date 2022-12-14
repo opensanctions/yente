@@ -2,7 +2,6 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 from yente import settings
-from yente.data.dataset import Dataset
 from yente.data.loader import load_yaml_url
 
 
@@ -12,16 +11,19 @@ class CatalogManifest(BaseModel):
 
     url: str
     scope: Optional[str] = None
+    scopes: List[str] = []
     namespace: Optional[bool] = None
     resource_name: Optional[str] = None
     resource_type: Optional[str] = None
 
     async def fetch(self, manifest: "Manifest") -> None:
         data = await load_yaml_url(self.url)
+        if self.scope is not None:
+            self.scopes.append(self.scope)
 
         for ds in data["datasets"]:
             if self.scope is not None:
-                ds["load"] = self.scope == ds["name"]
+                ds["load"] = ds["name"] in self.scopes
             if self.namespace is not None:
                 ds["namesapce"] = self.namespace
             if self.resource_name is not None:

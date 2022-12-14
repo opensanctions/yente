@@ -9,7 +9,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
-from yente.search.base import get_es, get_opaque_id, semaphore
+from yente.search.base import get_es, get_opaque_id, query_semaphore
 from yente.search.search import result_entities
 
 log = get_logger(__name__)
@@ -87,7 +87,7 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
         }
 
         try:
-            async with semaphore:
+            async with query_semaphore:
                 resp = await es_.search(
                     index=settings.ENTITY_INDEX,
                     query=query,

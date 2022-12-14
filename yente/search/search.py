@@ -15,7 +15,7 @@ from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
-from yente.search.base import get_es, get_opaque_id, semaphore
+from yente.search.base import get_es, get_opaque_id, query_semaphore
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)
@@ -80,7 +80,7 @@ async def search_entities(
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     try:
-        async with semaphore:
+        async with query_semaphore:
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
                 query=query,
@@ -112,7 +112,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
                 "minimum_should_match": 1,
             }
         }
-        async with semaphore:
+        async with query_semaphore:
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
                 query=query,
@@ -142,7 +142,7 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
     es = await get_es()
     es_ = es.options(opaque_id=get_opaque_id())
     try:
-        async with semaphore:
+        async with query_semaphore:
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
                 query={"bool": {"filter": [filter_]}},
