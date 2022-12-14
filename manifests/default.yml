@@ -3,6 +3,6 @@ catalogs:
   - url: "https://data.opensanctions.org/datasets/latest/index.json"
     scope: all
     resource_name: entities.ftm.json
-  # - url: "https://data.opensanctions.org/contrib/graph/catalog.json"
+  # - url: "https://data.opensanctions.org/graph/catalog.json"
   #   resource_name: entities.ftm.json
 datasets: []
