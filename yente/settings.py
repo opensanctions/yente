@@ -100,7 +100,7 @@ DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 
 BASE_SCHEMA = "Thing"
-PORT = int(env_str("YENTE_PORT") or "8000")
+PORT = int(env_str("YENTE_PORT") or env_str("PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {
     "Cache-Control": "public; max-age=3600",
