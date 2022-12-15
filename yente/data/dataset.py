@@ -7,7 +7,6 @@ from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
 from nomenklatura.dataset.util import type_check, type_require
 from nomenklatura.util import iso_to_version, datetime_iso
-from followthemoney import model
 from followthemoney.types import registry
 from followthemoney.namespace import Namespace
 
