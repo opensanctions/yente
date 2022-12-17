@@ -15,7 +15,7 @@ from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import refresh_manifest, get_catalog
-from yente.data.loader import get_url_path, load_json_lines
+from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
@@ -24,12 +24,14 @@ from yente.data.util import expand_dates, expand_names
 log = get_logger(__name__)
 
 
-async def entity_docs_from_path(
-    dataset: Dataset, index: str, data_path: Path
+async def iter_entity_docs(
+    dataset: Dataset, index: str
 ) -> AsyncGenerator[Dict[str, Any], None]:
+    if dataset.entities_url is None:
+        return
     datasets = set(dataset.dataset_names)
     idx = 0
-    async for data in load_json_lines(data_path):
+    async for data in load_json_lines(dataset.entities_url, index):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
         idx += 1
@@ -81,8 +83,6 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         log.info("Index is up to date.", index=next_index)
         return
 
-    data_path = await get_url_path(dataset.entities_url, f"{next_index}.json")
-
     # await es.indices.delete(index=next_index)
     log.info("Create index", index=next_index)
     try:
@@ -100,7 +100,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         )
 
     try:
-        docs = entity_docs_from_path(dataset, next_index, data_path)
+        docs = iter_entity_docs(dataset, next_index)
         await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
     except (BulkIndexError, KeyboardInterrupt, OSError, Exception) as exc:
         log.exception("Indexing error: %s" % exc)

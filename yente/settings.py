@@ -99,6 +99,8 @@ CRON_REFRESH: Optional[Cron] = None
 DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 
+STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
+
 BASE_SCHEMA = "Thing"
 PORT = int(env_str("YENTE_PORT") or env_str("PORT") or "8000")
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
