@@ -1,12 +1,8 @@
-from pathlib import Path
 import pytest
-
-from .conftest import client
+from pathlib import Path
 
 from yente.data import get_catalog, get_manifest
-from yente.data.loader import load_json_lines, get_url_path
-
-# from yente.search.indexer import entity_docs_from_path
+from yente.data.loader import load_json_lines
 from yente.data.util import resolve_url_type
 
 
@@ -23,9 +19,8 @@ async def test_local_dataset():
     ds = catalog.require("parteispenden")
     assert ds.load
     assert "donations.ijson" in ds.entities_url
-    url_path = await get_url_path(ds.entities_url, "test")
     lines = list()
-    async for line in load_json_lines(url_path):
+    async for line in load_json_lines(ds.entities_url, "test"):
         lines.append(line)
     assert len(lines) > 10, lines
 

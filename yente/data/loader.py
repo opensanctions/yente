@@ -26,7 +26,7 @@ async def load_yaml_url(url: str) -> Any:
     return yaml.safe_load(data)
 
 
-async def _fetch_url_to_path(url: str, path: Path) -> None:
+async def fetch_url_to_path(url: str, path: Path) -> None:
     async with http_session() as client:
         async with client.get(url) as resp:
             async with aiofiles.open(path, "wb") as outfh:
@@ -34,7 +34,7 @@ async def _fetch_url_to_path(url: str, path: Path) -> None:
                     await outfh.write(chunk)
 
 
-async def _read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
+async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
     async with aiofiles.open(path, "rb") as fh:
         async for line in fh:
             yield orjson.loads(line)
@@ -47,15 +47,15 @@ async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]
             raise ValueError("Invalid path: %s" % url)
         path = Path(parsed.path).resolve()
         log.info("Reading local data", url=url, path=path.as_posix())
-        async for line in _read_path_lines(path):
+        async for line in read_path_lines(path):
             yield line
 
     elif not settings.STREAM_LOAD:
         path = settings.DATA_PATH.joinpath(base_name)
         log.info("Fetching data", url=url, path=path.as_posix())
         try:
-            await _fetch_url_to_path(url, path)
-            async for line in _read_path_lines(path):
+            await fetch_url_to_path(url, path)
+            async for line in read_path_lines(path):
                 yield line
         finally:
             path.unlink(missing_ok=True)
