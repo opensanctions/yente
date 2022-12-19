@@ -68,6 +68,7 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
     picked: List[str] = []
     fingerprinted_ = [fingerprint_name(n) for n in names]
     names = [n for n in fingerprinted_ if n is not None]
+
     # Centroid:
     picked_name = registry.name.pick(names)
     if picked_name is not None:
@@ -83,6 +84,8 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
             for pick in picked:
                 candidates[cand] += _compare_distance(pick, cand)
 
+        if not len(candidates):
+            break
         pick, _ = sorted(candidates.items(), key=lambda c: c[1], reverse=True)[0]
         picked.append(pick)
 
