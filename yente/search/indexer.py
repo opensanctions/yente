@@ -1,12 +1,10 @@
 import asyncio
 import threading
-from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk, BulkIndexError
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
-from followthemoney.types import registry
 from followthemoney.types.date import DateType
 from followthemoney.types.name import NameType
 
@@ -102,8 +100,15 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     try:
         docs = iter_entity_docs(dataset, next_index)
         await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
-    except (BulkIndexError, KeyboardInterrupt, OSError, Exception) as exc:
-        log.exception("Indexing error: %s" % exc)
+    except (
+        BulkIndexError,
+        KeyboardInterrupt,
+        OSError,
+        Exception,
+        asyncio.TimeoutError,
+        asyncio.CancelledError,
+    ) as exc:
+        log.exception("Indexing error: %r" % exc)
         await es.indices.delete(index=next_index)
         return
 
