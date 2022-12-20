@@ -29,6 +29,7 @@ async def load_yaml_url(url: str) -> Any:
 async def fetch_url_to_path(url: str, path: Path) -> None:
     async with http_session() as client:
         async with client.get(url) as resp:
+            resp.raise_for_status()
             async with aiofiles.open(path, "wb") as outfh:
                 while chunk := await resp.content.read(BUFFER):
                     await outfh.write(chunk)
@@ -63,5 +64,6 @@ async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]
         log.info("Streaming data", url=url)
         async with http_session() as client:
             async with client.get(url) as resp:
+                resp.raise_for_status()
                 async for line in resp.content:
                     yield orjson.loads(line)
