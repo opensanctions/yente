@@ -108,7 +108,7 @@ def resolve_url_type(url: str) -> Union[Path, str]:
 @asynccontextmanager
 async def http_session() -> AsyncGenerator[ClientSession, None]:
     timeout = ClientTimeout(
-        total=3600,
+        total=84600,
         connect=None,
         sock_connect=None,
         sock_read=None,
