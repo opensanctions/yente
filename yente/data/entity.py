@@ -52,7 +52,7 @@ class Entity(CompositeEntity):
 
         # Extract names from IBANs, phone numbers etc.
         countries = obj.get_type_values(registry.country)
-        for (prop, value) in obj.itervalues():
+        for (prop, value) in list(obj.itervalues()):
             hint = prop.type.country_hint(value)
             if hint is not None and hint not in countries:
                 obj.add("country", hint, cleaned=True)
