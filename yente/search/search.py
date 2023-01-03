@@ -57,10 +57,10 @@ def result_facets(
             value = SearchFacetItem(name=key, label=key, count=bucket.get("doc_count"))
             if field == "datasets":
                 facet.label = "Data sources"
-                try:
-                    value.label = catalog.require(key).title
-                except KeyError:
-                    value.label = key
+                value.label = key
+                ds = catalog.get(key)
+                if ds is not None:
+                    value.label = ds.title or key
             if field in registry.groups:
                 type_ = registry.groups[field]
                 facet.label = type_.plural
