@@ -1,4 +1,3 @@
-schedule: "*/30 * * * *"
 catalogs:
   - url: "https://data.opensanctions.org/datasets/latest/index.json"
     scope: all

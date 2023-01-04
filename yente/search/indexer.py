@@ -12,7 +12,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
-from yente.data import refresh_manifest, get_catalog
+from yente.data import refresh_catalog, get_catalog
 from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
@@ -140,7 +140,6 @@ async def update_index(force: bool = False) -> None:
     es_ = await get_es()
     es = es_.options(request_timeout=300)
     try:
-        await refresh_manifest()
         catalog = await get_catalog()
         log.info("Index update check")
         indexers = []

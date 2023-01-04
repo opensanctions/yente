@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from structlog.stdlib import BoundLogger
 from asyncstdlib.functools import cache
@@ -7,14 +8,11 @@ from yente.data.manifest import Manifest
 from yente.data.dataset import Dataset
 
 log: BoundLogger = structlog.get_logger(__name__)
-
-
-async def get_manifest() -> Manifest:
-    return await Manifest.load()
+fetch_lock = asyncio.Lock()
 
 
 @cache
-async def get_catalog() -> DataCatalog[Dataset]:
+async def fetch_catalog() -> DataCatalog[Dataset]:
     manifest = await Manifest.load()
     catalog = DataCatalog(Dataset, {})
     for dmf in manifest.datasets:
@@ -22,6 +20,12 @@ async def get_catalog() -> DataCatalog[Dataset]:
     return catalog
 
 
-async def refresh_manifest() -> None:
-    log.info("Refreshing manifest metadata...")
-    get_catalog.cache_clear()
+async def get_catalog() -> DataCatalog[Dataset]:
+    async with fetch_lock:
+        return await fetch_catalog()
+
+
+async def refresh_catalog() -> None:
+    log.info("Refreshing manifest/catalog...")
+    fetch_catalog.cache_clear()
+    await get_catalog()

@@ -35,7 +35,7 @@ By default, `yente` will check for an updated build of the OpenSanctions databas
 
 You can change this behaviour in two ways:
 
-* Edit the [crontab](https://crontab.guru/) specification for `schedule` in your `manifest.yml` (see below) in order to run the auto-update process at a different interval. Setting the `schedule` to `null` will disable automatic data updates entirely.
+* Specify a [crontab](https://crontab.guru/) for `YENTE_SCHEDULE` in your environment in order to run the auto-update process at a different interval. Setting the environment variable `YENTE_AUTO_REINDEX` to `false` will disable automatic data updates entirely.
 
 * If you wish to manually run an indexing process, you can do so by calling the script `yente/reindex.py`. This command must be invoked inside the application container. For example, in a docker-compose based environment, the full command would be: `docker-compose run app python3 yente/reindex.py`.
 
@@ -48,6 +48,8 @@ The API server has a few operations-related settings, which are passed as enviro
 - ``YENTE_ENDPOINT_URL`` the URL which should be used to generate external links back to
   the API server, e.g. ``https://yente.mycompany.com``.
 - ``YENTE_MANIFEST`` specify the path of the `manifest.yml` that defines the datasets exposed by the service.
+- ``YENTE_SCHEDULE`` gives the frequency at which new data will be indexed as a a [crontab](https://crontab.guru/).
+- ``YENTE_AUTO_REINDEX`` can be set to ``false`` to disable automatic data updates and force data to be re-indexed only via the command line (``yente reindex``).
 - ``YENTE_UPDATE_TOKEN`` should be set to a secret string. The token is used with a `POST` request to the `/updatez` endpoint to force an immediate re-indexing of the data.
 - ``YENTE_ELASTICSEARCH_URL``: Elasticsearch URL, defaults to `http://localhost:9200`.
 - ``YENTE_ELASTICSEARCH_INDEX``: Elasticsearch index, defaults to `yente`.
@@ -60,7 +62,6 @@ The API server has a few operations-related settings, which are passed as enviro
 The default configuration of `yente` will index and expose the datasets published by OpenSanctions every time they change. By adding a *manifest file*, you can change this behaviour in several ways:
 
 * Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.) that you wish to vet alongside the OpenSanctions data.
-* Change the update interval (`schedule`) to check less frequently, e.g. only once a month.
 * Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
 
 Side note: A **dataset** in `yente` contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
@@ -68,9 +69,6 @@ Side note: A **dataset** in `yente` contains a set of entities. However, some da
 Defining these extra indexing options is handled via a YAML file you can supply for `yente`. (The file needs to be accessible to the application, which may require the use of a [Docker volume](https://docs.docker.com/storage/volumes/) or a Kubernetes [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/#using-configmaps-as-files-from-a-pod)). The manifest file can also be configured as a HTTP/HTTPS URL which the yente application will download upon startup. An example manifest might look like this:
 
 ```yaml
-# Schedule is a crontab specification. Set it to `null` to disable automatic updates
-# entirely:
-schedule: "*/30 * * * *"
 # Import external dataset specifications from OpenSanctions. This will fetch the dataset
 # metadata from the given index and make them available to yente.
 catalogs:
@@ -118,7 +116,7 @@ datasets:
       - sanctions
 ```
 
-In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney](https://docs.alephdata.org/developers/followthemoney) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) using the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
+In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney](https://alephdata.github.io/followthemoney/) entities. There are various ways to produce FtM data, but the most convenient is [importing structured data via a mapping specification](https://docs.alephdata.org/developers/mappings) using the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities. Don't forget to `ftm aggregate` your custom data before indexing it in `yente`!
 
 ## Development
 

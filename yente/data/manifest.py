@@ -34,7 +34,6 @@ class CatalogManifest(BaseModel):
 
 
 class Manifest(BaseModel):
-    schedule: Optional[str] = None
     catalogs: List[CatalogManifest] = []
     datasets: List[Dict[str, Any]] = []
 

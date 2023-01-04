@@ -1,16 +1,15 @@
 import pytest
 from pathlib import Path
 
-from yente.data import get_catalog, get_manifest
+from yente.data import get_catalog
 from yente.data.loader import load_json_lines
 from yente.data.util import resolve_url_type
 
 
 @pytest.mark.asyncio
 async def test_manifest():
-    manifest = await get_manifest()
-    assert len(manifest.datasets), manifest.datasets
-    assert manifest.schedule is None
+    catalog = await get_catalog()
+    assert len(catalog.datasets), catalog.datasets
 
 
 @pytest.mark.asyncio

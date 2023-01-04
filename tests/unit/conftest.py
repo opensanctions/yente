@@ -14,8 +14,7 @@ settings.MANIFEST = str(MANIFEST_PATH)
 settings.UPDATE_TOKEN = "test"
 settings.ES_INDEX = f"yente-test-{run_id}"
 settings.ENTITY_INDEX = f"{settings.ES_INDEX}-entities"
-settings.STATEMENT_INDEX = f"{settings.ES_INDEX}-statements"
-settings.STATEMENT_API = False
+settings.AUTO_REINDEX = False
 
 app = create_app()
 client = TestClient(app)

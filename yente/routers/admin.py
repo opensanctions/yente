@@ -5,10 +5,9 @@ from starlette.responses import FileResponse
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data import get_catalog, get_manifest, refresh_manifest
+from yente.data import get_catalog, refresh_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel
-from yente.data.manifest import Manifest
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
@@ -17,24 +16,22 @@ log = get_logger(__name__)
 router = APIRouter()
 
 
-async def regular_update() -> None:
-    if settings.TESTING:
-        return
-    update_index_threaded()
+async def cron_task() -> None:
+    await refresh_catalog()
+    if settings.AUTO_REINDEX:
+        update_index_threaded()
 
 
 @router.on_event("startup")
 async def startup_event() -> None:
-    await get_index_status()
-    manifest = await get_manifest()
-    if settings.MANIFEST_CRONTAB:
-        settings.CRON_REFRESH = aiocron.crontab(
-            settings.MANIFEST_CRONTAB,
-            func=refresh_manifest,
-        )
-    if manifest.schedule is not None:
-        await regular_update()
-        settings.CRON_UPDATE = aiocron.crontab(manifest.schedule, func=regular_update)
+    log.info(
+        "Setting up background refresh",
+        crontab=settings.CRONTAB,
+        auto_reindex=settings.AUTO_REINDEX,
+    )
+    settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
+    if settings.AUTO_REINDEX:
+        update_index_threaded()
 
 
 @router.on_event("shutdown")

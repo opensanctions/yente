@@ -91,15 +91,13 @@ DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
 MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
 MANIFEST = env_str("YENTE_MANIFEST") or str(MANIFEST_DEFAULT_PATH)
-MANIFEST_CRONTAB = env_str("YENTE_MANIFEST_CRONTAB")
-
-CRON_UPDATE: Optional[Cron] = None
-CRON_REFRESH: Optional[Cron] = None
+CRON: Optional[Cron] = None
+CRONTAB = env_str("YENTE_CRONTAB", "*/30 * * * *")
+AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
+STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
 
 DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
-
-STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
 
 BASE_SCHEMA = "Thing"
 PORT = int(env_str("YENTE_PORT") or env_str("PORT") or "8000")

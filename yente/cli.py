@@ -38,15 +38,11 @@ def serve() -> None:
     server.run()
 
 
-async def _reindex(force: bool = False) -> None:
-    await update_index(force=force)
-
-
 @cli.command("reindex", help="Re-index the data if newer data is available")
 @click.option("-f", "--force", is_flag=True, default=False)
 def reindex(force: bool) -> None:
     configure_logging()
-    asyncio.run(_reindex(force=force))
+    asyncio.run(update_index(force=force))
 
 
 async def _clear_index() -> None:
