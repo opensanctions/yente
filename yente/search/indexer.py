@@ -12,7 +12,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
-from yente.data import refresh_catalog, get_catalog
+from yente.data import get_catalog
 from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
