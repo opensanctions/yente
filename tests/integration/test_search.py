@@ -14,10 +14,10 @@ def test_search_falah_taha(http: Session, search_url: str):
 
 
 def test_search_fuzzy_barrack(http: Session, search_url: str):
-    resp = http.get(search_url, params={"q": "Barrack Obama", "fuzzy": "true"})
+    resp = http.get(search_url, params={"q": "Barrack~ Obama"})
     assert first_result_id(resp.json(), "Q76"), resp.json()
 
 
 def test_search_fuzzy_barock(http: Session, search_url: str):
-    resp = http.get(search_url, params={"q": "Barock~ Obama", "fuzzy": "true"})
+    resp = http.get(search_url, params={"q": "Barock~ Obama"})
     assert first_result_id(resp.json(), "Q76"), resp.json()
