@@ -3,7 +3,7 @@ nomenklatura==2.7.7
 asyncstdlib==3.10.5
 aiocron==1.8
 aiocsv==1.2.3
-aiofiles==22.1.0
+aiofiles==23.1.0
 types-aiofiles==22.1.0.4
 aiohttp[speedups]==3.8.3
 elasticsearch[async]==8.5.3
