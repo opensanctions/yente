@@ -205,7 +205,7 @@ async def match(
             entity = Entity.from_example(example.schema_, example.properties)
             query = entity_query(ds, entity)
         except Exception as exc:
-            log.exception("Cannot parse example entity: %s" % str(exc))
+            log.info("Cannot parse example entity: %s" % str(exc))
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot parse example entity: {exc}",
