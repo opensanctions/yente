@@ -16,7 +16,6 @@ class Entity(CompositeEntity):
 
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
-        self._caption: str = data.get("caption") or self.caption
         self.target: bool = data.get("target", False)
 
         # Not sure that impugning this is a good idea, to be seen:
@@ -30,7 +29,7 @@ class Entity(CompositeEntity):
         data["first_seen"] = self.first_seen
         data["last_seen"] = self.last_seen
         data["target"] = self.target
-        data["caption"] = self._caption
+        data["caption"] = self.caption
         return data
 
     @classmethod
