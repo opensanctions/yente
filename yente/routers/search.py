@@ -8,7 +8,7 @@ from followthemoney import model
 from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
-from yente.data.common import EntityMatchQuery, EntityMatchResponse
+from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityResponse, SearchResponse, EntityMatches
 from yente.search.queries import parse_sorts, text_query, entity_query
 from yente.search.queries import facet_aggregations
@@ -232,7 +232,7 @@ async def match(
             status=200,
             results=scored,
             total=total,
-            query=entity.to_dict(),
+            query=EntityExample.parse_obj(entity),
         )
     matcher = explain_matcher()
     response.headers["x-batch-size"] = str(len(responses))

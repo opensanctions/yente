@@ -27,7 +27,7 @@ class EntityResponse(BaseModel):
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
-        return cls(
+        return cls.construct(
             id=entity.id,
             caption=entity.caption,
             schema=entity.schema.name,
@@ -52,7 +52,7 @@ class ScoredEntityResponse(EntityResponse):
     def from_entity_result(
         cls, entity: Entity, result: MatchingResult, threshold: float
     ) -> "ScoredEntityResponse":
-        return cls(
+        return cls.construct(
             id=entity.id,
             caption=entity.caption,
             schema=entity.schema.name,

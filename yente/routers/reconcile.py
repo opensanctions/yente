@@ -16,6 +16,7 @@ from yente.data.dataset import Dataset
 from yente.data.freebase import (
     FreebaseEntity,
     FreebaseEntityResult,
+    FreebaseManifestView,
     FreebaseManifestPreview,
     FreebaseManifestSuggest,
     FreebaseManifestSuggestType,
@@ -31,7 +32,7 @@ from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
 from yente.scoring import score_results
-from yente.util import match_prefix, limit_window
+from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
 
@@ -63,7 +64,7 @@ async def reconcile(
     Tutorial: [Using OpenRefine to match entities in a spreadsheet](https://www.opensanctions.org/articles/2022-01-10-openrefine-reconciliation/).
     """
     ds = await get_dataset(dataset)
-    base_url = urljoin(str(request.base_url), f"/reconcile/{dataset}")
+    base_url = typed_url(urljoin(str(request.base_url), f"/reconcile/{dataset}"))
     schemata = await get_matchable_schemata(ds)
     # Pass on query string (useful for API keys)
     query_string = request.url.query.strip()
@@ -73,11 +74,13 @@ async def reconcile(
     return FreebaseManifest(
         versions=["0.2"],
         name=f"{ds.title} ({settings.TITLE})",
-        identifierSpace="https://www.opensanctions.org/reference/#schema",
-        schemaSpace="https://www.opensanctions.org/reference/#schema",
-        view={"url": ("https://www.opensanctions.org/entities/{{id}}/")},
+        identifierSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
+        schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
+        view=FreebaseManifestView(
+            url=typed_url("https://www.opensanctions.org/entities/{{id}}/")
+        ),
         preview=FreebaseManifestPreview(
-            url="https://www.opensanctions.org/entities/preview/{{id}}/",
+            url=typed_url("https://www.opensanctions.org/entities/preview/{{id}}/"),
             width=430,
             height=600,
         ),

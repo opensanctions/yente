@@ -30,8 +30,8 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
 
 
 def result_total(result: ObjectApiResponse[Any]) -> TotalSpec:
-    spec: Dict[str, Union[int, str]] = result.get("hits", {}).get("total")
-    return TotalSpec(value=spec["value"], relation=spec["relation"])
+    total: Dict[str, Any] = result.get("hits", {}).get("total")
+    return TotalSpec(value=total["value"], relation=total["relation"])
 
 
 def result_entities(response: ObjectApiResponse[Any]) -> Generator[Entity, None, None]:
@@ -52,9 +52,10 @@ def result_facets(
         buckets: List[Dict[str, Any]] = agg.get("buckets", [])
         for bucket in buckets:
             key: Optional[str] = bucket.get("key")
-            if key is None:
+            count: Optional[int] = bucket.get("doc_count")
+            if key is None or count is None:
                 continue
-            value = SearchFacetItem(name=key, label=key, count=bucket.get("doc_count"))
+            value = SearchFacetItem(name=key, label=key, count=count)
             if field == "datasets":
                 facet.label = "Data sources"
                 value.label = key

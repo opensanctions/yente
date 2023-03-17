@@ -40,7 +40,12 @@ class FreebaseEntity(BaseModel):
     @classmethod
     def from_proxy(cls, proxy: EntityProxy) -> "FreebaseEntity":
         type_ = [FreebaseType.from_schema(proxy.schema)]
-        return FreebaseEntity(id=proxy.id, name=proxy.caption, type=type_)
+        return FreebaseEntity(
+            id=proxy.id,
+            name=proxy.caption,
+            type=type_,
+            description=proxy.schema.label,
+        )
 
 
 class FreebaseScoredEntity(FreebaseEntity):
@@ -55,6 +60,7 @@ class FreebaseScoredEntity(FreebaseEntity):
         return cls(
             id=data.id,
             name=data.caption,
+            description=schema.label,
             type=[FreebaseType.from_schema(schema)],
             score=data.score,
             match=data.match,

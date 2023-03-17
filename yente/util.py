@@ -1,4 +1,6 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, cast
+from pydantic import AnyHttpUrl
+from pydantic.tools import parse_obj_as
 
 from yente import settings
 
@@ -6,6 +8,10 @@ from yente import settings
 class EntityRedirect(Exception):
     def __init__(self, canonical_id: str) -> None:
         self.canonical_id = canonical_id
+
+
+def typed_url(url: Any) -> AnyHttpUrl:
+    return cast(AnyHttpUrl, parse_obj_as(AnyHttpUrl, url))
 
 
 def match_prefix(prefix: str, *labels: Optional[str]) -> bool:
