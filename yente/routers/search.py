@@ -232,7 +232,7 @@ async def match(
             status=200,
             results=scored,
             total=total,
-            query=EntityExample.parse_obj(entity),
+            query=EntityExample.parse_obj(entity.to_dict()),
         )
     matcher = explain_matcher()
     response.headers["x-batch-size"] = str(len(responses))
