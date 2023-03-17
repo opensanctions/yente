@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
 RUN apt-get -qq -y update \
     && apt-get -y upgrade \
     && apt-get -y install locales ca-certificates tzdata curl python3-pip \
-    python3-icu python3-cryptography libicu-dev pkg-config \
+    python3-icu python3-cryptography python3-venv libicu-dev pkg-config \
     && apt-get -qq -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -22,6 +22,8 @@ RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG='en_US.UTF-8' \
     TZ="UTC"
 
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 RUN mkdir -p /app
 WORKDIR /app
 COPY . /app
