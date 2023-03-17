@@ -65,10 +65,12 @@ metadata:
   name: yente-manifest
 data:
   manifest.yml: |
-    schedule: null
-    external:
-      url: "https://data.opensanctions.org/datasets/latest/index.json"
-      scope: all
+    catalogs:
+      - url: "https://data.opensanctions.org/datasets/latest/index.json"
+        scope: all
+        resource_name: entities.ftm.json
+      # - url: "https://data.opensanctions.org/graph/catalog.json"
+      #   resource_name: entities.ftm.json
     datasets: []
 ---
 apiVersion: apps/v1
@@ -133,8 +135,10 @@ spec:
               value: http://yente-index-es-default:9200
             - name: YENTE_MANIFEST
               value: /app/manifests/production.yml
-            - name: YENTE_MANIFEST_CRONTAB
+            - name: YENTE_CRONTAB
               value: "*/30 * * * *"
+            - name: YENTE_AUTO_REINDEX
+              value: "false"
             - name: YENTE_ELASTICSEARCH_INDEX
               value: "yente"
             - name: FORWARDED_ALLOW_IPS
@@ -177,6 +181,8 @@ spec:
 ---
 # This separates the re-indexing job from the API workers so that a crash in the
 # API service can never lead to a failure to re-index.
+#
+# This relates to the YENTE_AUTO_REINDEX setting above.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
