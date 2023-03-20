@@ -251,7 +251,7 @@ async def match(
 )
 async def fetch_entity(
     response: Response,
-    entity_id: str = Path(None, description="ID of the entity to retrieve"),
+    entity_id: str = Path(description="ID of the entity to retrieve", example="Q7747"),
     nested: bool = Query(
         True,
         title="Include adjacent entities (e.g. addresses, family, subsidiaries) in response",

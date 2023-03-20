@@ -6,7 +6,6 @@ from yente.data import get_catalog
 
 
 PATH_DATASET = Path(
-    "default",
     description="Data source or collection name to be queries",
     example="default",
 )
