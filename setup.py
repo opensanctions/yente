@@ -31,7 +31,7 @@ setup(
         "email-validator==1.3.1",
         "structlog==22.3.0",
         "pyicu==2.10.2",
-        "orjson==3.8.7",
+        "orjson==3.8.8",
         "text-unidecode==1.3",
         "click==8.0.4",
         "normality==2.4.0",
