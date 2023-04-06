@@ -2,7 +2,7 @@ import sys
 import logging
 import structlog
 from logging import Filter, LogRecord
-from typing import cast, Any, Dict, List
+from typing import Any, Dict, List
 from structlog.dev import ConsoleRenderer, set_exc_info
 from structlog.contextvars import merge_contextvars
 from structlog.processors import UnicodeDecoder, TimeStamper
