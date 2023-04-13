@@ -1,7 +1,7 @@
 import json
 from fastapi import HTTPException
-from typing import Dict, List, Set, Tuple, Union
-from elasticsearch import ApiError, TransportError
+from typing import Dict, List, Set, Tuple, Union, Optional
+from elasticsearch import ApiError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -20,20 +20,21 @@ Inverted = Dict[str, Set[Tuple[Property, str]]]
 
 
 def nest_entity(
-    entity: Entity, entities: Entities, inverted: Inverted, path: Set[str]
+    entity: Entity, entities: Entities, inverted: Inverted, path: Set[Optional[str]]
 ) -> EntityResponse:
     props: Dict[str, List[Value]] = {}
     next_path = set([entity.id]).union(path)
 
     # Find other entities pointing to the one we're processing:
-    for (prop, adj_id) in inverted.get(entity.id, {}):
-        if adj_id in path or len(path) > 1:
-            continue
-        adj = entities.get(adj_id)
-        if adj is not None:
-            nested = nest_entity(adj, entities, inverted, next_path)
-            props.setdefault(prop.name, [])
-            props[prop.name].append(nested)
+    if entity.id is not None:
+        for (prop, adj_id) in inverted.get(entity.id, {}):
+            if adj_id in path or len(path) > 1:
+                continue
+            adj = entities.get(adj_id)
+            if adj is not None:
+                nested = nest_entity(adj, entities, inverted, next_path)
+                props.setdefault(prop.name, [])
+                props[prop.name].append(nested)
 
     # Expand nested entities:
     for prop in entity.iterprops():
@@ -58,7 +59,7 @@ def nest_entity(
 
 
 async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse:
-    if not nested:
+    if not nested or root.id is None:
         return EntityResponse.from_entity(root)
     inverted: Inverted = {}
     reverse = [root.id]
@@ -104,6 +105,8 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
         reverse = []
         next_entities.clear()
         for adj in result_entities(resp):
+            if adj.id is None:
+                continue
             entities[adj.id] = adj
 
             for prop, value in adj.itervalues():

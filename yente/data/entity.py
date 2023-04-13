@@ -18,18 +18,10 @@ class Entity(CompositeEntity):
         super().__init__(model, data, cleaned=cleaned)
         self.target: bool = data.get("target", False)
 
-        # Not sure that impugning this is a good idea, to be seen:
-        first_seen: Optional[str] = data.get("first_seen")
-        last_seen: Optional[str] = data.get("last_seen")
-        self.first_seen: str = first_seen or last_seen or settings.RUN_TIME
-        self.last_seen: str = last_seen or self.first_seen
-
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
-        data["first_seen"] = self.first_seen
-        data["last_seen"] = self.last_seen
+        data["first_seen"] = self.first_seen or settings.RUN_TIME
         data["target"] = self.target
-        data["caption"] = self.caption
         return data
 
     @classmethod
