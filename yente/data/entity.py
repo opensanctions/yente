@@ -20,7 +20,6 @@ class Entity(CompositeEntity):
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
-        data["first_seen"] = self.first_seen or settings.RUN_TIME
         data["target"] = self.target
         return data
 
