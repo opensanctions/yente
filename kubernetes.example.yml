@@ -227,7 +227,7 @@ spec:
                 - name: YENTE_MANIFEST
                   value: /app/manifests/production.yml
                 - name: YENTE_ELASTICSEARCH_INDEX
-                  value: "prod"
+                  value: "yente"
           restartPolicy: OnFailure
           volumes:
             - name: manifest-volume
