@@ -27,11 +27,4 @@ def score_results(
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
     if limit is not None:
         scored = scored[:limit]
-
-    # If multiple entities meet the match threshold, it's ambiguous
-    # and we bail out:
-    if matches > 1:
-        for result in scored:
-            result.match = False
-
     return scored
