@@ -16,8 +16,8 @@ from yente.data import get_catalog
 from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
-from yente.search.mapping import INDEX_SETTINGS
-from yente.data.util import expand_dates, expand_names
+from yente.search.mapping import INDEX_SETTINGS, NAMES_FIELD, SOUNDEX_FIELD
+from yente.data.util import expand_dates, expand_names, soundex_names
 
 log = get_logger(__name__)
 
@@ -44,8 +44,10 @@ async def iter_entity_docs(
         texts = entity.pop("indexText")
         doc = entity.to_full_dict(matchable=True)
         doc["text"] = texts
+        names = doc.pop(NameType.group, [])
+        doc[NAMES_FIELD] = expand_names(names)
+        doc[SOUNDEX_FIELD] = soundex_names(names)
         doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
-        doc[NameType.group] = expand_names(doc.pop(NameType.group, []))
         entity_id = doc.pop("id")
         yield {"_index": index, "_id": entity_id, "_source": doc}
 

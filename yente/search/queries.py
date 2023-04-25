@@ -2,18 +2,15 @@ from typing import Any, Dict, Generator, List, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from followthemoney.types.name import NameType
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import tokenize_names, pick_names
-from yente.search.mapping import TEXT_TYPES
+from yente.data.util import tokenize_names, pick_names, soundex_names
+from yente.search.mapping import TEXT_TYPES, NAMES_FIELD, SOUNDEX_FIELD
 
 log = get_logger(__name__)
 FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
-
-NAMES_FIELD = NameType.group or "names"
 
 
 def filter_query(
@@ -42,12 +39,12 @@ def filter_query(
     return {"bool": {"filter": filterqs, "should": shoulds, "minimum_should_match": 1}}
 
 
-def names_query(entity: EntityProxy, field: str = NAMES_FIELD) -> List[Clause]:
+def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     shoulds = []
     for name in pick_names(names, limit=5):
         match = {
-            field: {
+            NAMES_FIELD: {
                 "query": name,
                 "fuzziness": "AUTO",
                 "minimum_should_match": "70%",
@@ -56,7 +53,9 @@ def names_query(entity: EntityProxy, field: str = NAMES_FIELD) -> List[Clause]:
         }
         shoulds.append({"match": match})
     for token in tokenize_names(names):
-        shoulds.append({"term": {field: {"value": token}}})
+        shoulds.append({"term": {NAMES_FIELD: {"value": token}}})
+    for phoneme in soundex_names(names):
+        shoulds.append({"term": {SOUNDEX_FIELD: {"value": phoneme}}})
     return shoulds
 
 

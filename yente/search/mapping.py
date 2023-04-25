@@ -3,6 +3,7 @@ from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
 from followthemoney.types.common import PropertyType
+from followthemoney.types.name import NameType
 
 from yente import settings
 
@@ -31,6 +32,8 @@ INDEX_SETTINGS = {
         "number_of_shards": settings.ES_SHARDS,
     },
 }
+NAMES_FIELD = NameType.group or "names"
+SOUNDEX_FIELD = "soundex"
 
 
 def make_field(
@@ -86,6 +89,7 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
+        "soundex": make_keyword(),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
         "properties": {"dynamic": "strict", "properties": prop_mapping},

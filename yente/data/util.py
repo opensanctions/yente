@@ -1,8 +1,9 @@
 import fingerprints
 from pathlib import Path
+from jellyfish import soundex
 from functools import lru_cache
 from urllib.parse import urlparse
-from normality import WS
+from normality import WS, normalize
 from Levenshtein import distance
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
@@ -38,7 +39,7 @@ def expand_names(names: List[str]) -> List[str]:
 
 def tokenize_names(names: List[str]) -> Set[str]:
     """Get a unique set of tokens present in the given set of names."""
-    expanded = set()
+    expanded: Set[str] = set()
     for name in names:
         name = name.lower()
         expanded.update(name.split(WS))
@@ -46,6 +47,18 @@ def tokenize_names(names: List[str]) -> Set[str]:
         if fp is not None:
             expanded.update(fp.split(WS))
     return expanded
+
+
+def soundex_names(names: List[str]) -> List[str]:
+    """Generate phonetic forms of the given names."""
+    phonemes: Set[str] = set()
+    for name in names:
+        normalized = normalize(name, ascii=True)
+        if normalized is not None:
+            for word in normalized.split(WS):
+                if len(word) > 2:
+                    phonemes.add(soundex(word))
+    return list(phonemes)
 
 
 @lru_cache(maxsize=500)
