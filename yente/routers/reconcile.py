@@ -9,7 +9,7 @@ from followthemoney import model
 from followthemoney.types import registry
 
 from yente import settings
-from yente.data.common import ErrorResponse
+from yente.data.common import ErrorResponse, EntityExample
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
@@ -150,7 +150,7 @@ async def reconcile_query(
     """Reconcile operation for a single query."""
     limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
     schema = query.get("type", settings.BASE_SCHEMA)
-    properties = {"alias": [query.get("query")]}
+    properties: Dict[str, List[str]] = {"alias": [query.get("query", "")]}
 
     for p in query.get("properties", []):
         prop = model.get_qname(p.get("pid"))
@@ -160,7 +160,8 @@ async def reconcile_query(
             properties[prop.name] = []
         properties[prop.name].append(p.get("v"))
 
-    proxy = Entity.from_example(schema, properties)
+    example = EntityExample(id=None, schema=schema, properties=dict(properties))
+    proxy = Entity.from_example(example)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
     entities = result_entities(resp)

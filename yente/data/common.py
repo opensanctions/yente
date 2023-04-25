@@ -100,6 +100,7 @@ class SearchResponse(ResultsResponse):
 
 
 class EntityExample(BaseModel):
+    id: Optional[str] = Field(None, example="my-entity-id")
     schema_: str = Field(..., example=settings.BASE_SCHEMA, alias="schema")
     properties: Dict[str, Union[str, List[str]]] = Field(
         ..., example={"name": ["John Doe"]}

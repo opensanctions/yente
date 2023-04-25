@@ -202,7 +202,7 @@ async def match(
 
     for name, example in match.queries.items():
         try:
-            entity = Entity.from_example(example.schema_, example.properties)
+            entity = Entity.from_example(example)
             query = entity_query(ds, entity)
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))

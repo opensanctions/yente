@@ -21,7 +21,7 @@ def expand_dates(dates: List[str]) -> List[str]:
     return list(expanded)
 
 
-@lru_cache(maxsize=500)
+@lru_cache(maxsize=10000)
 def fingerprint_name(name: str) -> Optional[str]:
     return fingerprints.generate(name)
 

@@ -1,12 +1,14 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
 from nomenklatura.entity import CompositeEntity
 
-from yente import settings
 from yente.logs import get_logger
+
+if TYPE_CHECKING:
+    from yente.data.common import EntityExample
 
 log = get_logger(__name__)
 
@@ -24,10 +26,10 @@ class Entity(CompositeEntity):
         return data
 
     @classmethod
-    def from_example(cls, schema: str, properties: Dict[str, Any]) -> "Entity":
-        data = {"id": "example", "schema": schema}
+    def from_example(cls, example: "EntityExample") -> "Entity":
+        data = {"id": example.id, "schema": example.schema_}
         obj = cls(model, data)
-        for prop_name, values in properties.items():
+        for prop_name, values in example.properties.items():
             if prop_name not in obj.schema.properties:
                 log.warning(
                     "Invalid example property",
