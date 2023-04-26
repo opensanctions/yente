@@ -8,7 +8,7 @@ from Levenshtein import distance
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
-from typing import AsyncGenerator, Dict, List, Optional, Set, Union
+from typing import AsyncGenerator, Dict, List, Optional, Set, Union, Generator
 from followthemoney.types import registry
 
 
@@ -49,15 +49,23 @@ def tokenize_names(names: List[str]) -> Set[str]:
     return expanded
 
 
-def soundex_names(names: List[str]) -> List[str]:
-    """Generate phonetic forms of the given names."""
-    phonemes: Set[str] = set()
+def name_words(names: List[str]) -> Set[str]:
+    """Get a unique set of tokens present in the given set of names."""
+    words: Set[str] = set()
     for name in names:
         normalized = normalize(name, ascii=True)
         if normalized is not None:
             for word in normalized.split(WS):
-                if len(word) > 2:
-                    phonemes.add(soundex(word))
+                words.add(word)
+    return words
+
+
+def soundex_names(names: List[str]) -> List[str]:
+    """Generate phonetic forms of the given names."""
+    phonemes: Set[str] = set()
+    for word in name_words(names):
+        if len(word) > 2:
+            phonemes.add(soundex(word))
     return list(phonemes)
 
 
