@@ -1,15 +1,13 @@
-from typing import Iterable, List, Optional, Dict, Callable
+from typing import List
 from followthemoney.types import registry
 from jellyfish import soundex, jaro_winkler_similarity
 from nomenklatura.entity import CE
-from nomenklatura.matching import compare_scored
 from nomenklatura.matching.types import MatchingResult
 from nomenklatura.matching.features.util import compare_sets
 
-from yente import settings
-from yente.data.entity import Entity
-from yente.data.common import ScoredEntityResponse
 from yente.data.util import name_words
+
+# Try to re-produce results from: https://sanctionssearch.ofac.treas.gov/
 
 
 def _soundex_jaro(query: List[str], result: List[str]) -> float:
@@ -53,36 +51,3 @@ def compare_ofac(query: CE, result: CE) -> MatchingResult:
     features = {"names_jaro": names_jaro, "soundex_jaro": soundex_jaro}
     score = _ofac_round_score(max(names_jaro, soundex_jaro))
     return MatchingResult(score=score, features=features)
-
-
-ALGORITHMS: Dict[str, Callable[[CE, CE], MatchingResult]] = {
-    "regression_matcher": compare_scored,
-    "ofac_249": compare_ofac,
-}
-DEFAULT_ALGORITHM = "regression_matcher"
-
-
-def score_results(
-    entity: Entity,
-    results: Iterable[Entity],
-    threshold: float = settings.SCORE_THRESHOLD,
-    cutoff: float = 0.0,
-    limit: Optional[int] = None,
-    algorithm: str = DEFAULT_ALGORITHM,
-) -> List[ScoredEntityResponse]:
-    scored: List[ScoredEntityResponse] = []
-    matches = 0
-    scorer_func = ALGORITHMS.get(algorithm, ALGORITHMS[DEFAULT_ALGORITHM])
-    for proxy in results:
-        scoring = scorer_func(entity, proxy)
-        result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)
-        if result.score <= cutoff:
-            continue
-        if result.match:
-            matches += 1
-        scored.append(result)
-
-    scored = sorted(scored, key=lambda r: r.score, reverse=True)
-    if limit is not None:
-        scored = scored[:limit]
-    return scored
