@@ -34,7 +34,8 @@ def _soundex_jaro(query: List[str], result: List[str]) -> float:
     return sum(similiarities) / float(len(similiarities))
 
 
-def _ofac_round_score(score: float, precision: float = 0.05):
+def _ofac_round_score(score: float, precision: float = 0.05) -> float:
+    """OFAC seems to return scores in steps of 5, ie. 100, 95, 90, 85, etc."""
     correction = 0.5 if score >= 0 else -0.5
     return round(int(score / precision + correction) * precision, 2)
 
@@ -54,11 +55,11 @@ def compare_ofac(query: CE, result: CE) -> MatchingResult:
     return MatchingResult(score=score, features=features)
 
 
-SCORER: Dict[str, Callable[[CE, CE], MatchingResult]] = {
-    "default": compare_scored,
-    "ofac": compare_ofac,
+ALGORITHMS: Dict[str, Callable[[CE, CE], MatchingResult]] = {
+    "regression_matcher": compare_scored,
+    "ofac_249": compare_ofac,
 }
-DEFAULT_SCORER = "default"
+DEFAULT_ALGORITHM = "regression_matcher"
 
 
 def score_results(
@@ -67,11 +68,11 @@ def score_results(
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
     limit: Optional[int] = None,
-    scorer: str = DEFAULT_SCORER,
+    algorithm: str = DEFAULT_ALGORITHM,
 ) -> List[ScoredEntityResponse]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
-    scorer_func = SCORER.get(scorer, SCORER[DEFAULT_SCORER])
+    scorer_func = ALGORITHMS.get(algorithm, ALGORITHMS[DEFAULT_ALGORITHM])
     for proxy in results:
         scoring = scorer_func(entity, proxy)
         result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)

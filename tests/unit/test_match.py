@@ -51,6 +51,20 @@ def test_match_putin():
     assert res0["id"] == "Q7747", res0
 
 
+def test_match_putin_ofac_mode():
+    query = {"queries": {"vv": EXAMPLE}}
+    resp = client.post("/match/default", json=query, params={"algorithm": "ofac_249"})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["responses"]["vv"]
+    assert res["query"]["schema"] == "Person"
+    assert res["query"]["properties"]["country"][0] == "ru"
+    assert res["total"]["value"] > 0, res["total"]
+    res0 = res["results"][0]
+    assert res0["id"] == "Q7747", res0
+    assert res0["score"] > 0.90, res0
+
+
 def test_match_no_schema():
     query = {"queries": {"fail": {"properties": {"name": "Banana"}}}}
     resp = client.post("/match/default", json=query)
@@ -69,7 +83,7 @@ def test_match_ermakov():
 
 def test_id_pass_through():
     body = dict(ERMAKOV)
-    body['id'] = 'ermakov'
+    body["id"] = "ermakov"
     query = {"queries": {"no1": body}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text

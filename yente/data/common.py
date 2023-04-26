@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Union, Optional
 from pydantic import BaseModel, Field
-from nomenklatura.matching.types import FeatureDocs
 from nomenklatura.matching.types import MatchingResult
 
 from yente import settings
@@ -120,7 +119,6 @@ class EntityMatches(BaseModel):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
-    matcher: FeatureDocs
     limit: int = Field(..., example=5)
 
 
