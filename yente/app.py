@@ -9,7 +9,7 @@ from structlog.contextvars import clear_contextvars, bind_contextvars
 
 from yente import settings
 from yente.logs import get_logger
-from yente.routers import reconcile, search, admin
+from yente.routers import reconcile, search, match, admin
 
 log = get_logger("yente")
 
@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
     )
     app.middleware("http")(request_middleware)
     app.include_router(search.router)
+    app.include_router(match.router)
     app.include_router(reconcile.router)
     app.include_router(admin.router)
 
