@@ -53,6 +53,9 @@ def test_match_putin():
 
 def test_match_putin_ofac_mode():
     query = {"queries": {"vv": EXAMPLE}}
+    resp = client.post("/match/default", json=query, params={"algorithm": "neural_net"})
+    assert resp.status_code == 400, resp.text
+
     resp = client.post("/match/default", json=query, params={"algorithm": "ofac_249"})
     assert resp.status_code == 200, resp.text
     data = resp.json()
