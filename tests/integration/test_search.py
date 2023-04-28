@@ -5,7 +5,8 @@ from .util import find_result_id, first_result_id
 
 def test_search_putin(http: Session, search_url: str):
     resp = http.get(search_url, params={"q": "vladimir putin"})
-    assert find_result_id(resp.json(), "Q7747"), resp.json()
+    data = resp.json()
+    assert find_result_id(resp.json(), "Q7747"), data
 
 
 def test_search_falah_taha(http: Session, search_url: str):

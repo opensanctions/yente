@@ -19,8 +19,8 @@ class Entity(CompositeEntity):
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
         self.target: bool = data.get("target", False)
-        self._first_seen: Optional[str] = data.get("first_seen", False)
-        self._last_seen: Optional[str] = data.get("last_seen", False)
+        self._first_seen: Optional[str] = data.get("first_seen", None)
+        self._last_seen: Optional[str] = data.get("last_seen", None)
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
