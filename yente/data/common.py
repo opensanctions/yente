@@ -35,8 +35,8 @@ class EntityResponse(BaseModel):
             datasets=list(entity.datasets),
             referents=list(entity.referents),
             target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
+            first_seen=entity._first_seen or entity.first_seen,
+            last_seen=entity._last_seen or entity.last_seen,
         )
 
 
@@ -60,8 +60,8 @@ class ScoredEntityResponse(EntityResponse):
             datasets=list(entity.datasets),
             referents=list(entity.referents),
             target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
+            first_seen=entity._first_seen or entity.first_seen,
+            last_seen=entity._last_seen or entity.last_seen,
             score=result["score"],
             match=result["score"] >= threshold,
             features=result["features"],
