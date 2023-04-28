@@ -33,6 +33,7 @@ INDEX_SETTINGS = {
     },
 }
 NAMES_FIELD = NameType.group or "names"
+NAME_PART_FIELD = "name_parts"
 SOUNDEX_FIELD = "soundex"
 
 
@@ -89,7 +90,8 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
-        "soundex": make_keyword(),
+        SOUNDEX_FIELD: make_keyword(),
+        NAME_PART_FIELD: make_keyword(),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
         "properties": {"dynamic": "strict", "properties": prop_mapping},
