@@ -5,8 +5,8 @@ from followthemoney.types import registry
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import tokenize_names, pick_names, soundex_names
-from yente.search.mapping import TEXT_TYPES, NAMES_FIELD, SOUNDEX_FIELD
+from yente.data.util import name_words, pick_names, soundex_names
+from yente.search.mapping import TEXT_TYPES, NAMES_FIELD, SOUNDEX_FIELD, NAME_PART_FIELD
 
 log = get_logger(__name__)
 FilterDict = Dict[str, Union[bool, str, List[str]]]
@@ -52,8 +52,8 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             }
         }
         shoulds.append({"match": match})
-    for token in tokenize_names(names):
-        shoulds.append({"term": {NAMES_FIELD: {"value": token}}})
+    for token in name_words(names):
+        shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
     for phoneme in soundex_names(names):
         shoulds.append({"term": {SOUNDEX_FIELD: {"value": phoneme}}})
     return shoulds
