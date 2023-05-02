@@ -18,7 +18,7 @@ setup(
     install_requires=[
         "followthemoney==3.3.0",
         "nomenklatura==2.9.5",
-        "asyncstdlib==3.10.6",
+        "asyncstdlib==3.10.7",
         "aiocron==1.8",
         "aiocsv==1.2.4",
         "aiofiles==23.1.0",
