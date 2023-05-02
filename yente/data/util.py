@@ -48,7 +48,7 @@ def name_words(names: List[str]) -> Set[str]:
     """Get a unique set of tokens present in the given set of names."""
     words: Set[str] = set()
     for name in names:
-        normalized = normalize(name, ascii=True)
+        normalized = fingerprint_name(name)
         if normalized is not None:
             for word in normalized.split(WS):
                 words.add(word)
