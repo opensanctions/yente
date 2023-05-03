@@ -26,7 +26,9 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
-    return Entity.from_dict(model, source)
+    entity = Entity.from_dict(model, source)
+    entity.datasets = set(source["datasets"])
+    return entity
 
 
 def result_total(result: ObjectApiResponse[Any]) -> TotalSpec:

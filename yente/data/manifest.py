@@ -1,8 +1,11 @@
+import asyncio
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
+from nomenklatura.dataset import DataCatalog
 
 from yente import settings
 from yente.data.loader import load_yaml_url
+from yente.data.dataset import Dataset
 
 
 class CatalogManifest(BaseModel):
@@ -45,3 +48,19 @@ class Manifest(BaseModel):
             await catalog.fetch(manifest)
         # TODO: load remote metadata from a `metadata_url` on each dataset?
         return manifest
+
+
+class Catalog(DataCatalog[Dataset]):
+    """A collection of datasets, loaded from a manifest."""
+
+    instance: Optional["Catalog"] = None
+    lock = asyncio.Lock()
+
+    @classmethod
+    async def load(cls) -> "Catalog":
+        async with cls.lock:
+            instance = cls(Dataset, {})
+            manifest = await Manifest.load()
+            for dmf in manifest.datasets:
+                instance.make_dataset(dmf)
+            return instance

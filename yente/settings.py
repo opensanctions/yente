@@ -95,6 +95,7 @@ CRON: Optional[Cron] = None
 CRONTAB = env_str("YENTE_CRONTAB", "*/30 * * * *")
 AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
 STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
+DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM") or "regression-v1"
 
 DATA_PATH = Path(env_str("YENTE_DATA_PATH") or "/tmp")
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")

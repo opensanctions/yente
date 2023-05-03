@@ -31,7 +31,7 @@ from yente.data.freebase import (
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
-from yente.scoring import score_results
+from yente.scoring import score_results, get_algorithm
 from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
 
@@ -164,8 +164,9 @@ async def reconcile_query(
     proxy = Entity.from_example(example)
     query = entity_query(dataset, proxy)
     resp = await search_entities(query, limit=limit, offset=offset)
+    algorithm = get_algorithm(settings.DEFAULT_ALGORITHM)
     entities = result_entities(resp)
-    scoreds = [s for s in score_results(proxy, entities, limit=limit)]
+    scoreds = [s for s in score_results(algorithm, proxy, entities, limit=limit)]
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]
     log.info(
         f"/reconcile/{dataset.name}",

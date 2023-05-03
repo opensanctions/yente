@@ -1,4 +1,4 @@
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
@@ -19,10 +19,16 @@ class Entity(CompositeEntity):
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
         self.target: bool = data.get("target", False)
+        self._first_seen: Optional[str] = data.get("first_seen", None)
+        self._last_seen: Optional[str] = data.get("last_seen", None)
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data["target"] = self.target
+        if data.get("first_seen") is None:
+            data["first_seen"] = self._first_seen
+        if data.get("last_seen") is None:
+            data["last_seen"] = self._last_seen
         return data
 
     @classmethod

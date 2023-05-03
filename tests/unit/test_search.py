@@ -8,7 +8,12 @@ def test_search_putin():
     assert "results" in data, data
     results = data.get("results")
     assert len(results), results
-    assert results[0]["id"] == "Q7747", results
+    putin = results[0]
+    assert putin["id"] == "Q7747", results
+    assert putin["first_seen"] is not None, putin
+    assert putin["first_seen"].startswith("20")
+    assert putin["last_seen"] is not None, putin
+    assert putin["last_seen"].startswith("20")
 
 
 def test_search_no_query():

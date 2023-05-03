@@ -1,5 +1,4 @@
 import asyncio
-from enum import Enum
 from typing import Dict
 from fastapi import APIRouter, Query, Response, HTTPException
 
@@ -12,14 +11,15 @@ from yente.search.queries import entity_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
 from yente.util import limit_window
-from yente.scoring import score_results, DEFAULT_ALGORITHM, ALGORITHMS
+from yente.scoring import score_results, get_algorithm
+from nomenklatura.matching import ALGORITHMS
 from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET
 
 log = get_logger(__name__)
 router = APIRouter()
 
-ALGO_LIST = ", ".join([a for a in ALGORITHMS.keys()])
+ALGO_LIST = ", ".join([a.NAME for a in ALGORITHMS])
 
 
 @router.post(
@@ -50,7 +50,7 @@ async def match(
         title="Lower bound of score for results to be returned at all",
     ),
     algorithm: str = Query(
-        DEFAULT_ALGORITHM,
+        settings.DEFAULT_ALGORITHM,
         title=f"Scoring algorithm to use, options: {ALGO_LIST}",
     ),
 ) -> EntityMatchResponse:
@@ -109,13 +109,11 @@ async def match(
     """
     ds = await get_dataset(dataset)
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+    algorithm_type = get_algorithm(algorithm)
 
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
-
-    if algorithm not in ALGORITHMS:
-        raise HTTPException(400, detail="Unknown algorithm: %s" % algorithm)
 
     queries = []
     entities = []
@@ -140,12 +138,12 @@ async def match(
     for (name, entity), resp in zip(entities, results):
         ents = result_entities(resp)
         scored = score_results(
+            algorithm_type,
             entity,
             ents,
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
-            algorithm=algorithm,
         )
         total = result_total(resp)
         log.info(
@@ -161,4 +159,8 @@ async def match(
             query=EntityExample.parse_obj(entity.to_dict()),
         )
     response.headers["x-batch-size"] = str(len(responses))
-    return EntityMatchResponse(responses=responses, limit=limit)
+    return EntityMatchResponse(
+        responses=responses,
+        matcher=algorithm_type.explain(),
+        limit=limit,
+    )

@@ -1,4 +1,3 @@
-import fingerprints
 from pathlib import Path
 from jellyfish import soundex
 from functools import lru_cache
@@ -8,8 +7,9 @@ from Levenshtein import distance
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
-from typing import AsyncGenerator, Dict, List, Optional, Set, Union, Generator
+from typing import AsyncGenerator, Dict, List, Set, Union
 from followthemoney.types import registry
+from nomenklatura.util import fingerprint_name, normalize_name
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -20,11 +20,6 @@ def expand_dates(dates: List[str]) -> List[str]:
             if len(date) > prec.value:
                 expanded.add(date[: prec.value])
     return list(expanded)
-
-
-@lru_cache(maxsize=10000)
-def fingerprint_name(name: str) -> Optional[str]:
-    return fingerprints.generate(name)
 
 
 def expand_names(names: List[str]) -> List[str]:
@@ -53,7 +48,7 @@ def name_words(names: List[str]) -> Set[str]:
     """Get a unique set of tokens present in the given set of names."""
     words: Set[str] = set()
     for name in names:
-        normalized = normalize(name, ascii=True)
+        normalized = fingerprint_name(name)
         if normalized is not None:
             for word in normalized.split(WS):
                 words.add(word)

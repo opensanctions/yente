@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, List, Union, Optional
 from pydantic import BaseModel, Field
-from nomenklatura.matching.types import MatchingResult
+from nomenklatura.matching.types import MatchingResult, FeatureDocs
 
 from yente import settings
 from yente.data.entity import Entity
@@ -34,8 +34,8 @@ class EntityResponse(BaseModel):
             datasets=list(entity.datasets),
             referents=list(entity.referents),
             target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
+            first_seen=entity._first_seen or entity.first_seen,
+            last_seen=entity._last_seen or entity.last_seen,
         )
 
 
@@ -59,8 +59,8 @@ class ScoredEntityResponse(EntityResponse):
             datasets=list(entity.datasets),
             referents=list(entity.referents),
             target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
+            first_seen=entity._first_seen or entity.first_seen,
+            last_seen=entity._last_seen or entity.last_seen,
             score=result["score"],
             match=result["score"] >= threshold,
             features=result["features"],
@@ -119,6 +119,7 @@ class EntityMatches(BaseModel):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
+    matcher: FeatureDocs
     limit: int = Field(..., example=5)
 
 
@@ -135,3 +136,13 @@ class DatasetModel(BaseModel):
 
 class DataCatalogModel(BaseModel):
     datasets: List[DatasetModel]
+
+
+class Algorithm(BaseModel):
+    name: str
+    description: Optional[str]
+    features: FeatureDocs
+
+
+class AlgorithmResponse(BaseModel):
+    algorithms: List[Algorithm]
