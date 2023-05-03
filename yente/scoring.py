@@ -1,34 +1,33 @@
-from typing import Iterable, List, Optional, Dict, Callable
-from nomenklatura.entity import CE
-from nomenklatura.matching import compare_scored
-from nomenklatura.matching.types import MatchingResult
+from fastapi import HTTPException
+from typing import Iterable, List, Optional, Type
+from nomenklatura.matching import ALGORITHMS, MatcherV1
+from nomenklatura.matching.types import ScoringAlgorithm
 
 from yente import settings
 from yente.data.entity import Entity
 from yente.data.common import ScoredEntityResponse
-from yente.scoring.ofac import compare_ofac
 
 
-ALGORITHMS: Dict[str, Callable[[CE, CE], MatchingResult]] = {
-    "regression_matcher": compare_scored,
-    "ofac_249": compare_ofac,
-}
-DEFAULT_ALGORITHM = "regression_matcher"
+def get_algorithm(name: str) -> Type[ScoringAlgorithm]:
+    """Return the scoring algorithm class with the given name."""
+    for algorithm in ALGORITHMS:
+        if algorithm.NAME == name:
+            return algorithm
+    raise HTTPException(400, detail=f"Unknown algorithm: {name}")
 
 
 def score_results(
+    algorithm: Type[ScoringAlgorithm],
     entity: Entity,
     results: Iterable[Entity],
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
     limit: Optional[int] = None,
-    algorithm: str = DEFAULT_ALGORITHM,
 ) -> List[ScoredEntityResponse]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
-    scorer_func = ALGORITHMS.get(algorithm, ALGORITHMS[DEFAULT_ALGORITHM])
     for proxy in results:
-        scoring = scorer_func(entity, proxy)
+        scoring = algorithm.compare(entity, proxy)
         result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)
         if result.score <= cutoff:
             continue
