@@ -1,13 +1,16 @@
 import aiocron  # type: ignore
+from typing import List
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
+from normality import collapse_spaces
 from starlette.responses import FileResponse
+from nomenklatura.matching import ALGORITHMS
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data import get_catalog, refresh_catalog
 from yente.data.common import ErrorResponse, StatusResponse
-from yente.data.common import DataCatalogModel
+from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.base import close_es
@@ -87,6 +90,23 @@ async def catalog() -> DataCatalogModel:
     """
     catalog = await get_catalog()
     return DataCatalogModel.parse_obj(catalog.to_dict())
+
+
+@router.get(
+    "/algorithms",
+    response_model=AlgorithmResponse,
+)
+async def algorithms() -> AlgorithmResponse:
+    """Return a list of the supported matching/scoring algorithms."""
+    algorithms: List[Algorithm] = []
+    for algo in ALGORITHMS:
+        desc = Algorithm(
+            name=algo.NAME,
+            description=collapse_spaces(algo.__doc__),
+            features=algo.explain(),
+        )
+        algorithms.append(desc)
+    return AlgorithmResponse(algorithms=algorithms)
 
 
 @router.post(

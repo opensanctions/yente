@@ -25,6 +25,14 @@ def test_manifest():
     assert len(data["datasets"]) > 5
 
 
+def test_algorithms():
+    res = client.get("/algorithms")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert "algorithms" in data
+    assert len(data["algorithms"]) > 3
+
+
 def test_updatez_get():
     res = client.get("/updatez")
     assert res.status_code == 405, res.text
