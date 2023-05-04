@@ -94,10 +94,13 @@ async def catalog() -> DataCatalogModel:
 
 @router.get(
     "/algorithms",
+    tags=["System information"],
     response_model=AlgorithmResponse,
 )
 async def algorithms() -> AlgorithmResponse:
-    """Return a list of the supported matching/scoring algorithms."""
+    """Return a list of the supported matching/scoring algorithms used by the matching endpoing.
+
+    See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/)."""
     algorithms: List[Algorithm] = []
     for algo in ALGORITHMS:
         desc = Algorithm(
