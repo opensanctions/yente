@@ -65,19 +65,19 @@ async def iter_entity_docs(
 
 async def index_entities_rate_limit(
     es: AsyncElasticsearch, dataset: Dataset, force: bool
-) -> None:
+) -> bool:
     async with index_semaphore:
-        await index_entities(es, dataset, force=force)
+        return await index_entities(es, dataset, force=force)
 
 
-async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> None:
+async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     if not dataset.load:
         log.debug("Dataset is not loadable", dataset=dataset.name)
-        return
+        return False
     if dataset.entities_url is None:
         log.warning("Cannot identify resource with FtM entities", dataset=dataset.name)
-        return
+        return False
 
     # Versioning defaults to the software version instead of a data update date:
     version = f"{settings.INDEX_VERSION}{dataset.version}"
@@ -92,7 +92,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     exists = await es.indices.exists(index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
-        return
+        return False
 
     # await es.indices.delete(index=next_index)
     log.info("Create index", index=next_index)
@@ -128,13 +128,13 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
             entities_url=dataset.entities_url,
         )
         await es.indices.delete(index=next_index)
-        return
+        return False
 
     await es.indices.refresh(index=next_index)
     res = await es.indices.put_alias(index=next_index, name=settings.ENTITY_INDEX)
     if res.meta.status != 200:
         log.error("Failed to alias next index", index=next_index)
-        return
+        return False
 
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
     indices: Any = await es.cat.indices(format="json")
@@ -142,14 +142,18 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
     if len(current) == 0:
         log.error("No index was created", index=next_index)
-        return
+        return False
     for index in current:
         if index != next_index:
             log.info("Delete other index", index=index)
             await es.indices.delete(index=index)
 
+    return True
 
-async def update_index(force: bool = False) -> None:
+
+async def update_index(force: bool = False) -> bool:
+    """Reindex all datasets if there is a new version of their data contenst available,
+    return boolean to indicate if the index was changed for any of them."""
     es_ = await get_es()
     es = es_.options(request_timeout=300)
     try:
@@ -158,8 +162,10 @@ async def update_index(force: bool = False) -> None:
         indexers = []
         for dataset in catalog.datasets:
             indexers.append(index_entities_rate_limit(es, dataset, force))
-        await asyncio.gather(*indexers)
-        log.info("Index update complete.")
+        results = await asyncio.gather(*indexers)
+        changed = True in results
+        log.info("Index update complete.", changed=changed)
+        return changed
     finally:
         await es.close()
         await close_es()
