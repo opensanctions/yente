@@ -14,6 +14,8 @@ def test_search_putin():
     assert putin["first_seen"].startswith("20")
     assert putin["last_seen"] is not None, putin
     assert putin["last_seen"].startswith("20")
+    assert "sanctions" not in putin["datasets"]
+    assert "default" not in putin["datasets"]
 
 
 def test_search_no_query():
