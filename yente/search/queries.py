@@ -2,10 +2,11 @@ from typing import Any, Dict, Generator, List, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
+from nomenklatura.util import name_words
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import name_words, pick_names, soundex_names
+from yente.data.util import pick_names, soundex_names
 from yente.search.mapping import TEXT_TYPES, NAMES_FIELD, SOUNDEX_FIELD, NAME_PART_FIELD
 
 log = get_logger(__name__)
