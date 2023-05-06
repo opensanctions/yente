@@ -1,15 +1,14 @@
 from pathlib import Path
-from jellyfish import soundex
+from jellyfish import soundex, levenshtein_distance
 from functools import lru_cache
 from urllib.parse import urlparse
-from normality import WS, normalize
-from Levenshtein import distance
+from normality import WS
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout
 from typing import AsyncGenerator, Dict, List, Set, Union
 from followthemoney.types import registry
-from nomenklatura.util import fingerprint_name, normalize_name
+from nomenklatura.util import fingerprint_name, name_words
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -20,39 +19,6 @@ def expand_dates(dates: List[str]) -> List[str]:
             if len(date) > prec.value:
                 expanded.add(date[: prec.value])
     return list(expanded)
-
-
-def expand_names(names: List[str]) -> List[str]:
-    """Expand names into normalized version."""
-    expanded = set(names)
-    for name in names:
-        fp = fingerprint_name(name)
-        if fp is not None:
-            expanded.add(fp)
-    return list(expanded)
-
-
-def tokenize_names(names: List[str]) -> Set[str]:
-    """Get a unique set of tokens present in the given set of names."""
-    expanded: Set[str] = set()
-    for name in names:
-        name = name.lower()
-        expanded.update(name.split(WS))
-        fp = fingerprint_name(name)
-        if fp is not None:
-            expanded.update(fp.split(WS))
-    return expanded
-
-
-def name_words(names: List[str]) -> Set[str]:
-    """Get a unique set of tokens present in the given set of names."""
-    words: Set[str] = set()
-    for name in names:
-        normalized = fingerprint_name(name)
-        if normalized is not None:
-            for word in normalized.split(WS):
-                words.add(word)
-    return words
 
 
 def soundex_names(names: List[str]) -> List[str]:
@@ -66,7 +32,7 @@ def soundex_names(names: List[str]) -> List[str]:
 
 @lru_cache(maxsize=500)
 def _compare_distance(left: str, right: str) -> int:
-    dist: int = distance(left[:250], right[:250])
+    dist: int = levenshtein_distance(left[:250], right[:250])
     return dist
 
 

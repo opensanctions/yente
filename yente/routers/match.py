@@ -11,8 +11,8 @@ from yente.search.queries import entity_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
 from yente.util import limit_window
-from yente.scoring import score_results, get_algorithm
-from nomenklatura.matching import ALGORITHMS
+from yente.scoring import score_results
+from nomenklatura.matching import ALGORITHMS, get_algorithm
 from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET
 
@@ -110,6 +110,8 @@ async def match(
     ds = await get_dataset(dataset)
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
     algorithm_type = get_algorithm(algorithm)
+    if algorithm_type is None:
+        raise HTTPException(400, detail=f"Unknown algorithm: {algorithm}")
 
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH

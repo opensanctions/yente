@@ -51,12 +51,12 @@ def test_match_putin():
     assert res0["id"] == "Q7747", res0
 
 
-def test_match_putin_ofac_mode():
+def test_match_putin_name_based_mode():
     query = {"queries": {"vv": EXAMPLE}}
     resp = client.post("/match/default", json=query, params={"algorithm": "neural-net"})
     assert resp.status_code == 400, resp.text
 
-    resp = client.post("/match/default", json=query, params={"algorithm": "ofac-249"})
+    resp = client.post("/match/default", json=query, params={"algorithm": "name-based"})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["responses"]["vv"]
