@@ -33,7 +33,7 @@ not include functionality for metered accounting of API requests.
 In this service, there is support for the following operations:
 
 * A simple text-based search for interactive applications (``/search``),
-* A query-by-example endpoint for KYC-style tasks (``/match``),
+* A query-by-example endpoint for screening tasks (``/match``),
 * Support for getting graph data for a particular entity (``/entities``),
 * Support for the OpenRefine Reconciliation API (``/reconcile``).
 
@@ -45,7 +45,7 @@ Further reading:
 * [Self-hosted OpenSanctions](https://www.opensanctions.org/docs/self-hosted/)
 * [Install and deployment](https://github.com/opensanctions/yente/blob/main/README.md)
 * Intro to the [entity data model](https://www.opensanctions.org/docs/entities/)
-* Tutorial: [Using the matching API to do KYC-style checks](https://www.opensanctions.org/articles/2022-02-01-matching-api/)
+* Tutorial: [Using the matching API to do screening checks](https://www.opensanctions.org/docs/api/matching/)
 * [Data dictionary](https://opensanctions.org/reference/)
 """
 
