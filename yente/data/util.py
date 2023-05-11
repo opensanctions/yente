@@ -2,7 +2,6 @@ from pathlib import Path
 from jellyfish import soundex, levenshtein_distance
 from functools import lru_cache
 from urllib.parse import urlparse
-from normality import WS
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout

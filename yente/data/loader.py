@@ -1,5 +1,6 @@
 import yaml
 import orjson
+import asyncio
 import aiofiles
 from pathlib import Path
 from urllib.parse import urlparse
@@ -23,7 +24,10 @@ async def load_yaml_url(url: str) -> Any:
         async with http_session() as client:
             async with client.get(url) as resp:
                 data = await resp.text()
-    return yaml.safe_load(data)
+    # HACK: PyYAML is so slow that it sometimes hangs the workers, so
+    # spawning a thread is unblocking.
+    content = await asyncio.to_thread(yaml.safe_load, data)
+    return content
 
 
 async def fetch_url_to_path(url: str, path: Path) -> None:
