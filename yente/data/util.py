@@ -4,7 +4,7 @@ from functools import lru_cache
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Set, Union
 from followthemoney.types import registry
 from nomenklatura.util import fingerprint_name, name_words
@@ -94,5 +94,8 @@ async def http_session() -> AsyncGenerator[ClientSession, None]:
         sock_connect=None,
         sock_read=None,
     )
-    async with ClientSession(timeout=timeout, trust_env=True) as client:
+    connector = TCPConnector(limit=10)
+    async with ClientSession(
+        timeout=timeout, trust_env=True, connector=connector
+    ) as client:
         yield client
