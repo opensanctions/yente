@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import structlog
 from structlog.stdlib import BoundLogger
 
@@ -16,5 +17,16 @@ async def get_catalog() -> Catalog:
 
 
 async def refresh_catalog() -> None:
-    log.info("Refreshing manifest/catalog...")
-    Catalog.instance = await Catalog.load()
+    # HACK: PyYAML is so slow that it sometimes hangs the workers, so
+    # spawning a thread is unblocking.
+
+    async def update_in_thread() -> None:
+        log.info("Refreshing manifest/catalog...", ts=Catalog.loaded_at)
+        Catalog.instance = await Catalog.load()
+
+    thread = threading.Thread(
+        target=asyncio.run,
+        args=(update_in_thread(),),
+        daemon=True,
+    )
+    thread.start()
