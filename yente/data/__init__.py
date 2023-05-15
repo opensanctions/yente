@@ -21,7 +21,7 @@ async def refresh_catalog() -> None:
     # spawning a thread is unblocking.
 
     async def update_in_thread() -> None:
-        log.info("Refreshing manifest/catalog...", ts=Catalog.loaded_at)
+        log.info("Refreshing manifest/catalog...", catalog=Catalog.instance)
         Catalog.instance = await Catalog.load()
 
     thread = threading.Thread(
