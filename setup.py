@@ -32,7 +32,7 @@ setup(
         "structlog==23.1.0",
         "pyicu==2.11",
         "jellyfish==0.11.2",
-        "orjson==3.8.12",
+        "orjson==3.8.13",
         "text-unidecode==1.3",
         "click==8.0.4",
         "normality==2.4.0",
