@@ -22,7 +22,10 @@ async def refresh_catalog() -> None:
 
     async def update_in_thread() -> None:
         log.info("Refreshing manifest/catalog...", catalog=Catalog.instance)
-        Catalog.instance = await Catalog.load()
+        try:
+            Catalog.instance = await Catalog.load()
+        except (Exception, KeyboardInterrupt) as exc:
+            log.exception("Metadata fetch error: %s" % exc)
 
     thread = threading.Thread(
         target=asyncio.run,

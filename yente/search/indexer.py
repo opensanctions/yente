@@ -173,7 +173,10 @@ async def update_index(force: bool = False) -> bool:
 
 def update_index_threaded(force: bool = False) -> None:
     async def update_in_thread() -> None:
-        await update_index(force=force)
+        try:
+            await update_index(force=force)
+        except (Exception, KeyboardInterrupt) as exc:
+            log.exception("Index update error: %s" % exc)
 
     thread = threading.Thread(
         target=asyncio.run,
