@@ -31,7 +31,7 @@ async def fetch_url_to_path(url: str, path: Path) -> None:
         async with client.get(url) as resp:
             resp.raise_for_status()
             async with aiofiles.open(path, "wb") as outfh:
-                while chunk := await resp.content.read(BUFFER):
+                async for chunk in resp.content.iter_chunked(BUFFER):
                     await outfh.write(chunk)
 
 
