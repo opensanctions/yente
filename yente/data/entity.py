@@ -25,10 +25,8 @@ class Entity(CompositeEntity):
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data["target"] = self.target
-        if data.get("first_seen") is None:
-            data["first_seen"] = self._first_seen
-        if data.get("last_seen") is None:
-            data["last_seen"] = self._last_seen
+        data["first_seen"] = self._first_seen or data.get("first_seen")
+        data["last_seen"] = self._last_seen or data.get("last_seen")
         return data
 
     @classmethod
