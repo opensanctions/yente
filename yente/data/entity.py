@@ -1,9 +1,10 @@
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Set, Optional, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
+from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
-from nomenklatura.entity import CompositeEntity
+from nomenklatura.publish.names import pick_name
 
 from yente.logs import get_logger
 
@@ -13,20 +14,40 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
-class Entity(CompositeEntity):
+class Entity(EntityProxy):
     """Entity for sanctions list entries and adjacent objects."""
 
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
+        self.caption: str = data.get("caption", None)
+        if self.caption is None:
+            self.caption = self._pick_caption()
         self.target: bool = data.get("target", False)
-        self._first_seen: Optional[str] = data.get("first_seen", None)
-        self._last_seen: Optional[str] = data.get("last_seen", None)
+        self.first_seen: Optional[str] = data.get("first_seen", None)
+        self.last_seen: Optional[str] = data.get("last_seen", None)
+        self.datasets: Set = set(data.get("datasets", []))
+        self.referents: Set = set(data.get("referents", []))
+
+    def _pick_caption(self) -> str:
+        is_thing = self.schema.is_a("Thing")
+        for prop in self.schema.caption:
+            values = self.get(prop)
+            if is_thing and len(values) > 1:
+                name = pick_name(values)
+                if name is not None:
+                    return name
+            for value in values:
+                return value
+        return self.schema.label
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
+        data["caption"] = self.caption
         data["target"] = self.target
-        data["first_seen"] = self._first_seen or data.get("first_seen")
-        data["last_seen"] = self._last_seen or data.get("last_seen")
+        data["first_seen"] = self.first_seen
+        data["last_seen"] = self.last_seen
+        data["datasets"] = list(self.datasets)
+        data["referents"] = list(self.referents)
         return data
 
     @classmethod
