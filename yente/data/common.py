@@ -23,12 +23,13 @@ class EntityResponse(BaseModel):
     target: bool = Field(False)
     first_seen: Optional[datetime] = Field(..., example=datetime.utcnow())
     last_seen: Optional[datetime] = Field(..., example=datetime.utcnow())
+    last_change: Optional[datetime] = Field(..., example=datetime.utcnow())
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
         return cls.construct(
             id=entity.id,
-            caption=entity.caption,
+            caption=entity._caption,
             schema=entity.schema.name,
             properties=dict(entity.properties),
             datasets=list(entity.datasets),
@@ -36,6 +37,7 @@ class EntityResponse(BaseModel):
             target=entity.target,
             first_seen=entity.first_seen,
             last_seen=entity.last_seen,
+            last_change=entity.last_change,
         )
 
 
@@ -53,7 +55,7 @@ class ScoredEntityResponse(EntityResponse):
     ) -> "ScoredEntityResponse":
         return cls.construct(
             id=entity.id,
-            caption=entity.caption,
+            caption=entity._caption,
             schema=entity.schema.name,
             properties=entity.properties,
             datasets=list(entity.datasets),
@@ -61,6 +63,7 @@ class ScoredEntityResponse(EntityResponse):
             target=entity.target,
             first_seen=entity.first_seen,
             last_seen=entity.last_seen,
+            last_change=entity.last_change,
             score=result["score"],
             match=result["score"] >= threshold,
             features=result["features"],

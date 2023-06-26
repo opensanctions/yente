@@ -19,14 +19,16 @@ class Entity(EntityProxy):
 
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
-        self.caption: str = data.get("caption", None)
-        if self.caption is None:
-            self.caption = self._pick_caption()
+        self._caption: str = data.get("caption", None)
+        if self._caption is None:
+            self._caption = self._pick_caption()
         self.target: bool = data.get("target", False)
         self.first_seen: Optional[str] = data.get("first_seen", None)
         self.last_seen: Optional[str] = data.get("last_seen", None)
+        self.last_change: Optional[str] = data.get("last_change", None)
         self.datasets: Set = set(data.get("datasets", []))
         self.referents: Set = set(data.get("referents", []))
+        self.context = {}
 
     def _pick_caption(self) -> str:
         is_thing = self.schema.is_a("Thing")
@@ -42,10 +44,11 @@ class Entity(EntityProxy):
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
-        data["caption"] = self.caption
+        data["caption"] = self._caption
         data["target"] = self.target
         data["first_seen"] = self.first_seen
         data["last_seen"] = self.last_seen
+        data["last_change"] = self.last_change
         data["datasets"] = list(self.datasets)
         data["referents"] = list(self.referents)
         return data

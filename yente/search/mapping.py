@@ -92,6 +92,7 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "text": make_field("text"),
         SOUNDEX_FIELD: make_keyword(),
         NAME_PART_FIELD: make_keyword(),
+        "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
         "properties": {"dynamic": "strict", "properties": prop_mapping},
