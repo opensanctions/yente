@@ -26,8 +26,8 @@ class Entity(EntityProxy):
         self.first_seen: Optional[str] = data.get("first_seen", None)
         self.last_seen: Optional[str] = data.get("last_seen", None)
         self.last_change: Optional[str] = data.get("last_change", None)
-        self.datasets: Set = set(data.get("datasets", []))
-        self.referents: Set = set(data.get("referents", []))
+        self.datasets: Set[str] = set(data.get("datasets", []))
+        self.referents: Set[str] = set(data.get("referents", []))
         self.context = {}
 
     def _pick_caption(self) -> str:
