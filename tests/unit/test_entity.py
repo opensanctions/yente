@@ -13,6 +13,10 @@ def test_entity_fetch():
     assert data["id"] == "Q7747"
     assert data["schema"] == "Person"
     assert "eu_fsf" in data["datasets"]
+    assert len(data["referents"]) > 5, data["referents"]
+    assert data["last_change"].startswith("20")
+    assert data["first_seen"].startswith("20")
+    assert data["last_seen"].startswith("20")
 
     props = data["properties"]
     assert isinstance(props["birthDate"][0], str), props["birthDate"]
