@@ -17,7 +17,7 @@ setup(
     namespace_packages=[],
     install_requires=[
         "followthemoney==3.4.3",
-        "nomenklatura==3.2.0",
+        "nomenklatura==3.2.1",
         "asyncstdlib==3.10.8",
         "aiocron==1.8",
         "aiocsv==1.2.4",
