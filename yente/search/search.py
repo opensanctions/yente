@@ -54,6 +54,8 @@ def result_facets(
         buckets: List[Dict[str, Any]] = agg.get("buckets", [])
         for bucket in buckets:
             key: Optional[str] = bucket.get("key")
+            if key is not None:
+                key = str(key)
             count: Optional[int] = bucket.get("doc_count")
             if key is None or count is None:
                 continue

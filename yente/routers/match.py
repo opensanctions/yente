@@ -158,7 +158,7 @@ async def match(
             status=200,
             results=scored,
             total=total,
-            query=EntityExample.parse_obj(entity.to_dict()),
+            query=EntityExample.model_validate(entity.to_dict()),
         )
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(

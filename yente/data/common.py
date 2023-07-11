@@ -10,38 +10,27 @@ EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
 
 class ErrorResponse(BaseModel):
-    detail: str = Field(..., example="Detailed error message")
+    detail: str = Field(..., examples=["Detailed error message"])
 
 
 class EntityResponse(BaseModel):
-    id: str = Field(..., example="NK-A7z....")
-    caption: str = Field(..., example="John Doe")
-    schema_: str = Field(..., example="LegalEntity", alias="schema")
-    properties: EntityProperties = Field(..., example={"name": ["John Doe"]})
-    datasets: List[str] = Field([], example=["us_ofac_sdn"])
-    referents: List[str] = Field([], example=["ofac-1234"])
+    id: str = Field(..., examples=["NK-A7z...."])
+    caption: str = Field(..., examples=["John Doe"])
+    schema_: str = Field(..., examples=["LegalEntity"], alias="schema")
+    properties: EntityProperties = Field(..., examples=[{"name": ["John Doe"]}])
+    datasets: List[str] = Field([], examples=[["us_ofac_sdn"]])
+    referents: List[str] = Field([], examples=[["ofac-1234"]])
     target: bool = Field(False)
-    first_seen: Optional[datetime] = Field(..., example=datetime.utcnow())
-    last_seen: Optional[datetime] = Field(..., example=datetime.utcnow())
-    last_change: Optional[datetime] = Field(..., example=datetime.utcnow())
+    first_seen: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
+    last_seen: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
+    last_change: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
-        return cls.construct(
-            id=entity.id,
-            caption=entity._caption,
-            schema=entity.schema.name,
-            properties=dict(entity.properties),
-            datasets=list(entity.datasets),
-            referents=list(entity.referents),
-            target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
-            last_change=entity.last_change,
-        )
+        return cls.model_validate(entity.to_dict())
 
 
-EntityResponse.update_forward_refs()
+EntityResponse.model_rebuild()
 
 
 class ScoredEntityResponse(EntityResponse):
@@ -53,21 +42,10 @@ class ScoredEntityResponse(EntityResponse):
     def from_entity_result(
         cls, entity: Entity, result: MatchingResult, threshold: float
     ) -> "ScoredEntityResponse":
-        return cls.construct(
-            id=entity.id,
-            caption=entity._caption,
-            schema=entity.schema.name,
-            properties=entity.properties,
-            datasets=list(entity.datasets),
-            referents=list(entity.referents),
-            target=entity.target,
-            first_seen=entity.first_seen,
-            last_seen=entity.last_seen,
-            last_change=entity.last_change,
-            score=result["score"],
-            match=result["score"] >= threshold,
-            features=result["features"],
-        )
+        data = entity.to_dict()
+        data.update(result)
+        data["match"] = result["score"] >= threshold
+        return cls.model_validate(data)
 
 
 class StatusResponse(BaseModel):
@@ -75,24 +53,24 @@ class StatusResponse(BaseModel):
 
 
 class SearchFacetItem(BaseModel):
-    name: str = Field(..., example="ru")
-    label: str = Field(..., example="Russia")
-    count: int = Field(1, example=42)
+    name: str = Field(..., examples=["ru"])
+    label: str = Field(..., examples=["Russia"])
+    count: int = Field(1, examples=[42])
 
 
 class SearchFacet(BaseModel):
-    label: str = Field(..., example="Countries")
+    label: str = Field(..., examples=["Countries"])
     values: List[SearchFacetItem]
 
 
 class TotalSpec(BaseModel):
-    value: int = Field(..., example=42)
-    relation: str = Field("eq", example="eq")
+    value: int = Field(..., examples=[42])
+    relation: str = Field("eq", examples=["eq"])
 
 
 class ResultsResponse(BaseModel):
-    limit: int = Field(..., example=20)
-    offset: int = Field(0, example=0)
+    limit: int = Field(..., examples=[20])
+    offset: int = Field(0, examples=[0])
     total: TotalSpec
 
 
@@ -102,10 +80,10 @@ class SearchResponse(ResultsResponse):
 
 
 class EntityExample(BaseModel):
-    id: Optional[str] = Field(None, example="my-entity-id")
-    schema_: str = Field(..., example=settings.BASE_SCHEMA, alias="schema")
+    id: Optional[str] = Field(None, examples=["my-entity-id"])
+    schema_: str = Field(..., examples=[settings.BASE_SCHEMA], alias="schema")
     properties: Dict[str, Union[str, List[str]]] = Field(
-        ..., example={"name": ["John Doe"]}
+        ..., examples=[{"name": ["John Doe"]}]
     )
 
 
@@ -114,7 +92,7 @@ class EntityMatchQuery(BaseModel):
 
 
 class EntityMatches(BaseModel):
-    status: int = Field(200, example=200)
+    status: int = Field(200, examples=[200])
     results: List[ScoredEntityResponse]
     total: TotalSpec
     query: EntityExample
@@ -123,16 +101,16 @@ class EntityMatches(BaseModel):
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
     matcher: FeatureDocs
-    limit: int = Field(..., example=5)
+    limit: int = Field(..., examples=[5])
 
 
 class DatasetModel(BaseModel):
     name: str
     title: str
-    summary: Optional[str]
-    url: Optional[str]
+    summary: Optional[str] = None
+    url: Optional[str] = None
     load: bool
-    entities_url: Optional[str]
+    entities_url: Optional[str] = None
     version: str
     children: List[str]
 
@@ -143,7 +121,7 @@ class DataCatalogModel(BaseModel):
 
 class Algorithm(BaseModel):
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     features: FeatureDocs
 
 
