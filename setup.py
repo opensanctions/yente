@@ -34,7 +34,7 @@ setup(
         "jellyfish==1.0.0",
         "orjson==3.9.2",
         "text-unidecode==1.3",
-        "click==8.0.4",
+        "click==8.1.5",
         "normality==2.4.0",
         "languagecodes==1.1.1",
         "countrynames==1.15.0",
