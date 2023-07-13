@@ -16,7 +16,7 @@ setup(
     packages=find_packages(exclude=["examples", "tests"]),
     namespace_packages=[],
     install_requires=[
-        "followthemoney==3.4.3",
+        "followthemoney==3.4.4",
         "nomenklatura==3.2.1",
         "asyncstdlib==3.10.8",
         "aiocron==1.8",
