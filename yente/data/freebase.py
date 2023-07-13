@@ -11,9 +11,9 @@ from yente.data.common import ScoredEntityResponse
 
 
 class FreebaseType(BaseModel):
-    id: str = Field(..., example="Person")
-    name: str = Field(..., example="People")
-    description: Optional[str] = Field(None, example="...")
+    id: str = Field(..., examples=["Person"])
+    name: str = Field(..., examples=["People"])
+    description: Optional[str] = None
 
     @classmethod
     def from_schema(cls, schema: Schema) -> "FreebaseType":
@@ -22,9 +22,9 @@ class FreebaseType(BaseModel):
 
 
 class FreebaseProperty(BaseModel):
-    id: str = Field(..., example="birthDate")
-    name: str = Field(..., example="Date of birth")
-    description: Optional[str] = Field(None, example="...")
+    id: str = Field(..., examples=["birthDate"])
+    name: str = Field(..., examples=["Date of birth"])
+    description: Optional[str] = None
 
     @classmethod
     def from_prop(cls, prop: Property) -> "FreebaseProperty":
@@ -32,9 +32,9 @@ class FreebaseProperty(BaseModel):
 
 
 class FreebaseEntity(BaseModel):
-    id: str = Field(..., example="NK-A7z....")
-    name: str = Field(..., example="John Doe")
-    description: Optional[str] = Field(None, example="...")
+    id: str = Field(..., examples=["NK-A7z...."])
+    name: str = Field(..., examples=["John Doe"])
+    description: Optional[str] = None
     type: List[FreebaseType]
 
     @classmethod
@@ -49,8 +49,8 @@ class FreebaseEntity(BaseModel):
 
 
 class FreebaseScoredEntity(FreebaseEntity):
-    score: Optional[float] = Field(..., example=0.99)
-    match: Optional[bool] = Field(..., example=False)
+    score: Optional[float] = Field(..., examples=[0.99])
+    match: Optional[bool] = Field(..., examples=[False])
 
     @classmethod
     def from_scored(cls, data: ScoredEntityResponse) -> "FreebaseScoredEntity":
@@ -89,11 +89,11 @@ class FreebasePropertySuggestResponse(FreebaseSuggestResponse):
 
 
 class FreebaseManifestView(BaseModel):
-    url: str
+    url: AnyHttpUrl
 
 
 class FreebaseManifestPreview(BaseModel):
-    url: str
+    url: AnyHttpUrl
     width: int
     height: int
 
@@ -110,8 +110,8 @@ class FreebaseManifestSuggest(BaseModel):
 
 
 class FreebaseManifest(BaseModel):
-    versions: List[str] = Field(..., example=["0.2"])
-    name: str = Field(..., example=settings.TITLE)
+    versions: List[str] = Field(..., examples=[["0.2"]])
+    name: str = Field(..., examples=[settings.TITLE])
     identifierSpace: AnyHttpUrl
     schemaSpace: AnyHttpUrl
     view: FreebaseManifestView

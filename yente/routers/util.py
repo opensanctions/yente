@@ -7,7 +7,7 @@ from yente.data import get_catalog
 
 PATH_DATASET = Path(
     description="Data source or collection name to be queries",
-    example="default",
+    examples=["default"],
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
 

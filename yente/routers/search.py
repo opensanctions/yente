@@ -115,7 +115,9 @@ async def search(
 )
 async def fetch_entity(
     response: Response,
-    entity_id: str = Path(description="ID of the entity to retrieve", example="Q7747"),
+    entity_id: str = Path(
+        description="ID of the entity to retrieve", examples=["Q7747"]
+    ),
     nested: bool = Query(
         True,
         title="Include adjacent entities (e.g. addresses, family, subsidiaries) in response",

@@ -89,7 +89,7 @@ async def catalog() -> DataCatalogModel:
     data sources are included, and how often they should be loaded.
     """
     catalog = await get_catalog()
-    return DataCatalogModel.parse_obj(catalog.to_dict())
+    return DataCatalogModel.model_validate(catalog.to_dict())
 
 
 @router.get(

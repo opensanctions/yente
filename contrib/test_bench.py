@@ -22,7 +22,7 @@ EXAMPLE = {
 
 async def test_example():
     ds = await get_dataset("default")
-    example = EntityExample.parse_obj(EXAMPLE)
+    example = EntityExample.model_validate(EXAMPLE)
     entity = Entity.from_example(example)
     query = entity_query(ds, entity)
     pprint(query)

@@ -42,7 +42,7 @@ class Manifest(BaseModel):
     @classmethod
     async def load(cls) -> "Manifest":
         data = await load_yaml_url(settings.MANIFEST)
-        manifest = cls.parse_obj(data)
+        manifest = cls.model_validate(data)
         for catalog in manifest.catalogs:
             await catalog.fetch(manifest)
         # TODO: load remote metadata from a `metadata_url` on each dataset?
