@@ -37,7 +37,7 @@ setup(
         "click==8.0.4",
         "normality==2.4.0",
         "languagecodes==1.1.1",
-        "countrynames==1.15.0",
+        "countrynames==1.15.1",
         "fingerprints==1.1.0",
         "pantomime==0.6.0",
     ],
