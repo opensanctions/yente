@@ -19,6 +19,7 @@ def filter_query(
     dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
+    exclude_schema: List[str] = [],
 ) -> Clause:
     filterqs: List[Clause] = []
     if dataset is not None:
@@ -37,7 +38,17 @@ def filter_query(
         values = [v for v in values if len(v)]
         if len(values):
             filterqs.append({"terms": {field: values}})
-    return {"bool": {"filter": filterqs, "should": shoulds, "minimum_should_match": 1}}
+    must_not: List[Clause] = []
+    for schema_name in exclude_schema:
+        must_not.append({"term": {"schema": schema_name}})
+    return {
+        "bool": {
+            "filter": filterqs,
+            "must_not": must_not,
+            "should": shoulds,
+            "minimum_should_match": 1,
+        }
+    }
 
 
 def names_query(entity: EntityProxy) -> List[Clause]:
@@ -84,6 +95,7 @@ def text_query(
     filters: FilterDict = {},
     fuzzy: bool = False,
     simple: bool = False,
+    exclude_schema: List[str] = [],
 ) -> Clause:
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
@@ -109,7 +121,13 @@ def text_query(
             }
         }
         # log.info("Query", should=should)
-    return filter_query([should], dataset=dataset, schema=schema, filters=filters)
+    return filter_query(
+        [should],
+        dataset=dataset,
+        schema=schema,
+        filters=filters,
+        exclude_schema=exclude_schema,
+    )
 
 
 def prefix_query(

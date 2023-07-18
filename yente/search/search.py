@@ -66,6 +66,12 @@ def result_facets(
                 ds = catalog.get(key)
                 if ds is not None:
                     value.label = ds.title or key
+            if field == "schema":
+                facet.label = "Entity types"
+                value.label = key
+                schema_obj = model.get(key)
+                if schema_obj is not None:
+                    value.label = schema_obj.plural
             if field in registry.groups:
                 type_ = registry.groups[field]
                 facet.label = type_.plural

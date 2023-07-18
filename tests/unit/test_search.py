@@ -44,6 +44,17 @@ def test_search_filter_schema_remove():
     assert len(results) == 0, results
 
 
+def test_search_filter_exclude_schema():
+    res = client.get("/search/default?q=moscow")
+    assert res.status_code == 200, res
+    total = res.json()["total"]["value"]
+    assert total > 100, total
+    res = client.get("/search/default?q=moscow&exclude_schema=Address")
+    assert res.status_code == 200, res
+    new_total = res.json()["total"]["value"]
+    assert new_total < total, new_total
+
+
 def test_search_filter_schema_keep():
     res = client.get("/search/default?q=vladimir putin&schema=Person")
     assert res.status_code == 200, res

@@ -9,7 +9,7 @@ from yente import settings
 
 MappingProperty = Dict[str, Union[List[str], str]]
 
-DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy||strict_date_optional_time"
+DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy||strict_date_optional_time"  # noqa
 TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
     "analysis": {

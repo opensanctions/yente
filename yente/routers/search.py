@@ -39,6 +39,9 @@ async def search(
     schema: str = Query(
         settings.BASE_SCHEMA, title="Types of entities that can match the search"
     ),
+    exclude_schema: List[str] = Query(
+        [], title="Remove the given types of entities from results"
+    ),
     countries: List[str] = Query([], title="Filter by country codes"),
     topics: List[str] = Query(
         [], title="Filter by entity topics (e.g. sanction, role.pep)"
@@ -73,7 +76,15 @@ async def search(
     }
     if target is not None:
         filters["target"] = target
-    query = text_query(ds, schema_obj, q, filters=filters, fuzzy=fuzzy, simple=simple)
+    query = text_query(
+        ds,
+        schema_obj,
+        q,
+        filters=filters,
+        fuzzy=fuzzy,
+        simple=simple,
+        exclude_schema=exclude_schema,
+    )
     aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await search_entities(
         query,
