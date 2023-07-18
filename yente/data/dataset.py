@@ -23,6 +23,7 @@ class Dataset(NKDataset):
         if name != norm_name:
             raise ValueError("Invalid dataset name %r (try: %r)" % (name, norm_name))
         super().__init__(catalog, data)
+        self._children.update(data.get("scopes", []))
 
         if self.version is None:
             ts = data.get("last_export", BOOT_TIME)
@@ -55,4 +56,6 @@ class Dataset(NKDataset):
         data["load"] = self.load
         data["entities_url"] = self.entities_url
         data["namespace"] = self.ns is not None
+        if "children" not in data:
+            data["children"] = [c.name for c in self.children]
         return data
