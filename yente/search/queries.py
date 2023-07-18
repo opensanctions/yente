@@ -7,7 +7,7 @@ from nomenklatura.util import name_words
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.util import pick_names, soundex_names
-from yente.search.mapping import TEXT_TYPES, NAMES_FIELD, SOUNDEX_FIELD, NAME_PART_FIELD
+from yente.search.mapping import NAMES_FIELD, SOUNDEX_FIELD, NAME_PART_FIELD
 
 log = get_logger(__name__)
 FilterDict = Dict[str, Union[bool, str, List[str]]]
@@ -65,7 +65,7 @@ def entity_query(dataset: Dataset, entity: EntityProxy) -> Clause:
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
-        if prop.type in TEXT_TYPES:
+        if prop.type == registry.address:
             query = {"match": {prop.type.group: {"query": value}}}
             shoulds.append(query)
         elif prop.type.group is not None:

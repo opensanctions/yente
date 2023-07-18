@@ -77,7 +77,7 @@ async def index_entities_rate_limit(
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     if not dataset.load:
-        log.debug("Dataset is not loadable", dataset=dataset.name)
+        log.debug("Dataset is going to be loaded", dataset=dataset.name)
         return False
     if dataset.entities_url is None:
         log.warning("Cannot identify resource with FtM entities", dataset=dataset.name)

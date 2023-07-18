@@ -120,7 +120,7 @@ async def fetch_entity(
     ),
     nested: bool = Query(
         True,
-        title="Include adjacent entities (e.g. addresses, family, subsidiaries) in response",
+        title="Include adjacent entities (e.g. addresses, family) in response",
     ),
 ) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in

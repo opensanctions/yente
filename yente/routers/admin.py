@@ -98,7 +98,8 @@ async def catalog() -> DataCatalogModel:
     response_model=AlgorithmResponse,
 )
 async def algorithms() -> AlgorithmResponse:
-    """Return a list of the supported matching/scoring algorithms used by the matching endpoing.
+    """Return a list of the supported matching/scoring algorithms used by the matching
+    endpoint.
 
     See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/)."""
     algorithms: List[Algorithm] = []
