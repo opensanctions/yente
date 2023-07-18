@@ -62,7 +62,7 @@ async def match(
     and nationality of a person. This works by submitting a batch of entities, each
     formatted like those returned by the API.
 
-    Tutorial: [Using the matching API to do KYC-style checks](https://www.opensanctions.org/docs/api/matching/).
+    Tutorial: [Using the matching API](https://www.opensanctions.org/docs/api/matching/).
 
     For example, the following would be valid query examples:
 

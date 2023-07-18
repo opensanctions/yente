@@ -60,8 +60,8 @@ async def search(
     a name. This can be used to implement a simple, user-facing search. For proper
     entity matching, the multi-property matching API should be used instead.
 
-    Search queries can use the [ElasticSearch Query string syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-syntax)
-    to perform field-specific searches, wildcard and fuzzy searches.
+    Search queries can include field-specific fitlers, wildcards and fuzzy searches.
+    See also: [search API documentation](https://www.opensanctions.org/docs/api/search/).
     """
     limit, offset = limit_window(limit, offset, 10)
     ds = await get_dataset(dataset)
