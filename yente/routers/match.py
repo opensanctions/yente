@@ -53,6 +53,10 @@ async def match(
         settings.DEFAULT_ALGORITHM,
         title=f"Scoring algorithm to use, options: {ALGO_LIST}",
     ),
+    fuzzy: bool = Query(
+        True,
+        title="Use slow matching for candidate generation, does not affect scores",
+    ),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -124,7 +128,7 @@ async def match(
     for name, example in match.queries.items():
         try:
             entity = Entity.from_example(example)
-            query = entity_query(ds, entity)
+            query = entity_query(ds, entity, fuzzy=fuzzy)
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))
             raise HTTPException(

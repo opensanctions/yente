@@ -51,18 +51,20 @@ def filter_query(
     }
 
 
-def names_query(entity: EntityProxy) -> List[Clause]:
+def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     shoulds = []
     for name in pick_names(names, limit=5):
         match = {
             NAMES_FIELD: {
                 "query": name,
-                "fuzziness": "AUTO",
                 "minimum_should_match": "70%",
+                "fuzziness": 0,
                 "boost": 3.0,
             }
         }
+        if fuzzy:
+            match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
     for token in name_words(names):
         shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
@@ -71,20 +73,20 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     return shoulds
 
 
-def entity_query(dataset: Dataset, entity: EntityProxy) -> Clause:
+def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = True) -> Clause:
     shoulds: List[Clause] = []
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
         if prop.type == registry.address:
-            query = {"match": {prop.type.group: {"query": value}}}
+            query = {"match": {prop.type.group: value}}
             shoulds.append(query)
         elif prop.type.group is not None:
             shoulds.append({"term": {prop.type.group: value}})
-        else:
-            shoulds.append({"match_phrase": {"text": value}})
+        elif fuzzy:
+            shoulds.append({"match": {"text": value}})
 
-    shoulds.extend(names_query(entity))
+    shoulds.extend(names_query(entity, fuzzy=fuzzy))
     return filter_query(shoulds, dataset=dataset, schema=entity.schema)
 
 

@@ -129,7 +129,7 @@ def test_search_targets():
     results = data.get("results")
     assert len(results), results
     for res in results:
-        assert res["target"] == True, res
+        assert res["target"] is True, res
 
 
 def test_search_sorted():

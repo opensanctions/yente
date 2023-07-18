@@ -82,6 +82,14 @@ def test_match_ermakov():
     query = {"queries": {"ermakov": ERMAKOV}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text
+    results = resp.json()["responses"]["ermakov"]["results"]
+    assert len(results) > 0, results
+
+    params = {"fuzzy": "false"}
+    resp = client.post("/match/default", json=query, params=params)
+    assert resp.status_code == 200, resp.text
+    results2 = resp.json()["responses"]["ermakov"]["results"]
+    assert len(results) == len(results2), results2
 
 
 def test_id_pass_through():
