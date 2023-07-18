@@ -27,7 +27,7 @@ class CatalogManifest(BaseModel):
             if self.scope is not None:
                 ds["load"] = ds["name"] in self.scopes
             if self.namespace is not None:
-                ds["namesapce"] = self.namespace
+                ds["namespace"] = self.namespace
             if self.resource_name is not None:
                 ds["resource_name"] = self.resource_name
             if self.resource_type is not None:
