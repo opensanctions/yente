@@ -125,10 +125,14 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         asyncio.TimeoutError,
         asyncio.CancelledError,
     ) as exc:
+        errors = None
+        if hasattr(exc, "errors"):
+            errors = exc.errors
         log.exception(
             "Indexing error: %r" % exc,
             dataset=dataset.name,
             index=next_index,
+            errors=errors,
             entities_url=dataset.entities_url,
         )
         await es.indices.delete(index=next_index)

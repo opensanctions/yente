@@ -1,5 +1,5 @@
 import json
-from typing import Generator, Set, Union
+from typing import Generator, Set
 from typing import Any, Dict, List, Optional
 from elasticsearch import TransportError, ApiError
 from elasticsearch.exceptions import NotFoundError
