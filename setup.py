@@ -39,7 +39,7 @@ setup(
         "languagecodes==1.1.1",
         "countrynames==1.15.1",
         "fingerprints==1.1.0",
-        "pantomime==0.6.0",
+        "pantomime==0.6.1",
     ],
     extras_require={
         "dev": [
