@@ -23,7 +23,7 @@ setup(
         "aiocsv==1.2.4",
         "aiofiles==23.1.0",
         "types-aiofiles==23.1.0.4",
-        "aiohttp[speedups]==3.8.4",
+        "aiohttp[speedups]==3.8.5",
         "elasticsearch[async]==8.8.2",
         "fastapi==0.100.0",
         "uvicorn[standard]==0.23.1",
