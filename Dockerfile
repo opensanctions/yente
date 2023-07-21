@@ -9,6 +9,7 @@ RUN apt-get -qq -y update \
     && apt-get -y upgrade \
     && apt-get -y install locales ca-certificates tzdata curl python3-pip \
     python3-icu python3-cryptography python3-venv libicu-dev pkg-config \
+    libleveldb-dev libleveldb1d \
     && apt-get -qq -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
