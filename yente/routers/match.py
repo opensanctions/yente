@@ -54,7 +54,7 @@ async def match(
         title=f"Scoring algorithm to use, options: {ALGO_LIST}",
     ),
     fuzzy: bool = Query(
-        True,
+        settings.MATCH_FUZZY,
         title="Use slow matching for candidate generation, does not affect scores",
     ),
 ) -> EntityMatchResponse:
