@@ -90,12 +90,15 @@ def resolve_url_type(url: str) -> Union[Path, str]:
 async def http_session() -> AsyncGenerator[ClientSession, None]:
     timeout = ClientTimeout(
         total=84600,
-        connect=None,
+        connect=30,
         sock_connect=None,
         sock_read=None,
     )
     connector = TCPConnector(limit=10)
     async with ClientSession(
-        timeout=timeout, trust_env=True, connector=connector
+        timeout=timeout,
+        trust_env=True,
+        connector=connector,
+        read_bufsize=10 * 1024 * 1024,
     ) as client:
         yield client

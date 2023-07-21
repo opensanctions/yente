@@ -16,7 +16,7 @@ async def get_catalog() -> Catalog:
     return Catalog.instance
 
 
-async def refresh_catalog() -> None:
+async def _PREV_refresh_catalog() -> None:
     # HACK: PyYAML is so slow that it sometimes hangs the workers, so
     # spawning a thread is unblocking.
 
@@ -33,3 +33,11 @@ async def refresh_catalog() -> None:
         daemon=True,
     )
     thread.start()
+
+
+async def refresh_catalog() -> None:
+    log.info("Refreshing manifest/catalog...", catalog=Catalog.instance)
+    try:
+        Catalog.instance = await Catalog.load()
+    except (Exception, KeyboardInterrupt) as exc:
+        log.exception("Metadata fetch error: %s" % exc)

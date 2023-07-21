@@ -15,6 +15,8 @@ log = get_logger(__name__)
 
 
 async def load_yaml_url(url: str) -> Any:
+    if url.lower().endswith(".json"):
+        return await load_json_url(url)
     url_ = resolve_url_type(url)
     if isinstance(url_, Path):
         async with aiofiles.open(url_, "r") as fh:
@@ -24,6 +26,18 @@ async def load_yaml_url(url: str) -> Any:
             async with client.get(url) as resp:
                 data = await resp.text()
     return yaml.safe_load(data)
+
+
+async def load_json_url(url: str) -> Any:
+    url_ = resolve_url_type(url)
+    if isinstance(url_, Path):
+        async with aiofiles.open(url_, "rb") as fh:
+            data = await fh.read()
+    else:
+        async with http_session() as client:
+            async with client.get(url) as resp:
+                data = await resp.read()
+    return orjson.loads(data)
 
 
 async def fetch_url_to_path(url: str, path: Path) -> None:
