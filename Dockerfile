@@ -27,7 +27,7 @@ ENV PATH="/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 RUN mkdir -p /app
 WORKDIR /app
 COPY . /app
-RUN pip install --no-cache-dir -q -e /app
+RUN pip install --no-cache-dir -e /app
 
 USER app:app
 CMD ["yente", "serve"]
