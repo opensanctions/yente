@@ -23,7 +23,6 @@ class Dataset(NKDataset):
         if name != norm_name:
             raise ValueError("Invalid dataset name %r (try: %r)" % (name, norm_name))
         super().__init__(catalog, data)
-        self._children.update(data.get("scopes", []))
 
         if self.version is None:
             ts = data.get("last_export", BOOT_TIME)
