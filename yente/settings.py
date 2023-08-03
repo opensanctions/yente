@@ -107,17 +107,36 @@ CACHE_HEADERS = {
     "Cache-Control": "public; max-age=3600",
     "X-Robots-Tag": "none",
 }
+# How many results to return per page of search results max:
 MAX_PAGE = 500
+
+# How many entities to accept in a /match batch at most:
 MAX_BATCH = int(env_str("YENTE_MAX_BATCH") or "100")
 MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
+
+# How many results to return per /match query by default:
 MATCH_PAGE = int(env_str("YENTE_MATCH_PAGE") or "5")
+
+# How many results to return per /match query at most:
 MAX_MATCHES = int(env_str("YENTE_MAX_MATCHES") or "10")
+
+# How many candidates to retrieve as a multiplier of the /match limit:
+MATCH_CANDIDATES = int(env_str("YENTE_MATCH_CANDIDATES") or "10")
+
+# Whether to run expensive levenshtein queries inside ElasticSearch:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY") or "true")
+
+# How many match and search queries to run against ES in parallel:
 QUERY_CONCURRENCY = int(env_str("YENTE_QUERY_CONCURRENCY") or "10")
+
+# How many index operations to run against ES in parallel:
 INDEX_CONCURRENCY = int(env_str("YENTE_INDEX_CONCURRENCY") or "5")
 
+# Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
+
+# Default cutoff for scores that should not be returned as /match results:
 SCORE_CUTOFF = 0.10
 
 # ElasticSearch settings:
@@ -131,6 +150,7 @@ ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS") or "1")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "005")
 
+# Log output can be formatted as JSON:
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 

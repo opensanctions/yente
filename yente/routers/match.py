@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict
 from fastapi import APIRouter, Query, Response, HTTPException
+from nomenklatura.matching import ALGORITHMS, get_algorithm
 
 from yente import settings
 from yente.logs import get_logger
@@ -12,7 +13,6 @@ from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
-from nomenklatura.matching import ALGORITHMS, get_algorithm
 from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET
 
@@ -135,7 +135,11 @@ async def match(
                 status_code=400,
                 detail=f"Cannot parse example entity: {exc}",
             )
-        queries.append(search_entities(query, limit=limit * 10))
+        # We're using a higher limit for candidate generation, because we want to
+        # get a broad range of candidates to score against. This is a trade-off
+        # between speed and accuracy.
+        candidates = limit * settings.MATCH_CANDIDATES
+        queries.append(search_entities(query, limit=candidates))
         entities.append((name, entity))
     if not len(queries) and not len(responses):
         raise HTTPException(400, detail="No queries provided.")
