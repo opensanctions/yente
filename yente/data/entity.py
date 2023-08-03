@@ -1,10 +1,10 @@
-from typing import Any, Dict, Set, Optional, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
-from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
 from nomenklatura.publish.names import pick_name
+from nomenklatura.stream import StreamEntity
 
 from yente.logs import get_logger
 
@@ -14,21 +14,14 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
-class Entity(EntityProxy):
+class Entity(StreamEntity):
     """Entity for sanctions list entries and adjacent objects."""
 
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
-        self._caption: str = data.get("caption", None)
         if self._caption is None:
             self._caption = self._pick_caption()
         self.target: bool = data.get("target", False)
-        self.first_seen: Optional[str] = data.get("first_seen", None)
-        self.last_seen: Optional[str] = data.get("last_seen", None)
-        self.last_change: Optional[str] = data.get("last_change", None)
-        self.datasets: Set[str] = set(data.get("datasets", []))
-        self.referents: Set[str] = set(data.get("referents", []))
-        self.context = {}
 
     def _pick_caption(self) -> str:
         is_thing = self.schema.is_a("Thing")
@@ -44,13 +37,7 @@ class Entity(EntityProxy):
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
-        data["caption"] = self._caption
         data["target"] = self.target
-        data["first_seen"] = self.first_seen
-        data["last_seen"] = self.last_seen
-        data["last_change"] = self.last_change
-        data["datasets"] = list(self.datasets)
-        data["referents"] = list(self.referents)
         return data
 
     @classmethod

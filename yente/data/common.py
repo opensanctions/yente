@@ -21,9 +21,9 @@ class EntityResponse(BaseModel):
     datasets: List[str] = Field([], examples=[["us_ofac_sdn"]])
     referents: List[str] = Field([], examples=[["ofac-1234"]])
     target: bool = Field(False)
-    first_seen: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
-    last_seen: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
-    last_change: Optional[datetime] = Field(..., examples=[datetime.utcnow()])
+    first_seen: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
+    last_seen: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
+    last_change: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
