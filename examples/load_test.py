@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 log = logging.getLogger("load_test")
 session = requests.Session()
 
-HOST = "https://api-test.opensanctions.org/"
+HOST = "https://api.test.opensanctions.org/"
 # HOST = "http://localhost:9000/"
 API_KEY = os.environ.get("OPENSANCTIONS_API_KEY")
 if API_KEY:

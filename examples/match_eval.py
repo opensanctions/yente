@@ -3,7 +3,7 @@ import requests
 from pprint import pprint
 
 # The OpenSanctions service API. This endpoint will only do sanctions checks.
-URL = "https://api-test.opensanctions.org/match/sanctions"
+URL = "https://api.test.opensanctions.org/match/sanctions"
 URL = "http://localhost:9000/match/sanctions"
 
 # A query for a person with a specific name and birth date. Note multiple names given
