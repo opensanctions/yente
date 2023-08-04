@@ -20,10 +20,12 @@ def filter_query(
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
     exclude_schema: List[str] = [],
+    exclude_datasets: List[str] = [],
 ) -> Clause:
     filterqs: List[Clause] = []
     if dataset is not None:
-        filterqs.append({"terms": {"datasets": dataset.dataset_names}})
+        ds = [d for d in dataset.dataset_names if d not in exclude_datasets]
+        filterqs.append({"terms": {"datasets": ds}})
     if schema is not None:
         schemata = schema.matchable_schemata
         schemata.add(schema)
@@ -73,7 +75,13 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
     return shoulds
 
 
-def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = True) -> Clause:
+def entity_query(
+    dataset: Dataset,
+    entity: EntityProxy,
+    fuzzy: bool = True,
+    exclude_schema: List[str] = [],
+    exclude_datasets: List[str] = [],
+) -> Clause:
     shoulds: List[Clause] = []
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
@@ -87,7 +95,13 @@ def entity_query(dataset: Dataset, entity: EntityProxy, fuzzy: bool = True) -> C
             shoulds.append({"match": {"text": value}})
 
     shoulds.extend(names_query(entity, fuzzy=fuzzy))
-    return filter_query(shoulds, dataset=dataset, schema=entity.schema)
+    return filter_query(
+        shoulds,
+        dataset=dataset,
+        schema=entity.schema,
+        exclude_schema=exclude_schema,
+        exclude_datasets=exclude_datasets,
+    )
 
 
 def text_query(
@@ -98,6 +112,7 @@ def text_query(
     fuzzy: bool = False,
     simple: bool = False,
     exclude_schema: List[str] = [],
+    exclude_datasets: List[str] = [],
 ) -> Clause:
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
@@ -129,6 +144,7 @@ def text_query(
         schema=schema,
         filters=filters,
         exclude_schema=exclude_schema,
+        exclude_datasets=exclude_datasets,
     )
 
 

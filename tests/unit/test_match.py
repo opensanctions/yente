@@ -92,6 +92,16 @@ def test_match_ermakov():
     assert len(results) == len(results2), results2
 
 
+def test_match_exclude_dataset():
+    query = {"queries": {"vv": EXAMPLE}}
+    params = {"algorithm": "name-based", "exclude_datasets": "eu_fsf"}
+    resp = client.post("/match/default", json=query, params=params)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["responses"]["vv"]
+    assert len(res["results"]) == 0, res
+
+
 def test_id_pass_through():
     body = dict(ERMAKOV)
     body["id"] = "ermakov"

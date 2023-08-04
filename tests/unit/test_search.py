@@ -55,6 +55,17 @@ def test_search_filter_exclude_schema():
     assert new_total < total, new_total
 
 
+def test_search_filter_exclude_dataset():
+    res = client.get("/search/default?q=vladimir putin")
+    assert res.status_code == 200, res
+    total = res.json()["total"]["value"]
+    assert total > 0, total
+    res = client.get("/search/default?q=vladimir putin&exclude_datasets=eu_fsf")
+    assert res.status_code == 200, res
+    new_total = res.json()["total"]["value"]
+    assert new_total == 0
+
+
 def test_search_filter_schema_keep():
     res = client.get("/search/default?q=vladimir putin&schema=Person")
     assert res.status_code == 200, res

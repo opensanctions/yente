@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict
+from typing import Dict, List
 from fastapi import APIRouter, Query, Response, HTTPException
 from nomenklatura.matching import ALGORITHMS, get_algorithm
 
@@ -52,6 +52,12 @@ async def match(
     algorithm: str = Query(
         settings.DEFAULT_ALGORITHM,
         title=f"Scoring algorithm to use, options: {ALGO_LIST}",
+    ),
+    exclude_schema: List[str] = Query(
+        [], title="Remove the given types of entities from results"
+    ),
+    exclude_datasets: List[str] = Query(
+        [], title="Remove the given datasets from results"
     ),
     fuzzy: bool = Query(
         settings.MATCH_FUZZY,
@@ -128,7 +134,13 @@ async def match(
     for name, example in match.queries.items():
         try:
             entity = Entity.from_example(example)
-            query = entity_query(ds, entity, fuzzy=fuzzy)
+            query = entity_query(
+                ds,
+                entity,
+                fuzzy=fuzzy,
+                exclude_schema=exclude_schema,
+                exclude_datasets=exclude_datasets,
+            )
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))
             raise HTTPException(
