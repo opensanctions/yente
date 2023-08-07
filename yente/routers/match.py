@@ -56,7 +56,7 @@ async def match(
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
-    exclude_datasets: List[str] = Query(
+    exclude_dataset: List[str] = Query(
         [], title="Remove the given datasets from results"
     ),
     fuzzy: bool = Query(
@@ -139,7 +139,7 @@ async def match(
                 entity,
                 fuzzy=fuzzy,
                 exclude_schema=exclude_schema,
-                exclude_datasets=exclude_datasets,
+                exclude_dataset=exclude_dataset,
             )
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))

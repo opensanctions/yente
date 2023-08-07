@@ -20,11 +20,11 @@ def filter_query(
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
     exclude_schema: List[str] = [],
-    exclude_datasets: List[str] = [],
+    exclude_dataset: List[str] = [],
 ) -> Clause:
     filterqs: List[Clause] = []
     if dataset is not None:
-        ds = [d for d in dataset.dataset_names if d not in exclude_datasets]
+        ds = [d for d in dataset.dataset_names if d not in exclude_dataset]
         filterqs.append({"terms": {"datasets": ds}})
     if schema is not None:
         schemata = schema.matchable_schemata
@@ -80,7 +80,7 @@ def entity_query(
     entity: EntityProxy,
     fuzzy: bool = True,
     exclude_schema: List[str] = [],
-    exclude_datasets: List[str] = [],
+    exclude_dataset: List[str] = [],
 ) -> Clause:
     shoulds: List[Clause] = []
     for prop, value in entity.itervalues():
@@ -100,7 +100,7 @@ def entity_query(
         dataset=dataset,
         schema=entity.schema,
         exclude_schema=exclude_schema,
-        exclude_datasets=exclude_datasets,
+        exclude_dataset=exclude_dataset,
     )
 
 
@@ -112,7 +112,7 @@ def text_query(
     fuzzy: bool = False,
     simple: bool = False,
     exclude_schema: List[str] = [],
-    exclude_datasets: List[str] = [],
+    exclude_dataset: List[str] = [],
 ) -> Clause:
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
@@ -144,7 +144,7 @@ def text_query(
         schema=schema,
         filters=filters,
         exclude_schema=exclude_schema,
-        exclude_datasets=exclude_datasets,
+        exclude_dataset=exclude_dataset,
     )
 
 

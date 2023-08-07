@@ -42,7 +42,7 @@ async def search(
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
-    exclude_datasets: List[str] = Query(
+    exclude_dataset: List[str] = Query(
         [], title="Remove the given datasets from results"
     ),
     countries: List[str] = Query([], title="Filter by country codes"),
@@ -87,7 +87,7 @@ async def search(
         fuzzy=fuzzy,
         simple=simple,
         exclude_schema=exclude_schema,
-        exclude_datasets=exclude_datasets,
+        exclude_dataset=exclude_dataset,
     )
     aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await search_entities(

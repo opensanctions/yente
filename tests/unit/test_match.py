@@ -94,7 +94,7 @@ def test_match_ermakov():
 
 def test_match_exclude_dataset():
     query = {"queries": {"vv": EXAMPLE}}
-    params = {"algorithm": "name-based", "exclude_datasets": "eu_fsf"}
+    params = {"algorithm": "name-based", "exclude_dataset": "eu_fsf"}
     resp = client.post("/match/default", json=query, params=params)
     assert resp.status_code == 200, resp.text
     data = resp.json()
