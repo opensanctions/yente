@@ -21,7 +21,6 @@ class Entity(StreamEntity):
         super().__init__(model, data, cleaned=cleaned)
         if self._caption is None:
             self._caption = self._pick_caption()
-        self.target: bool = data.get("target", False)
 
     def _pick_caption(self) -> str:
         is_thing = self.schema.is_a("Thing")
@@ -34,11 +33,6 @@ class Entity(StreamEntity):
             for value in values:
                 return value
         return self.schema.label
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = super().to_dict()
-        data["target"] = self.target
-        return data
 
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
