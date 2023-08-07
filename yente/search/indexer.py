@@ -93,7 +93,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     )
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
     next_index = f"{dataset_prefix}-{version}"
-    exists = await es.indices.exists(index=next_index)
+    exists = await es.indices.exists_alias(name=settings.ENTITY_INDEX, index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
         return False
