@@ -61,10 +61,10 @@ spec:
               name: http
           resources:
             requests:
-              memory: 600Mi
+              memory: 800Mi
               cpu: 200m
             limits:
-              memory: 600Mi
+              memory: 800Mi
               cpu: 200m
           securityContext:
             readOnlyRootFilesystem: true
@@ -161,10 +161,10 @@ spec:
                 - reindex
               resources:
                 requests:
-                  memory: 600M
+                  memory: 800M
                   cpu: 400m
                 limits:
-                  memory: 600M
+                  memory: 800M
                   cpu: 400m
               securityContext:
                 readOnlyRootFilesystem: true
