@@ -21,7 +21,7 @@ setup(
         "asyncstdlib==3.10.8",
         "aiocron==1.8",
         "aiocsv==1.2.4",
-        "aiofiles==23.1.0",
+        "aiofiles==23.2.1",
         "types-aiofiles>=23.1.0.4,<23.2",
         "aiohttp[speedups]==3.8.5",
         "elasticsearch[async]==8.9.0",
