@@ -1,7 +1,7 @@
 import json
 from fastapi import HTTPException
 from typing import Dict, List, Set, Tuple, Union, Optional
-from elasticsearch import ApiError
+from opensearchpy import OpenSearchException
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -68,7 +68,7 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
     next_entities = set(root.get_type_values(registry.entity))
 
     es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
+    es_ = es
     while True:
         shoulds = []
         if len(reverse):
@@ -94,9 +94,9 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
                     query=query,
                     size=settings.MAX_RESULTS,
                 )
-        except ApiError as ae:
+        except OpenSearchException as ae:
             log.error(
-                f"Nested search error {ae.status_code}: {ae.message}",
+                f"Nested search error {ae.status_code}: {ae.error}",
                 index=settings.ENTITY_INDEX,
                 query_json=json.dumps(query),
             )

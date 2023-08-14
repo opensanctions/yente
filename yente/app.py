@@ -1,6 +1,6 @@
 import time
 from uuid import uuid4
-from elasticsearch import ApiError, TransportError
+from opensearchpy import OpenSearchException, TransportError
 from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,14 +49,14 @@ async def request_middleware(
     return response
 
 
-async def api_error_handler(request: Request, exc: ApiError) -> Response:
-    log.error(f"Search error {exc.status_code}: {exc.message}")
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+async def api_error_handler(request: Request, exc: OpenSearchException) -> Response:
+    log.error(f"Search error {exc.status_code}: {exc.error}")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.error})
 
 
 async def transport_error_handler(request: Request, exc: TransportError) -> Response:
-    log.error(f"Transport: {exc.message}")
-    return JSONResponse(status_code=500, content={"detail": exc.message})
+    log.error(f"Transport: {exc.error}")
+    return JSONResponse(status_code=500, content={"detail": exc.error})
 
 
 def create_app() -> FastAPI:
@@ -81,6 +81,6 @@ def create_app() -> FastAPI:
     app.include_router(reconcile.router)
     app.include_router(admin.router)
 
-    app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(OpenSearchException, api_error_handler)
     app.add_exception_handler(TransportError, transport_error_handler)
     return app

@@ -1,9 +1,8 @@
 import json
 from typing import Generator, Set
 from typing import Any, Dict, List, Optional
-from elasticsearch import TransportError, ApiError
-from elasticsearch.exceptions import NotFoundError
-from elastic_transport import ObjectApiResponse
+from opensearchpy import TransportError, OpenSearchException
+from opensearchpy.exceptions import NotFoundError
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.schema import Schema
@@ -31,12 +30,12 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
     return entity
 
 
-def result_total(result: ObjectApiResponse[Any]) -> TotalSpec:
+def result_total(result: Any) -> TotalSpec:
     total: Dict[str, Any] = result.get("hits", {}).get("total")
     return TotalSpec(value=total["value"], relation=total["relation"])
 
 
-def result_entities(response: ObjectApiResponse[Any]) -> Generator[Entity, None, None]:
+def result_entities(response: Any) -> Generator[Entity, None, None]:
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
         entity = result_entity(hit)
@@ -45,7 +44,7 @@ def result_entities(response: ObjectApiResponse[Any]) -> Generator[Entity, None,
 
 
 def result_facets(
-    response: ObjectApiResponse[Any], catalog: DataCatalog[Dataset]
+    response: Any, catalog: DataCatalog[Dataset]
 ) -> Dict[str, SearchFacet]:
     facets: Dict[str, SearchFacet] = {}
     aggs: Dict[str, Dict[str, Any]] = response.get("aggregations", {})
@@ -87,33 +86,36 @@ async def search_entities(
     offset: int = 0,
     aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
-) -> ObjectApiResponse[Any]:
+) -> Any:
     es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
+    es_ = es
     try:
         async with query_semaphore:
+            body = {}
+            body['query'] = query
+            if aggregations:
+                body['aggs'] = aggregations
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
-                query=query,
+                body=body,
                 size=limit,
                 sort=sort,
                 from_=offset,
-                aggregations=aggregations,
             )
             return response
-    except ApiError as ae:
+    except OpenSearchException as ae:
         log.warning(
-            f"API error {ae.status_code}: {ae.message}",
+            f"API error {ae.status_code}: {ae.args}",
             index=settings.ENTITY_INDEX,
             query_json=json.dumps(query),
         )
-        raise HTTPException(status_code=ae.status_code, detail=ae.body)
+        raise HTTPException(status_code=ae.status_code, detail=ae.error)
 
 
 async def get_entity(entity_id: str) -> Optional[Entity]:
     es = await get_es()
     try:
-        es_ = es.options(opaque_id=get_opaque_id())
+        es_ = es
         query = {
             "bool": {
                 "should": [
@@ -138,10 +140,10 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
                 return entity
     except NotFoundError:
         pass
-    except ApiError as ae:
+    except OpenSearchException as ae:
         msg = f"API error {ae.status_code}: {str(ae)}"
         log.warning(msg, index=settings.ENTITY_INDEX)
-        raise HTTPException(status_code=ae.status_code, detail=ae.message)
+        raise HTTPException(status_code=ae.status_code, detail=ae.error)
     return None
 
 
@@ -151,14 +153,16 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
     filter_ = {"terms": {"datasets": dataset.dataset_names}}
     facet = "schemata"
     es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
+    es_ = es
     try:
         async with query_semaphore:
+            body = {}
+            body['query'] = {"bool": {"filter": [filter_]}}
+            body['aggs'] = {facet: {"terms": {"field": "schema", "size": 1000}}}
             response = await es_.search(
                 index=settings.ENTITY_INDEX,
-                query={"bool": {"filter": [filter_]}},
+                body=body,
                 size=0,
-                aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},
             )
         aggs = response.get("aggregations", {})
         schemata: Set[Schema] = set()
@@ -168,7 +172,7 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
             if schema is not None and schema.matchable:
                 schemata.update(schema.schemata)
         return schemata
-    except ApiError as error:
+    except OpenSearchException as error:
         log.error("Could not get matchable schema", error=str(error))
         return set()
 
@@ -176,13 +180,13 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
 async def get_index_status(index: Optional[str] = None) -> bool:
     es = await get_es()
     try:
-        es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
+        es_ = es
         health = await es_.cluster.health(index=index, timeout=0)
         status = health.get("status")
         if status not in ("yellow", "green"):
             log.warning("Index is not in green state")
             return False
         return True
-    except (ApiError, TransportError) as te:
+    except (OpenSearchException, TransportError) as te:
         log.error(f"Search status failure: {te}")
         return False

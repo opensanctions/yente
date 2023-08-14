@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   index:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+    image: opensearchproject/opensearch
     expose:
       - "9200"
     ports:
@@ -12,7 +12,8 @@ services:
       - cluster.name=opensanctions-index
       - discovery.type=single-node
       - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
+      - plugins.security.disabled=true
+      - plugins.security.ssl.http.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
@@ -25,11 +26,19 @@ services:
         max_replicas_per_node: 1
       restart_policy:
         condition: on-failure
+    healthcheck:
+      test: ['CMD', 'bash', '-ec', 'curl -u admin:admin http://localhost:9200/_cluster/health | grep -E "yellow|green"']
+      interval: 20s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
   app:
+    container_name: yente
     image: ghcr.io/opensanctions/yente:latest
     depends_on:
-      - index
+      index:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -38,7 +47,7 @@ services:
       # Set this to a randomly generated string to enable the /updatez API:
       YENTE_UPDATE_TOKEN: ""
     # If you want to index data from the host machine as a custom dataset,
-    # create a volume mount here to make that data accessible from the 
+    # create a volume mount here to make that data accessible from the
     # container:
     # volumes:
     #   - "/path/on/the/host/computer:/data"
@@ -54,9 +63,7 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
-        delay: 10s
         max_attempts: 3
-        window: 120s
 
 volumes:
   index-os-data: null
