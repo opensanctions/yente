@@ -132,6 +132,8 @@ async def match(
     responses: Dict[str, EntityMatches] = {}
 
     for name, example in match.queries.items():
+        if example is None:
+            continue
         try:
             entity = Entity.from_example(example)
             query = entity_query(
