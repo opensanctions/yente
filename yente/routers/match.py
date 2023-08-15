@@ -63,6 +63,11 @@ async def match(
         settings.MATCH_FUZZY,
         title="Use slow matching for candidate generation, does not affect scores",
     ),
+    since: str = Query(
+        None,
+        pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        title=f"Match against records that were updated since the given date",
+    )
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -142,6 +147,7 @@ async def match(
                 fuzzy=fuzzy,
                 exclude_schema=exclude_schema,
                 exclude_dataset=exclude_dataset,
+                since=since,
             )
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))
