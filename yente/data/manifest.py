@@ -60,4 +60,5 @@ class Catalog(DataCatalog[Dataset]):
         catalog = cls(Dataset, {})
         for dmf in manifest.datasets:
             catalog.make_dataset(dmf)
+
         return catalog

@@ -80,7 +80,10 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         log.debug("Dataset is going to be loaded", dataset=dataset.name)
         return False
     if dataset.entities_url is None:
-        log.warning("Cannot identify resource with FtM entities", dataset=dataset.name)
+        log.warning(
+            "Cannot identify resource with FtM entities",
+            dataset=dataset.name,
+        )
         return False
 
     # Versioning defaults to the software version instead of a data update date:
