@@ -10,6 +10,7 @@ PATH_DATASET = Path(
     examples=["default"],
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
+TS_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?$"
 
 
 async def get_dataset(name: str) -> Dataset:

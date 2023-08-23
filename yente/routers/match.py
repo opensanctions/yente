@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Query, Response, HTTPException
 from nomenklatura.matching import ALGORITHMS, get_algorithm
 
@@ -14,7 +14,7 @@ from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
 from yente.routers.util import get_dataset
-from yente.routers.util import PATH_DATASET
+from yente.routers.util import PATH_DATASET, TS_PATTERN
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -63,11 +63,11 @@ async def match(
         settings.MATCH_FUZZY,
         title="Use slow matching for candidate generation, does not affect scores",
     ),
-    since: str = Query(
+    changed_since: Optional[str] = Query(
         None,
-        pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-        title=f"Match against records that were updated since the given date",
-    )
+        pattern=TS_PATTERN,
+        title="Match against entities that were updated since the given date",
+    ),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -147,7 +147,7 @@ async def match(
                 fuzzy=fuzzy,
                 exclude_schema=exclude_schema,
                 exclude_dataset=exclude_dataset,
-                since=since,
+                changed_since=changed_since,
             )
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))

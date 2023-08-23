@@ -21,7 +21,7 @@ def filter_query(
     filters: FilterDict = {},
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
-    since: str = None
+    changed_since: Optional[str] = None,
 ) -> Clause:
     filterqs: List[Clause] = []
     if dataset is not None:
@@ -41,8 +41,8 @@ def filter_query(
         values = [v for v in values if len(v)]
         if len(values):
             filterqs.append({"terms": {field: values}})
-    if since is not None:
-        filterqs.append({"range": {"last_change": {"gt": since}}})
+    if changed_since is not None:
+        filterqs.append({"range": {"last_change": {"gt": changed_since}}})
     must_not: List[Clause] = []
     for schema_name in exclude_schema:
         must_not.append({"term": {"schema": schema_name}})
@@ -84,7 +84,7 @@ def entity_query(
     fuzzy: bool = True,
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
-    since: str = None,
+    changed_since: Optional[str] = None,
 ) -> Clause:
     shoulds: List[Clause] = []
     for prop, value in entity.itervalues():
@@ -105,7 +105,7 @@ def entity_query(
         schema=entity.schema,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
-        since=since,
+        changed_since=changed_since,
     )
 
 
@@ -118,6 +118,7 @@ def text_query(
     simple: bool = False,
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
+    changed_since: Optional[str] = None,
 ) -> Clause:
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
@@ -150,6 +151,7 @@ def text_query(
         filters=filters,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
+        changed_since=changed_since,
     )
 
 

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from .conftest import client
 
 
@@ -64,6 +66,15 @@ def test_search_filter_exclude_dataset():
     assert res.status_code == 200, res
     new_total = res.json()["total"]["value"]
     assert new_total == 0
+
+
+def test_search_filter_changed_since():
+    ts = datetime.utcnow() + timedelta(days=1)
+    tx = ts.isoformat(sep="T", timespec="minutes")
+    res = client.get(f"/search/default?q=vladimir putin&changed_since={tx}")
+    assert res.status_code == 200, res
+    total = res.json()["total"]["value"]
+    assert total == 0, total
 
 
 def test_search_filter_schema_keep():

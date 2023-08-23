@@ -16,7 +16,7 @@ from yente.search.nested import serialize_entity
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
 from yente.routers.util import get_dataset
-from yente.routers.util import PATH_DATASET
+from yente.routers.util import PATH_DATASET, TS_PATTERN
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -44,6 +44,11 @@ async def search(
     ),
     exclude_dataset: List[str] = Query(
         [], title="Remove the given datasets from results"
+    ),
+    changed_since: Optional[str] = Query(
+        None,
+        pattern=TS_PATTERN,
+        title="Search entities that were updated since the given date",
     ),
     countries: List[str] = Query([], title="Filter by country codes"),
     topics: List[str] = Query(
@@ -88,6 +93,7 @@ async def search(
         simple=simple,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
+        changed_since=changed_since,
     )
     aggregations = facet_aggregations([f for f in filters.keys()])
     resp = await search_entities(
