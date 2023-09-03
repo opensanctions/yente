@@ -29,8 +29,6 @@ class Dataset(NKDataset):
             self.version = iso_to_version(ts) or "static"
 
         self.load = as_bool(data.get("load"), True)
-        if self.is_collection:
-            self.load = False
         self.entities_url = self._get_entities_url(data)
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
