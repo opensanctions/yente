@@ -36,4 +36,4 @@ def test_match_rotenberg(http: Session, match_url: str):
 
     # SGM company ID:
     qres = resp.json()["responses"]["q2"]["results"][0]
-    assert "1207700324941" in json.dumps(qres)
+    assert "1077762942212" in json.dumps(qres)
