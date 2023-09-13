@@ -3,6 +3,7 @@ from uuid import uuid4
 from elasticsearch import ApiError, TransportError
 from fastapi import FastAPI
 from fastapi import Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
 from structlog.contextvars import clear_contextvars, bind_contextvars
@@ -68,6 +69,13 @@ def create_app() -> FastAPI:
         redoc_url="/",
     )
     app.middleware("http")(request_middleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(search.router)
     app.include_router(match.router)
     app.include_router(reconcile.router)
