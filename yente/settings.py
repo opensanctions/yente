@@ -43,7 +43,7 @@ control.
 Further reading:
 
 * [Self-hosted OpenSanctions](https://www.opensanctions.org/docs/self-hosted/)
-* [Install and deployment](https://github.com/opensanctions/yente/blob/main/README.md)
+* [Install and deployment](https://www.opensanctions.org/docs/yente/)
 * Intro to the [entity data model](https://www.opensanctions.org/docs/entities/)
 * Tutorial: [Using the matching API to do screening checks](https://www.opensanctions.org/docs/api/matching/)
 * [Data dictionary](https://opensanctions.org/reference/)
