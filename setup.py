@@ -16,7 +16,7 @@ setup(
     packages=find_packages(exclude=["examples", "tests"]),
     namespace_packages=[],
     install_requires=[
-        "followthemoney==3.5.2",
+        "followthemoney==3.5.3",
         "nomenklatura==3.4.0",
         "asyncstdlib==3.10.8",
         "aiocron==1.8",
@@ -32,7 +32,7 @@ setup(
         "structlog==23.1.0",
         "pyicu==2.11",
         "jellyfish==1.0.0",
-        "orjson==3.9.5",
+        "orjson==3.9.7",
         "text-unidecode==1.3",
         "click==8.1.6",
         "normality==2.4.0",
