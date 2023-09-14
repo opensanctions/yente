@@ -34,7 +34,7 @@ INDEX_SETTINGS = {
 }
 NAMES_FIELD = NameType.group or "names"
 NAME_PART_FIELD = "name_parts"
-SOUNDEX_FIELD = "soundex"
+PHONETIC_FIELD = "phonetic"
 
 
 def make_field(
@@ -90,7 +90,7 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
-        SOUNDEX_FIELD: make_keyword(),
+        PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_keyword(),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),

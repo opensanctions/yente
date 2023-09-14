@@ -1,13 +1,12 @@
 from pathlib import Path
-from jellyfish import soundex, levenshtein_distance
-from functools import lru_cache
+from jellyfish import metaphone
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Set, Union
 from followthemoney.types import registry
-from nomenklatura.util import fingerprint_name, name_words
+from nomenklatura.util import fingerprint_name, name_words, levenshtein
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -20,19 +19,13 @@ def expand_dates(dates: List[str]) -> List[str]:
     return list(expanded)
 
 
-def soundex_names(names: List[str]) -> List[str]:
+def phonetic_names(names: List[str]) -> List[str]:
     """Generate phonetic forms of the given names."""
     phonemes: Set[str] = set()
     for word in name_words(names):
         if len(word) > 2:
-            phonemes.add(soundex(word))
+            phonemes.add(metaphone(word))
     return list(phonemes)
-
-
-@lru_cache(maxsize=500)
-def _compare_distance(left: str, right: str) -> int:
-    dist: int = levenshtein_distance(left[:250], right[:250])
-    return dist
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:
@@ -63,7 +56,7 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
                 continue
             candidates[cand] = 0
             for pick in picked:
-                candidates[cand] += _compare_distance(pick, cand)
+                candidates[cand] += levenshtein(pick, cand)
 
         if not len(candidates):
             break

@@ -20,8 +20,8 @@ from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
-from yente.search.mapping import NAMES_FIELD, SOUNDEX_FIELD, NAME_PART_FIELD
-from yente.data.util import expand_dates, soundex_names
+from yente.search.mapping import NAMES_FIELD, PHONETIC_FIELD, NAME_PART_FIELD
+from yente.data.util import expand_dates, phonetic_names
 
 log = get_logger(__name__)
 
@@ -59,7 +59,7 @@ async def iter_entity_docs(
                     name_parts.update(fp.split(WS))
             doc[NAMES_FIELD] = list(expanded_names)
             doc[NAME_PART_FIELD] = list(name_parts)
-            doc[SOUNDEX_FIELD] = soundex_names(names)
+            doc[PHONETIC_FIELD] = phonetic_names(names)
             doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             entity_id = doc.pop("id")
             yield {"_index": index, "_id": entity_id, "_source": doc}
