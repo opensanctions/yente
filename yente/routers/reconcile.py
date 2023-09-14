@@ -77,11 +77,9 @@ async def reconcile(
         name=f"{ds.title} ({settings.TITLE})",
         identifierSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
-        view=FreebaseManifestView(
-            url=typed_url("https://www.opensanctions.org/entities/{{id}}/")
-        ),
+        view=FreebaseManifestView(url="https://www.opensanctions.org/entities/{{id}}/"),
         preview=FreebaseManifestPreview(
-            url=typed_url("https://www.opensanctions.org/entities/preview/{{id}}/"),
+            url="https://www.opensanctions.org/entities/preview/{{id}}/",
             width=430,
             height=600,
         ),
