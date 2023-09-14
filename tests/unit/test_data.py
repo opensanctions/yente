@@ -4,7 +4,7 @@ from pathlib import Path
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
 from yente.data.util import resolve_url_type
-from yente.data.util import soundex_names
+from yente.data.util import phonetic_names
 
 
 @pytest.mark.asyncio
@@ -39,15 +39,13 @@ def test_resolve_url_type():
 
 
 def test_soundex_names():
-    soundexes = soundex_names(['Vladimir Putin'])
-    assert len(soundexes) == 2
-    assert 'P350' in soundexes
-    assert 'V435' in soundexes
-    soundexes = soundex_names(['Влади́мир Влади́мирович ПУ́ТИН'])
-    assert len(soundexes) == 2
-    assert 'P350' in soundexes
-    assert 'V435' in soundexes
-    shortened = soundex_names(['Влади́мир В. ПУ́ТИН'])
+    phonemes = phonetic_names(["Vladimir Putin"])
+    assert len(phonemes) == 2
+    assert "PTN" in phonemes
+    phonemes = phonetic_names(["Влади́мир Влади́мирович ПУ́ТИН"])
+    assert len(phonemes) == 3
+    assert "PTN" in phonemes
+    shortened = phonetic_names(["Влади́мир В. ПУ́ТИН"])
     assert len(shortened) == 2
-    soundexes = soundex_names(['Vladimir Peter Putin'])
-    assert len(soundexes) == 3
+    phonemes = phonetic_names(["Vladimir Peter Putin"])
+    assert len(phonemes) == 3
