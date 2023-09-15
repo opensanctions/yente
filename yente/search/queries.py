@@ -73,8 +73,9 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
         shoulds.append({"match": match})
     for token in name_words(names):
         shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
-    for phoneme in phonetic_names(names):
-        shoulds.append({"term": {PHONETIC_FIELD: {"value": phoneme}}})
+    if entity.schema.name in ("Person", "LegalEntity"):
+        for phoneme in phonetic_names(names):
+            shoulds.append({"term": {PHONETIC_FIELD: {"value": phoneme}}})
     return shoulds
 
 
