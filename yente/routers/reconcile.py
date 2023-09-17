@@ -7,7 +7,7 @@ from fastapi import Request, Response
 from fastapi import HTTPException
 from followthemoney import model
 from followthemoney.types import registry
-from nomenklatura.matching import get_algorithm
+
 
 from yente import settings
 from yente.data.common import ErrorResponse, EntityExample
@@ -34,8 +34,9 @@ from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window, typed_url
-from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
-from yente.routers.util import TS_PATTERN, ALGO_LIST
+from yente.routers.util import PATH_DATASET, QUERY_PREFIX
+from yente.routers.util import TS_PATTERN, ALGO_HELP
+from yente.routers.util import get_algorithm_by_name, get_dataset
 
 
 log = get_logger(__name__)
@@ -116,7 +117,7 @@ async def reconcile_post(
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
     algorithm: str = Query(
         settings.BEST_ALGORITHM,
-        title=f"Scoring algorithm to use, options: {ALGO_LIST}",
+        title=ALGO_HELP,
     ),
     changed_since: Optional[str] = Query(
         None,
@@ -180,9 +181,7 @@ async def reconcile_query(
     proxy = Entity.from_example(example)
     query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
     resp = await search_entities(query, limit=limit, offset=offset)
-    algorithm_ = get_algorithm(algorithm)
-    if algorithm_ is None:
-        raise HTTPException(400, detail=f"Unknown algorithm: {algorithm}")
+    algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
     scoreds = [s for s in score_results(algorithm_, proxy, entities, limit=limit)]
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]

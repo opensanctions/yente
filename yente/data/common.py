@@ -128,3 +128,5 @@ class Algorithm(BaseModel):
 
 class AlgorithmResponse(BaseModel):
     algorithms: List[Algorithm]
+    default: str
+    best: str

@@ -110,7 +110,11 @@ async def algorithms() -> AlgorithmResponse:
             features=algo.explain(),
         )
         algorithms.append(desc)
-    return AlgorithmResponse(algorithms=algorithms)
+    return AlgorithmResponse(
+        algorithms=algorithms,
+        default=settings.DEFAULT_ALGORITHM,
+        best=settings.BEST_ALGORITHM,
+    )
 
 
 @router.post(

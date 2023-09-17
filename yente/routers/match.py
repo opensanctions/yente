@@ -1,7 +1,6 @@
 import asyncio
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Query, Response, HTTPException
-from nomenklatura.matching import get_algorithm
 
 from yente import settings
 from yente.logs import get_logger
@@ -13,8 +12,8 @@ from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
-from yente.routers.util import get_dataset
-from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_LIST
+from yente.routers.util import get_dataset, get_algorithm_by_name
+from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_HELP
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -47,10 +46,7 @@ async def match(
         settings.SCORE_CUTOFF,
         title="Lower bound of score for results to be returned at all",
     ),
-    algorithm: str = Query(
-        settings.DEFAULT_ALGORITHM,
-        title=f"Scoring algorithm to use, options: {ALGO_LIST}, best: {settings.BEST_ALGORITHM}",  # noqa
-    ),
+    algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
@@ -122,9 +118,7 @@ async def match(
     """
     ds = await get_dataset(dataset)
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
-    algorithm_type = get_algorithm(algorithm)
-    if algorithm_type is None:
-        raise HTTPException(400, detail=f"Unknown algorithm: {algorithm}")
+    algorithm_type = get_algorithm_by_name(algorithm)
 
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
