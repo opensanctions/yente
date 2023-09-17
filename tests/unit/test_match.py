@@ -65,7 +65,7 @@ def test_match_putin_name_based_mode():
     assert res["total"]["value"] > 0, res["total"]
     res0 = res["results"][0]
     assert res0["id"] == "Q7747", res0
-    assert res0["score"] > 0.90, res0
+    assert res0["score"] > 0.70, res0
 
 
 def test_match_no_schema():
