@@ -1,5 +1,6 @@
 from fastapi import Path, Query
 from fastapi import HTTPException
+from nomenklatura.matching import ALGORITHMS
 
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
@@ -11,6 +12,7 @@ PATH_DATASET = Path(
 )
 QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
 TS_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?$"
+ALGO_LIST = ", ".join([a.NAME for a in ALGORITHMS])
 
 
 async def get_dataset(name: str) -> Dataset:

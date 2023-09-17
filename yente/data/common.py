@@ -43,8 +43,9 @@ class ScoredEntityResponse(EntityResponse):
         cls, entity: Entity, result: MatchingResult, threshold: float
     ) -> "ScoredEntityResponse":
         data = entity.to_dict()
-        data.update(result)
-        data["match"] = result["score"] >= threshold
+        data["score"] = result.score
+        data["features"] = result.features
+        data["match"] = result.score >= threshold
         return cls.model_validate(data)
 
 

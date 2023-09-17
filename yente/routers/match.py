@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Query, Response, HTTPException
-from nomenklatura.matching import ALGORITHMS, get_algorithm
+from nomenklatura.matching import get_algorithm
 
 from yente import settings
 from yente.logs import get_logger
@@ -14,12 +14,10 @@ from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
 from yente.routers.util import get_dataset
-from yente.routers.util import PATH_DATASET, TS_PATTERN
+from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_LIST
 
 log = get_logger(__name__)
 router = APIRouter()
-
-ALGO_LIST = ", ".join([a.NAME for a in ALGORITHMS])
 
 
 @router.post(
@@ -51,7 +49,7 @@ async def match(
     ),
     algorithm: str = Query(
         settings.DEFAULT_ALGORITHM,
-        title=f"Scoring algorithm to use, options: {ALGO_LIST}",
+        title=f"Scoring algorithm to use, options: {ALGO_LIST}, best: {settings.BEST_ALGORITHM}",  # noqa
     ),
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"

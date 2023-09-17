@@ -1,7 +1,7 @@
 import json
 import asyncio
 from urllib.parse import urljoin
-from typing import Any, Coroutine, Dict, List, Tuple
+from typing import Any, Coroutine, Dict, List, Tuple, Optional
 from fastapi import APIRouter, Query, Form
 from fastapi import Request, Response
 from fastapi import HTTPException
@@ -35,6 +35,7 @@ from yente.search.search import get_matchable_schemata
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX, get_dataset
+from yente.routers.util import TS_PATTERN, ALGO_LIST
 
 
 log = get_logger(__name__)
@@ -113,11 +114,20 @@ async def reconcile_post(
     response: Response,
     dataset: str = PATH_DATASET,
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
+    algorithm: str = Query(
+        settings.BEST_ALGORITHM,
+        title=f"Scoring algorithm to use, options: {ALGO_LIST}",
+    ),
+    changed_since: Optional[str] = Query(
+        None,
+        pattern=TS_PATTERN,
+        title="Match against entities that were updated since the given date",
+    ),
 ) -> Dict[str, FreebaseEntityResult]:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     ds = await get_dataset(dataset)
-    resp = await reconcile_queries(ds, queries)
+    resp = await reconcile_queries(ds, queries, algorithm, changed_since)
     response.headers["x-batch-size"] = str(len(resp))
     return resp
 
@@ -125,6 +135,8 @@ async def reconcile_post(
 async def reconcile_queries(
     dataset: Dataset,
     data: str,
+    algorithm: str,
+    changed_since: Optional[str],
 ) -> Dict[str, FreebaseEntityResult]:
     # multiple requests in one query
     try:
@@ -138,13 +150,18 @@ async def reconcile_queries(
 
     tasks: List[Coroutine[Any, Any, Tuple[str, FreebaseEntityResult]]] = []
     for k, q in queries.items():
-        tasks.append(reconcile_query(k, dataset, q))
+        task = reconcile_query(k, dataset, q, changed_since, algorithm)
+        tasks.append(task)
     results: List[Tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
     return dict(results)
 
 
 async def reconcile_query(
-    name: str, dataset: Dataset, query: Dict[str, Any]
+    name: str,
+    dataset: Dataset,
+    query: Dict[str, Any],
+    algorithm: str,
+    changed_since: Optional[str],
 ) -> Tuple[str, FreebaseEntityResult]:
     """Reconcile operation for a single query."""
     limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
@@ -161,13 +178,13 @@ async def reconcile_query(
 
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
     proxy = Entity.from_example(example)
-    query = entity_query(dataset, proxy)
+    query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
     resp = await search_entities(query, limit=limit, offset=offset)
-    algorithm = get_algorithm(settings.DEFAULT_ALGORITHM)
-    if algorithm is None:
+    algorithm_ = get_algorithm(algorithm)
+    if algorithm_ is None:
         raise HTTPException(400, detail=f"Unknown algorithm: {algorithm}")
     entities = result_entities(resp)
-    scoreds = [s for s in score_results(algorithm, proxy, entities, limit=limit)]
+    scoreds = [s for s in score_results(algorithm_, proxy, entities, limit=limit)]
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]
     log.info(
         f"/reconcile/{dataset.name}",
