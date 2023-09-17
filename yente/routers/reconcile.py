@@ -150,7 +150,7 @@ async def reconcile_queries(
 
     tasks: List[Coroutine[Any, Any, Tuple[str, FreebaseEntityResult]]] = []
     for k, q in queries.items():
-        task = reconcile_query(k, dataset, q, changed_since, algorithm)
+        task = reconcile_query(k, dataset, q, algorithm, changed_since)
         tasks.append(task)
     results: List[Tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
     return dict(results)
