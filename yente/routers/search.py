@@ -95,7 +95,8 @@ async def search(
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
     )
-    aggregations = facet_aggregations([f for f in filters.keys()])
+    aggregation_fields = list(filters.keys()) + ["schema"]
+    aggregations = facet_aggregations(aggregation_fields)
     resp = await search_entities(
         query,
         limit=limit,

@@ -132,6 +132,19 @@ def test_search_facet_topics():
     assert "sanction" in names, names
 
 
+def test_search_facet_schema():
+    res = client.get("/search/default?schema=Person")
+    assert res.status_code == 200, res
+    persons = res.json()["total"]["value"]
+    assert persons > 0, persons
+
+    res = client.get("/search/default")
+    assert res.status_code == 200, res
+    schemata = res.json()["facets"]["schema"]
+    names = [c["name"] for c in schemata["values"]]
+    assert "Address" in names, names
+
+
 def test_search_no_targets():
     res = client.get("/search/default?schema=LegalEntity&target=false")
     assert res.status_code == 200, res
