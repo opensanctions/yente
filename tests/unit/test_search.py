@@ -133,10 +133,10 @@ def test_search_facet_topics():
 
 
 def test_search_facet_schema():
-    res = client.get("/search/default?schema=Person")
+    res = client.get("/search/default?schema=Address")
     assert res.status_code == 200, res
-    persons = res.json()["total"]["value"]
-    assert persons > 0, persons
+    addresses = res.json()["total"]["value"]
+    assert addresses > 0, addresses
 
     res = client.get("/search/default")
     assert res.status_code == 200, res
