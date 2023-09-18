@@ -146,19 +146,16 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     if res.meta.status != 200:
         log.error("Failed to alias next index", index=next_index)
         return False
-
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
-    indices: Any = await es.cat.indices(format="json")
-    current: List[str] = [s.get("index") for s in indices]
-    current = [c for c in current if c.startswith(f"{dataset_prefix}-")]
-    if len(current) == 0:
-        log.error("No index was created", index=next_index)
-        return False
-    for index in current:
-        if index != next_index:
-            log.info("Delete other index", index=index)
-            await es.indices.delete(index=index)
 
+    indices: Any = await es.cat.indices(format="json")
+    for index_data in indices:
+        index_name: str = index_data.get("index")
+        if not index_name.startswith(f"{dataset_prefix}-"):
+            continue
+        if index_name < next_index:
+            log.info("Delete old index", index=index_name)
+            await es.indices.delete(index=index_name)
     return True
 
 
