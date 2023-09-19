@@ -1,5 +1,4 @@
 from pathlib import Path
-from jellyfish import metaphone
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
@@ -7,6 +6,7 @@ from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Set, Union
 from followthemoney.types import registry
 from nomenklatura.util import fingerprint_name, name_words, levenshtein
+from nomenklatura.util import phonetic_token
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -24,7 +24,7 @@ def phonetic_names(names: List[str]) -> List[str]:
     phonemes: Set[str] = set()
     for word in name_words(names):
         if len(word) > 2:
-            phonemes.add(metaphone(word))
+            phonemes.add(phonetic_token(word))
     return list(phonemes)
 
 

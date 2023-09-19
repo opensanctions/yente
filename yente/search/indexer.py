@@ -94,8 +94,8 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         url=dataset.entities_url,
         version=version,
     )
-    dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}"
-    next_index = f"{dataset_prefix}-{version}"
+    dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}-"
+    next_index = f"{dataset_prefix}{version}"
     exists = await es.indices.exists_alias(name=settings.ENTITY_INDEX, index=next_index)
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
@@ -148,14 +148,22 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         return False
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
 
-    indices: Any = await es.cat.indices(format="json")
-    for index_data in indices:
-        index_name: str = index_data.get("index")
-        if not index_name.startswith(f"{dataset_prefix}-"):
+    res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
+    for aliased_index in res.body.keys():
+        if aliased_index == next_index:
             continue
-        if index_name < next_index:
-            log.info("Delete old index", index=index_name)
-            await es.indices.delete(index=index_name)
+        if aliased_index.startswith(dataset_prefix):
+            log.info("Delete old index", index=aliased_index)
+            res = await es.indices.delete(index=aliased_index)
+
+    # indices: Any = await es.cat.indices(format="json")
+    # for index_data in indices:
+    #     index_name: str = index_data.get("index")
+    #     if not index_name.startswith(dataset_prefix):
+    #         continue
+    #     if index_name < next_index:
+    #         log.info("Delete old index", index=index_name)
+    #         res = await es.indices.delete(index=index_name)
     return True
 
 
