@@ -1,7 +1,8 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Annotated
 from fastapi import APIRouter, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from followthemoney import model
+import enum
 
 from yente import settings
 from yente.logs import get_logger
@@ -20,6 +21,16 @@ from yente.routers.util import PATH_DATASET, TS_PATTERN
 
 log = get_logger(__name__)
 router = APIRouter()
+
+
+DEFAULT_FACETS = ["countries", "topics", "datasets"]
+
+
+class Facets(str, enum.Enum):
+    COUNTRIES = "countries"
+    TOPICS = "topics"
+    DATASETS = "datasets"
+    SCHEMA = "schema"
 
 
 @router.get(
@@ -63,6 +74,15 @@ async def search(
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
     fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
     simple: bool = Query(False, title="Use simple syntax for user-facing query boxes"),
+    facets: Annotated[
+        List[Facets],
+        Query(
+            title=(
+                "Facet counts to include in response. "
+                "`schema` facet includes descendents of schema provided as query parameter."
+            )
+        ),
+    ] = DEFAULT_FACETS,
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -95,8 +115,7 @@ async def search(
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
     )
-    aggregation_fields = list(filters.keys()) + ["schema"]
-    aggregations = facet_aggregations(aggregation_fields)
+    aggregations = facet_aggregations(facets)
     resp = await search_entities(
         query,
         limit=limit,

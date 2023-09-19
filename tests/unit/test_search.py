@@ -138,11 +138,31 @@ def test_search_facet_schema():
     addresses = res.json()["total"]["value"]
     assert addresses > 0, addresses
 
-    res = client.get("/search/default")
+    res = client.get("/search/default?facets=schema")
     assert res.status_code == 200, res
     schemata = res.json()["facets"]["schema"]
     names = [c["name"] for c in schemata["values"]]
     assert "Address" in names, names
+
+
+def test_search_facet_parameter():
+    res = client.get("/search/default")
+    assert res.status_code == 200, res
+    facets = res.json()["facets"]
+    assert len(list(facets.keys())) == 3
+    assert "schema" not in facets
+    assert "topics" in facets
+    assert "datasets" in facets
+    assert "countries" in facets
+
+    res = client.get("/search/default?facets=schema&facets=topics")
+    assert res.status_code == 200, res
+    facets = res.json()["facets"]
+    assert len(list(facets.keys())) == 2
+    assert "schema" in facets
+    assert "topics" in facets
+    assert "datasets" not in facets
+    assert "countries" not in facets
 
 
 def test_search_no_targets():
