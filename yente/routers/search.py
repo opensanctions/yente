@@ -1,4 +1,4 @@
-from typing import List, Optional, Union, Annotated
+from typing import List, Optional, Union
 from fastapi import APIRouter, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from followthemoney import model
@@ -23,14 +23,17 @@ log = get_logger(__name__)
 router = APIRouter()
 
 
-DEFAULT_FACETS = ["countries", "topics", "datasets"]
-
-
-class Facets(str, enum.Enum):
-    COUNTRIES = "countries"
-    TOPICS = "topics"
+class Facet(str, enum.Enum):
     DATASETS = "datasets"
     SCHEMA = "schema"
+    COUNTRIES = "countries"
+    NAMES = "names"
+    IDENTIFIERS = "identifiers"
+    TOPICS = "topics"
+    GENDERS = "genders"
+
+
+DEFAULT_FACETS = [Facet.COUNTRIES, Facet.TOPICS, Facet.DATASETS]
 
 
 @router.get(
@@ -74,15 +77,10 @@ async def search(
     target: Optional[bool] = Query(None, title="Include only targeted entities"),
     fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
     simple: bool = Query(False, title="Use simple syntax for user-facing query boxes"),
-    facets: Annotated[
-        List[Facets],
-        Query(
-            title=(
-                "Facet counts to include in response. "
-                "`schema` facet includes descendents of schema provided as query parameter."
-            )
-        ),
-    ] = DEFAULT_FACETS,
+    facets: List[Facet] = Query(
+        DEFAULT_FACETS,
+        title="Facet counts to include in response.",
+    ),
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -115,7 +113,7 @@ async def search(
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
     )
-    aggregations = facet_aggregations(facets)
+    aggregations = facet_aggregations([f.value for f in facets])
     resp = await search_entities(
         query,
         limit=limit,
