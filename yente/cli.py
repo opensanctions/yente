@@ -51,8 +51,8 @@ async def _clear_index() -> None:
     for index in indices:
         index_name: str = index.get("index")
         if index_name.startswith(settings.ES_INDEX):
-        log.info("Delete index", index=index_name)
-        await es.indices.delete(index=index_name)
+            log.info("Delete index", index=index_name)
+            await es.indices.delete(index=index_name)
     await es.close()
 
 
