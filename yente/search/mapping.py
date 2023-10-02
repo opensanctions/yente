@@ -34,7 +34,8 @@ INDEX_SETTINGS = {
 }
 NAMES_FIELD = NameType.group or "names"
 NAME_PART_FIELD = "name_parts"
-PHONETIC_FIELD = "phonetic"
+NAME_KEY_FIELD = "name_keys"
+NAME_PHONETIC_FIELD = "name_phonetic"
 
 
 def make_field(
@@ -90,8 +91,9 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
         "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
-        PHONETIC_FIELD: make_keyword(),
+        NAME_PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_keyword(),
+        NAME_KEY_FIELD: make_field("keyword", copy_to=["text"]),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
@@ -107,7 +109,10 @@ def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
 
     drop_fields = [t.group for t in registry.groups.values()]
     drop_fields.append("text")
-    drop_fields.remove(registry.name.group)
+    drop_fields.append(NAME_PHONETIC_FIELD)
+    drop_fields.append(NAME_PART_FIELD)
+    drop_fields.append(NAME_KEY_FIELD)
+    drop_fields.remove(NAMES_FIELD)
     return {
         "dynamic": "strict",
         "properties": mapping,

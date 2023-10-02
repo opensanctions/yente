@@ -1,13 +1,14 @@
 from typing import Any, Dict, Generator, List, Tuple, Union, Optional
+from fingerprints import clean_name_light
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from nomenklatura.util import name_words
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import pick_names, phonetic_names
-from yente.search.mapping import NAMES_FIELD, PHONETIC_FIELD, NAME_PART_FIELD
+from yente.data.util import pick_names, phonetic_names, index_name_parts
+from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
+from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 
 log = get_logger(__name__)
 FilterDict = Dict[str, Union[bool, str, List[str]]]
@@ -29,7 +30,6 @@ def filter_query(
         filterqs.append({"terms": {"datasets": ds}})
     if schema is not None:
         schemata = schema.matchable_schemata
-        schemata.add(schema)
         if not schema.matchable:
             schemata.update(schema.descendants)
         names = [s.name for s in schemata]
@@ -58,24 +58,32 @@ def filter_query(
 
 def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
-    shoulds = []
+    names.extend(entity.get("weakAlias", quiet=True))
+    shoulds: List[Clause] = []
     for name in pick_names(names, limit=5):
         match = {
             NAMES_FIELD: {
                 "query": name,
-                "minimum_should_match": "70%",
-                "fuzziness": 0,
-                "boost": 3.0,
+                "operator": "AND",
             }
         }
         if fuzzy:
             match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
-    for token in name_words(names):
-        shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
-    if entity.schema.name in ("Person", "LegalEntity"):
-        for phoneme in phonetic_names(names):
-            shoulds.append({"term": {PHONETIC_FIELD: {"value": phoneme}}})
+        cleaned = clean_name_light(name)
+        if cleaned is not None:
+            keyq = {"term": {NAME_KEY_FIELD: {"value": cleaned, "boost": 4.0}}}
+            shoulds.append(keyq)
+    name_parts: Dict[str, int] = {}
+    for part in index_name_parts(names):
+        name_parts.setdefault(part, 0)
+        name_parts[part] += 1
+    total = float(sum(name_parts.values()))
+    for token, count in name_parts.items():
+        boost = 1.1 + (count / total)
+        shoulds.append({"term": {NAME_PART_FIELD: {"value": token, "boost": boost}}})
+    for phoneme in set(phonetic_names(names)):
+        shoulds.append({"term": {NAME_PHONETIC_FIELD: {"value": phoneme}}})
     return shoulds
 
 
@@ -87,7 +95,7 @@ def entity_query(
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
 ) -> Clause:
-    shoulds: List[Clause] = []
+    shoulds: List[Clause] = names_query(entity, fuzzy=fuzzy)
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
@@ -99,7 +107,6 @@ def entity_query(
         elif fuzzy:
             shoulds.append({"match": {"text": value}})
 
-    shoulds.extend(names_query(entity, fuzzy=fuzzy))
     return filter_query(
         shoulds,
         dataset=dataset,

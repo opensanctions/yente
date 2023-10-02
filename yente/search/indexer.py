@@ -1,15 +1,12 @@
 import asyncio
 import threading
-from normality import WS
-from typing import Any, AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, Dict, List
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk, BulkIndexError
 from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
-from followthemoney.types.name import NameType
-from nomenklatura.util import fingerprint_name
 
 from yente import settings
 from yente.logs import get_logger
@@ -20,8 +17,10 @@ from yente.data.loader import load_json_lines
 from yente.search.base import get_es, close_es, index_semaphore
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
-from yente.search.mapping import NAMES_FIELD, PHONETIC_FIELD, NAME_PART_FIELD
+from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
+from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 from yente.data.util import expand_dates, phonetic_names
+from yente.data.util import index_name_parts, index_name_keys
 
 log = get_logger(__name__)
 
@@ -49,17 +48,11 @@ async def iter_entity_docs(
             texts = entity.pop("indexText")
             doc = entity.to_full_dict(matchable=True)
             doc["text"] = texts
-            names = doc.pop(NameType.group, [])
-            expanded_names = set(names)
-            name_parts = set()
-            for name in names:
-                fp = fingerprint_name(name)
-                if fp is not None:
-                    expanded_names.add(fp)
-                    name_parts.update(fp.split(WS))
-            doc[NAMES_FIELD] = list(expanded_names)
-            doc[NAME_PART_FIELD] = list(name_parts)
-            doc[PHONETIC_FIELD] = phonetic_names(names)
+            names: List[str] = doc.get(NAMES_FIELD, [])
+            names.extend(entity.get("weakAlias", quiet=True))
+            doc[NAME_PART_FIELD] = index_name_parts(names)
+            doc[NAME_KEY_FIELD] = index_name_keys(names)
+            doc[NAME_PHONETIC_FIELD] = phonetic_names(names)
             doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             entity_id = doc.pop("id")
             yield {"_index": index, "_id": entity_id, "_source": doc}
