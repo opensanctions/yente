@@ -38,7 +38,7 @@ def test_resolve_url_type():
         resolve_url_type("/no/such/path.csv")
 
 
-def test_soundex_names():
+def test_phonetic_names():
     phonemes = phonetic_names(["Vladimir Putin"])
     assert len(phonemes) == 2
     assert "PTN" in phonemes

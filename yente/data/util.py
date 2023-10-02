@@ -24,7 +24,7 @@ def expand_dates(dates: List[str]) -> List[str]:
 def phonetic_names(names: List[str]) -> List[str]:
     """Generate phonetic forms of the given names."""
     phonemes: List[str] = []
-    for word in names_word_list(names):
+    for word in names_word_list(names, min_length=2):
         phonemes.append(phonetic_token(word))
     return phonemes
 
