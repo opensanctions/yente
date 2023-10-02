@@ -166,6 +166,7 @@ async def match(
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
+            weights=match.weights,
         )
         total = result_total(resp)
         log.info(

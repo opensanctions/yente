@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Type
+from typing import Iterable, List, Optional, Type, Dict
 from nomenklatura.matching.types import ScoringAlgorithm
 
 from yente import settings
@@ -13,11 +13,12 @@ def score_results(
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
     limit: Optional[int] = None,
+    weights: Dict[str, float] = {},
 ) -> List[ScoredEntityResponse]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
     for proxy in results:
-        scoring = algorithm.compare(entity, proxy)
+        scoring = algorithm.compare(entity, proxy, override_weights=weights)
         result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)
         if result.score <= cutoff:
             continue

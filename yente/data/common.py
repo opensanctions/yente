@@ -3,7 +3,6 @@ from typing import Dict, List, Union, Optional
 from pydantic import BaseModel, Field
 from nomenklatura.matching.types import MatchingResult, FeatureDocs
 
-from yente import settings
 from yente.data.entity import Entity
 
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
@@ -82,13 +81,14 @@ class SearchResponse(ResultsResponse):
 
 class EntityExample(BaseModel):
     id: Optional[str] = Field(None, examples=["my-entity-id"])
-    schema_: str = Field(..., examples=[settings.BASE_SCHEMA], alias="schema")
+    schema_: str = Field(..., examples=["Person"], alias="schema")
     properties: Dict[str, Union[str, List[str]]] = Field(
         ..., examples=[{"name": ["John Doe"]}]
     )
 
 
 class EntityMatchQuery(BaseModel):
+    weights: Dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
     queries: Dict[str, EntityExample]
 
 
