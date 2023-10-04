@@ -29,9 +29,15 @@ EXAMPLE_2 = {
 # ID that we can recognize it by later:
 BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2}}
 
-# Send the batch off to the API and raise an exception for a non-OK response code.
+# Configure an API key for the service. This is required for the hosted API.
 headers = {"Authorization": f"Apikey {API_KEY}"}
-response = requests.post(URL, json=BATCH, headers=headers)
+
+# This configures the scoring system. "fuzzy" is related only to the pre-retrieval
+# of entities and can be turned off for a performance boost.
+params = {"algorithm": "best", "fuzzy": "false"}
+
+# Send the batch off to the API and raise an exception for a non-OK response code.
+response = requests.post(URL, json=BATCH, headers=headers, params=params)
 response.raise_for_status()
 
 responses = response.json().get("responses")

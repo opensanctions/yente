@@ -57,8 +57,12 @@ EXAMPLE_3 = {
 # ID that we can recognize it by later:
 BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2, "q3": EXAMPLE_3}}
 
+# This configures the scoring system. "fuzzy" is related only to the pre-retrieval
+# of entities and can be turned off for a performance boost.
+PARAMS = {"algorithm": "best", "fuzzy": "false"}
+
 # Send the batch off to the API and raise an exception for a non-OK response code.
-response = requests.post(URL, json=BATCH)
+response = requests.post(URL, json=BATCH, params=PARAMS)
 if not response.ok:
     pprint(response.json())
     sys.exit(1)

@@ -55,7 +55,7 @@ BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2, "q3": EXAMPLE_3}}
 for fuzzy in (True, False):
     start = time.time()
     for i in range(100):
-        params = {"fuzzy": fuzzy}
+        params = {"fuzzy": fuzzy, "algorithm": "best"}
         response = requests.post(URL, json=BATCH, params=params)
         if not response.ok:
             print("FAIL", response.status_code)
