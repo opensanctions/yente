@@ -68,8 +68,8 @@ async def match(
     formatted like those returned by the API.
 
     Tutorials:
-    * [Using the matching API](https://www.opensanctions.org/docs/api/matching/).
-    * [Configuring the scoring system](https://www.opensanctions.org/docs/api/scoring/).
+    * [Using the matching API](https://www.opensanctions.org/docs/api/matching/)
+    * [Configuring the scoring system](https://www.opensanctions.org/docs/api/scoring/)
 
     For example, the following would be valid query examples:
 

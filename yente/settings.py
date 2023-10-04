@@ -138,7 +138,7 @@ INDEX_CONCURRENCY = int(env_str("YENTE_INDEX_CONCURRENCY") or "5")
 SCORE_THRESHOLD = 0.70
 
 # Default cutoff for scores that should not be returned as /match results:
-SCORE_CUTOFF = 0.10
+SCORE_CUTOFF = 0.40
 
 # ElasticSearch settings:
 ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
