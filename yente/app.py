@@ -76,8 +76,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(search.router)
     app.include_router(match.router)
+    app.include_router(search.router)
     app.include_router(reconcile.router)
     app.include_router(admin.router)
 
