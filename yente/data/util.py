@@ -1,14 +1,27 @@
 from pathlib import Path
 from normality import WS
 from urllib.parse import urlparse
+from jellyfish import metaphone
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Union, Iterable, Optional
 from followthemoney.types import registry
-from fingerprints import remove_types, clean_name_light
-from nomenklatura.util import fingerprint_name, levenshtein, phonetic_token
-from nomenklatura.util import names_word_list
+from normality.cleaning import decompose_nfkd, category_replace
+from fingerprints import remove_types, clean_name_light, clean_entity_prefix
+from nomenklatura.util import fingerprint_name, levenshtein, names_word_list
+
+
+def _clean_phonetic(original: str) -> Optional[str]:
+    # We're not using the nomenklatura function for this because we want to
+    # be extra picky what phonemes are put into the search index, so that
+    # we can reduce the number of false positives.
+    text = clean_entity_prefix(original)
+    cleaned = clean_name_light(text)
+    cleaned = decompose_nfkd(cleaned)
+    cleaned = category_replace(cleaned)
+    cleaned = remove_types(cleaned)
+    return cleaned
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -24,8 +37,12 @@ def expand_dates(dates: List[str]) -> List[str]:
 def phonetic_names(names: List[str]) -> List[str]:
     """Generate phonetic forms of the given names."""
     phonemes: List[str] = []
-    for word in names_word_list(names, min_length=2):
-        phonemes.append(phonetic_token(word))
+    for word in names_word_list(names, normalizer=_clean_phonetic, min_length=2):
+        if not word.isalpha():
+            continue
+        token = metaphone(word)
+        if len(token) > 1:
+            phonemes.append(token)
     return phonemes
 
 

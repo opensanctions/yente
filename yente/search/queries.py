@@ -72,18 +72,13 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
         shoulds.append({"match": match})
         cleaned = clean_name_light(name)
         if cleaned is not None:
-            keyq = {"term": {NAME_KEY_FIELD: {"value": cleaned, "boost": 4.0}}}
-            shoulds.append(keyq)
-    name_parts: Dict[str, int] = {}
-    for part in index_name_parts(names):
-        name_parts.setdefault(part, 0)
-        name_parts[part] += 1
-    total = float(sum(name_parts.values()))
-    for token, count in name_parts.items():
-        boost = 1.1 + (count / total)
-        shoulds.append({"term": {NAME_PART_FIELD: {"value": token, "boost": boost}}})
+            term = {NAME_KEY_FIELD: {"value": cleaned, "boost": 4.0}}
+            shoulds.append({"term": term})
+    for token in set(index_name_parts(names)):
+        shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
     for phoneme in set(phonetic_names(names)):
-        shoulds.append({"term": {NAME_PHONETIC_FIELD: {"value": phoneme}}})
+        term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
+        shoulds.append({"term": term})
     return shoulds
 
 

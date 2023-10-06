@@ -49,3 +49,5 @@ def test_phonetic_names():
     assert len(shortened) == 2
     phonemes = phonetic_names(["Vladimir Peter Putin"])
     assert len(phonemes) == 3
+    phonemes = phonetic_names(["OAO Gazprom"])
+    assert len(phonemes) == 1
