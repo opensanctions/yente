@@ -38,7 +38,7 @@ setup(
         "normality==2.4.0",
         "languagecodes==1.1.1",
         "countrynames==1.15.2",
-        "fingerprints==1.2.2",
+        "fingerprints==1.2.3",
         "pantomime==0.6.1",
     ],
     extras_require={
