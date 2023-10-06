@@ -5,7 +5,7 @@ from jellyfish import metaphone
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from typing import AsyncGenerator, Dict, List, Union, Iterable, Optional
+from typing import AsyncGenerator, Dict, List, Union, Iterable, Optional, Set
 from followthemoney.types import registry
 from normality.cleaning import decompose_nfkd, category_replace
 from fingerprints import remove_types, clean_name_light, clean_entity_prefix
@@ -67,12 +67,12 @@ def index_name_parts(names: List[str]) -> List[str]:
 
 def index_name_keys(names: List[str]) -> List[str]:
     """Generate a indexable name keys from the given names."""
-    keys: List[str] = []
+    keys: Set[str] = set()
     for name in names:
         for key in (fingerprint_name(name), clean_name_light(name)):
             if key is not None:
-                keys.append(key)
-    return keys
+                keys.add(key)
+    return list(keys)
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:
