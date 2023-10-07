@@ -17,10 +17,9 @@ def _clean_phonetic(original: str) -> Optional[str]:
     # be extra picky what phonemes are put into the search index, so that
     # we can reduce the number of false positives.
     text = clean_entity_prefix(original)
-    cleaned = clean_name_light(text)
+    cleaned = remove_types(text, clean=clean_name_light)
     cleaned = decompose_nfkd(cleaned)
     cleaned = category_replace(cleaned)
-    cleaned = remove_types(cleaned)
     return cleaned
 
 
