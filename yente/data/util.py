@@ -2,25 +2,28 @@ from pathlib import Path
 from normality import WS
 from urllib.parse import urlparse
 from jellyfish import metaphone
+from functools import lru_cache
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Union, Iterable, Optional, Set
 from followthemoney.types import registry
-from normality.cleaning import decompose_nfkd, category_replace
-from fingerprints import remove_types, clean_name_light, clean_entity_prefix
+from normality.scripts import is_modern_alphabet
+from fingerprints import remove_types, clean_name_light
 from nomenklatura.util import fingerprint_name, levenshtein, names_word_list
 
 
+@lru_cache(maxsize=5000)
+def _metaphone_cached(word: str) -> str:
+    return metaphone(word)
+
+
 def _clean_phonetic(original: str) -> Optional[str]:
-    # We're not using the nomenklatura function for this because we want to
-    # be extra picky what phonemes are put into the search index, so that
-    # we can reduce the number of false positives.
-    text = clean_entity_prefix(original)
-    cleaned = remove_types(text, clean=clean_name_light)
-    cleaned = decompose_nfkd(cleaned)
-    cleaned = category_replace(cleaned)
-    return cleaned
+    # We're being extra picky what phonemes are put into the search index,
+    # so that we can reduce the number of false positives.
+    if not is_modern_alphabet(original):
+        return None
+    return fingerprint_name(original)
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -37,9 +40,7 @@ def phonetic_names(names: List[str]) -> List[str]:
     """Generate phonetic forms of the given names."""
     phonemes: List[str] = []
     for word in names_word_list(names, normalizer=_clean_phonetic, min_length=2):
-        if not word.isalpha():
-            continue
-        token = metaphone(word)
+        token = _metaphone_cached(word)
         if len(token) > 1:
             phonemes.append(token)
     return phonemes
