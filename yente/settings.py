@@ -150,6 +150,7 @@ ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX") or "yente"
 ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS") or "1")
 ENTITY_INDEX = f"{ES_INDEX}-entities"
 INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "008")
+INDEX_EXISTS_ABORT = as_bool(env_str("YENTE_INDEX_EXISTS_ABORT") or "false")
 
 # Log output can be formatted as JSON:
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))

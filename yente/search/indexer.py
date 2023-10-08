@@ -92,7 +92,13 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     )
     dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}-"
     next_index = f"{dataset_prefix}{version}"
-    exists = await es.indices.exists_alias(name=settings.ENTITY_INDEX, index=next_index)
+    if settings.INDEX_EXISTS_ABORT:
+        exists = await es.indices.exists(index=next_index)
+    else:
+        exists = await es.indices.exists_alias(
+            name=settings.ENTITY_INDEX,
+            index=next_index,
+        )
     if exists.body and not force:
         log.info("Index is up to date.", index=next_index)
         return False
@@ -134,7 +140,13 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
             errors=errors,
             entities_url=dataset.entities_url,
         )
-        await es.indices.delete(index=next_index)
+        if settings.INDEX_EXISTS_ABORT:
+            is_linked = await es.indices.exists_alias(
+                name=settings.ENTITY_INDEX,
+                index=next_index,
+            )
+            if not is_linked.body:
+                await es.indices.delete(index=next_index)
         return False
 
     await es.indices.refresh(index=next_index)
