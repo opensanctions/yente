@@ -140,13 +140,13 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
             errors=errors,
             entities_url=dataset.entities_url,
         )
-        if settings.INDEX_EXISTS_ABORT:
-            is_linked = await es.indices.exists_alias(
-                name=settings.ENTITY_INDEX,
-                index=next_index,
-            )
-            if not is_linked.body:
-                await es.indices.delete(index=next_index)
+        is_aliased = await es.indices.exists_alias(
+            name=settings.ENTITY_INDEX,
+            index=next_index,
+        )
+        if not is_aliased.body:
+            log.info("Deleting partial index", index=next_index)
+            await es.indices.delete(index=next_index)
         return False
 
     await es.indices.refresh(index=next_index)
@@ -163,15 +163,6 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         if aliased_index.startswith(dataset_prefix):
             log.info("Delete old index", index=aliased_index)
             res = await es.indices.delete(index=aliased_index)
-
-    # indices: Any = await es.cat.indices(format="json")
-    # for index_data in indices:
-    #     index_name: str = index_data.get("index")
-    #     if not index_name.startswith(dataset_prefix):
-    #         continue
-    #     if index_name < next_index:
-    #         log.info("Delete old index", index=index_name)
-    #         res = await es.indices.delete(index=index_name)
     return True
 
 
