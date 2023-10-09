@@ -145,7 +145,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
             index=next_index,
         )
         if not is_aliased.body:
-            log.info("Deleting partial index", index=next_index)
+            log.warn("Deleting partial index", index=next_index)
             await es.indices.delete(index=next_index)
         return False
 
