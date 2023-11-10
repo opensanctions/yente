@@ -28,7 +28,7 @@ setup(
         "fastapi==0.104.0",
         "uvicorn[standard]==0.23.2",
         "python-multipart==0.0.6",
-        "email-validator==2.0.0.post1",
+        "email-validator==2.1.0.post1",
         "structlog==23.2.0",
         "pyicu==2.12",
         "jellyfish==1.0.1",
