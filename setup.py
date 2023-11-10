@@ -20,7 +20,7 @@ setup(
         "nomenklatura==3.7.0",
         "asyncstdlib==3.10.9",
         "aiocron==1.8",
-        "aiocsv==1.2.4",
+        "aiocsv==1.2.5",
         "aiofiles==23.2.1",
         "types-aiofiles>=23.1.0.4,<23.3",
         "aiohttp[speedups]==3.8.6",
