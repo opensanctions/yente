@@ -31,7 +31,7 @@ setup(
         "email-validator==2.0.0.post1",
         "structlog==23.2.0",
         "pyicu==2.12",
-        "jellyfish==1.0.1",
+        "jellyfish==1.0.3",
         "orjson==3.9.10",
         "text-unidecode==1.3",
         "click==8.1.6",
