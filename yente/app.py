@@ -1,5 +1,7 @@
 import time
+import aiocron  # type: ignore
 from uuid import uuid4
+from contextlib import asynccontextmanager
 from elasticsearch import ApiError, TransportError
 from fastapi import FastAPI
 from fastapi import Request, Response
@@ -11,8 +13,31 @@ from structlog.contextvars import clear_contextvars, bind_contextvars
 from yente import settings
 from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
+from yente.data import refresh_catalog
+from yente.search.base import close_es
+from yente.search.indexer import update_index_threaded
 
 log = get_logger("yente")
+
+
+async def cron_task() -> None:
+    await refresh_catalog()
+    if settings.AUTO_REINDEX:
+        update_index_threaded()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info(
+        "Setting up background refresh",
+        crontab=settings.CRONTAB,
+        auto_reindex=settings.AUTO_REINDEX,
+    )
+    settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
+    if settings.AUTO_REINDEX:
+        update_index_threaded()
+    yield
+    await close_es()
 
 
 async def request_middleware(
@@ -67,6 +92,7 @@ def create_app() -> FastAPI:
         contact=settings.CONTACT,
         openapi_tags=settings.TAGS,
         redoc_url="/",
+        lifespan=lifespan,
     )
     app.middleware("http")(request_middleware)
     app.add_middleware(

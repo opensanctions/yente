@@ -32,6 +32,7 @@ class Dataset(NKDataset):
         self.entities_url = self._get_entities_url(data)
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
+        self.index_version: Optional[str] = None
 
     def _get_entities_url(self, data: Dict[str, Any]) -> Optional[str]:
         if "entities_url" in data:
@@ -53,7 +54,10 @@ class Dataset(NKDataset):
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data["load"] = self.load
-        data["entities_url"] = self.entities_url
+        if self.load:
+            data["entities_url"] = self.entities_url
+        data["index_version"] = self.index_version
+        data["index_current"] = self.index_version == self.version
         if self.ns is not None:
             data["namespace"] = True
         if "children" not in data:

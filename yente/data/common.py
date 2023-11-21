@@ -113,6 +113,8 @@ class DatasetModel(BaseModel):
     load: bool
     entities_url: Optional[str] = None
     version: str
+    index_version: Optional[str] = None
+    index_current: bool = False
     children: List[str]
 
 

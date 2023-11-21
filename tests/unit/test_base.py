@@ -33,6 +33,21 @@ def test_algorithms():
     assert len(data["algorithms"]) > 3
 
 
+def test_catalog():
+    res = client.get("/catalog")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert "datasets" in data
+    datasets = {d["name"]: d for d in data["datasets"]}
+    assert datasets["us_ofac_sdn"]["index_current"] is False
+    assert datasets["eu_fsf"]["index_current"] is True
+    donations = datasets["parteispenden"]
+    assert donations["load"] is True
+    assert donations["index_current"] is True
+    assert donations["index_version"] == "100"
+    assert donations["version"] == "100"
+
+
 def test_updatez_get():
     res = client.get("/updatez")
     assert res.status_code == 405, res.text
@@ -47,7 +62,7 @@ def test_updatez_no_token_configured():
 
 
 def test_updatez_no_token():
-    res = client.post(f"/updatez?sync=true")
+    res = client.post("/updatez?sync=true")
     assert res.status_code == 403, res.text
 
 

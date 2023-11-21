@@ -1,4 +1,3 @@
-import aiocron  # type: ignore
 from typing import List
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
@@ -8,38 +7,15 @@ from nomenklatura.matching import ALGORITHMS
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data import get_catalog, refresh_catalog
+from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
-from yente.search.base import close_es
+from yente.search.status import sync_dataset_versions
 
 log = get_logger(__name__)
 router = APIRouter()
-
-
-async def cron_task() -> None:
-    await refresh_catalog()
-    if settings.AUTO_REINDEX:
-        update_index_threaded()
-
-
-@router.on_event("startup")
-async def startup_event() -> None:
-    log.info(
-        "Setting up background refresh",
-        crontab=settings.CRONTAB,
-        auto_reindex=settings.AUTO_REINDEX,
-    )
-    settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
-    if settings.AUTO_REINDEX:
-        update_index_threaded()
-
-
-@router.on_event("shutdown")
-async def shutdown_event() -> None:
-    await close_es()
 
 
 @router.get(
@@ -89,6 +65,7 @@ async def catalog() -> DataCatalogModel:
     data sources are included, and how often they should be loaded.
     """
     catalog = await get_catalog()
+    await sync_dataset_versions(catalog)
     return DataCatalogModel.model_validate(catalog.to_dict())
 
 
