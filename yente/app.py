@@ -1,6 +1,7 @@
 import time
 import aiocron  # type: ignore
 from uuid import uuid4
+from typing import AsyncGenerator
 from contextlib import asynccontextmanager
 from elasticsearch import ApiError, TransportError
 from fastapi import FastAPI
@@ -27,7 +28,7 @@ async def cron_task() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info(
         "Setting up background refresh",
         crontab=settings.CRONTAB,
