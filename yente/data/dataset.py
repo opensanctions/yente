@@ -28,7 +28,7 @@ class Dataset(NKDataset):
             ts = data.get("last_export", BOOT_TIME)
             self.version = iso_to_version(ts) or "static"
 
-        self.load = as_bool(data.get("load"), True)
+        self.load = as_bool(data.get("load"), not self.is_collection)
         self.entities_url = self._get_entities_url(data)
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
@@ -54,7 +54,8 @@ class Dataset(NKDataset):
         data = super().to_dict()
         data["load"] = self.load
         data["entities_url"] = self.entities_url
-        data["namespace"] = self.ns is not None
+        if self.ns is not None:
+            data["namespace"] = True
         if "children" not in data:
             data["children"] = [c.name for c in self.children]
         return data
