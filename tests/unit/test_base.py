@@ -37,6 +37,8 @@ def test_catalog():
     res = client.get("/catalog")
     assert res.status_code == 200, res
     data = res.json()
+    assert "current" in data
+    assert "eu_fsf" in data["current"]
     assert "datasets" in data
     datasets = {d["name"]: d for d in data["datasets"]}
     assert datasets["us_ofac_sdn"]["index_current"] is False

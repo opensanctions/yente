@@ -120,6 +120,8 @@ class DatasetModel(BaseModel):
 
 class DataCatalogModel(BaseModel):
     datasets: List[DatasetModel]
+    current: List[str]
+    outdated: List[str]
 
 
 class Algorithm(BaseModel):
