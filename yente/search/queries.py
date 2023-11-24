@@ -85,6 +85,7 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
 def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
+    filters: FilterDict = {},
     fuzzy: bool = True,
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
@@ -104,6 +105,7 @@ def entity_query(
 
     return filter_query(
         shoulds,
+        filters=filters,
         dataset=dataset,
         schema=entity.schema,
         exclude_schema=exclude_schema,

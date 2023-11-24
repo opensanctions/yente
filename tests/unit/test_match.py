@@ -102,6 +102,16 @@ def test_match_exclude_dataset():
     assert len(res["results"]) == 0, res
 
 
+def test_filter_topic():
+    query = {"queries": {"vv": EXAMPLE}}
+    params = {"algorithm": "name-based", "topics": "crime.cyber"}
+    resp = client.post("/match/default", json=query, params=params)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["responses"]["vv"]
+    assert len(res["results"]) == 0, res
+
+
 def test_id_pass_through():
     body = dict(ERMAKOV)
     body["id"] = "ermakov"
