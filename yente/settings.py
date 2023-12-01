@@ -100,7 +100,7 @@ CRON: Optional[Cron] = None
 CRONTAB = env_str("YENTE_CRONTAB", "*/30 * * * *")
 AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
 STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
-DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "regression-v1")
+DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
 BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 
 DATA_PATH = Path(env_str("YENTE_DATA_PATH", "/tmp"))
