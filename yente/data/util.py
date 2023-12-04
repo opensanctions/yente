@@ -118,7 +118,10 @@ def get_url_local_path(url: str) -> Optional[Path]:
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
     if scheme in ("file", "") and parsed.path != "":
-        return Path(parsed.path).resolve()
+        path = Path(parsed.path).resolve()
+        if not path.exists():
+            raise RuntimeError("File not found: %s" % path)
+        return path
     return None
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
-from yente.data.util import resolve_url_type
+from yente.data.util import get_url_local_path
 from yente.data.util import phonetic_names
 
 
@@ -25,17 +25,14 @@ async def test_local_dataset():
     assert len(lines) > 10, lines
 
 
-def test_resolve_url_type():
-    out = resolve_url_type("http://banana.com/bla.txt")
-    assert isinstance(out, str)
-    out = resolve_url_type(__file__)
+def test_get_url_local_path():
+    out = get_url_local_path("http://banana.com/bla.txt")
+    assert out is None
+    out = get_url_local_path(__file__)
     assert isinstance(out, Path)
 
     with pytest.raises(RuntimeError):
-        resolve_url_type("ftp://banana.com/bla.txt")
-
-    with pytest.raises(RuntimeError):
-        resolve_url_type("/no/such/path.csv")
+        get_url_local_path("/no/such/path.csv")
 
 
 def test_phonetic_names():
