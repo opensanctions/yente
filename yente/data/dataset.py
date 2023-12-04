@@ -11,6 +11,7 @@ from followthemoney.types import registry
 from followthemoney.namespace import Namespace
 
 from yente.logs import get_logger
+from yente.data.util import get_url_local_path
 
 log = get_logger(__name__)
 BOOT_TIME = datetime_iso(datetime.utcnow())
@@ -23,13 +24,19 @@ class Dataset(NKDataset):
         if name != norm_name:
             raise ValueError("Invalid dataset name %r (try: %r)" % (name, norm_name))
         super().__init__(catalog, data)
+        self.load = as_bool(data.get("load"), not self.is_collection)
+        self.entities_url = self._get_entities_url(data)
 
         if self.version is None:
             ts = data.get("last_export", BOOT_TIME)
+            if self.entities_url is not None:
+                path = get_url_local_path(self.entities_url)
+                if path is not None and path.exists():
+                    mtime = path.stat().st_mtime
+                    mdt = datetime.fromtimestamp(mtime)
+                    ts = datetime_iso(mdt)
             self.version = iso_to_version(ts) or "static"
 
-        self.load = as_bool(data.get("load"), not self.is_collection)
-        self.entities_url = self._get_entities_url(data)
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
         self.index_version: Optional[str] = None

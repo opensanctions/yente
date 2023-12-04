@@ -7,7 +7,7 @@ from typing import Any, AsyncGenerator
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.util import http_session, resolve_url_type
+from yente.data.util import http_session, get_url_local_path
 
 BUFFER = 10 * 1024 * 1024
 
@@ -17,9 +17,9 @@ log = get_logger(__name__)
 async def load_yaml_url(url: str) -> Any:
     if url.lower().endswith(".json"):
         return await load_json_url(url)
-    url_ = resolve_url_type(url)
-    if isinstance(url_, Path):
-        async with aiofiles.open(url_, "r") as fh:
+    path = get_url_local_path(url)
+    if path is not None:
+        async with aiofiles.open(path, "r") as fh:
             data = await fh.read()
     else:
         async with http_session() as client:
@@ -29,9 +29,9 @@ async def load_yaml_url(url: str) -> Any:
 
 
 async def load_json_url(url: str) -> Any:
-    url_ = resolve_url_type(url)
-    if isinstance(url_, Path):
-        async with aiofiles.open(url_, "rb") as fh:
+    path = get_url_local_path(url)
+    if path is not None:
+        async with aiofiles.open(path, "rb") as fh:
             data = await fh.read()
     else:
         async with http_session() as client:

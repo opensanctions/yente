@@ -6,7 +6,7 @@ from functools import lru_cache
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from typing import AsyncGenerator, Dict, List, Union, Iterable, Optional, Set
+from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set
 from followthemoney.types import registry
 from normality.scripts import is_modern_alphabet
 from fingerprints import remove_types, clean_name_light
@@ -113,17 +113,13 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
     return picked
 
 
-def resolve_url_type(url: str) -> Union[Path, str]:
-    """Check if a given path is local or remote and return a parsed form."""
+def get_url_local_path(url: str) -> Optional[Path]:
+    """Check if a given URL is local file path."""
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
-    if scheme in ("http", "https"):
-        return url
-    if parsed.path:
-        path = Path(parsed.path).resolve()
-        if path.exists():
-            return path
-    raise RuntimeError("Cannot open resource: %s" % url)
+    if scheme in ("file", "") and parsed.path != "":
+        return Path(parsed.path).resolve()
+    return None
 
 
 @asynccontextmanager
