@@ -1,4 +1,4 @@
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND noninteractive
 
 LABEL org.opencontainers.image.title "OpenSanctions yente"
