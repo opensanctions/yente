@@ -8,6 +8,7 @@ from nomenklatura.dataset.util import type_check
 from nomenklatura.util import iso_to_version, datetime_iso
 from followthemoney.types import registry
 from followthemoney.namespace import Namespace
+from followthemoney.util import sanitize_text
 
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path
@@ -45,7 +46,7 @@ class Dataset(NKDataset):
         self.index_version: Optional[str] = None
 
     def _get_entities_url(self, data: Dict[str, Any]) -> Optional[str]:
-        entities_url = data.get("entities_url", data.get("path"))
+        entities_url = sanitize_text(data.get("entities_url", data.get("path")))
         if entities_url is not None:
             return entities_url
         resource_name = type_check(registry.string, data.get("resource_name"))
