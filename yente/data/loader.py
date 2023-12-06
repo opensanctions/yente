@@ -2,7 +2,6 @@ import yaml
 import orjson
 import aiofiles
 from pathlib import Path
-from urllib.parse import urlparse
 from typing import Any, AsyncGenerator
 
 from yente import settings
@@ -56,11 +55,8 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
 
 
 async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]:
-    parsed = urlparse(url)
-    if parsed.scheme.lower() == "file":
-        if parsed.path is None:
-            raise ValueError("Invalid path: %s" % url)
-        path = Path(parsed.path).resolve()
+    path = get_url_local_path(url)
+    if path is not None:
         log.info("Reading local data", url=url, path=path.as_posix())
         async for line in read_path_lines(path):
             yield line

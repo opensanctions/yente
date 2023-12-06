@@ -1,11 +1,10 @@
-from pathlib import Path
 from banal import as_bool
 from normality import slugify
 from datetime import datetime
 from typing import Dict, Optional, Any
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
-from nomenklatura.dataset.util import type_check, type_require
+from nomenklatura.dataset.util import type_check
 from nomenklatura.util import iso_to_version, datetime_iso
 from followthemoney.types import registry
 from followthemoney.namespace import Namespace
@@ -26,6 +25,10 @@ class Dataset(NKDataset):
         super().__init__(catalog, data)
         self.load = as_bool(data.get("load"), not self.is_collection)
         self.entities_url = self._get_entities_url(data)
+        if self.entities_url is not None:
+            entities_path = get_url_local_path(self.entities_url)
+            if entities_path is not None:
+                self.entities_url = entities_path.as_uri()
 
         if self.version is None:
             ts = data.get("last_export", BOOT_TIME)
@@ -42,11 +45,9 @@ class Dataset(NKDataset):
         self.index_version: Optional[str] = None
 
     def _get_entities_url(self, data: Dict[str, Any]) -> Optional[str]:
-        if "entities_url" in data:
-            return type_require(registry.url, data.get("entities_url"))
-        path = type_check(registry.string, data.get("path"))
-        if path is not None:
-            return Path(path).resolve().as_uri()
+        entities_url = data.get("entities_url", data.get("path"))
+        if entities_url is not None:
+            return entities_url
         resource_name = type_check(registry.string, data.get("resource_name"))
         resource_type = type_check(registry.string, data.get("resource_type"))
         for resource in self.resources:
@@ -61,7 +62,7 @@ class Dataset(NKDataset):
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data["load"] = self.load
-        if self.load:
+        if self.entities_url:
             data["entities_url"] = self.entities_url
         data["index_version"] = self.index_version
         data["index_current"] = self.index_version == self.version

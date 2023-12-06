@@ -28,6 +28,14 @@ async def test_local_dataset():
 def test_get_url_local_path():
     out = get_url_local_path("http://banana.com/bla.txt")
     assert out is None
+    out = get_url_local_path("https://banana.com/bla.txt")
+    assert out is None
+    out = get_url_local_path("file:///etc/passwd")
+    assert isinstance(out, Path)
+    assert "/etc/passwd" in out.as_posix()
+    out = get_url_local_path("/etc/passwd")
+    assert isinstance(out, Path)
+    assert "/etc/passwd" in out.as_posix()
     out = get_url_local_path(__file__)
     assert isinstance(out, Path)
 
