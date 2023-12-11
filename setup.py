@@ -24,7 +24,7 @@ setup(
         "aiofiles==23.2.1",
         "types-aiofiles>=23.1.0.4,<23.3",
         "aiohttp[speedups]==3.9.1",
-        "elasticsearch[async]==8.11.0",
+        "elasticsearch[async]==8.11.1",
         "fastapi==0.104.1",
         "uvicorn[standard]==0.24.0.post1",
         "python-multipart==0.0.6",
