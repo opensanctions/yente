@@ -1,7 +1,7 @@
 import time
 import aiocron  # type: ignore
 from uuid import uuid4
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
 from elasticsearch import ApiError, TransportError
 from fastapi import FastAPI
@@ -19,6 +19,7 @@ from yente.search.base import close_es
 from yente.search.indexer import update_index_threaded
 
 log = get_logger("yente")
+ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
 
 
 async def cron_task() -> None:
@@ -85,6 +86,12 @@ async def transport_error_handler(request: Request, exc: TransportError) -> Resp
     return JSONResponse(status_code=500, content={"detail": exc.message})
 
 
+HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
+    ApiError: api_error_handler,
+    TransportError: transport_error_handler,
+}
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.TITLE,
@@ -92,6 +99,7 @@ def create_app() -> FastAPI:
         version=settings.VERSION,
         contact=settings.CONTACT,
         openapi_tags=settings.TAGS,
+        exception_handlers=HANDLERS,
         redoc_url="/",
         lifespan=lifespan,
     )
@@ -107,7 +115,4 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(reconcile.router)
     app.include_router(admin.router)
-
-    app.add_exception_handler(ApiError, api_error_handler)
-    app.add_exception_handler(TransportError, transport_error_handler)
     return app
