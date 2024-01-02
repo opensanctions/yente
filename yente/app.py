@@ -77,12 +77,12 @@ async def request_middleware(
 
 
 async def api_error_handler(request: Request, exc: ApiError) -> Response:
-    log.error(f"Search error {exc.status_code}: {exc.message}")
+    log.exception(f"Search error {exc.status_code}: {exc.message}")
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 async def transport_error_handler(request: Request, exc: TransportError) -> Response:
-    log.error(f"Transport: {exc.message}")
+    log.exception(f"Transport: {exc.message}")
     return JSONResponse(status_code=500, content={"detail": exc.message})
 
 
