@@ -8,8 +8,6 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.util import http_session, get_url_local_path
 
-BUFFER = 10 * 1024 * 1024
-
 log = get_logger(__name__)
 
 
@@ -44,7 +42,7 @@ async def fetch_url_to_path(url: str, path: Path) -> None:
         async with client.get(url) as resp:
             resp.raise_for_status()
             async with aiofiles.open(path, "wb") as outfh:
-                async for chunk in resp.content.iter_chunked(BUFFER):
+                async for chunk, _ in resp.content.iter_chunks():
                     await outfh.write(chunk)
 
 
@@ -52,6 +50,14 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
     async with aiofiles.open(path, "rb") as fh:
         async for line in fh:
             yield orjson.loads(line)
+
+
+async def stream_http_lines(url: str) -> AsyncGenerator[Any, None]:
+    async with http_session() as client:
+        async with client.get(url, timeout=None) as resp:
+            resp.raise_for_status()
+            async for line in resp.content:
+                yield orjson.loads(line)
 
 
 async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]:
@@ -72,8 +78,6 @@ async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]
             path.unlink(missing_ok=True)
     else:
         log.info("Streaming data", url=url)
-        async with http_session() as client:
-            async with client.get(url) as resp:
-                resp.raise_for_status()
-                async for line in resp.content:
-                    yield orjson.loads(line)
+        async for line in stream_http_lines(url):
+            yield line
+        

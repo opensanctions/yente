@@ -128,16 +128,16 @@ def get_url_local_path(url: str) -> Optional[Path]:
 @asynccontextmanager
 async def http_session() -> AsyncGenerator[ClientSession, None]:
     timeout = ClientTimeout(
-        total=84600,
+        total=7200,
         connect=30,
-        sock_connect=None,
-        sock_read=None,
+        # sock_connect=None,
+        # sock_read=None,
     )
-    connector = TCPConnector(limit=10)
+    connector = TCPConnector(limit=30)
     async with ClientSession(
         timeout=timeout,
         trust_env=True,
         connector=connector,
-        read_bufsize=10 * 1024 * 1024,
+        read_bufsize=1 * 1024 * 1024,
     ) as client:
         yield client
