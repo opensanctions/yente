@@ -179,7 +179,8 @@ async def update_index(force: bool = False) -> bool:
         log.info("Index update check")
         changed = False
         for dataset in catalog.datasets:
-            changed = changed or await index_entities_rate_limit(es, dataset, force)
+            _changed = await index_entities_rate_limit(es, dataset, force)
+            changed = changed or _changed
         log.info("Index update complete.", changed=changed)
         return changed
     finally:
