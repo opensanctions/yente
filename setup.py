@@ -29,7 +29,7 @@ setup(
         "uvicorn[standard]==0.25.0",
         "python-multipart==0.0.6",
         "email-validator==2.1.0.post1",
-        "structlog==23.3.0",
+        "structlog==24.1.0",
         "pyicu==2.12",
         "jellyfish==1.0.3",
         "orjson==3.9.10",
