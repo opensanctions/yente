@@ -1,6 +1,7 @@
 import time
 import asyncio
 import warnings
+from threading import Lock
 from typing import cast, Any, Dict
 from structlog.contextvars import get_contextvars
 from elasticsearch import AsyncElasticsearch
@@ -15,7 +16,7 @@ warnings.filterwarnings("ignore", category=ElasticsearchWarning)
 log = get_logger(__name__)
 POOL: Dict[int, AsyncElasticsearch] = {}
 query_semaphore = asyncio.Semaphore(settings.QUERY_CONCURRENCY)
-index_semaphore = asyncio.Semaphore(settings.INDEX_CONCURRENCY)
+index_lock = Lock()
 
 
 def get_opaque_id() -> str:

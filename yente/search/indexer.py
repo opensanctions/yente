@@ -14,7 +14,7 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
-from yente.search.base import get_es, close_es, index_semaphore
+from yente.search.base import get_es, close_es, index_lock
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
 from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
@@ -66,7 +66,10 @@ async def iter_entity_docs(
 async def index_entities_rate_limit(
     es: AsyncElasticsearch, dataset: Dataset, force: bool
 ) -> bool:
-    async with index_semaphore:
+    if index_lock.locked():
+        log.info("Index is already being updated", dataset=dataset.name, force=force)
+        return False
+    with index_lock:
         return await index_entities(es, dataset, force=force)
 
 
@@ -174,11 +177,9 @@ async def update_index(force: bool = False) -> bool:
     try:
         catalog = await get_catalog()
         log.info("Index update check")
-        indexers = []
+        changed = False
         for dataset in catalog.datasets:
-            indexers.append(index_entities_rate_limit(es, dataset, force))
-        results = await asyncio.gather(*indexers)
-        changed = True in results
+            changed = changed or await index_entities_rate_limit(es, dataset, force)
         log.info("Index update complete.", changed=changed)
         return changed
     finally:

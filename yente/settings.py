@@ -136,9 +136,6 @@ MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 # How many match and search queries to run against ES in parallel:
 QUERY_CONCURRENCY = int(env_str("YENTE_QUERY_CONCURRENCY", "10"))
 
-# How many index operations to run against ES in parallel:
-INDEX_CONCURRENCY = int(env_str("YENTE_INDEX_CONCURRENCY", "5"))
-
 # Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
 
