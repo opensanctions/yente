@@ -1,12 +1,12 @@
 from typing import Any, Dict, Generator, List, Tuple, Union, Optional
-from fingerprints import clean_name_light
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import pick_names, phonetic_names, index_name_parts
+from yente.data.util import pick_names, phonetic_names
+from yente.data.util import index_name_parts, index_name_keys
 from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 
@@ -70,10 +70,9 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
         if fuzzy:
             match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
-        cleaned = clean_name_light(name)
-        if cleaned is not None:
-            term = {NAME_KEY_FIELD: {"value": cleaned, "boost": 4.0}}
-            shoulds.append({"term": term})
+    for key in index_name_keys(names):
+        term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
+        shoulds.append({"term": term})
     for token in set(index_name_parts(names)):
         shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
     for phoneme in set(phonetic_names(names)):
