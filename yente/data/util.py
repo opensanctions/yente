@@ -1,13 +1,13 @@
+import httpx
 from pathlib import Path
 from normality import WS
 from urllib.parse import urlparse
 from jellyfish import metaphone
 from functools import lru_cache
+from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set
-from followthemoney.types import registry
 from normality.scripts import is_modern_alphabet
 from fingerprints import remove_types, clean_name_light
 from nomenklatura.util import fingerprint_name, levenshtein, names_word_list
@@ -126,18 +126,9 @@ def get_url_local_path(url: str) -> Optional[Path]:
 
 
 @asynccontextmanager
-async def http_session() -> AsyncGenerator[ClientSession, None]:
-    timeout = ClientTimeout(
-        total=7200,
-        connect=30,
-        # sock_connect=None,
-        # sock_read=None,
-    )
-    connector = TCPConnector(limit=30)
-    async with ClientSession(
-        timeout=timeout,
-        trust_env=True,
-        connector=connector,
-        read_bufsize=1 * 1024 * 1024,
+async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
+    transport = httpx.AsyncHTTPTransport(retries=3)
+    async with httpx.AsyncClient(
+        transport=transport, http2=True, timeout=None
     ) as client:
         yield client

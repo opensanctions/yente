@@ -6,7 +6,7 @@ from typing import Any, AsyncGenerator
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.util import http_session, get_url_local_path
+from yente.data.util import get_url_local_path, httpx_session
 
 log = get_logger(__name__)
 
@@ -19,9 +19,9 @@ async def load_yaml_url(url: str) -> Any:
         async with aiofiles.open(path, "r") as fh:
             data = await fh.read()
     else:
-        async with http_session() as client:
-            async with client.get(url) as resp:
-                data = await resp.text()
+        async with httpx_session() as client:
+            resp = await client.get(url)
+            data = resp.text
     return yaml.safe_load(data)
 
 
@@ -31,18 +31,18 @@ async def load_json_url(url: str) -> Any:
         async with aiofiles.open(path, "rb") as fh:
             data = await fh.read()
     else:
-        async with http_session() as client:
-            async with client.get(url) as resp:
-                data = await resp.read()
+        async with httpx_session() as client:
+            resp = await client.get(url)
+            data = resp.content
     return orjson.loads(data)
 
 
 async def fetch_url_to_path(url: str, path: Path) -> None:
-    async with http_session() as client:
-        async with client.get(url) as resp:
+    async with httpx_session() as client:
+        async with client.stream('GET', url) as resp:
             resp.raise_for_status()
             async with aiofiles.open(path, "wb") as outfh:
-                async for chunk, _ in resp.content.iter_chunks():
+                async for chunk in resp.aiter_bytes():
                     await outfh.write(chunk)
 
 
@@ -53,10 +53,10 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
 
 
 async def stream_http_lines(url: str) -> AsyncGenerator[Any, None]:
-    async with http_session() as client:
-        async with client.get(url, timeout=None) as resp:
+    async with httpx_session() as client:
+        async with client.stream('GET', url) as resp:
             resp.raise_for_status()
-            async for line in resp.content:
+            async for line in resp.aiter_lines():
                 yield orjson.loads(line)
 
 
