@@ -1,7 +1,10 @@
 import yaml
+import httpx
 import orjson
+import asyncio
 import aiofiles
 from pathlib import Path
+from itertools import count
 from typing import Any, AsyncGenerator
 
 from yente import settings
@@ -53,12 +56,19 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
 
 
 async def stream_http_lines(url: str) -> AsyncGenerator[Any, None]:
-    async with httpx_session() as client:
-        async with client.stream('GET', url) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                yield orjson.loads(line)
-
+    for retry in count():
+        try:
+            async with httpx_session() as client:
+                async with client.stream('GET', url) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        yield orjson.loads(line)
+                    return
+        except httpx.TransportError as exc:
+            if retry > 3:
+                raise
+            await asyncio.sleep(1.0)
+            log.error("Streaming index HTTP error: %s, retrying..." % exc)
 
 async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]:
     path = get_url_local_path(url)

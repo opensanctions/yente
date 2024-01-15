@@ -134,7 +134,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         asyncio.CancelledError,
     ) as exc:
         errors = None
-        if hasattr(exc, "errors"):
+        if isinstance(exc, BulkIndexError):
             errors = exc.errors
         log.exception(
             "Indexing error: %r" % exc,
