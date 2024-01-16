@@ -74,6 +74,7 @@ async def catalog() -> DataCatalogModel:
             response["current"].append(dataset.name)
         elif dataset.index_version is not None:
             response["outdated"].append(dataset.name)
+    response["index_stale"] = len(response["outdated"]) > 0
     return DataCatalogModel.model_validate(response)
 
 

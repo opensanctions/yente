@@ -122,6 +122,7 @@ class DataCatalogModel(BaseModel):
     datasets: List[DatasetModel]
     current: List[str]
     outdated: List[str]
+    index_stale: bool = False
 
 
 class Algorithm(BaseModel):
