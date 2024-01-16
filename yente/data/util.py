@@ -41,7 +41,7 @@ def phonetic_names(names: List[str]) -> List[str]:
     phonemes: List[str] = []
     for word in names_word_list(names, normalizer=_clean_phonetic, min_length=2):
         token = _metaphone_cached(word)
-        if len(token) > 1:
+        if len(token) > 2:
             phonemes.append(token)
     return phonemes
 
@@ -71,6 +71,7 @@ def index_name_keys(names: List[str]) -> List[str]:
     for name in names:
         for key in (fingerprint_name(name), clean_name_light(name)):
             if key is not None:
+                key = key.replace(' ', '')
                 keys.add(key)
     return list(keys)
 
