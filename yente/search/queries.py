@@ -1,3 +1,4 @@
+from pprint import pprint  # noqa
 from typing import Any, Dict, Generator, List, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
@@ -65,6 +66,7 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
             NAMES_FIELD: {
                 "query": name,
                 "operator": "AND",
+                "boost": 3.0,
             }
         }
         if fuzzy:
@@ -74,7 +76,8 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
     for token in set(index_name_parts(names)):
-        shoulds.append({"term": {NAME_PART_FIELD: {"value": token}}})
+        term = {NAME_PART_FIELD: {"value": token, 'boost': 1.0}}
+        shoulds.append({"term": term})
     for phoneme in set(phonetic_names(names)):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
         shoulds.append({"term": term})

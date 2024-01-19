@@ -99,6 +99,8 @@ async def search_entities(
                 sort=sort,
                 from_=offset,
                 aggregations=aggregations,
+                # https://discuss.elastic.co/t/querying-an-alias-throws-off-scoring-completely/351423/4
+                search_type="dfs_query_then_fetch",
             )
             return response
     except ApiError as ae:
