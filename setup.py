@@ -24,7 +24,7 @@ setup(
         "aiofiles==23.2.1",
         "types-aiofiles>=23.1.0.4,<23.3",
         "aiohttp[speedups]==3.9.1",
-        "elasticsearch[async]==8.11.1",
+        "elasticsearch[async]==8.12.0",
         "fastapi==0.109.0",
         "uvicorn[standard]==0.26.0",
         "httpx[http2]==0.26.0",
