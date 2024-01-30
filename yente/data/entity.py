@@ -3,7 +3,7 @@ from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
 from followthemoney.helpers import combine_names
-from nomenklatura.publish.names import pick_caption
+from rigour.names import pick_name
 from nomenklatura.stream import StreamEntity
 
 from yente.logs import get_logger
@@ -20,7 +20,20 @@ class Entity(StreamEntity):
     def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
         super().__init__(model, data, cleaned=cleaned)
         if self._caption is None:
-            self._caption = pick_caption(self)
+            self._caption = self._pick_caption()
+
+    def _pick_caption(self) -> str:
+        is_thing = self.schema.is_a("Thing")
+        for prop in self.schema.caption:
+            values = self.get(prop)
+            if is_thing and len(values) > 1:
+                name = pick_name(values)
+                if name is not None:
+                    return name
+            for value in values:
+                return value
+        return self.schema.label
+
 
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
