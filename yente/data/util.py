@@ -8,9 +8,10 @@ from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set
-from normality.scripts import is_modern_alphabet
+from rigour.text.scripts import is_modern_alphabet
+from rigour.text.distance import levenshtein
 from fingerprints import remove_types, clean_name_light
-from nomenklatura.util import fingerprint_name, levenshtein, names_word_list
+from nomenklatura.util import fingerprint_name, names_word_list
 
 
 @lru_cache(maxsize=5000)
