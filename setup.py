@@ -30,7 +30,7 @@ setup(
         "uvicorn[standard]==0.27.1",
         "httpx[http2]==0.26.0",
         "python-multipart==0.0.9",
-        "email-validator==2.1.0.post1",
+        "email-validator==2.1.1",
         "structlog==24.1.0",
         "pyicu==2.12",
         "jellyfish==1.0.3",
