@@ -43,6 +43,8 @@ def get_es_connection() -> AsyncElasticsearch:
     if settings.ES_USERNAME and settings.ES_PASSWORD:
         auth = (settings.ES_USERNAME, settings.ES_PASSWORD)
         kwargs["basic_auth"] = auth
+    if settings.ES_CA_CERT:
+        kwargs["ca_certs"] = settings.ES_CA_CERT
     return AsyncElasticsearch(**kwargs)
 
 
