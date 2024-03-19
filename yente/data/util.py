@@ -72,7 +72,7 @@ def index_name_keys(names: List[str]) -> List[str]:
     for name in names:
         for key in (fingerprint_name(name), clean_name_light(name)):
             if key is not None:
-                key = key.replace(' ', '')
+                key = key.replace(" ", "")
                 keys.add(key)
     return list(keys)
 
