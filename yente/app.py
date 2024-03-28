@@ -7,6 +7,7 @@ from elasticsearch import ApiError, TransportError
 from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
 from structlog.contextvars import clear_contextvars, bind_contextvars
@@ -111,6 +112,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=500)
     app.include_router(match.router)
     app.include_router(search.router)
     app.include_router(reconcile.router)
