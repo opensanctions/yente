@@ -4,6 +4,7 @@ on: [push]
 
 permissions:
   packages: write
+  id-token: write
 
 jobs:
   test:
