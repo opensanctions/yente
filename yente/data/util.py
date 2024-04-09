@@ -1,4 +1,5 @@
 import httpx
+import os
 from pathlib import Path
 from normality import WS
 from urllib.parse import urlparse
@@ -25,6 +26,13 @@ def _clean_phonetic(original: str) -> Optional[str]:
     if not is_modern_alphabet(original):
         return None
     return fingerprint_name(original)
+
+
+def _proxy_env():
+    """Retrieve proxy from env vars if set."""
+    return os.environ.get(
+        "HTTP_PROXY", os.environ.get("HTTPS_PROXY", os.environ.get("ALL_PROXY"))
+    )
 
 
 def expand_dates(dates: List[str]) -> List[str]:
@@ -131,6 +139,6 @@ def get_url_local_path(url: str) -> Optional[Path]:
 async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = httpx.AsyncHTTPTransport(retries=3)
     async with httpx.AsyncClient(
-        transport=transport, http2=True, timeout=None
+        transport=transport, http2=True, timeout=None, proxy=_proxy_env
     ) as client:
         yield client

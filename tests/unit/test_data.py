@@ -3,8 +3,7 @@ from pathlib import Path
 
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
-from yente.data.util import get_url_local_path
-from yente.data.util import phonetic_names
+from yente.data.util import get_url_local_path, phonetic_names, _proxy_env
 
 
 @pytest.mark.asyncio
@@ -56,3 +55,16 @@ def test_phonetic_names():
     assert len(phonemes) == 3
     phonemes = phonetic_names(["OAO Gazprom"])
     assert len(phonemes) == 1
+
+def test__proxy_env(monkeypatch):
+    monkeypatch.delenv("HTTP_PROXY")
+    monkeypatch.delenv("HTTPS_PROXY")
+    monkeypatch.delenv("ALL_PROXY")
+    assert _proxy_env() is None
+    proxy="http://thingy.proxy"
+    monkeypatch.setenv("ALL_PROXY", proxy)
+    assert _proxy_env() == proxy
+    monkeypatch.setenv("HTTPS_PROXY", proxy + "1")
+    assert _proxy_env() == proxy + "1"
+    monkeypatch.setenv("HTTP_PROXY", proxy + "2")
+    assert _proxy_env() == proxy + "2"
