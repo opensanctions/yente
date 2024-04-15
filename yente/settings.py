@@ -113,6 +113,10 @@ CACHE_HEADERS = {
     "Cache-Control": "public; max-age=3600",
     "X-Robots-Tag": "none",
 }
+
+# Set a proxy for outgoing HTTP requests:
+HTTP_PROXY = env_str("YENTE_HTTP_PROXY", "")
+
 # How many results to return per page of search results max:
 MAX_PAGE = 500
 
