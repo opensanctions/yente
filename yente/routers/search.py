@@ -53,6 +53,9 @@ async def search(
     schema: str = Query(
         settings.BASE_SCHEMA, title="Types of entities that can match the search"
     ),
+    include_dataset: List[str] = Query(
+        [], title="Only include the given datasets in results"
+    ),
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
@@ -109,6 +112,7 @@ async def search(
         filters=filters,
         fuzzy=fuzzy,
         simple=simple,
+        include_dataset=include_dataset,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,

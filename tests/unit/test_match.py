@@ -102,6 +102,44 @@ def test_match_exclude_dataset():
     assert len(res["results"]) == 0, res
 
 
+def test_match_include_dataset():
+    # When querying Putin
+    query = {"queries": {"vv": EXAMPLE}}
+    # Using only datasets that do not include Putin
+    params = {
+        "algorithm": "name-based",
+        "include_dataset": ["ae_local_terrorists", "mx_governors"],
+    }
+    resp = client.post("/match/default", json=query, params=params)
+    # We should get a succesful response
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    res = data["responses"]["vv"]
+    # And we should get no matches
+    assert len(res["results"]) == 0, res
+    # When using a dataset that includes Putin
+    params = {
+        "algorithm": "name-based",
+        "include_dataset": ["eu_fsf", "ae_local_terrorists"],
+    }
+    resp = client.post("/match/default", json=query, params=params)
+    data = resp.json()
+    res = data["responses"]["vv"]
+    # And we should get matches
+    assert len(res["results"]) > 0, res
+    # When we exclude the eu_fsf dataset
+    params = {
+        "algorithm": "name-based",
+        "include_dataset": ["eu_fsf", "mx_governors", "ae_local_terrorists"],
+        "exclude_dataset": "eu_fsf",
+    }
+    # We should get no matches
+    resp = client.post("/match/default", json=query, params=params)
+    data = resp.json()
+    res = data["responses"]["vv"]
+    assert len(res["results"]) == 0, res
+
+
 def test_filter_topic():
     query = {"queries": {"vv": EXAMPLE}}
     params = {"algorithm": "name-based", "topics": "crime.cyber"}

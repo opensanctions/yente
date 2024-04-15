@@ -47,6 +47,9 @@ async def match(
         title="Lower bound of score for results to be returned at all",
     ),
     algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
+    include_dataset: List[str] = Query(
+        [], title="Only include the given datasets in results"
+    ),
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
@@ -144,6 +147,7 @@ async def match(
                 entity,
                 filters=filters,
                 fuzzy=fuzzy,
+                include_dataset=include_dataset,
                 exclude_schema=exclude_schema,
                 exclude_dataset=exclude_dataset,
                 changed_since=changed_since,
