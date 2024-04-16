@@ -68,6 +68,29 @@ def test_search_filter_exclude_dataset():
     assert new_total == 0
 
 
+def test_search_filter_include_dataset():
+    res = client.get("/search/default?q=vladimir putin")
+    assert res.status_code == 200, res
+    total = res.json()["total"]["value"]
+    assert total > 0, total
+    # When we include a dataset that does not contain Putin or is not available
+    # in the collection we should get no results
+    res = client.get("/search/default?q=vladimir putin&include_dataset=mx_senators")
+    assert res.status_code == 200, res
+    new_total = res.json()["total"]["value"]
+    assert new_total == 0
+    # When we include a dataset that contains Putin we should get results
+    res = client.get("/search/default?q=vladimir putin&include_dataset=eu_fsf")
+    new_total = res.json()["total"]["value"]
+    assert new_total > 0
+    # When using both include and exclude, the exclude should take precedence
+    res = client.get(
+        "/search/default?q=vladimir putin&include_dataset=eu_fsf&exclude_dataset=eu_fsf"
+    )
+    new_total = res.json()["total"]["value"]
+    assert new_total == 0
+
+
 def test_search_filter_changed_since():
     ts = datetime.utcnow() + timedelta(days=1)
     tx = ts.isoformat(sep="T", timespec="minutes")

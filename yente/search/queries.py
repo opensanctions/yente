@@ -21,13 +21,19 @@ def filter_query(
     dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
+    include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
 ) -> Clause:
     filterqs: List[Clause] = []
     if dataset is not None:
-        ds = [d for d in dataset.dataset_names if d not in exclude_dataset]
+        ds = [
+            d
+            for d in dataset.dataset_names
+            if (len(include_dataset) == 0 or d in include_dataset)
+            and d not in exclude_dataset
+        ]
         filterqs.append({"terms": {"datasets": ds}})
     if schema is not None:
         schemata = schema.matchable_schemata
@@ -76,7 +82,7 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
     for token in set(index_name_parts(names)):
-        term = {NAME_PART_FIELD: {"value": token, 'boost': 1.0}}
+        term = {NAME_PART_FIELD: {"value": token, "boost": 1.0}}
         shoulds.append({"term": term})
     for phoneme in set(phonetic_names(names)):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
@@ -89,6 +95,7 @@ def entity_query(
     entity: EntityProxy,
     filters: FilterDict = {},
     fuzzy: bool = True,
+    include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
@@ -110,6 +117,7 @@ def entity_query(
         filters=filters,
         dataset=dataset,
         schema=entity.schema,
+        include_dataset=include_dataset,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
@@ -123,6 +131,7 @@ def text_query(
     filters: FilterDict = {},
     fuzzy: bool = False,
     simple: bool = False,
+    include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
@@ -156,6 +165,7 @@ def text_query(
         dataset=dataset,
         schema=schema,
         filters=filters,
+        include_dataset=include_dataset,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
