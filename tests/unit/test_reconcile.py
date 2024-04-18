@@ -43,8 +43,9 @@ def test_reconcile_suggest_entity_prefix():
     res = resp.json()["result"]
     assert len(res) > 0, res
     assert "Q7747" == res[0]["id"], res
-    name = ascii_text(res[0]["name"]).lower()
-    assert "vladimir" in name, name
+    name = ascii_text(res[0]["name"])
+    assert name is not None, res
+    assert "vladimir" in name.lower(), name
 
 
 def test_reconcile_suggest_entity_prefix_dummy():
