@@ -32,7 +32,7 @@ setup(
         "python-multipart==0.0.9",
         "email-validator==2.1.1",
         "structlog==24.1.0",
-        "pyicu==2.12",
+        "pyicu==2.13",
         "jellyfish==1.0.3",
         "orjson==3.10.1",
         "text-unidecode==1.3",
