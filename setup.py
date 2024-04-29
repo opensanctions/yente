@@ -21,7 +21,7 @@ setup(
         "rigour==0.5.2",
         "asyncstdlib==3.12.3",
         "aiocron==1.8",
-        "aiocsv==1.3.1",
+        "aiocsv==1.3.2",
         "aiofiles==23.2.1",
         "types-aiofiles>=23.1.0.4,<23.3",
         "aiohttp[speedups]==3.9.5",
