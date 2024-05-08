@@ -4,6 +4,7 @@ from uuid import uuid4
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
 from elasticsearch import ApiError, TransportError
+from pydantic import ValidationError
 from fastapi import FastAPI
 from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -87,9 +88,16 @@ async def transport_error_handler(request: Request, exc: TransportError) -> Resp
     return JSONResponse(status_code=500, content={"detail": exc.message})
 
 
+async def validation_error_handler(request: Request, exc: ValidationError) -> Response:
+    log.warn(f"Validation error: {exc}")
+    body = {"detail": exc.title, "errors": exc.errors()}
+    return JSONResponse(status_code=400, content=body)
+
+
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
     ApiError: api_error_handler,
     TransportError: transport_error_handler,
+    ValidationError: validation_error_handler,
 }
 
 

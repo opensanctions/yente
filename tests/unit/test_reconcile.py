@@ -23,6 +23,12 @@ def test_reconcile_post():
     assert res[0]["id"] == "Q18634850", res
 
 
+def test_reconcile_invalid():
+    queries = {"mutti": {"query": 37473874}}
+    resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
+    assert resp.status_code == 400, resp.text
+
+
 def test_reconcile_suggest_entity_no_prefix():
     resp = client.get("/reconcile/default/suggest/entity")
     assert resp.status_code == 200, resp.text
@@ -37,8 +43,9 @@ def test_reconcile_suggest_entity_prefix():
     res = resp.json()["result"]
     assert len(res) > 0, res
     assert "Q7747" == res[0]["id"], res
-    name = ascii_text(res[0]["name"]).lower()
-    assert "vladimir" in name, name
+    name = ascii_text(res[0]["name"])
+    assert name is not None, res
+    assert "vladimir" in name.lower(), name
 
 
 def test_reconcile_suggest_entity_prefix_dummy():
