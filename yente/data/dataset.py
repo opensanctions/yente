@@ -41,6 +41,9 @@ class Dataset(NKDataset):
                     ts = datetime_iso(mdt)
             self.version = iso_to_version(ts) or "static"
 
+        self.last_export = data.get("last_export")
+        self.entity_count = data.get("entity_count")
+        self.target_count = data.get("target_count")
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
         self.index_version: Optional[str] = None
@@ -67,6 +70,9 @@ class Dataset(NKDataset):
             data["entities_url"] = self.entities_url
         data["index_version"] = self.index_version
         data["index_current"] = self.index_version == self.version
+        data["last_export"] = self.last_export
+        data["target_count"] = self.target_count
+        data["entity_count"] = self.entity_count
         if self.ns is not None:
             data["namespace"] = True
         if "children" not in data:

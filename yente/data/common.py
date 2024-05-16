@@ -110,11 +110,24 @@ class DatasetModel(BaseModel):
     title: str
     summary: Optional[str] = None
     url: Optional[str] = None
-    load: bool
+    load: bool = Field(description="Whether the dataset should be loaded.")
     entities_url: Optional[str] = None
     version: str
-    index_version: Optional[str] = None
-    index_current: bool = False
+    index_version: Optional[str] = Field(
+        None, description="Version of the index, if any."
+    )
+    index_current: bool = Field(False, description="Whether the index is up-to-date.")
+    last_export: Optional[datetime] = Field(
+        None,
+        examples=[datetime.utcnow()],
+        description="Last time OpenSanctions crawled the dataset.",
+    )
+    target_count: Optional[int] = Field(
+        None, examples=[42], description="Number of target entities in the dataset."
+    )
+    entity_count: Optional[int] = Field(
+        None, examples=[142], description="Total number of entities in the dataset."
+    )
     children: List[str]
 
 
