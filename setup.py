@@ -27,7 +27,7 @@ setup(
         "aiohttp[speedups]==3.9.5",
         "elasticsearch[async]==8.13.1",
         "fastapi==0.111.0",
-        "uvicorn[standard]==0.29.0",
+        "uvicorn[standard]==0.30.0",
         "httpx[http2]==0.27.0",
         "python-multipart==0.0.9",
         "email-validator==2.1.1",
