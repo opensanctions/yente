@@ -33,7 +33,7 @@ setup(
         "email-validator==2.1.1",
         "structlog==24.1.0",
         "pyicu==2.13.1",
-        "jellyfish==1.0.3",
+        "jellyfish==1.0.4",
         "orjson==3.10.3",
         "text-unidecode==1.3",
         "click==8.1.6",
