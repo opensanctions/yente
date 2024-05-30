@@ -77,7 +77,7 @@ spec:
               name: tmp-volume
           env:
             - name: YENTE_PORT
-              value: 8000
+              value: "8000"
             - name: YENTE_TITLE
               value: "OpenSanctions API"
             - name: YENTE_LOG_JSON
