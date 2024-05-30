@@ -177,6 +177,8 @@ spec:
                 - mountPath: /tmp
                   name: tmp-volume
               env:
+                - name: YENTE_PORT
+                  value: "8000"
                 - name: YENTE_LOG_JSON
                   value: "true"
                 - name: YENTE_ELASTICSEARCH_URL
