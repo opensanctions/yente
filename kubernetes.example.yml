@@ -83,10 +83,13 @@ spec:
             - name: YENTE_LOG_JSON
               value: "true"
             - name: YENTE_UPDATE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: api-test-secrets
-                  key: update-token
+              value: "unsafe-default"
+              # This can be used to trigger a data update forcefully. It should be
+              # kept secret and only used in a secure environment.
+              # valueFrom:
+              #   secretKeyRef:
+              #   name: api-test-secrets
+              #     key: update-token
             - name: YENTE_ELASTICSEARCH_URL
               value: http://yente-index-es-default:9200
             - name: YENTE_MANIFEST
