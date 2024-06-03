@@ -2,6 +2,7 @@ import pytest
 from uuid import uuid4
 from pathlib import Path
 from fastapi.testclient import TestClient
+import json
 
 from yente import settings
 from yente.app import create_app
@@ -9,7 +10,8 @@ from yente.app import create_app
 
 run_id = uuid4().hex
 settings.TESTING = True
-MANIFEST_PATH = Path(__file__).parent / "../fixtures/manifest.yml"
+FIXTURES_PATH = Path(__file__).parent / "../fixtures/"
+MANIFEST_PATH = FIXTURES_PATH / "manifest.yml"
 settings.MANIFEST = str(MANIFEST_PATH)
 settings.UPDATE_TOKEN = "test"
 settings.ES_INDEX = f"yente-test-{run_id}"
@@ -20,11 +22,16 @@ app = create_app()
 client = TestClient(app)
 
 
+@pytest.fixture(scope="session", autouse=False)
+def fake_deltas_path() -> Path:
+    return FIXTURES_PATH / "fake_entities.delta.json"
+
+
 def clear_state():
     pass
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=False)
 def load_data():
     client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
     clear_state()
