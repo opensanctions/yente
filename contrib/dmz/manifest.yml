@@ -1,0 +1,11 @@
+catalogs:
+  # The catalog file is loaded in order to get all the metadata for the datasets
+  # included in the database.
+  - url: "file:///path/to/dmz/index.json"
+datasets:
+  - name: offline
+    title: Wrapper dataset for offline data
+    children:
+      - default
+    entities_url: "file:///path/to/dmz/entities.ftm.json"
+    load: true
