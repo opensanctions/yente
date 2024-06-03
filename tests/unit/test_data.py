@@ -5,6 +5,7 @@ from yente.data import get_catalog
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
 from yente.data.util import phonetic_names
+from yente.search.indexer import update_from_deltas
 
 
 @pytest.mark.asyncio
