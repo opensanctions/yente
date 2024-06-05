@@ -5,7 +5,7 @@ from yente.search.base import SearchProvider, Index
 from unittest.mock import MagicMock, patch
 
 
-@patch("yente.data.dataset.Dataset")
+@patch("yente.data.manifest.Dataset")
 @pytest.mark.asyncio
 async def test_index_creation(MockDataset):
     m = MockDataset()
@@ -13,7 +13,7 @@ async def test_index_creation(MockDataset):
     m.next_version = MagicMock(return_value="5")
     provider = await SearchProvider.create()
     index = Index(provider, m)
-    assert index.index_name == "yente-entities-test"
+    assert index.name == "yente-entities-test"
     try:
         assert await index.exists() is False
         await index.upsert()

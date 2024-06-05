@@ -1,6 +1,7 @@
 import time
 import asyncio
 import warnings
+import re
 from threading import Lock
 from typing import cast, Any, Dict, List, AsyncGenerator
 from structlog.contextvars import get_contextvars
@@ -131,12 +132,35 @@ class SearchProvider:
     def delete_index(self, index: str):
         return self.client.indices.delete(index=index)
 
+    async def get_alias_sources(self, alias: str):
+        resp = await self.client.indices.get_alias(name=alias)
+        return resp.body
+
     async def up_to_date(self, index: str) -> bool:
         exists = await self.client.indices.exists(index=index)
         if exists.body:
             log.info("Index is up to date.", index=index)
             return True
         return False
+
+    async def alias_rollover(self, alias: str, new_index: str, prefix: str = None):
+        """
+        Remove all existing indices with a given prefix from the alias and add the new one.
+        """
+        sources = await self.client.indices.get_alias(name=alias)
+        actions = []
+        for current_index in sources.keys():
+            if prefix is not None and not current_index.startswith(prefix):
+                continue
+            actions.append({"remove": {"index": current_index, "alias": alias}})
+        actions.append({"add": {"index": new_index, "alias": alias}})
+        return await self.client.indices.update_aliases(actions=actions)
+
+    async def add_alias(self, index: str, alias: str):
+        """
+        Add an index to an alias.
+        """
+        return await self.client.indices.put_alias(index=index, name=alias)
 
     async def update(self, entities, index_name: str):
         resp = await async_bulk(
@@ -207,36 +231,71 @@ class Index:
             raise Exception("Only one of dataset or index_name must be provided")
         if dataset is not None:
             self.dataset = dataset
-            self.index_name = "yente-entities-" + dataset.name
+            self.name = (
+                f"{self.prefix(self.dataset)}-{settings.INDEX_VERSION}{dataset.version}"
+            )
         else:
-            self.index_name = index_name
+            self.name = index_name
         self.client = client
 
+    @classmethod
+    def prefix(cls, dataset: Dataset) -> str:
+        return f"{settings.ENTITY_INDEX}-{dataset.name}"
+
     def exists(self):
-        return self.client.up_to_date(self.index_name)
+        return self.client.up_to_date(self.name)
 
     def upsert(self):
-        return self.client.upsert_index(index=self.index_name)
+        return self.client.upsert_index(index=self.name)
 
     def delete(self):
-        return self.client.delete_index(index=self.index_name)
+        return self.client.delete_index(index=self.name)
 
-    async def clone(self) -> "Index":
+    def add_alias(self, alias: str):
+        return self.client.add_alias(index=self.name, alias=alias)
+
+    async def from_alias(self):
+        sources = await self.client.get_alias_sources(self.name)
+        return [parse_index_version(k) for k in sources.keys()]
+
+    async def clone(self, dataset: Dataset | None = None) -> "Index":
+        """
+        Create a copy of the index with the given name.
+        """
+        clone_dataset = dataset or self.dataset
+        cloned_index = Index(self.client, dataset=clone_dataset)
+        name = cloned_index.name if dataset else self.name + "-clone"
         try:
             await self.set_read_only()
-            await self.client.clone_index(self.index_name, self.index_name + "-clone")
+            await self.client.clone_index(self.name, name)
         finally:
             await self.set_read_write()
-        return Index(self.client, index_name=self.index_name + "-clone")
+        return cloned_index
+
+    def make_main(self):
+        """
+        Makes this index the base for Yente searches.
+        """
+        return self.client.alias_rollover(
+            settings.ENTITY_INDEX, self.name, self.prefix(self.dataset)
+        )
 
     def set_read_only(self):
-        return self.client.add_write_block(self.index_name)
+        return self.client.add_write_block(self.name)
 
     def set_read_write(self):
-        return self.client.remove_write_block(self.index_name)
+        return self.client.remove_write_block(self.name)
 
     def bulk_update(self, entity_iterator: AsyncGenerator):
-        return self.client.update(entity_iterator, self.index_name)
+        return self.client.update(entity_iterator, self.name)
+
+
+def parse_index_version(dataset: Dataset, index_name: str) -> str:
+    """
+    Given a concrete index name, i.e. yente-entities-foo-09202101011
+    return the version string, i.e. 09202101011
+    """
+    return index_name.replace(Index.prefix(dataset), "").lstrip("-")
 
 
 def make_indexable(data):
@@ -254,3 +313,20 @@ def make_indexable(data):
     doc["text"] = texts
     del doc["id"]
     return doc
+
+
+async def get_current_version(provider: SearchProvider, dataset: Dataset) -> str | None:
+    """
+    Given the dataset, return the current version of the index for that dataset.
+    """
+    sources = await provider.get_alias_sources(settings.ENTITY_INDEX)
+    if len(sources.keys()) < 1:
+        raise ValueError(
+            f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
+        )
+    sources = [
+        parse_index_version(dataset, k)
+        for k in sources.keys()
+        if k.startswith(Index.prefix(dataset))
+    ]
+    return sorted(sources, reverse=True)[0] if len(sources) > 0 else None
