@@ -2,7 +2,6 @@ import pytest
 from uuid import uuid4
 from pathlib import Path
 from fastapi.testclient import TestClient
-import json
 
 from yente import settings
 from yente.app import create_app
@@ -11,6 +10,7 @@ from yente.app import create_app
 run_id = uuid4().hex
 settings.TESTING = True
 FIXTURES_PATH = Path(__file__).parent / "../fixtures/"
+VERSIONS_PATH = FIXTURES_PATH / "versions.json"
 MANIFEST_PATH = FIXTURES_PATH / "manifest.yml"
 settings.MANIFEST = str(MANIFEST_PATH)
 settings.UPDATE_TOKEN = "test"
