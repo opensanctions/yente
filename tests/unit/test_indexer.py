@@ -9,6 +9,7 @@ from yente.search.indexer import (
     get_next_version,
     DeltasNotAvailable,
     get_deltas_from_version,
+    delta_update_index,
 )
 from yente.search.base import Index, SearchProvider, get_current_version
 
@@ -169,3 +170,28 @@ async def test_can_do_switchover(MockDataset):
     assert sanctions_index.name not in sources.keys()
     # And the non-cloned index should still be aliased
     assert default_index.name in sources.keys()
+
+
+@pytest.mark.asyncio
+async def test_end_to_end(httpx_mock):
+    """
+    Test getting the delta versions and updating the index, using the data
+    mocks in the fixtures directory.
+    """
+    # No alias or index exists, so the first run should build the index from the beginning
+
+    available_versions = json.loads((FIXTURES_PATH / "versions.json").read_text())
+    for version, url in available_versions["versions"].items():
+        httpx_mock.add_response(
+            200,
+            url=url,
+            content=(
+                FIXTURES_PATH / f"dataset/has_deltas/{version}/entities.delta.json"
+            ).read_bytes(),
+        )
+    httpx_mock.add_response(
+        200,
+        url="https://data.opensanctions.org/artifacts/sanctions/versions.json",
+        content=(FIXTURES_PATH / "versions.json").read_bytes(),
+    )
+    await delta_update_index()
