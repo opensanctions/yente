@@ -7,14 +7,22 @@ from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
+from httpx import HTTPStatusError
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
-from yente.data.dataset import Dataset
+from yente.data.dataset import Dataset, get_delta_version
 from yente.data import get_catalog
-from yente.data.loader import load_json_lines
-from yente.search.base import get_es, close_es, index_lock
+from yente.data.loader import load_json_lines, load_json_url
+from yente.search.base import (
+    get_es,
+    close_es,
+    index_lock,
+    get_current_version,
+    SearchProvider,
+    Index,
+)
 from yente.search.mapping import make_entity_mapping
 from yente.search.mapping import INDEX_SETTINGS
 from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
@@ -202,3 +210,89 @@ def update_index_threaded(force: bool = False) -> None:
     )
     thread.start()
     # asyncio.to_thread(update_index, force=force)
+
+
+class DeltasNotAvailable(Exception):
+    pass
+
+
+async def get_deltas_from_version(
+    version: str, dataset: Dataset
+) -> AsyncGenerator[str, None]:
+    """
+    Get deltas from a specific version of a dataset.
+    """
+    try:
+        async for line in load_json_lines(
+            get_delta_version(dataset.name, version), "test"
+        ):
+            yield line
+    except HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise DeltasNotAvailable(f"No deltas found for {version}")
+
+
+async def get_delta_versions() -> AsyncGenerator[Dict[str, List], None]:
+    catalog = await get_catalog()
+    for dataset in catalog.datasets:
+        if dataset.delta_index is not None:
+            try:
+                yield await load_json_url(dataset.delta_index)
+            except HTTPStatusError as exc:
+                log.exception(f"Failed to load deltas for {dataset.name}: {exc}")
+                continue
+
+
+async def get_next_version(dataset: Dataset, provider: SearchProvider) -> None:
+    """
+    Get the next version of a dataset if versions are available.
+    Return None if the dataset is up to date.
+    """
+    if dataset.delta_index is None:
+        raise DeltasNotAvailable(f"No delta_index path specified for {dataset.name}")
+
+    version = await get_current_version(dataset, provider)
+
+    available_versions = [
+        settings.INDEX_VERSION + v for v in dataset.available_versions()
+    ]
+    try:
+        ix = available_versions.index(version)
+    except ValueError:
+        raise DeltasNotAvailable(
+            f"Current version of dataset not found in available versions: {dataset.name}, {version}"
+        )
+    if ix == len(available_versions) - 1:
+        log.info(
+            "Dataset is up to date.",
+            dataset=dataset.name,
+            current_version=version,
+        )
+        return
+    next_version = available_versions[ix + 1]
+    return next_version
+
+
+async def delta_update_index(force: bool = True):
+    # Get the catalog of datasets
+    catalog = await get_catalog()
+    log.info("Index update check")
+    provider = await SearchProvider.create()
+    for dataset in catalog.datasets:
+        try:
+            index = Index(provider, dataset.name, dataset.version)
+            target_version = await dataset.newest_version()
+            clone = index.clone(target_version)
+            # Get the next version
+            while next_version := await get_next_version(dataset, provider):
+                # Get the deltas from the new version
+                res = get_deltas_from_version(next_version, dataset)
+                # Update the cloned index from the deltas
+                await clone.bulk_update(res)
+            # Set the cloned index as the current index
+            clone.make_main()
+        except Exception as exc:
+            log.exception(f"Error updating index for {dataset.name}: {exc}")
+            if clone is not None:
+                await clone.delete()
+            _changed = await index_entities_rate_limit(provider.client, dataset, force)

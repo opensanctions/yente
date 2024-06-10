@@ -1,15 +1,13 @@
 import time
 import asyncio
 import warnings
-import re
 from threading import Lock
 from typing import cast, Any, Dict, List, AsyncGenerator
 from structlog.contextvars import get_contextvars
 from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk, BulkIndexError
+from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import (
     ElasticsearchWarning,
-    ConflictError,
     BadRequestError,
 )
 from elasticsearch.exceptions import TransportError, ConnectionError
@@ -223,24 +221,39 @@ class SearchProvider:
         }
 
 
+def parse_index_version(dataset: str, index_name: str) -> str:
+    """
+    Given a concrete index name, i.e. yente-entities-foo-09202101011
+    return the version string, i.e. 09202101011
+    """
+    return index_name.replace(Index.prefix(dataset), "").lstrip("-")
+
+
 class Index:
-    def __init__(self, client: SearchProvider, dataset=None, index_name=None) -> None:
-        if dataset is None and index_name is None:
-            raise Exception("Dataset or index_name must be provided")
-        if dataset is not None and index_name is not None:
-            raise Exception("Only one of dataset or index_name must be provided")
-        if dataset is not None:
-            self.dataset = dataset
-            self.name = (
-                f"{self.prefix(self.dataset)}-{settings.INDEX_VERSION}{dataset.version}"
-            )
-        else:
-            self.name = index_name
+    def __init__(self, client: SearchProvider, dataset_name: str, version: str) -> None:
+        self.dataset = dataset_name
+        self.name = f"{self.prefix(dataset_name)}-{settings.INDEX_VERSION}{version}"
         self.client = client
 
     @classmethod
-    def prefix(cls, dataset: Dataset) -> str:
-        return f"{settings.ENTITY_INDEX}-{dataset.name}"
+    def prefix(cls, dataset: str) -> str:
+        return f"{settings.ENTITY_INDEX}-{dataset}"
+
+    async def get_current_version(self):
+        """
+        Given the dataset, return the current version of the index for that dataset.
+        """
+        sources = await self.client.get_alias_sources(settings.ENTITY_INDEX)
+        if len(sources.keys()) < 1:
+            raise ValueError(
+                f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
+            )
+        sources = [
+            parse_index_version(self.dataset, k)
+            for k in sources.keys()
+            if k.startswith(Index.prefix(self.dataset))
+        ]
+        return sorted(sources, reverse=True)[0] if len(sources) > 0 else None
 
     def exists(self):
         return self.client.up_to_date(self.name)
@@ -258,16 +271,16 @@ class Index:
         sources = await self.client.get_alias_sources(self.name)
         return [parse_index_version(k) for k in sources.keys()]
 
-    async def clone(self, dataset: Dataset | None = None) -> "Index":
+    async def clone(self, version: str) -> "Index":
         """
         Create a copy of the index with the given name.
         """
-        clone_dataset = dataset or self.dataset
-        cloned_index = Index(self.client, dataset=clone_dataset)
-        name = cloned_index.name if dataset else self.name + "-clone"
+        cloned_index = Index(self.client, self.dataset, version)
+        if cloned_index.name == self.name:
+            raise ValueError("Cannot clone an index to itself.")
         try:
             await self.set_read_only()
-            await self.client.clone_index(self.name, name)
+            await self.client.clone_index(self.name, cloned_index.name)
         finally:
             await self.set_read_write()
         return cloned_index
@@ -290,14 +303,6 @@ class Index:
         return self.client.update(entity_iterator, self.name)
 
 
-def parse_index_version(dataset: Dataset, index_name: str) -> str:
-    """
-    Given a concrete index name, i.e. yente-entities-foo-09202101011
-    return the version string, i.e. 09202101011
-    """
-    return index_name.replace(Index.prefix(dataset), "").lstrip("-")
-
-
 def make_indexable(data):
     entity = Entity.from_dict(model, data)
     texts = entity.pop("indexText")
@@ -315,7 +320,7 @@ def make_indexable(data):
     return doc
 
 
-async def get_current_version(provider: SearchProvider, dataset: Dataset) -> str | None:
+async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str | None:
     """
     Given the dataset, return the current version of the index for that dataset.
     """
@@ -324,9 +329,9 @@ async def get_current_version(provider: SearchProvider, dataset: Dataset) -> str
         raise ValueError(
             f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
         )
-    sources = [
-        parse_index_version(dataset, k)
+    versions = [
+        parse_index_version(dataset.name, k)
         for k in sources.keys()
-        if k.startswith(Index.prefix(dataset))
+        if k.startswith(Index.prefix(dataset.name))
     ]
-    return sorted(sources, reverse=True)[0] if len(sources) > 0 else None
+    return sorted(versions, reverse=True)[0] if len(versions) > 0 else None
