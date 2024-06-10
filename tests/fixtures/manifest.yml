@@ -1,9 +1,8 @@
 schedule: null
-catalogs:
-  - url: "https://data.opensanctions.org/datasets/latest/index.json"
-    scope: eu_fsf
-    resource_name: entities.ftm.json
 datasets:
+  - name: sanctions
+    title: Sanctions
+    path: https://data.opensanctions.org/datasets/sanctions/index.json
   - name: parteispenden
     title: German political party donations
     path: tests/fixtures/donations.ijson
