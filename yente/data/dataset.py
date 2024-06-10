@@ -12,6 +12,8 @@ from followthemoney.util import sanitize_text
 
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path
+from yente.data.loader import load_json_url
+from yente import settings
 
 log = get_logger(__name__)
 BOOT_TIME = datetime_iso(datetime.utcnow())
@@ -41,6 +43,10 @@ class Dataset(NKDataset):
                     ts = datetime_iso(mdt)
             self.version = iso_to_version(ts) or "static"
 
+        self.delta_index = (
+            f"https://data.opensanctions.org/artifacts/{self.name}/versions.json"
+        )
+
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
         self.index_version: Optional[str] = None
@@ -60,6 +66,14 @@ class Dataset(NKDataset):
                 return resource.url
         return None
 
+    async def available_versions(self, refresh: bool = False) -> Dict[str, str]:
+        if self._available_versions is None or refresh is True:
+            self._available_versions = await load_json_url(self.delta_index)
+        return self._available_versions
+
+    async def newest_version(self) -> str:
+        return settings.INDEX_VERSION + sorted(self.available_versions())[-1]
+
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
         data["load"] = self.load
@@ -72,3 +86,7 @@ class Dataset(NKDataset):
         if "children" not in data:
             data["children"] = [c.name for c in self.children]
         return data
+
+
+def get_delta_version(dataset_name: str, version: str) -> str:
+    return f"https://data.opensanctions.org/artifacts/{dataset_name}/{version}/entities.delta.json"
