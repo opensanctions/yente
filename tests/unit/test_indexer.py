@@ -49,11 +49,15 @@ async def test_getting_versions_from(MockDataset):
 
 @pytest.mark.asyncio
 @patch("yente.data.manifest.Dataset")
-async def test_getting_deltas_from_version(MockDataset, httpx_mock):
+@patch("yente.search.indexer.get_delta_version")
+async def test_getting_deltas_from_version(
+    get_delta_version_mock, MockDataset, httpx_mock
+):
     ds = MockDataset()
-    ds.get_delta_version = MagicMock(
-        return_value="https://data.opensanctions.org/succesful/call/is/mocked"
+    get_delta_version_mock.return_value = (
+        "https://data.opensanctions.org/succesful/call/is/mocked"
     )
+
     # When the version has deltas it should return the deltas
     with open(FIXTURES_PATH / "entities.delta.json") as f:
         body = f.read()
@@ -64,8 +68,8 @@ async def test_getting_deltas_from_version(MockDataset, httpx_mock):
     except StopAsyncIteration:
         pytest.fail("Expected deltas but got none")
     # When the path does not exist it should raise a DeltasNotAvailable error
-    ds.get_delta_version = MagicMock(
-        return_value="https://data.opensanctions.org/failing/call/is/mocked"
+    get_delta_version_mock.return_value = (
+        "https://data.opensanctions.org/failing/call/is/mocked"
     )
     httpx_mock.add_response(
         404, url="https://data.opensanctions.org/failing/call/is/mocked"

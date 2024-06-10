@@ -1,7 +1,7 @@
 import pytest
 from yente.data.loader import read_path_lines
 from yente.search.base import SearchProvider, Index
-
+from yente import settings
 from unittest.mock import MagicMock, patch
 
 
@@ -10,10 +10,14 @@ from unittest.mock import MagicMock, patch
 async def test_index_creation(MockDataset):
     m = MockDataset()
     m.name = "test"
+    m.version = "4"
     m.next_version = MagicMock(return_value="5")
     provider = await SearchProvider.create()
-    index = Index(provider, m)
-    assert index.name == "yente-entities-test"
+    index = Index(provider, m.name, m.version)
+    assert (
+        index.name
+        == f"{settings.ENTITY_INDEX}-{m.name}-{settings.INDEX_VERSION}{m.version}"
+    )
     try:
         assert await index.exists() is False
         await index.upsert()
@@ -53,9 +57,10 @@ async def test_index_cloning(MockDataset):
 async def test_bulk_updating(MockDataset, fake_deltas_path):
     m = MockDataset()
     m.name = "test"
+    m.version = "4"
     m.next_version = MagicMock(return_value="5")
     provider = await SearchProvider.create()
-    index = Index(provider, m)
+    index = Index(provider, m.name, m.version)
     try:
         await index.upsert()
         await index.bulk_update(read_path_lines(fake_deltas_path))
