@@ -278,6 +278,7 @@ async def delta_update_index(force: bool = True):
     catalog = await get_catalog()
     log.info("Index update check")
     provider = await SearchProvider.create()
+    clone = None
     for dataset in catalog.datasets:
         try:
             index = Index(provider, dataset.name, dataset.version)

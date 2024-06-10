@@ -21,6 +21,7 @@ BOOT_TIME = datetime_iso(datetime.utcnow())
 
 class Dataset(NKDataset):
     def __init__(self, catalog: DataCatalog["Dataset"], data: Dict[str, Any]):
+        self._available_versions_map = None
         name = data["name"]
         norm_name = slugify(name, sep="_")
         if name != norm_name:
@@ -66,13 +67,25 @@ class Dataset(NKDataset):
                 return resource.url
         return None
 
+    async def delta_path(self, version: str) -> str:
+        if version not in self._available_versions_map:
+            raise ValueError(f"Version {version} not available for {self.name}")
+        return self._available_versions_map[version]
+
+    async def _load_versions_map(self, refresh: bool = False) -> None:
+        if self._available_versions_map is None or refresh is True:
+            resp = await load_json_url(self.delta_index)
+            if "versions" not in resp:
+                raise ValueError(f"Invalid versions file found at {self.delta_index}")
+            self._available_versions_map = resp.get("versions")
+
     async def available_versions(self, refresh: bool = False) -> Dict[str, str]:
-        if self._available_versions is None or refresh is True:
-            self._available_versions = await load_json_url(self.delta_index)
-        return self._available_versions
+        await self._load_versions_map(refresh=refresh)
+        return self._available_versions_map.keys()
 
     async def newest_version(self) -> str:
-        return settings.INDEX_VERSION + sorted(self.available_versions())[-1]
+        available = await self.available_versions()
+        return settings.INDEX_VERSION + sorted(available)[-1]
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
