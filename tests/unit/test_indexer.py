@@ -1,13 +1,78 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from httpx import HTTPStatusError
-from yente import settings
+import json
+from unittest.mock import patch, MagicMock
+from .conftest import VERSIONS_PATH, FIXTURES_PATH
 
-from yente.search.indexer import delta_index, first_available_delta
+from yente import settings
+from yente.search.indexer import (
+    get_delta_versions,
+    get_next_version,
+    DeltasNotAvailable,
+    get_deltas_from_version,
+)
 from yente.search.base import Index, SearchProvider, get_current_version
 
 # TODO: Mock httpx instead
 DS_WITH_DELTAS = "https://data.opensanctions.org/artifacts/sanctions/versions.json"
+
+
+@pytest.mark.asyncio
+@patch("yente.data.manifest.Dataset")
+async def test_getting_versions_from(MockDataset):
+    with open(VERSIONS_PATH) as f:
+        provider = await SearchProvider.create()
+        dataset = MockDataset()
+        dataset.delta_index = None
+        # When the dataset does not have a version it should throw an error
+        with pytest.raises(DeltasNotAvailable):
+            await get_next_version(dataset, provider)
+        # When the dataset has a version not in the version index it should throw an Error
+        versions = json.load(f).get("items")
+        versions.sort()
+        assert "0" not in versions  # doh
+        dataset.version = "0"
+        dataset.available_versions = MagicMock(return_value=versions)
+        dataset.name = "foobar"
+        dataset.delta_index = "file://" + VERSIONS_PATH.resolve().as_posix()
+        index = Index(provider, dataset.name, dataset.version)
+        await index.upsert()
+        await index.add_alias(settings.ENTITY_INDEX)
+        with pytest.raises(DeltasNotAvailable):
+            await get_next_version(dataset, provider)
+        # When the dataset already has the newest version it should return None
+        dataset.version = versions[-1]
+        index = Index(provider, dataset.name, dataset.version)
+        await index.upsert()
+        await index.add_alias(settings.ENTITY_INDEX)
+        assert await get_next_version(dataset, provider) is None
+
+
+@pytest.mark.asyncio
+@patch("yente.data.manifest.Dataset")
+async def test_getting_deltas_from_version(MockDataset, httpx_mock):
+    ds = MockDataset()
+    ds.get_delta_version = MagicMock(
+        return_value="https://data.opensanctions.org/succesful/call/is/mocked"
+    )
+    # When the version has deltas it should return the deltas
+    with open(FIXTURES_PATH / "entities.delta.json") as f:
+        body = f.read()
+    httpx_mock.add_response(200, content=body)
+    res = get_deltas_from_version("has_deltas", ds)
+    try:
+        await res.__anext__()
+    except StopAsyncIteration:
+        pytest.fail("Expected deltas but got none")
+    # When the path does not exist it should raise a DeltasNotAvailable error
+    ds.get_delta_version = MagicMock(
+        return_value="https://data.opensanctions.org/failing/call/is/mocked"
+    )
+    httpx_mock.add_response(
+        404, url="https://data.opensanctions.org/failing/call/is/mocked"
+    )
+    res = get_deltas_from_version("no_deltas", ds)
+    with pytest.raises(DeltasNotAvailable):
+        await res.__anext__()
 
 
 @pytest.mark.asyncio
@@ -21,7 +86,7 @@ async def test_delta_index_version(MockDataset, MockCatalog, get_catalog_mock):
     get_catalog_mock.return_value = c
     has_version.delta_index = DS_WITH_DELTAS
     # When passed a dataset that implements a version file it should be returned
-    async for res in delta_index():
+    async for res in get_delta_versions():
         assert res is not None
     # When passed a dataset that does not have deltas or does not exist an empty generator is returned
     no_versions = MockDataset()
@@ -29,7 +94,7 @@ async def test_delta_index_version(MockDataset, MockCatalog, get_catalog_mock):
         "https://data.opensanctions.org/artifacts/no_such_dataset/versions.json"
     )
     c.datasets = [no_versions]
-    async for res in delta_index():
+    async for res in get_delta_versions():
         assert res is None
 
 
@@ -46,14 +111,14 @@ async def test_gets_the_current_index_version(MockDataset):
     resp = await index.add_alias(settings.ENTITY_INDEX)
     assert resp.body["acknowledged"] is True
     # It should be possible the current version from indexed dataset
-    version = await get_current_version(provider, m)
+    version = await get_current_version(m, provider)
     assert version == f"{settings.INDEX_VERSION}{m.version}"
     # Updating the dataset should change the version
     m.version = 2
     index = Index(provider, dataset=m)
     await index.upsert()
     await index.add_alias(settings.ENTITY_INDEX)
-    version = await get_current_version(provider, m)
+    version = await get_current_version(m, provider)
     assert version == f"{settings.INDEX_VERSION}{m.version}"
     # But adding a different dataset should not change the version
     m2 = m.deepcopy()
@@ -62,7 +127,7 @@ async def test_gets_the_current_index_version(MockDataset):
     index2 = Index(provider, dataset=m2)
     await index2.upsert()
     await index2.add_alias(settings.ENTITY_INDEX)
-    version = await get_current_version(provider, m)
+    version = await get_current_version(m, provider)
     assert version == f"{settings.INDEX_VERSION}{m.version}"
 
 
