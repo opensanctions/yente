@@ -1,6 +1,7 @@
 from banal import as_bool
 from normality import slugify
 from datetime import datetime
+from httpx import HTTPStatusError
 from typing import Dict, Optional, Any
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
@@ -83,9 +84,16 @@ class Dataset(NKDataset):
         await self._load_versions_map(refresh=refresh)
         return self._available_versions_map.keys()
 
-    async def newest_version(self) -> str:
-        available = await self.available_versions()
-        return settings.INDEX_VERSION + sorted(available)[-1]
+    async def newest_version(self) -> str | None:
+        """
+        Get the newest version available for this dataset. If delta versioning
+        is not implemented for this dataset, return None.
+        """
+        try:
+            available = await self.available_versions(refresh=True)
+            return settings.INDEX_VERSION + sorted(available)[-1]
+        except HTTPStatusError:
+            return None
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
