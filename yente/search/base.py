@@ -232,30 +232,14 @@ def parse_index_version(dataset: str, index_name: str) -> str:
 class Index:
     def __init__(self, client: SearchProvider, dataset_name: str, version: str) -> None:
         self.dataset = dataset_name
-        self.name = f"{self.prefix(dataset_name)}-{settings.INDEX_VERSION}{version}"
+        self.name = f"{self.prefix(dataset_name)}-{version}"
         self.client = client
 
     @classmethod
     def prefix(cls, dataset: str) -> str:
         return f"{settings.ENTITY_INDEX}-{dataset}"
 
-    async def get_current_version(self):
-        """
-        Given the dataset, return the current version of the index for that dataset.
-        """
-        sources = await self.client.get_alias_sources(settings.ENTITY_INDEX)
-        if len(sources.keys()) < 1:
-            raise ValueError(
-                f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
-            )
-        sources = [
-            parse_index_version(self.dataset, k)
-            for k in sources.keys()
-            if k.startswith(Index.prefix(self.dataset))
-        ]
-        return sorted(sources, reverse=True)[0] if len(sources) > 0 else None
-
-    def exists(self):
+    def exists(self) -> bool:
         return self.client.up_to_date(self.name)
 
     def upsert(self):

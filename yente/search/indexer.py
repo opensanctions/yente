@@ -93,8 +93,11 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         )
         return False
 
-    # Versioning defaults to the software version instead of a data update date:
-    version = f"{settings.INDEX_VERSION}{dataset.version}"
+    # Versioning defaults to the newest delta version, otherwise it uses the software version.
+    if newest := await dataset.newest_version():
+        version = newest
+    else:
+        version = f"{settings.INDEX_VERSION}{dataset.version}"
     log.info(
         "Indexing entities",
         dataset=dataset.name,
@@ -222,6 +225,7 @@ async def get_deltas_from_version(
     """
     Get deltas from a specific version of a dataset.
     """
+    version = version.replace(settings.INDEX_VERSION, "")
     try:
         async for line in load_json_lines(
             get_delta_version(dataset.name, version), "test"
@@ -243,7 +247,7 @@ async def get_delta_versions() -> AsyncGenerator[Dict[str, List], None]:
                 continue
 
 
-async def get_next_version(dataset: Dataset, provider: SearchProvider) -> None:
+async def get_next_version(dataset: Dataset, version: str) -> None:
     """
     Get the next version of a dataset if versions are available.
     Return None if the dataset is up to date.
@@ -251,10 +255,8 @@ async def get_next_version(dataset: Dataset, provider: SearchProvider) -> None:
     if dataset.delta_index is None:
         raise DeltasNotAvailable(f"No delta_index path specified for {dataset.name}")
 
-    version = await get_current_version(dataset, provider)
-
     available_versions = [
-        settings.INDEX_VERSION + v for v in dataset.available_versions()
+        settings.INDEX_VERSION + v for v in await dataset.available_versions()
     ]
     try:
         ix = available_versions.index(version)
@@ -281,17 +283,27 @@ async def delta_update_index(force: bool = True):
     clone = None
     for dataset in catalog.datasets:
         try:
-            index = Index(provider, dataset.name, dataset.version)
+            current_version = await get_current_version(dataset, provider)
+            index = Index(provider, dataset.name, current_version)
             target_version = await dataset.newest_version()
-            clone = index.clone(target_version)
-            # Get the next version
-            while next_version := await get_next_version(dataset, provider):
-                # Get the deltas from the new version
-                res = get_deltas_from_version(next_version, dataset)
-                # Update the cloned index from the deltas
-                await clone.bulk_update(res)
-            # Set the cloned index as the current index
-            clone.make_main()
+            # If delta versioning is not implemented, update the index from scratch.
+            if target_version is None:
+                raise DeltasNotAvailable(f"No versions available for {dataset.name}")
+            if current_version == target_version:
+                log.info(
+                    "Dataset is up to date.",
+                    dataset=dataset.name,
+                    current_version=current_version,
+                )
+                continue
+            clone = await index.clone(target_version)
+            # Get the next version.
+            while next_version := await get_next_version(dataset, current_version):
+                # Get the deltas from the next version and pass them to the bulk update.
+                await clone.bulk_update(get_deltas_from_version(next_version, dataset))
+                current_version = next_version
+            # Set the cloned index as the current index.
+            await clone.make_main()
         except Exception as exc:
             log.exception(f"Error updating index for {dataset.name}: {exc}")
             if clone is not None:
