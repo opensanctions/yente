@@ -2,8 +2,4 @@ schedule: null
 datasets:
   - name: sanctions
     title: Sanctions
-    path: https://data.opensanctions.org/datasets/sanctions/index.json
-  - name: parteispenden
-    title: German political party donations
-    path: tests/fixtures/donations.ijson
-    version: "100"
+    entities_url: https://data.opensanctions.org/datasets/sanctions/entities.ftm.json
