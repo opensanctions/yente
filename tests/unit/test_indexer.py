@@ -26,7 +26,7 @@ async def test_getting_versions_from(MockDataset):
         dataset.delta_index = None
         # When the dataset does not have a version it should throw an error
         with pytest.raises(DeltasNotAvailable):
-            await get_next_version(dataset, provider)
+            await get_next_version(dataset, dataset.version)
         # When the dataset has a version not in the version index it should throw an Error
         versions = json.load(f).get("items")
         versions.sort()
@@ -39,13 +39,13 @@ async def test_getting_versions_from(MockDataset):
         await index.upsert()
         await index.add_alias(settings.ENTITY_INDEX)
         with pytest.raises(DeltasNotAvailable):
-            await get_next_version(dataset, provider)
+            await get_next_version(dataset, dataset.version)
         # When the dataset already has the newest version it should return None
         dataset.version = versions[-1]
         index = Index(provider, dataset.name, dataset.version)
         await index.upsert()
         await index.add_alias(settings.ENTITY_INDEX)
-        assert await get_next_version(dataset, provider) is None
+        assert await get_next_version(dataset, dataset.version) is None
 
 
 @pytest.mark.asyncio
@@ -179,8 +179,18 @@ async def test_end_to_end(httpx_mock):
     mocks in the fixtures directory.
     """
     # No alias or index exists, so the first run should build the index from the beginning
-
     available_versions = json.loads((FIXTURES_PATH / "versions.json").read_text())
+    httpx_mock.add_response(
+        200,
+        url="https://data.opensanctions.org/datasets/sanctions/entities.ftm.json",
+        content=(FIXTURES_PATH / "dataset/has_deltas/entities.ftm.json").read_bytes(),
+    )
+    httpx_mock.add_response(
+        200,
+        url="https://data.opensanctions.org/artifacts/sanctions/versions.json",
+        content=(FIXTURES_PATH / "start_version.json").read_bytes(),
+    )
+    await delta_update_index()
     for version, url in available_versions["versions"].items():
         httpx_mock.add_response(
             200,
