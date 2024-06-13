@@ -1,13 +1,19 @@
 import pytest
 import json
 from .conftest import FIXTURES_PATH
-
+from yente.settings import ENTITY_INDEX
+import httpx
 from yente.search.indexer import (
     delta_update_index,
 )
 
 # TODO: Mock httpx instead
 DS_WITH_DELTAS = "https://data.opensanctions.org/artifacts/sanctions/versions.json"
+
+
+@pytest.fixture
+def non_mocked_hosts() -> list:
+    return ["localhost"]
 
 
 @pytest.mark.asyncio
@@ -43,4 +49,7 @@ async def test_end_to_end(httpx_mock):
         content=(FIXTURES_PATH / "versions.json").read_bytes(),
     )
     await delta_update_index()
-    pass
+    httpx.post(f"http://localhost:9200/{ENTITY_INDEX}/_refresh")
+    resp = httpx.get(f"http://localhost:9200/{ENTITY_INDEX}/_count")
+    assert resp.status_code == 200
+    assert resp.json().get("count") == 10
