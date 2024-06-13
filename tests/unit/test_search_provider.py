@@ -1,6 +1,6 @@
 import pytest
 from yente.data.loader import read_path_lines
-from yente.search.base import SearchProvider, Index
+from yente.search.base import ESSearchProvider, Index
 from yente import settings
 from unittest.mock import MagicMock, patch
 from typing import AsyncGenerator, List
@@ -183,7 +183,7 @@ async def test_index_creation(MockDataset):
     m.name = "test"
     m.version = "4"
     m.next_version = MagicMock(return_value="5")
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     index = Index(provider, m.name, m.version)
     assert (
         index.name
@@ -211,7 +211,7 @@ async def test_index_cloning(MockDataset):
     m = MockDataset()
     m.name = "test"
     m.next_version = MagicMock(return_value="5")
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     index = Index(provider, m)
     try:
         await index.upsert()
@@ -230,7 +230,7 @@ async def test_bulk_updating(MockDataset, fake_deltas_path):
     m.name = "test"
     m.version = "4"
     m.next_version = MagicMock(return_value="5")
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     index = Index(provider, m.name, m.version)
     try:
         await index.upsert()
