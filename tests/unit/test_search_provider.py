@@ -166,14 +166,20 @@ class TestSearchProvider:
 
 class TestIndex:
     @pytest.mark.asyncio
-    async def test_can_bulk_update(self, search_provider):
-        # Given an existing index
+    async def test_switchover(self, search_provider):
+        # It is possible to make an index the main index
         index = Index(search_provider, "test", "1")
         await index.upsert()
-        # It should be possible to bulk update it
-        await index.bulk_update(
-            as_generator([{"op": "ADD", "entity": {"id": "1", "name": "test"}}])
-        )
+        await index.make_main()
+        indices = await search_provider.get_backing_indexes(settings.ENTITY_INDEX)
+        assert index.name in indices
+        # It is possible to switch over to a new index
+        new_index = Index(search_provider, "test", "2")
+        await new_index.upsert()
+        await new_index.make_main()
+        indices = await search_provider.get_backing_indexes(settings.ENTITY_INDEX)
+        assert new_index.name in indices
+        assert index.name not in indices
 
 
 @patch("yente.data.manifest.Dataset")
