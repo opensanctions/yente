@@ -31,11 +31,6 @@ async def search_provider():
     await provider.delete_index("test*")
 
 
-@pytest.fixture(scope="session", autouse=False)
-def fake_deltas_path() -> Path:
-    return FIXTURES_PATH / "fake_entities.delta.json"
-
-
 def clear_state():
     pass
 
