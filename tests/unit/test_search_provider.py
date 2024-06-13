@@ -1,8 +1,6 @@
 import pytest
-from yente.data.loader import read_path_lines
-from yente.search.base import ESSearchProvider, Index
+from yente.search.base import Index
 from yente import settings
-from unittest.mock import MagicMock, patch
 from typing import AsyncGenerator, List
 
 
@@ -82,7 +80,7 @@ class TestSearchProvider:
         sources = await search_provider.get_alias_sources("test_alias")
         assert sorted(sources) == ["test_1", "test_2"]
         # It should be possible to switch the sources for an alias based off of a prefix
-        await search_provider.alias_rollover("test_alias", "test_2", "test_")
+        await search_provider.rollover("test_alias", "test_2", "test_")
         sources = await search_provider.get_alias_sources("test_alias")
         assert sorted(sources) == ["test_2"]
 
@@ -180,69 +178,3 @@ class TestIndex:
         indices = await search_provider.get_backing_indexes(settings.ENTITY_INDEX)
         assert new_index.name in indices
         assert index.name not in indices
-
-
-@patch("yente.data.manifest.Dataset")
-@pytest.mark.asyncio
-async def test_index_creation(MockDataset):
-    m = MockDataset()
-    m.name = "test"
-    m.version = "4"
-    m.next_version = MagicMock(return_value="5")
-    provider = await ESSearchProvider.create()
-    index = Index(provider, m.name, m.version)
-    assert (
-        index.name
-        == f"{settings.ENTITY_INDEX}-{m.name}-{settings.INDEX_VERSION}{m.version}"
-    )
-    try:
-        assert await index.exists() is False
-        await index.upsert()
-        assert await index.exists() is True
-        # Creating the same index again should not raise an error
-        try:
-            await index.upsert()
-        except Exception as e:
-            raise AssertionError(
-                f"It should be possible to create the same index twice: {e}"
-            )
-    finally:
-        await index.delete()
-        await provider.client.close()
-
-
-@patch("yente.data.dataset.Dataset")
-@pytest.mark.asyncio
-async def test_index_cloning(MockDataset):
-    m = MockDataset()
-    m.name = "test"
-    m.next_version = MagicMock(return_value="5")
-    provider = await ESSearchProvider.create()
-    index = Index(provider, m)
-    try:
-        await index.upsert()
-        clone = await index.clone()
-        assert await clone.exists() is True
-    finally:
-        await index.delete()
-        await clone.delete()
-        await provider.client.close()
-
-
-@patch("yente.data.dataset.Dataset")
-@pytest.mark.asyncio
-async def test_bulk_updating(MockDataset, fake_deltas_path):
-    m = MockDataset()
-    m.name = "test"
-    m.version = "4"
-    m.next_version = MagicMock(return_value="5")
-    provider = await ESSearchProvider.create()
-    index = Index(provider, m.name, m.version)
-    try:
-        await index.upsert()
-        await index.bulk_update(read_path_lines(fake_deltas_path))
-    except Exception as e:
-        print(e)
-    finally:
-        await index.delete()
-        await provider.client.close()

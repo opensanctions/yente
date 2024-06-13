@@ -263,6 +263,13 @@ class ESSearchProvider(SearchProvider):
     async def refresh(self, index: str):
         await self.client.indices.refresh(index=index)
 
+    async def add_alias(self, index: str, alias: str):
+        return await self.client.indices.put_alias(index=index, name=alias)
+
+    async def get_alias_sources(self, alias: str) -> List[str]:
+        resp = await self.client.indices.get_alias(name=alias)
+        return list(resp.keys())
+
     async def update(self, entities: AsyncGenerator, index_name: str):
         resp = await async_bulk(
             client=self.client,
