@@ -228,23 +228,12 @@ async def get_deltas_from_version(
     version = version.replace(settings.INDEX_VERSION, "")
     try:
         async for line in load_json_lines(
-            get_delta_version(dataset.name, version), "test"
+            get_delta_version(dataset.name, version), version
         ):
             yield line
     except HTTPStatusError as exc:
         if exc.response.status_code == 404:
             raise DeltasNotAvailable(f"No deltas found for {version}")
-
-
-async def get_delta_versions() -> AsyncGenerator[Dict[str, List], None]:
-    catalog = await get_catalog()
-    for dataset in catalog.datasets:
-        if dataset.delta_index is not None:
-            try:
-                yield await load_json_url(dataset.delta_index)
-            except HTTPStatusError as exc:
-                log.exception(f"Failed to load deltas for {dataset.name}: {exc}")
-                continue
 
 
 async def get_next_version(dataset: Dataset, version: str) -> None:
