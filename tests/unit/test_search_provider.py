@@ -3,6 +3,33 @@ from yente.data.loader import read_path_lines
 from yente.search.base import SearchProvider, Index
 from yente import settings
 from unittest.mock import MagicMock, patch
+from typing import AsyncGenerator, List
+
+
+async def as_generator(lst: List) -> AsyncGenerator:
+    for i in lst:
+        yield i
+
+
+operations = [
+    {
+        "op": "ADD",
+        "entity": {
+            "id": "1",
+            "name": "test",
+            "schema": "Person",
+            "properties": {},
+        },
+    },
+    {
+        "op": "MOD",
+        "entity": {"id": "1", "name": "Vorgle", "schema": "Person", "properties": {}},
+    },
+    {
+        "op": "DEL",
+        "entity": {"id": "1"},
+    },
+]
 
 
 class TestSearchProvider:
@@ -75,6 +102,78 @@ class TestSearchProvider:
         # If the source and target are the same, raise an error
         with pytest.raises(Exception):
             await search_provider.clone_index("test", "test")
+
+    @pytest.mark.asyncio
+    async def test_updating(self, search_provider):
+        # It should be able to parse all operation types
+        for op in operations:
+            try:
+                search_provider._to_operation(op, "test")
+            except Exception as e:
+                raise AssertionError(f"Operation {op['op']} should be parsable: {e}")
+        # Given an existing index
+        await search_provider.upsert_index("test")
+        # It should be possible to update it with a list of documents
+        docs = [
+            {
+                "op": "ADD",
+                "entity": {
+                    "id": "1",
+                    "name": "test",
+                    "schema": "Person",
+                    "properties": {},
+                },
+            },
+            {
+                "op": "ADD",
+                "entity": {
+                    "id": "2",
+                    "name": "Claude Foobar Michel",
+                    "schema": "Person",
+                    "properties": {},
+                },
+            },
+        ]
+        await search_provider.update(as_generator(docs), "test")
+        await search_provider.refresh("test")
+        assert await search_provider.count("test") == 2
+        # It should be possible to delete a document
+        await search_provider.update(
+            as_generator([{"op": "DEL", "entity": {"id": "2"}}]), "test"
+        )
+        await search_provider.refresh("test")
+        assert await search_provider.count("test") == 1
+        # Modify the document does not change the index count
+        await search_provider.update(
+            as_generator(
+                [
+                    {
+                        "op": "MOD",
+                        "entity": {
+                            "id": "1",
+                            "name": "Theresa May",
+                            "schema": "Person",
+                            "properties": {"hobbies": "Running through wheat fields."},
+                        },
+                    }
+                ]
+            ),
+            "test",
+        )
+        await search_provider.refresh("test")
+        assert await search_provider.count("test") == 1
+
+
+class TestIndex:
+    @pytest.mark.asyncio
+    async def test_can_bulk_update(self, search_provider):
+        # Given an existing index
+        index = Index(search_provider, "test", "1")
+        await index.upsert()
+        # It should be possible to bulk update it
+        await index.bulk_update(
+            as_generator([{"op": "ADD", "entity": {"id": "1", "name": "test"}}])
+        )
 
 
 @patch("yente.data.manifest.Dataset")

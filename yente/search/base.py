@@ -9,6 +9,7 @@ from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import (
     ElasticsearchWarning,
     BadRequestError,
+    NotFoundError,
 )
 from elasticsearch.exceptions import TransportError, ConnectionError
 from followthemoney import model
@@ -99,6 +100,9 @@ class SearchProvider:
         return self
 
     async def upsert_index(self, index: str):
+        """
+        Create an index if it does not exist. If it does exist, do nothing.
+        """
         try:
             schemata = list(model.schemata.values())
             mapping = make_entity_mapping(schemata)
@@ -108,33 +112,46 @@ class SearchProvider:
         except BadRequestError:
             pass
 
-    def remove_write_block(self, index: str):
-        return self.client.indices.put_settings(
+    async def _remove_write_block(self, index: str):
+        resp = await self.client.indices.put_settings(
             index=index, settings={"index.blocks.read_only": False}
         )
+        return resp
 
-    def add_write_block(self, index: str):
-        return self.client.indices.put_settings(
+    async def _add_write_block(self, index: str):
+        resp = await self.client.indices.put_settings(
             index=index, settings={"index.blocks.read_only": True}
         )
+        return resp
 
-    def clone_index(self, index: str, new_index: str):
-        return self.client.indices.clone(
-            index=index,
-            target=new_index,
-            body={
-                "settings": {"index": {"blocks": {"read_only": False}}},
-            },
-        )
+    async def clone_index(self, index: str, new_index: str):
+        try:
+            await self._add_write_block(index)
+            await self.client.indices.clone(
+                index=index,
+                target=new_index,
+                body={
+                    "settings": {"index": {"blocks": {"read_only": False}}},
+                },
+            )
+        finally:
+            await self._remove_write_block(index)
 
-    def delete_index(self, index: str):
-        return self.client.indices.delete(index=index)
+    async def delete_index(self, index: str):
+        """
+        Delete a given index if it exists.
+        """
+        try:
+            resp = await self.client.indices.delete(index=index)
+            return resp
+        except NotFoundError:
+            pass
 
     async def get_alias_sources(self, alias: str):
         resp = await self.client.indices.get_alias(name=alias)
         return resp.body
 
-    async def up_to_date(self, index: str) -> bool:
+    async def index_exists(self, index: str) -> bool:
         exists = await self.client.indices.exists(index=index)
         if exists.body:
             log.info("Index is up to date.", index=index)
@@ -148,7 +165,9 @@ class SearchProvider:
         sources = await self.client.indices.get_alias(name=alias)
         actions = []
         for current_index in sources.keys():
-            if prefix is not None and not current_index.startswith(prefix):
+            if (
+                prefix is not None and not current_index.startswith(prefix)
+            ) or current_index == new_index:
                 continue
             actions.append({"remove": {"index": current_index, "alias": alias}})
         actions.append({"add": {"index": new_index, "alias": alias}})
@@ -158,9 +177,16 @@ class SearchProvider:
         """
         Add an index to an alias.
         """
-        return await self.client.indices.put_alias(index=index, name=alias)
+        await self.client.indices.put_alias(index=index, name=alias)
 
-    async def update(self, entities, index_name: str):
+    async def count(self, index: str) -> int:
+        resp = await self.client.count(index=index)
+        return resp["count"]
+
+    async def refresh(self, index: str):
+        return await self.client.indices.refresh(index=index)
+
+    async def update(self, entities: AsyncGenerator, index_name: str):
         resp = await async_bulk(
             client=self.client,
             actions=self._entity_iterator(entities, index_name),
@@ -240,7 +266,7 @@ class Index:
         return f"{settings.ENTITY_INDEX}-{dataset}"
 
     def exists(self) -> bool:
-        return self.client.up_to_date(self.name)
+        return self.client.index_exists(self.name)
 
     def upsert(self):
         return self.client.upsert_index(index=self.name)
@@ -251,10 +277,6 @@ class Index:
     def add_alias(self, alias: str):
         return self.client.add_alias(index=self.name, alias=alias)
 
-    async def from_alias(self):
-        sources = await self.client.get_alias_sources(self.name)
-        return [parse_index_version(k) for k in sources.keys()]
-
     async def clone(self, version: str) -> "Index":
         """
         Create a copy of the index with the given name.
@@ -262,11 +284,7 @@ class Index:
         cloned_index = Index(self.client, self.dataset, version)
         if cloned_index.name == self.name:
             raise ValueError("Cannot clone an index to itself.")
-        try:
-            await self.set_read_only()
-            await self.client.clone_index(self.name, cloned_index.name)
-        finally:
-            await self.set_read_write()
+        await self.client.clone_index(self.name, cloned_index.name)
         return cloned_index
 
     def make_main(self):
@@ -276,12 +294,6 @@ class Index:
         return self.client.alias_rollover(
             settings.ENTITY_INDEX, self.name, self.prefix(self.dataset)
         )
-
-    def set_read_only(self):
-        return self.client.add_write_block(self.name)
-
-    def set_read_write(self):
-        return self.client.remove_write_block(self.name)
 
     def bulk_update(self, entity_iterator: AsyncGenerator):
         return self.client.update(entity_iterator, self.name)
