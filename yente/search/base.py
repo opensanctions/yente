@@ -92,7 +92,7 @@ async def close_es() -> None:
         await es.close()
 
 
-class SearchProvider:
+class ESSearchProvider:
     @classmethod
     async def create(cls):
         self = cls()
@@ -256,7 +256,9 @@ def parse_index_version(dataset: str, index_name: str) -> str:
 
 
 class Index:
-    def __init__(self, client: SearchProvider, dataset_name: str, version: str) -> None:
+    def __init__(
+        self, client: ESSearchProvider, dataset_name: str, version: str
+    ) -> None:
         self.dataset = dataset_name
         self.name = f"{self.prefix(dataset_name)}-{version}"
         self.client = client
@@ -316,7 +318,9 @@ def make_indexable(data):
     return doc
 
 
-async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str | None:
+async def get_current_version(
+    dataset: Dataset, provider: ESSearchProvider
+) -> str | None:
     """
     Given the dataset, return the current version of the index for that dataset.
     """

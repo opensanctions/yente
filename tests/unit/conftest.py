@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
-from yente.search.base import SearchProvider
+from yente.search.base import ESSearchProvider
 
 
 run_id = uuid4().hex
@@ -26,7 +26,7 @@ client = TestClient(app)
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def search_provider():
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     yield provider
     await provider.delete_index("test*")
 

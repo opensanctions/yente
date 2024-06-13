@@ -20,7 +20,7 @@ from yente.search.base import (
     close_es,
     index_lock,
     get_current_version,
-    SearchProvider,
+    ESSearchProvider,
     Index,
 )
 from yente.search.mapping import make_entity_mapping
@@ -279,7 +279,7 @@ async def delta_update_index(force: bool = True):
     # Get the catalog of datasets
     catalog = await get_catalog()
     log.info("Index update check")
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     clone = None
     for dataset in catalog.datasets:
         try:

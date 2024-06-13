@@ -11,7 +11,7 @@ from yente.search.indexer import (
     get_deltas_from_version,
     delta_update_index,
 )
-from yente.search.base import Index, SearchProvider, get_current_version
+from yente.search.base import Index, ESSearchProvider, get_current_version
 
 # TODO: Mock httpx instead
 DS_WITH_DELTAS = "https://data.opensanctions.org/artifacts/sanctions/versions.json"
@@ -21,7 +21,7 @@ DS_WITH_DELTAS = "https://data.opensanctions.org/artifacts/sanctions/versions.js
 @patch("yente.data.manifest.Dataset")
 async def test_getting_versions_from(MockDataset):
     with open(VERSIONS_PATH) as f:
-        provider = await SearchProvider.create()
+        provider = await ESSearchProvider.create()
         dataset = MockDataset()
         dataset.delta_index = None
         # When the dataset does not have a version it should throw an error
@@ -110,7 +110,7 @@ async def test_gets_the_current_index_version(MockDataset):
     m = MockDataset()
     m.name = "sanctions"
     m.version = 1
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     index = Index(provider, dataset=m)
     await index.upsert()
     resp = await index.add_alias(settings.ENTITY_INDEX)
@@ -146,7 +146,7 @@ async def test_can_do_switchover(MockDataset):
     default = sanctions.deepcopy()
     default.name = "default"
     default.version = 1
-    provider = await SearchProvider.create()
+    provider = await ESSearchProvider.create()
     # Each of which have an index and sharing an alias
     sanctions_index = Index(provider, dataset=sanctions)
     default_index = Index(provider, dataset=default)
