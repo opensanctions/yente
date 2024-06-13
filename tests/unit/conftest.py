@@ -1,10 +1,12 @@
 import pytest
+import pytest_asyncio
 from uuid import uuid4
 from pathlib import Path
 from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
+from yente.search.base import SearchProvider
 
 
 run_id = uuid4().hex
@@ -20,6 +22,13 @@ settings.AUTO_REINDEX = False
 
 app = create_app()
 client = TestClient(app)
+
+
+@pytest_asyncio.fixture(scope="function", autouse=False)
+async def search_provider():
+    provider = await SearchProvider.create()
+    yield provider
+    await provider.delete_index("test*")
 
 
 @pytest.fixture(scope="session", autouse=False)
