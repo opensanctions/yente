@@ -115,10 +115,6 @@ class SearchProvider(ABC):
         pass
 
     @abstractmethod
-    def add_alias(self, index: str, alias: str):
-        pass
-
-    @abstractmethod
     def rollover(self, alias: str, new_index: str, prefix: str = None):
         pass
 
@@ -260,12 +256,6 @@ class ESSearchProvider(SearchProvider):
         actions.append({"add": {"index": new_index, "alias": alias}})
         return await self.client.indices.update_aliases(actions=actions)
 
-    async def add_alias(self, index: str, alias: str):
-        """
-        Add an index to an alias.
-        """
-        await self.client.indices.put_alias(index=index, name=alias)
-
     async def count(self, index: str) -> int:
         resp = await self.client.count(index=index)
         return resp["count"]
@@ -341,9 +331,6 @@ class Index:
 
     def delete(self):
         return self.client.delete_index(index=self.name)
-
-    def add_alias(self, alias: str):
-        return self.client.add_alias(index=self.name, alias=alias)
 
     async def clone(self, version: str) -> "Index":
         """
