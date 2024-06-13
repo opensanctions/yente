@@ -1,3 +1,4 @@
+from abc import abstractmethod, ABC
 import time
 import asyncio
 import warnings
@@ -92,7 +93,100 @@ async def close_es() -> None:
         await es.close()
 
 
-class ESSearchProvider:
+class SearchProvider(ABC):
+    @abstractmethod
+    async def create(cls):
+        pass
+
+    @abstractmethod
+    async def upsert_index(self, index: str):
+        pass
+
+    @abstractmethod
+    def clone_index(self, index: str, new_index: str):
+        pass
+
+    @abstractmethod
+    def index_exists(self, index: str) -> bool:
+        pass
+
+    @abstractmethod
+    def delete_index(self, index: str):
+        pass
+
+    @abstractmethod
+    def add_alias(self, index: str, alias: str):
+        pass
+
+    @abstractmethod
+    def rollover(self, alias: str, new_index: str, prefix: str = None):
+        pass
+
+    @abstractmethod
+    def update(self, entities: AsyncGenerator, index_name: str):
+        pass
+
+    @abstractmethod
+    def count(self, index: str) -> int:
+        """
+        Get the number of documents in an index.
+        """
+        pass
+
+    @abstractmethod
+    def _delete_operation(self, doc_id: str, index: str) -> Dict[str, Any]:
+        """
+        Return a document delete payload that can be accepted by the concrete search provider.
+        """
+        pass
+
+    @abstractmethod
+    def _create_operation(
+        self, entity: Dict[str, Any], doc_id: str, index: str
+    ) -> Dict[str, Any]:
+        """
+        Return a document create payload that can be accepted by the concrete search provider.
+        """
+        pass
+
+    @abstractmethod
+    def _update_operation(
+        self, entity: Dict[str, Any], doc_id: str, index: str
+    ) -> Dict[str, Any]:
+        """
+        Return a document update payload that can be accepted by the concrete search provider.
+        """
+        pass
+
+    @abstractmethod
+    async def get_backing_indexes(self, name: str) -> List[str]:
+        """
+        Get all the indexes backing Yente search. In ElasticSearch this would be implemented
+        with multiple indexes pointing to the alias specified by the name parameter.
+        """
+        pass
+
+    def _to_operation(self, body: Dict[str, Any], index: str) -> Dict[str, Any]:
+        """
+        Convert an entity to a bulk operation.
+        """
+        try:
+            entity = body.pop("entity")
+            doc_id = entity.pop("id")
+        except KeyError:
+            raise ValueError("No entity or ID in body.\n", body)
+        match body.get("op"):
+            case "ADD":
+                return self._create_operation(entity, doc_id, index)
+            case "MOD":
+                return self._update_operation(entity, doc_id, index)
+            case "DEL":
+                return self._delete_operation(doc_id, index)
+            case _:
+                raise ValueError(f"Unknown operation type: {body.get('op')}")
+
+
+class ESSearchProvider(SearchProvider):
     @classmethod
     async def create(cls):
         self = cls()
@@ -142,13 +236,12 @@ class ESSearchProvider:
         Delete a given index if it exists.
         """
         try:
-            resp = await self.client.indices.delete(index=index)
-            return resp
+            await self.client.indices.delete(index=index)
         except NotFoundError:
             pass
 
-    async def get_alias_sources(self, alias: str):
-        resp = await self.client.indices.get_alias(name=alias)
+    async def get_backing_indexes(self, name: str) -> List[str]:
+        resp = await self.client.indices.get_alias(name=name)
         return resp.body
 
     async def index_exists(self, index: str) -> bool:
@@ -158,18 +251,12 @@ class ESSearchProvider:
             return True
         return False
 
-    async def alias_rollover(self, alias: str, new_index: str, prefix: str = None):
+    async def rollover(self, alias: str, new_index: str, prefix: str = None):
         """
         Remove all existing indices with a given prefix from the alias and add the new one.
         """
-        sources = await self.client.indices.get_alias(name=alias)
         actions = []
-        for current_index in sources.keys():
-            if (
-                prefix is not None and not current_index.startswith(prefix)
-            ) or current_index == new_index:
-                continue
-            actions.append({"remove": {"index": current_index, "alias": alias}})
+        actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
         actions.append({"add": {"index": new_index, "alias": alias}})
         return await self.client.indices.update_aliases(actions=actions)
 
@@ -184,7 +271,7 @@ class ESSearchProvider:
         return resp["count"]
 
     async def refresh(self, index: str):
-        return await self.client.indices.refresh(index=index)
+        await self.client.indices.refresh(index=index)
 
     async def update(self, entities: AsyncGenerator, index_name: str):
         resp = await async_bulk(
@@ -200,25 +287,6 @@ class ESSearchProvider:
     ) -> AsyncGenerator[Any, Any]:
         async for data in async_entities:
             yield self._to_operation(data, index)
-
-    def _to_operation(self, body: Dict[str, Any], index: str) -> Dict[str, Any]:
-        """
-        Convert an entity to a bulk operation.
-        """
-        try:
-            entity = body.pop("entity")
-            doc_id = entity.pop("id")
-        except KeyError:
-            raise ValueError("No entity or ID in body.\n", body)
-        match body.get("op"):
-            case "ADD":
-                return self._create_operation(entity, doc_id, index)
-            case "MOD":
-                return self._update_operation(entity, doc_id, index)
-            case "DEL":
-                return self._delete_operation(doc_id, index)
-            case _:
-                raise ValueError(f"Unknown operation type: {body.get('op')}")
 
     def _delete_operation(self, doc_id: str, index: str) -> Dict[str, Any]:
         return {
@@ -256,9 +324,7 @@ def parse_index_version(dataset: str, index_name: str) -> str:
 
 
 class Index:
-    def __init__(
-        self, client: ESSearchProvider, dataset_name: str, version: str
-    ) -> None:
+    def __init__(self, client: SearchProvider, dataset_name: str, version: str) -> None:
         self.dataset = dataset_name
         self.name = f"{self.prefix(dataset_name)}-{version}"
         self.client = client
@@ -293,7 +359,7 @@ class Index:
         """
         Makes this index the base for Yente searches.
         """
-        return self.client.alias_rollover(
+        return self.client.rollover(
             settings.ENTITY_INDEX, self.name, self.prefix(self.dataset)
         )
 
@@ -318,20 +384,18 @@ def make_indexable(data):
     return doc
 
 
-async def get_current_version(
-    dataset: Dataset, provider: ESSearchProvider
-) -> str | None:
+async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str | None:
     """
-    Given the dataset, return the current version of the index for that dataset.
+    Given a dataset, return the current version of the index for that dataset.
     """
-    sources = await provider.get_alias_sources(settings.ENTITY_INDEX)
-    if len(sources.keys()) < 1:
+    sources = await provider.get_backing_indexes(settings.ENTITY_INDEX)
+    if len(sources) < 1:
         raise ValueError(
             f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
         )
     versions = [
         parse_index_version(dataset.name, k)
-        for k in sources.keys()
+        for k in sources
         if k.startswith(Index.prefix(dataset.name))
     ]
     return sorted(versions, reverse=True)[0] if len(versions) > 0 else None
