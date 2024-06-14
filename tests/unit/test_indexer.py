@@ -2,22 +2,20 @@ import pytest
 import json
 from .conftest import FIXTURES_PATH
 from yente.settings import ENTITY_INDEX
+from typing import List, Any
 import httpx
 from yente.search.indexer import (
     delta_update_catalog,
 )
 
-# TODO: Mock httpx instead
-DS_WITH_DELTAS = "https://data.opensanctions.org/artifacts/sanctions/versions.json"
-
 
 @pytest.fixture
-def non_mocked_hosts() -> list:
+def non_mocked_hosts() -> List[str]:
     return ["localhost"]
 
 
 @pytest.mark.asyncio
-async def test_end_to_end(httpx_mock, sanctions_catalog):
+async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
     """
     Test getting the delta versions and updating the index, using the data
     mocks in the fixtures directory.

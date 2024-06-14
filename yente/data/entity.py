@@ -2,7 +2,7 @@ from typing import Any, Dict, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
-from followthemoney.helpers import pcombine_names
+from followthemoney.helpers import combine_names
 from rigour.names import pick_name
 from nomenklatura.stream import StreamEntity
 
@@ -49,7 +49,7 @@ class Entity(StreamEntity):
             obj.add(prop_name, values, cleaned=False, fuzzy=True)
 
         # Generate names from name parts
-        pcombine_names(obj)
+        combine_names(obj)
 
         # Extract names from IBANs, phone numbers etc.
         countries = obj.get_type_values(registry.country)

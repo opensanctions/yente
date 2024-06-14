@@ -222,7 +222,7 @@ class DeltasNotAvailable(Exception):
 
 async def get_deltas_from_version(
     version: str, dataset: Dataset
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Get deltas from a specific version of a dataset.
     """
@@ -263,7 +263,7 @@ async def get_next_version(dataset: Dataset, version: str) -> str | None:
 
 async def delta_update_index(
     dataset: Dataset, provider: SearchProvider, force: bool = False
-):
+) -> bool:
     if not dataset.load:
         log.debug("Dataset is not going to be loaded", dataset=dataset.name)
         return False
@@ -292,6 +292,7 @@ async def delta_update_index(
             current_version = next_version
         # Set the cloned index as the current index.
         await clone.make_main()
+        return True
     except Exception as exc:
         log.info(
             f"Error updating index for {dataset.name}: {exc}\nStarting from scratch."
@@ -302,7 +303,7 @@ async def delta_update_index(
         return _changed
 
 
-async def delta_update_catalog(force: bool = True):
+async def delta_update_catalog(force: bool = True) -> None:
     # Get the catalog of datasets
     catalog = await get_catalog()
     log.info("Index update check")
@@ -312,6 +313,6 @@ async def delta_update_catalog(force: bool = True):
             log.info(
                 "Index is already being updated", dataset=dataset.name, force=force
             )
-            return False
+            continue
         with index_lock:
             await delta_update_index(dataset, provider, force=force)
