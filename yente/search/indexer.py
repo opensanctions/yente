@@ -235,7 +235,7 @@ async def get_deltas_from_version(
             raise DeltasNotAvailable(f"No deltas found for {version}")
 
 
-async def get_next_version(dataset: Dataset, version: str) -> None:
+async def get_next_version(dataset: Dataset, version: str) -> str | None:
     """
     Get the next version of a dataset if versions are available.
     Return None if the dataset is up to date.
@@ -256,7 +256,7 @@ async def get_next_version(dataset: Dataset, version: str) -> None:
             dataset=dataset.name,
             current_version=version,
         )
-        return
+        return None
     next_version = available_versions[ix + 1]
     return next_version
 
@@ -270,6 +270,8 @@ async def delta_update_index(
     clone = None
     try:
         current_version = await get_current_version(dataset, provider)
+        if current_version is None:
+            raise Exception("No index found for dataset.")
         index = Index(provider, dataset.name, current_version)
         target_version = await dataset.newest_version()
         # If delta versioning is not implemented, update the index from scratch.
@@ -291,7 +293,9 @@ async def delta_update_index(
         # Set the cloned index as the current index.
         await clone.make_main()
     except Exception as exc:
-        log.exception(f"Error updating index for {dataset.name}: {exc}")
+        log.info(
+            f"Error updating index for {dataset.name}: {exc}\nStarting from scratch."
+        )
         if clone is not None:
             await clone.delete()
         _changed = await index_entities(provider.client, dataset, force)
