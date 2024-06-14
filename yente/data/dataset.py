@@ -1,7 +1,6 @@
 from banal import as_bool
 from normality import slugify
 from datetime import datetime
-from httpx import HTTPStatusError
 from typing import Dict, Optional, Any, List
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
@@ -98,7 +97,8 @@ class Dataset(NKDataset):
         try:
             available = await self.available_versions(refresh=True)
             return settings.INDEX_VERSION + sorted(available)[-1]
-        except HTTPStatusError:
+        except Exception as e:
+            log.warning(f"Failed to get newest version for {self.name}: {e}")
             return None
 
     def to_dict(self) -> Dict[str, Any]:
