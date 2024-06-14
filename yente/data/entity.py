@@ -2,7 +2,7 @@ from typing import Any, Dict, TYPE_CHECKING
 from followthemoney import model
 from followthemoney.model import Model
 from followthemoney.types import registry
-from followthemoney.helpers import combine_names
+from followthemoney.helpers import pcombine_names
 from rigour.names import pick_name
 from nomenklatura.stream import StreamEntity
 
@@ -34,7 +34,6 @@ class Entity(StreamEntity):
                 return value
         return self.schema.label
 
-
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
         data = {"id": example.id, "schema": example.schema_}
@@ -50,11 +49,11 @@ class Entity(StreamEntity):
             obj.add(prop_name, values, cleaned=False, fuzzy=True)
 
         # Generate names from name parts
-        combine_names(obj)
+        pcombine_names(obj)
 
         # Extract names from IBANs, phone numbers etc.
         countries = obj.get_type_values(registry.country)
-        for (prop, value) in list(obj.itervalues()):
+        for prop, value in list(obj.itervalues()):
             hint = prop.type.country_hint(value)
             if hint is not None and hint not in countries:
                 obj.add("country", hint, cleaned=True)
