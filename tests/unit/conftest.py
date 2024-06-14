@@ -24,6 +24,16 @@ app = create_app()
 client = TestClient(app)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def manifest():
+    settings.MANIFEST = str(MANIFEST_PATH)
+
+
+@pytest.fixture(scope="function", autouse=False)
+def sanctions_catalog():
+    settings.MANIFEST = str(FIXTURES_PATH / "sanctions.yml")
+
+
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def search_provider():
     provider = await ESSearchProvider.create()
