@@ -2,7 +2,7 @@ from banal import as_bool
 from normality import slugify
 from datetime import datetime
 from httpx import HTTPStatusError
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
 from nomenklatura.dataset.util import type_check
@@ -22,7 +22,7 @@ BOOT_TIME = datetime_iso(datetime.utcnow())
 
 class Dataset(NKDataset):
     def __init__(self, catalog: DataCatalog["Dataset"], data: Dict[str, Any]):
-        self._available_versions_map = None
+        self._available_versions_map: Dict[str, str] = {}
         name = data["name"]
         norm_name = slugify(name, sep="_")
         if name != norm_name:
@@ -78,7 +78,7 @@ class Dataset(NKDataset):
         """
         Set a map of versions to their URLs for this dataset.
         """
-        if self._available_versions_map is None or refresh is True:
+        if self._available_versions_map is {} or refresh is True:
             if self.delta_index is None:
                 raise Exception(f"No delta_index path specified for {self.name}")
             resp = await load_json_url(self.delta_index)
@@ -86,9 +86,9 @@ class Dataset(NKDataset):
                 raise ValueError(f"Invalid versions file found at {self.delta_index}")
             self._available_versions_map = resp.get("versions")
 
-    async def available_versions(self, refresh: bool = False) -> Dict[str, str]:
+    async def available_versions(self, refresh: bool = False) -> List[str]:
         await self._load_versions_map(refresh=refresh)
-        return self._available_versions_map.keys()
+        return list(self._available_versions_map.keys())
 
     async def newest_version(self) -> str | None:
         """

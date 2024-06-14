@@ -94,8 +94,10 @@ async def close_es() -> None:
 
 
 class SearchProvider(ABC):
+    client: Any
+
     @abstractmethod
-    async def create(cls):
+    async def create(cls) -> "SearchProvider":
         pass
 
     @abstractmethod
@@ -103,27 +105,27 @@ class SearchProvider(ABC):
         pass
 
     @abstractmethod
-    def clone_index(self, index: str, new_index: str):
+    async def clone_index(self, index: str, new_index: str):
         pass
 
     @abstractmethod
-    def index_exists(self, index: str) -> bool:
+    async def index_exists(self, index: str) -> bool:
         pass
 
     @abstractmethod
-    def delete_index(self, index: str):
+    async def delete_index(self, index: str):
         pass
 
     @abstractmethod
-    def rollover(self, alias: str, new_index: str, prefix: str = None):
+    async def rollover(self, alias: str, new_index: str, prefix: str = ""):
         pass
 
     @abstractmethod
-    def update(self, entities: AsyncGenerator, index_name: str):
+    async def update(self, entities: AsyncGenerator, index_name: str):
         pass
 
     @abstractmethod
-    def count(self, index: str) -> int:
+    async def count(self, index: str) -> int:
         """
         Get the number of documents in an index.
         """
@@ -184,7 +186,7 @@ class SearchProvider(ABC):
 
 class ESSearchProvider(SearchProvider):
     @classmethod
-    async def create(cls):
+    async def create(cls) -> "ESSearchProvider":
         self = cls()
         self.client = await get_es()
         return self
@@ -247,7 +249,7 @@ class ESSearchProvider(SearchProvider):
             return True
         return False
 
-    async def rollover(self, alias: str, new_index: str, prefix: str = None):
+    async def rollover(self, alias: str, new_index: str, prefix: str = ""):
         """
         Remove all existing indices with a given prefix from the alias and add the new one.
         """
@@ -330,8 +332,8 @@ class Index:
     def prefix(cls, dataset: str) -> str:
         return f"{settings.ENTITY_INDEX}-{dataset}"
 
-    def exists(self) -> bool:
-        return self.client.index_exists(self.name)
+    async def exists(self) -> bool:
+        return await self.client.index_exists(self.name)
 
     def upsert(self):
         return self.client.upsert_index(index=self.name)
