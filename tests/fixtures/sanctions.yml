@@ -1,0 +1,7 @@
+catalogs:
+  - url: "https://data.opensanctions.org/datasets/latest/index.json"
+    scope: sanctions
+    resource_name: entities.ftm.json
+  # - url: "https://data.opensanctions.org/datasets/latest/graph/catalog.json"
+  #   resource_name: entities.ftm.json
+datasets: []
