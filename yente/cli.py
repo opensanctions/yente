@@ -7,7 +7,7 @@ from yente import settings
 from yente.app import create_app
 from yente.logs import configure_logging, get_logger
 from yente.search.base import get_es
-from yente.search.indexer import update_index, delta_update_index
+from yente.search.indexer import update_index, delta_update_catalog
 
 
 log = get_logger("yente")
@@ -48,7 +48,7 @@ def reindex(force: bool) -> None:
 @cli.command("delta-update", help="Update the index with new data only")
 def delta_update() -> None:
     configure_logging()
-    asyncio.run(delta_update_index(force=False))
+    asyncio.run(delta_update_catalog(force=False))
 
 
 async def _clear_index() -> None:
