@@ -17,7 +17,7 @@ def non_mocked_hosts() -> list:
 
 
 @pytest.mark.asyncio
-async def test_end_to_end(httpx_mock):
+async def test_end_to_end(httpx_mock, sanctions_catalog):
     """
     Test getting the delta versions and updating the index, using the data
     mocks in the fixtures directory.
