@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 import pytest
 import pytest_asyncio
 from uuid import uuid4
@@ -45,7 +46,7 @@ def clear_state():
     pass
 
 
-@pytest.fixture(scope="session", autouse=False)
+@pytest.fixture(scope="session", autouse=True)
 def load_data():
     client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
     clear_state()
