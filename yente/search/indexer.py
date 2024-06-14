@@ -12,15 +12,16 @@ from httpx import HTTPStatusError
 from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
-from yente.data.dataset import Dataset, get_delta_version
+from yente.data.dataset import Dataset
 from yente.data import get_catalog
-from yente.data.loader import load_json_lines, load_json_url
+from yente.data.loader import load_json_lines
 from yente.search.base import (
     get_es,
     close_es,
     index_lock,
     get_current_version,
     ESSearchProvider,
+    SearchProvider,
     Index,
 )
 from yente.search.mapping import make_entity_mapping
@@ -84,7 +85,7 @@ async def index_entities_rate_limit(
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     if not dataset.load:
-        log.debug("Dataset is going to be loaded", dataset=dataset.name)
+        log.debug("Dataset is not going to be loaded", dataset=dataset.name)
         return False
     if dataset.entities_url is None:
         log.warning(
@@ -227,9 +228,7 @@ async def get_deltas_from_version(
     """
     version = version.replace(settings.INDEX_VERSION, "")
     try:
-        async for line in load_json_lines(
-            get_delta_version(dataset.name, version), version
-        ):
+        async for line in load_json_lines(dataset.delta_path(version), version):
             yield line
     except HTTPStatusError as exc:
         if exc.response.status_code == 404:
@@ -241,8 +240,6 @@ async def get_next_version(dataset: Dataset, version: str) -> None:
     Get the next version of a dataset if versions are available.
     Return None if the dataset is up to date.
     """
-    if dataset.delta_index is None:
-        raise DeltasNotAvailable(f"No delta_index path specified for {dataset.name}")
 
     available_versions = [
         settings.INDEX_VERSION + v for v in await dataset.available_versions()
@@ -264,37 +261,53 @@ async def get_next_version(dataset: Dataset, version: str) -> None:
     return next_version
 
 
-async def delta_update_index(force: bool = True):
+async def delta_update_index(
+    dataset: Dataset, provider: SearchProvider, force: bool = False
+):
+    if not dataset.load:
+        log.debug("Dataset is not going to be loaded", dataset=dataset.name)
+        return False
+    clone = None
+    try:
+        current_version = await get_current_version(dataset, provider)
+        index = Index(provider, dataset.name, current_version)
+        target_version = await dataset.newest_version()
+        # If delta versioning is not implemented, update the index from scratch.
+        if target_version is None:
+            raise DeltasNotAvailable(f"No versions available for {dataset.name}")
+        if current_version == target_version:
+            log.info(
+                "Dataset is up to date.",
+                dataset=dataset.name,
+                current_version=current_version,
+            )
+            return False
+        clone = await index.clone(target_version)
+        # Get the next version.
+        while next_version := await get_next_version(dataset, current_version):
+            # Get the deltas from the next version and pass them to the bulk update.
+            await clone.bulk_update(get_deltas_from_version(next_version, dataset))
+            current_version = next_version
+        # Set the cloned index as the current index.
+        await clone.make_main()
+    except Exception as exc:
+        log.exception(f"Error updating index for {dataset.name}: {exc}")
+        if clone is not None:
+            await clone.delete()
+        _changed = await index_entities(provider.client, dataset, force)
+        return _changed
+
+
+async def delta_update_catalog(force: bool = True):
     # Get the catalog of datasets
     catalog = await get_catalog()
     log.info("Index update check")
     provider = await ESSearchProvider.create()
-    clone = None
     for dataset in catalog.datasets:
-        try:
-            current_version = await get_current_version(dataset, provider)
-            index = Index(provider, dataset.name, current_version)
-            target_version = await dataset.newest_version()
-            # If delta versioning is not implemented, update the index from scratch.
-            if target_version is None:
-                raise DeltasNotAvailable(f"No versions available for {dataset.name}")
-            if current_version == target_version:
-                log.info(
-                    "Dataset is up to date.",
-                    dataset=dataset.name,
-                    current_version=current_version,
-                )
-                continue
-            clone = await index.clone(target_version)
-            # Get the next version.
-            while next_version := await get_next_version(dataset, current_version):
-                # Get the deltas from the next version and pass them to the bulk update.
-                await clone.bulk_update(get_deltas_from_version(next_version, dataset))
-                current_version = next_version
-            # Set the cloned index as the current index.
-            await clone.make_main()
-        except Exception as exc:
-            log.exception(f"Error updating index for {dataset.name}: {exc}")
-            if clone is not None:
-                await clone.delete()
-            _changed = await index_entities_rate_limit(provider.client, dataset, force)
+        if index_lock.locked():
+            log.info(
+                "Index is already being updated", dataset=dataset.name, force=force
+            )
+            return False
+        with index_lock:
+            await delta_update_index(dataset, provider, force=force)

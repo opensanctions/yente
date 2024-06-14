@@ -1,0 +1,10 @@
+{"versions": 
+    {
+    "20240527134702-zbn":"https://data.opensanctions.org/artifacts/sanctions/20240527134702-zbn/entities.delta.json",
+    "20240527194702-wnk":"https://data.opensanctions.org/artifacts/sanctions/20240527194702-wnk/entities.delta.json",
+    "20240528014702-pfh":"https://data.opensanctions.org/artifacts/sanctions/20240528014702-pfh/entities.delta.json",
+    "20240528074703-npf":"https://data.opensanctions.org/artifacts/sanctions/20240528074703-npf/entities.delta.json",
+    "20240528134729-3iv":"https://data.opensanctions.org/artifacts/sanctions/20240528134729-3iv/entities.delta.json"
+    },
+    "updated_at": "2024-05-28T14:47:29Z"
+}
