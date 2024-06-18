@@ -6,6 +6,7 @@ from os import environ as env
 from normality import stringify
 from datetime import datetime
 from aiocron import Cron  # type: ignore
+import random
 
 
 def env_get(name: str) -> Optional[str]:
@@ -17,6 +18,12 @@ def env_str(name: str, default: str) -> str:
     """Ensure the env returns a string even on Windows (#100)."""
     value = stringify(env.get(name))
     return default if value is None else value
+
+
+def random_cron() -> str:
+    """Randomize the minute of the cron schedule to avoid thundering herd problem."""
+    random_minute = str(random.randint(0, 59))
+    return f"{random_minute} */2 * * *"
 
 
 VERSION = "3.8.9"
@@ -97,7 +104,7 @@ DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
 MANIFEST = env_str("YENTE_MANIFEST", MANIFEST_DEFAULT_PATH.as_posix())
 CRON: Optional[Cron] = None
-CRONTAB = env_str("YENTE_CRONTAB", "* */2 * * *")
+CRONTAB = env_str("YENTE_CRONTAB", random_cron())
 AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
 STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
