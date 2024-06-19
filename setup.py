@@ -31,7 +31,7 @@ setup(
         "httpx[http2]==0.27.0",
         "python-multipart==0.0.9",
         "email-validator==2.1.1",
-        "structlog==24.1.0",
+        "structlog==24.2.0",
         "pyicu==2.13.1",
         "jellyfish==1.0.4",
         "orjson==3.10.3",
