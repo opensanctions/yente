@@ -24,10 +24,15 @@ from yente.search.base import (
     SearchProvider,
     Index,
 )
-from yente.search.mapping import make_entity_mapping
-from yente.search.mapping import INDEX_SETTINGS
-from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
+from yente.search.mapping import (
+    make_entity_mapping,
+    NAME_PART_FIELD,
+    NAME_KEY_FIELD,
+    INDEX_SETTINGS,
+    NAMES_FIELD,
+    NAME_PHONETIC_FIELD,
+)
+from yente.search.util import construct_index_name, construct_index_version
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
@@ -96,17 +101,16 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
 
     # Versioning defaults to the newest delta version, otherwise it uses the software version.
     if newest := await dataset.newest_version():
-        version = newest
+        version: str | None = newest
     else:
-        version = f"{settings.INDEX_VERSION}{dataset.version}"
+        version = dataset.version
     log.info(
         "Indexing entities",
         dataset=dataset.name,
         url=dataset.entities_url,
         version=version,
     )
-    dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}-"
-    next_index = f"{dataset_prefix}{version}"
+    next_index = construct_index_name(dataset.name, version)
     if settings.INDEX_EXISTS_ABORT:
         exists = await es.indices.exists(index=next_index)
     else:
@@ -172,6 +176,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
     log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
 
     res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
+    dataset_prefix = construct_index_name(dataset.name)
     for aliased_index in res.body.keys():
         if aliased_index == next_index:
             continue
@@ -226,7 +231,6 @@ async def get_deltas_from_version(
     """
     Get deltas from a specific version of a dataset.
     """
-    version = version.replace(settings.INDEX_VERSION, "")
     try:
         async for line in load_json_lines(dataset.delta_path(version), version):
             yield line
@@ -241,9 +245,7 @@ async def get_next_version(dataset: Dataset, version: str) -> str | None:
     Return None if the dataset is up to date.
     """
 
-    available_versions = [
-        settings.INDEX_VERSION + v for v in await dataset.available_versions()
-    ]
+    available_versions = await dataset.available_versions()
     try:
         ix = available_versions.index(version)
     except ValueError:
@@ -273,7 +275,10 @@ async def delta_update_index(
         if current_version is None:
             raise Exception("No index found for dataset.")
         index = Index(provider, dataset.name, current_version)
-        target_version = await dataset.newest_version()
+        newest_ds = await dataset.newest_version()
+        if newest_ds is None:
+            raise DeltasNotAvailable(f"No versions available for {dataset.name}")
+        target_version = construct_index_version(newest_ds)
         # If delta versioning is not implemented, update the index from scratch.
         if target_version is None:
             raise DeltasNotAvailable(f"No versions available for {dataset.name}")

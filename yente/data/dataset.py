@@ -13,7 +13,6 @@ from followthemoney.util import sanitize_text
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path
 from yente.data.loader import load_json_url
-from yente import settings
 
 log = get_logger(__name__)
 BOOT_TIME = datetime_iso(datetime.utcnow())
@@ -84,6 +83,12 @@ class Dataset(NKDataset):
             if "versions" not in resp:
                 raise ValueError(f"Invalid versions file found at {self.delta_index}")
             self._available_versions_map = resp.get("versions")
+            if (
+                self.version is not None
+                and self.delta_index is not None
+                and self.version not in self._available_versions_map
+            ):
+                self._available_versions_map[self.version] = self.delta_index
 
     async def available_versions(self, refresh: bool = False) -> List[str]:
         await self._load_versions_map(refresh=refresh)
@@ -96,7 +101,7 @@ class Dataset(NKDataset):
         """
         try:
             available = await self.available_versions(refresh=True)
-            return settings.INDEX_VERSION + sorted(available)[-1]
+            return sorted(available)[-1]
         except Exception as e:
             log.warning(f"Failed to get newest version for {self.name}: {e}")
             return None
@@ -113,7 +118,3 @@ class Dataset(NKDataset):
         if "children" not in data:
             data["children"] = [c.name for c in self.children]
         return data
-
-
-def get_delta_version(dataset_name: str, version: str) -> str:
-    return f"https://data.opensanctions.org/artifacts/{dataset_name}/{version}/entities.delta.json"

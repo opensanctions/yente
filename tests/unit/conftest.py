@@ -32,14 +32,17 @@ def manifest():
 
 @pytest.fixture(scope="function", autouse=False)
 def sanctions_catalog():
+    manifest_tmp = settings.MANIFEST
     settings.MANIFEST = str(FIXTURES_PATH / "sanctions.yml")
+    yield
+    settings.MANIFEST = manifest_tmp
 
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def search_provider():
     provider = await ESSearchProvider.create()
     yield provider
-    await provider.delete_index("test*")
+    await provider.delete_index("test_*")
 
 
 def clear_state():
