@@ -21,10 +21,15 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
-from yente.search.mapping import make_entity_mapping
-from yente.search.mapping import INDEX_SETTINGS
-from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
+from yente.search.mapping import (
+    make_entity_mapping,
+    INDEX_SETTINGS,
+    NAMES_FIELD,
+    NAME_PHONETIC_FIELD,
+    NAME_PART_FIELD,
+    NAME_KEY_FIELD,
+)
+from yente.search.util import parse_index_name, construct_index_name
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
@@ -322,23 +327,11 @@ class ESSearchProvider(SearchProvider):
         }
 
 
-def parse_index_version(dataset: str, index_name: str) -> str:
-    """
-    Given a concrete index name, i.e. yente-entities-foo-09202101011
-    return the version string, i.e. 09202101011
-    """
-    return index_name.replace(Index.prefix(dataset), "").lstrip("-")
-
-
 class Index:
     def __init__(self, client: SearchProvider, dataset_name: str, version: str) -> None:
         self.dataset = dataset_name
-        self.name = f"{self.prefix(dataset_name)}-{version}"
+        self.name = construct_index_name(dataset_name, version)
         self.client = client
-
-    @classmethod
-    def prefix(cls, dataset: str) -> str:
-        return f"{settings.ENTITY_INDEX}-{dataset}"
 
     async def exists(self) -> bool:
         return await self.client.index_exists(self.name)
@@ -364,7 +357,7 @@ class Index:
         Makes this index the base for Yente searches.
         """
         return self.client.rollover(
-            settings.ENTITY_INDEX, self.name, self.prefix(self.dataset)
+            settings.ENTITY_INDEX, self.name, construct_index_name(self.dataset)
         )
 
     def bulk_update(
@@ -399,9 +392,9 @@ async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str
         raise ValueError(
             f"Expected at least one index for {settings.ENTITY_INDEX}, found 0."
         )
-    versions = [
-        parse_index_version(dataset.name, k)
-        for k in sources
-        if k.startswith(Index.prefix(dataset.name))
-    ]
+    versions = []
+    for k in sources:
+        if k.startswith(construct_index_name(dataset.name)):
+            _, _, version = parse_index_name(k)
+            versions.append(version)
     return sorted(versions, reverse=True)[0] if len(versions) > 0 else None
