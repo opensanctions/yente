@@ -1,6 +1,7 @@
 import pytest
 import json
-from .conftest import FIXTURES_PATH
+import re
+from .conftest import FIXTURES_PATH, load_data
 from yente.settings import ENTITY_INDEX
 from typing import List, Any
 import httpx
@@ -25,15 +26,21 @@ async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
         (FIXTURES_PATH / "dataset/t2/delta.json").read_text()
     )
     # Point the entities to our local fixture of 7 entities
+    url_pat = re.compile(
+        "https://mirror.opensanctions.net/datasets/\w+/sanctions/entities.ftm.json"
+    )
     httpx_mock.add_response(
         200,
-        url="https://mirror.opensanctions.net/datasets/20240613/sanctions/entities.ftm.json",
+        url=url_pat,
         content=(FIXTURES_PATH / "dataset/t1/entities.ftm.json").read_bytes(),
     )
     # Point the delta index to our local fixture containing only one version
+    url_pat = re.compile(
+        "https://data.opensanctions.org/artifacts/sanctions/\w+/delta.json"
+    )
     httpx_mock.add_response(
         200,
-        url="https://data.opensanctions.org/artifacts/sanctions/20240527134702-zbn/delta.json",
+        url=url_pat,
         content=(FIXTURES_PATH / "dataset/t1/delta.json").read_bytes(),
     )
     # The catalog index gets a copy of a real index, as seen at test writing time
