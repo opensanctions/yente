@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Set
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk, BulkIndexError
 from elasticsearch.exceptions import BadRequestError
@@ -291,7 +291,13 @@ async def delta_update_index(
             return False
         clone = await index.clone(target_version)
         # Get the next version.
+        seen: Set[str] = set()
         while next_version := await get_next_version(dataset, current_version):
+            seen.add(current_version)
+            if next_version in seen:
+                raise Exception(
+                    f"Loop detected in versions for {dataset.name}: {next_version}"
+                )
             # Get the deltas from the next version and pass them to the bulk update.
             await clone.bulk_update(get_deltas_from_version(next_version, dataset))
             current_version = next_version
