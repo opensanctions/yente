@@ -310,12 +310,7 @@ class ESSearchProvider(SearchProvider):
     def _update_operation(
         self, entity: Dict[str, Any], doc_id: str, index: str
     ) -> Dict[str, Any]:
-        return {
-            "_op_type": "update",
-            "_index": index,
-            "_id": doc_id,
-            "doc": make_indexable(entity),
-        }
+        return self._create_operation(entity, doc_id, index)
 
     def _create_operation(
         self, entity: Dict[str, Any], doc_id: str, index: str
