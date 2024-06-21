@@ -1,7 +1,7 @@
 import pytest
 import json
 import re
-from .conftest import FIXTURES_PATH, load_data
+from .conftest import FIXTURES_PATH
 from yente.settings import ENTITY_INDEX
 from typing import List, Any
 import httpx
@@ -27,7 +27,7 @@ async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
     )
     # Point the entities to our local fixture of 7 entities
     url_pat = re.compile(
-        "https://mirror.opensanctions.net/datasets/\w+/sanctions/entities.ftm.json"
+        "https:\/\/(mirror|data)\.opensanctions\.net\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
     )
     httpx_mock.add_response(
         200,
@@ -36,7 +36,7 @@ async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
     )
     # Point the delta index to our local fixture containing only one version
     url_pat = re.compile(
-        "https://data.opensanctions.org/artifacts/sanctions/\w+/delta.json"
+        "https:\/\/(data|mirror)\.opensanctions\.org\/artifacts\/sanctions\/[\w-]+\/delta\.json"
     )
     httpx_mock.add_response(
         200,

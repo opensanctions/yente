@@ -29,7 +29,11 @@ from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_KEY_FIELD,
 )
-from yente.search.util import parse_index_name, construct_index_name
+from yente.search.util import (
+    parse_index_name,
+    construct_index_name,
+    index_to_dataset_version,
+)
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
@@ -380,7 +384,7 @@ def make_indexable(data: Dict[str, Any]) -> Dict[str, Any]:
 
 async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str | None:
     """
-    Given a dataset, return the current version of the index for that dataset.
+    Return the currently indexed version of a given dataset.
     """
     sources = await provider.get_backing_indexes(settings.ENTITY_INDEX)
     if len(sources) < 1:
@@ -391,5 +395,5 @@ async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str
     for k in sources:
         if k.startswith(construct_index_name(dataset.name)):
             _, _, version = parse_index_name(k)
-            versions.append(version)
+            versions.append(index_to_dataset_version(version))
     return sorted(versions, reverse=True)[0] if len(versions) > 0 else None
