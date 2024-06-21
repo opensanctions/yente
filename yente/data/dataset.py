@@ -43,7 +43,7 @@ class Dataset(NKDataset):
                     ts = datetime_iso(mdt)
             self.version = iso_to_version(ts) or "static"
 
-        self.delta_index = data.get("delta_url", None)
+        self.delta_url = data.get("delta_url", None)
 
         namespace = as_bool(data.get("namespace"), False)
         self.ns = Namespace(self.name) if namespace else None
@@ -77,18 +77,18 @@ class Dataset(NKDataset):
         Set a map of versions to their URLs for this dataset.
         """
         if self._available_versions_map is {} or refresh is True:
-            if self.delta_index is None:
+            if self.delta_url is None:
                 raise Exception(f"No delta_index path specified for {self.name}")
-            resp = await load_json_url(self.delta_index)
+            resp = await load_json_url(self.delta_url)
             if "versions" not in resp:
-                raise ValueError(f"Invalid versions file found at {self.delta_index}")
+                raise ValueError(f"Invalid versions file found at {self.delta_url}")
             self._available_versions_map = resp.get("versions")
             if (
                 self.version is not None
-                and self.delta_index is not None
+                and self.delta_url is not None
                 and self.version not in self._available_versions_map
             ):
-                self._available_versions_map[self.version] = self.delta_index
+                self._available_versions_map[self.version] = self.delta_url
 
     async def available_versions(self, refresh: bool = False) -> List[str]:
         await self._load_versions_map(refresh=refresh)
