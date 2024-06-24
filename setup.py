@@ -19,7 +19,7 @@ setup(
         "followthemoney==3.6.3",
         "nomenklatura==3.10.6",
         "rigour==0.5.2",
-        "asyncstdlib==3.12.3",
+        "asyncstdlib==3.12.4",
         "aiocron==1.8",
         "aiocsv==1.3.2",
         "aiofiles==23.2.1",
