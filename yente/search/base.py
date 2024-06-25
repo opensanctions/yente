@@ -196,11 +196,19 @@ class SearchProvider(ABC):
 
 
 class ESSearchProvider(SearchProvider):
+
     @classmethod
     async def create(cls) -> "ESSearchProvider":
         self = cls()
         self.client = await get_es()
         return self
+
+    async def __aenter__(self) -> "ESSearchProvider":
+        self.client = await get_es()
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        await self.client.close()
 
     async def upsert_index(self, index: str) -> None:
         """

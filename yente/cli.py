@@ -48,7 +48,7 @@ def reindex(force: bool) -> None:
 @cli.command("delta-update", help="Update the index with new data only")
 def delta_update() -> None:
     configure_logging()
-    asyncio.run(delta_update_catalog(force=False))
+    asyncio.run(delta_update_catalog())
 
 
 async def _clear_index() -> None:
