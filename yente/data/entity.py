@@ -34,7 +34,6 @@ class Entity(StreamEntity):
                 return value
         return self.schema.label
 
-
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
         data = {"id": example.id, "schema": example.schema_}
@@ -54,7 +53,7 @@ class Entity(StreamEntity):
 
         # Extract names from IBANs, phone numbers etc.
         countries = obj.get_type_values(registry.country)
-        for (prop, value) in list(obj.itervalues()):
+        for prop, value in list(obj.itervalues()):
             hint = prop.type.country_hint(value)
             if hint is not None and hint not in countries:
                 obj.add("country", hint, cleaned=True)

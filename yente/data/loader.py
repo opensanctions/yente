@@ -36,13 +36,14 @@ async def load_json_url(url: str) -> Any:
     else:
         async with httpx_session() as client:
             resp = await client.get(url)
+            resp.raise_for_status()
             data = resp.content
     return orjson.loads(data)
 
 
 async def fetch_url_to_path(url: str, path: Path) -> None:
     async with httpx_session() as client:
-        async with client.stream('GET', url) as resp:
+        async with client.stream("GET", url) as resp:
             resp.raise_for_status()
             async with aiofiles.open(path, "wb") as outfh:
                 async for chunk in resp.aiter_bytes():
@@ -59,7 +60,7 @@ async def stream_http_lines(url: str) -> AsyncGenerator[Any, None]:
     for retry in count():
         try:
             async with httpx_session() as client:
-                async with client.stream('GET', url) as resp:
+                async with client.stream("GET", url) as resp:
                     resp.raise_for_status()
                     async for line in resp.aiter_lines():
                         yield orjson.loads(line)
@@ -69,6 +70,7 @@ async def stream_http_lines(url: str) -> AsyncGenerator[Any, None]:
                 raise
             await asyncio.sleep(1.0)
             log.error("Streaming index HTTP error: %s, retrying..." % exc)
+
 
 async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]:
     path = get_url_local_path(url)
@@ -90,4 +92,3 @@ async def load_json_lines(url: str, base_name: str) -> AsyncGenerator[Any, None]
         log.info("Streaming data", url=url)
         async for line in stream_http_lines(url):
             yield line
-        
