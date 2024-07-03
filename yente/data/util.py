@@ -7,12 +7,12 @@ from functools import lru_cache
 from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set
+from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set, Generator
 from rigour.text.scripts import is_modern_alphabet
 from rigour.text.distance import levenshtein
 from fingerprints import remove_types, clean_name_light
 from nomenklatura.util import fingerprint_name, names_word_list
-from yente.settings import HTTP_PROXY, VERSION
+from yente.settings import HTTP_PROXY, VERSION, AUTH_TOKEN
 
 
 @lru_cache(maxsize=5000)
@@ -128,12 +128,27 @@ def get_url_local_path(url: str) -> Optional[Path]:
     return None
 
 
+class Authenticator(httpx.Auth):
+    def auth_flow(
+        self, request: httpx.Request
+    ) -> Generator[httpx.Request, httpx.Response, None]:
+        response = yield request
+        if response.status_code == 401 and AUTH_TOKEN:
+            request.headers["Authentication"] = f"Token {AUTH_TOKEN}"
+            yield request
+
+
 @asynccontextmanager
 async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = httpx.AsyncHTTPTransport(retries=3)
     proxy = HTTP_PROXY if HTTP_PROXY != "" else None
     headers = {"User-Agent": f"Yente/{VERSION}"}
     async with httpx.AsyncClient(
-        transport=transport, http2=True, timeout=None, proxy=proxy, headers=headers
+        transport=transport,
+        http2=True,
+        timeout=None,
+        proxy=proxy,
+        headers=headers,
+        auth=Authenticator(),
     ) as client:
         yield client

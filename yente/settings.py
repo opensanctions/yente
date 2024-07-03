@@ -172,3 +172,6 @@ LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 # Used to pad out first_seen, last_seen on static collections
 RUN_TIME = datetime.utcnow().isoformat()[:19]
+
+# Authentication settings
+AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")
