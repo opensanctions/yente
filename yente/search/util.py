@@ -1,10 +1,9 @@
-from yente.data.dataset import Dataset
 from yente.settings import ENTITY_INDEX, INDEX_VERSION
 
 from typing import Tuple
 
 
-def parse_index_name(index: str) -> Tuple[str, str, str]:
+def parse_index_name(index: str) -> Tuple[str, str]:
     """
     Parse a given index name.
 
@@ -17,7 +16,9 @@ def parse_index_name(index: str) -> Tuple[str, str, str]:
     if not index.startswith(ENTITY_INDEX):
         raise ValueError("Index created with a different prefix and cannot be parsed.")
     index_end = index[len(ENTITY_INDEX) + 1 :]
-    return (ENTITY_INDEX, *index_end.split("-", 1))  # type: ignore[return-value]
+    dataset, index_version = index_end.split("-", 1)
+    dataset_version = index_version[len(INDEX_VERSION) :]
+    return (dataset, dataset_version)
 
 
 def construct_index_name(ds_name: str, ds_version: str | None = None) -> str:
@@ -39,15 +40,3 @@ def construct_index_version(version: str) -> str:
     if len(version) < 1:
         raise ValueError("Version must be at least one character long.")
     return f"{INDEX_VERSION}{version}"
-
-
-def index_to_dataset_version(version: str) -> str:
-    """
-    Given an index version, return the dataset version.
-    """
-    if not version.startswith(INDEX_VERSION):
-        raise ValueError("Invalid index version.")
-    ds_version = version[len(INDEX_VERSION) :]
-    if len(ds_version) < 1:
-        raise ValueError(f"Index version {version} does not end in a dataset version.")
-    return ds_version

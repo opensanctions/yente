@@ -3,7 +3,7 @@ import threading
 from typing import Any, AsyncGenerator, Dict, List, Set
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import BadRequestError
+from elasticsearch.exceptions import BadRequestError, NotFoundError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
@@ -15,6 +15,7 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
+from yente.data.delta import DatasetLoader
 from yente.search.base import (
     get_es,
     close_es,
@@ -32,27 +33,35 @@ from yente.search.mapping import (
     NAMES_FIELD,
     NAME_PHONETIC_FIELD,
 )
+from yente.search.util import parse_index_name
 from yente.search.util import construct_index_name, construct_index_version
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
+
 
 log = get_logger(__name__)
 
 
 async def iter_entity_docs(
-    dataset: Dataset, index: str
+    loader: DatasetLoader, index: str, force: bool = False
 ) -> AsyncGenerator[Dict[str, Any], None]:
-    if dataset.entities_url is None:
-        return
+    dataset = loader.dataset
     datasets = set(dataset.dataset_names)
     idx = 0
-    async for data in load_json_lines(dataset.entities_url, index):
+    async for data in loader.load(force_full=force):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
         idx += 1
+        if data["op"] == "DEL":
+            yield {
+                "_op_type": "delete",
+                "_index": index,
+                "_id": data["entity"]["id"],
+            }
+            continue
 
         try:
-            entity = Entity.from_dict(model, data)
+            entity = Entity.from_dict(model, data["entity"])
             entity.datasets = entity.datasets.intersection(datasets)
             if not len(entity.datasets):
                 entity.datasets.add(dataset.name)
@@ -77,6 +86,79 @@ async def iter_entity_docs(
             log.warning("Invalid entity: %s" % exc, data=data)
 
 
+async def rollover_index(
+    es: AsyncElasticsearch, alias: str, next_index: str, prefix: str
+) -> None:
+    """Remove all existing indices with a given prefix from the alias and
+    add the new one."""
+    actions = []
+    actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
+    actions.append({"add": {"index": next_index, "alias": alias}})
+    await es.indices.update_aliases(actions=actions)
+    log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
+
+
+async def clone_index(es: AsyncElasticsearch, base_version: str, target_version: str):
+    """Create a copy of the index with the given name."""
+    if base_version == target_version:
+        raise ValueError("Cannot clone an index to itself.")
+    try:
+        await es.indices.put_settings(
+            index=base_version,
+            settings={"index.blocks.read_only": True},
+        )
+        await es.indices.clone(
+            index=base_version,
+            target=target_version,
+            body={
+                "settings": {"index": {"blocks": {"read_only": False}}},
+            },
+        )
+        log.info("Cloned index", base=base_version, target=target_version)
+    finally:
+        await es.indices.put_settings(
+            index=base_version,
+            settings={"index.blocks.read_only": False},
+        )
+
+
+async def create_index(es: AsyncElasticsearch, index: str):
+    """Create a new index with the given name."""
+    log.info("Create index", index=index)
+    try:
+        schemata = list(model.schemata.values())
+        mapping = make_entity_mapping(schemata)
+        await es.indices.create(
+            index=index,
+            mappings=mapping,
+            settings=INDEX_SETTINGS,
+        )
+    except BadRequestError as exc:
+        log.warning(
+            "Cannot create index: %s" % exc.message,
+            index=index,
+        )
+
+
+async def get_index_version(es: AsyncElasticsearch, dataset: Dataset) -> str | None:
+    """Return the currently indexed version of a given dataset."""
+    try:
+        resp = await es.indices.get_alias(name=settings.ENTITY_INDEX)
+    except NotFoundError:
+        return None
+    versions: List[str] = []
+    for index in resp.keys():
+        ds, version = parse_index_name(index)
+        if ds == dataset.name:
+            versions.append(version)
+    if len(versions) == 0:
+        return None
+    # Return the oldest version of the index. If multiple versions are linked to the
+    # alias, it's a sign that a previous index update failed. So we're erring on the
+    # side of caution and returning the oldest version.
+    return min(versions)
+
+
 async def index_entities_rate_limit(
     es: AsyncElasticsearch, dataset: Dataset, force: bool
 ) -> bool:
@@ -89,28 +171,17 @@ async def index_entities_rate_limit(
 
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
-    if not dataset.load:
-        log.debug("Dataset is not going to be loaded", dataset=dataset.name)
+    base_version = await get_index_version(es, dataset)
+    loader = DatasetLoader(dataset, base_version)
+    if not await loader.check(force_full=force):
         return False
-    if dataset.entities_url is None:
-        log.warning(
-            "Cannot identify resource with FtM entities",
-            dataset=dataset.name,
-        )
-        return False
-
-    # Versioning defaults to the newest delta version, otherwise it uses the software version.
-    if newest := await dataset.newest_version():
-        version: str | None = newest
-    else:
-        version = dataset.version
     log.info(
         "Indexing entities",
         dataset=dataset.name,
         url=dataset.entities_url,
-        version=version,
+        version=loader.target_version,
     )
-    next_index = construct_index_name(dataset.name, version)
+    next_index = construct_index_name(dataset.name, loader.target_version)
     if settings.INDEX_EXISTS_ABORT:
         exists = await es.indices.exists(index=next_index)
     else:
@@ -123,23 +194,14 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         return False
 
     # await es.indices.delete(index=next_index)
-    log.info("Create index", index=next_index)
-    try:
-        schemata = list(model.schemata.values())
-        mapping = make_entity_mapping(schemata)
-        await es.indices.create(
-            index=next_index,
-            mappings=mapping,
-            settings=INDEX_SETTINGS,
-        )
-    except BadRequestError as exc:
-        log.warning(
-            "Cannot create index: %s" % exc.message,
-            index=next_index,
-        )
+    if loader.is_incremental and not force:
+        base_index = construct_index_name(dataset.name, loader.base_version)
+        await clone_index(es, base_index, next_index)
+    else:
+        await create_index(es, next_index)
 
     try:
-        docs = iter_entity_docs(dataset, next_index)
+        docs = iter_entity_docs(loader, next_index, force=force)
         await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
     except (
         BulkIndexError,
@@ -169,20 +231,8 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         return False
 
     await es.indices.refresh(index=next_index)
-    res = await es.indices.put_alias(index=next_index, name=settings.ENTITY_INDEX)
-    if res.meta.status != 200:
-        log.error("Failed to alias next index", index=next_index)
-        return False
-    log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
-
-    res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
     dataset_prefix = construct_index_name(dataset.name)
-    for aliased_index in res.body.keys():
-        if aliased_index == next_index:
-            continue
-        if aliased_index.startswith(dataset_prefix):
-            log.info("Delete old index", index=aliased_index)
-            res = await es.indices.delete(index=aliased_index)
+    await rollover_index(es, settings.ENTITY_INDEX, next_index, prefix=dataset_prefix)
     return True
 
 

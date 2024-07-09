@@ -32,7 +32,6 @@ from yente.search.mapping import (
 from yente.search.util import (
     parse_index_name,
     construct_index_name,
-    index_to_dataset_version,
 )
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
@@ -196,7 +195,6 @@ class SearchProvider(ABC):
 
 
 class ESSearchProvider(SearchProvider):
-
     @classmethod
     async def create(cls) -> "ESSearchProvider":
         self = cls()
@@ -401,7 +399,7 @@ async def get_current_version(dataset: Dataset, provider: SearchProvider) -> str
         )
     versions = []
     for k in sources:
-        if k.startswith(construct_index_name(dataset.name)):
-            _, _, version = parse_index_name(k)
-            versions.append(index_to_dataset_version(version))
+        ds, version = parse_index_name(k)
+        if ds == dataset.name:
+            versions.append(version)
     return sorted(versions, reverse=True)[0] if len(versions) > 0 else None
