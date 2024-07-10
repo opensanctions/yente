@@ -43,13 +43,13 @@ log = get_logger(__name__)
 
 
 async def iter_entity_docs(
-    loader: DatasetLoader, index: str, force: bool = False
+    loader: DatasetLoader, index: str
 ) -> AsyncGenerator[Dict[str, Any], None]:
     dataset = loader.dataset
     datasets = set(dataset.dataset_names)
     idx = 0
     ops: Dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
-    async for data in loader.load(force_full=force):
+    async for data in loader.load():
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
         op_code = data["op"]
@@ -182,8 +182,8 @@ async def index_entities_rate_limit(
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     base_version = await get_index_version(es, dataset)
-    loader = await DatasetLoader.build(dataset, base_version)
-    if not loader.check(force_full=force):
+    loader = await DatasetLoader.build(dataset, base_version, force_full=force)
+    if not loader.check():
         return False
     log.info(
         "Indexing entities",

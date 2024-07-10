@@ -21,18 +21,22 @@ class DatasetLoader(object):
     """A helper object for emitting entity operations to transition from one
     loaded dataset version to the next."""
 
-    def __init__(self, dataset: Dataset, base_version: Optional[str]) -> None:
+    def __init__(
+        self, dataset: Dataset, base_version: Optional[str], force_full: bool = False
+    ) -> None:
         self.dataset = dataset
-        self.target_version = dataset.version
+        self.target_version = dataset.version or "static"
         self.base_version = base_version
+        self.force_full = force_full
         self.delta_urls: Optional[List[Tuple[str, str]]] = None
 
     @classmethod
     async def build(
-        cls, dataset: Dataset, base_version: Optional[str]
+        cls, dataset: Dataset, base_version: Optional[str], force_full: bool = False
     ) -> "DatasetLoader":
         """Fetch the index of delta files and decide an index building strategy."""
-        loader = DatasetLoader(dataset, base_version)
+        loader = DatasetLoader(dataset, base_version, force_full=force_full)
+        if 
         if dataset.delta_url is None:
             log.debug("No delta updates available for: %r" % dataset.name)
             return loader
@@ -68,9 +72,11 @@ class DatasetLoader(object):
     @property
     def is_incremental(self) -> bool:
         """Check if there is sequence of delta entity patches that can be loaded."""
+        if self.force_full:
+            return False
         return self.delta_urls is not None and len(self.delta_urls) > 0
 
-    def check(self, force_full: bool = False) -> bool:
+    def check(self) -> bool:
         """Confirm that the dataset needs to be loaded."""
         if not self.dataset.load:
             return False
@@ -80,15 +86,15 @@ class DatasetLoader(object):
                 dataset=self.dataset.name,
             )
             return False
-        if force_full:
+        if self.force_full:
             return True
         if self.target_version == self.base_version:
             return False
         return True
 
-    async def load(self, force_full: bool = False) -> AsyncGenerator[EntityOp, None]:
+    async def load(self) -> AsyncGenerator[EntityOp, None]:
         """Generate entity change operations, including payload data."""
-        if force_full or self.delta_urls is None:
+        if self.force_full or self.delta_urls is None:
             if self.dataset.entities_url is None:
                 raise RuntimeError("No entities for dataset: %s" % self.dataset.name)
             base_name = f"{self.dataset.name}-{self.target_version}"
