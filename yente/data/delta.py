@@ -25,56 +25,53 @@ class DatasetLoader(object):
         self.dataset = dataset
         self.target_version = dataset.version
         self.base_version = base_version
-        self.is_prepared: bool = False
         self.delta_urls: Optional[List[Tuple[str, str]]] = None
 
-    async def prepare(self) -> None:
+    @classmethod
+    async def build(
+        cls, dataset: Dataset, base_version: Optional[str]
+    ) -> "DatasetLoader":
         """Fetch the index of delta files and decide an index building strategy."""
-        if self.is_prepared:
-            return
-        self.is_prepared = True
-        if self.dataset.delta_url is None:
-            log.debug("No delta updates available for: %r" % self.dataset.name)
-            return
-        if self.base_version is None or self.target_version <= self.base_version:
-            return
+        loader = DatasetLoader(dataset, base_version)
+        if dataset.delta_url is None:
+            log.debug("No delta updates available for: %r" % dataset.name)
+            return loader
+        if loader.base_version is None or loader.target_version <= loader.base_version:
+            return loader
 
-        index: DeltaIndex = await load_json_url(self.dataset.delta_url)
+        index: DeltaIndex = await load_json_url(dataset.delta_url)
         versions = index.get("versions", {})
         sorted_versions = sorted(versions.keys())
         if len(sorted_versions) == 0:
-            return
-        if self.base_version < min(sorted_versions):
+            return loader
+        if loader.base_version not in sorted_versions:
             log.warning(
                 "Loaded version of dataset is older than delta window",
-                dataset=self.dataset.name,
-                delta_url=self.dataset.delta_url,
-                base_version=self.base_version,
-                target_version=self.target_version,
+                dataset=dataset.name,
+                delta_url=dataset.delta_url,
+                base_version=loader.base_version,
+                target_version=loader.target_version,
+                delta_versions=sorted_versions,
             )
-            return
+            return loader
 
-        self.delta_urls = []
+        loader.delta_urls = []
         for version in sorted_versions:
-            if version <= self.base_version or version > self.target_version:
+            if version <= loader.base_version or version > loader.target_version:
                 continue
-            self.delta_urls.append((version, versions[version]))
+            loader.delta_urls.append((version, versions[version]))
 
         # TODO: is this smart? this avoids running clones when there is not change:
-        self.target_version = max(sorted_versions)
+        loader.target_version = max(sorted_versions)
+        return loader
 
     @property
     def is_incremental(self) -> bool:
         """Check if there is sequence of delta entity patches that can be loaded."""
-        if not self.is_prepared:
-            raise RuntimeError(
-                "Cannot call is_incremental before preparing the loader!"
-            )
         return self.delta_urls is not None and len(self.delta_urls) > 0
 
-    async def check(self, force_full: bool = False) -> bool:
+    def check(self, force_full: bool = False) -> bool:
         """Confirm that the dataset needs to be loaded."""
-        await self.prepare()
         if not self.dataset.load:
             return False
         if self.dataset.entities_url is None:
@@ -91,7 +88,6 @@ class DatasetLoader(object):
 
     async def load(self, force_full: bool = False) -> AsyncGenerator[EntityOp, None]:
         """Generate entity change operations, including payload data."""
-        await self.prepare()
         if force_full or self.delta_urls is None:
             if self.dataset.entities_url is None:
                 raise RuntimeError("No entities for dataset: %s" % self.dataset.name)

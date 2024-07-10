@@ -48,11 +48,14 @@ async def iter_entity_docs(
     dataset = loader.dataset
     datasets = set(dataset.dataset_names)
     idx = 0
+    ops: Dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
     async for data in loader.load(force_full=force):
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
+        op_code = data["op"]
         idx += 1
-        if data["op"] == "DEL":
+        ops[op_code] += 1
+        if op_code == "DEL":
             yield {
                 "_op_type": "delete",
                 "_index": index,
@@ -84,6 +87,12 @@ async def iter_entity_docs(
             yield {"_index": index, "_id": entity_id, "_source": doc}
         except FollowTheMoneyException as exc:
             log.warning("Invalid entity: %s" % exc, data=data)
+    log.info(
+        "Indexed %d entities" % idx,
+        added=ops["ADD"],
+        modified=ops["MOD"],
+        deleted=ops["DEL"],
+    )
 
 
 async def rollover_index(
@@ -107,6 +116,7 @@ async def clone_index(es: AsyncElasticsearch, base_version: str, target_version:
             index=base_version,
             settings={"index.blocks.read_only": True},
         )
+        await es.indices.delete(index=target_version, allow_no_indices=True)
         await es.indices.clone(
             index=base_version,
             target=target_version,
@@ -172,8 +182,8 @@ async def index_entities_rate_limit(
 async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
     base_version = await get_index_version(es, dataset)
-    loader = DatasetLoader(dataset, base_version)
-    if not await loader.check(force_full=force):
+    loader = await DatasetLoader.build(dataset, base_version)
+    if not loader.check(force_full=force):
         return False
     log.info(
         "Indexing entities",
