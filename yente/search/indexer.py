@@ -211,7 +211,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
         await create_index(es, next_index)
 
     try:
-        docs = iter_entity_docs(loader, next_index, force=force)
+        docs = iter_entity_docs(loader, next_index)
         await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
     except (
         BulkIndexError,
@@ -242,6 +242,7 @@ async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) 
 
     await es.indices.refresh(index=next_index)
     dataset_prefix = construct_index_name(dataset.name)
+    # FIXME: we're not actually deleting old indexes here any more!
     await rollover_index(es, settings.ENTITY_INDEX, next_index, prefix=dataset_prefix)
     return True
 
