@@ -17,7 +17,7 @@ class EntityOp(TypedDict):
     entity: Dict[str, Any]
 
 
-class DatasetLoader(object):
+class DatasetUpdater(object):
     """A helper object for emitting entity operations to transition from one
     loaded dataset version to the next."""
 
@@ -33,41 +33,42 @@ class DatasetLoader(object):
     @classmethod
     async def build(
         cls, dataset: Dataset, base_version: Optional[str], force_full: bool = False
-    ) -> "DatasetLoader":
+    ) -> "DatasetUpdater":
         """Fetch the index of delta files and decide an index building strategy."""
-        loader = DatasetLoader(dataset, base_version, force_full=force_full)
-        if 
+        obj = DatasetUpdater(dataset, base_version, force_full=force_full)
+        if force_full:
+            return obj
         if dataset.delta_url is None:
             log.debug("No delta updates available for: %r" % dataset.name)
-            return loader
-        if loader.base_version is None or loader.target_version <= loader.base_version:
-            return loader
+            return obj
+        if obj.base_version is None or obj.target_version <= obj.base_version:
+            return obj
 
         index: DeltaIndex = await load_json_url(dataset.delta_url)
         versions = index.get("versions", {})
         sorted_versions = sorted(versions.keys())
         if len(sorted_versions) == 0:
-            return loader
-        if loader.base_version not in sorted_versions:
+            return obj
+        if obj.base_version not in sorted_versions:
             log.warning(
                 "Loaded version of dataset is older than delta window",
                 dataset=dataset.name,
                 delta_url=dataset.delta_url,
-                base_version=loader.base_version,
-                target_version=loader.target_version,
+                base_version=obj.base_version,
+                target_version=obj.target_version,
                 delta_versions=sorted_versions,
             )
-            return loader
+            return obj
 
-        loader.delta_urls = []
+        obj.delta_urls = []
         for version in sorted_versions:
-            if version <= loader.base_version or version > loader.target_version:
+            if version <= obj.base_version or version > obj.target_version:
                 continue
-            loader.delta_urls.append((version, versions[version]))
+            obj.delta_urls.append((version, versions[version]))
 
         # TODO: is this smart? this avoids running clones when there is not change:
-        loader.target_version = max(sorted_versions)
-        return loader
+        obj.target_version = max(sorted_versions)
+        return obj
 
     @property
     def is_incremental(self) -> bool:
@@ -76,7 +77,7 @@ class DatasetLoader(object):
             return False
         return self.delta_urls is not None and len(self.delta_urls) > 0
 
-    def check(self) -> bool:
+    def needs_update(self) -> bool:
         """Confirm that the dataset needs to be loaded."""
         if not self.dataset.load:
             return False

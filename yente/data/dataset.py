@@ -1,7 +1,7 @@
 from banal import as_bool
 from normality import slugify
 from datetime import datetime
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any
 from nomenklatura.dataset import Dataset as NKDataset
 from nomenklatura.dataset import DataCatalog
 from nomenklatura.dataset.util import type_check
@@ -12,7 +12,6 @@ from followthemoney.util import sanitize_text
 
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path
-from yente.data.loader import load_json_url
 
 log = get_logger(__name__)
 BOOT_TIME = datetime_iso(datetime.utcnow())
@@ -20,7 +19,6 @@ BOOT_TIME = datetime_iso(datetime.utcnow())
 
 class Dataset(NKDataset):
     def __init__(self, catalog: DataCatalog["Dataset"], data: Dict[str, Any]):
-        self._available_versions_map: Dict[str, str] = {}
         name = data["name"]
         norm_name = slugify(name, sep="_")
         if name != norm_name:
@@ -63,48 +61,6 @@ class Dataset(NKDataset):
             if resource_type is not None and resource.mime_type == resource_type:
                 return resource.url
         return None
-
-    def delta_path(self, version: str) -> str:
-        """
-        Get the URL for the delta file for a specific version of this dataset.
-        """
-        if version not in self._available_versions_map:
-            raise ValueError(f"Version {version} not available for {self.name}")
-        return self._available_versions_map[version]
-
-    async def _load_versions_map(self, refresh: bool = False) -> None:
-        """
-        Set a map of versions to their URLs for this dataset.
-        """
-        if self._available_versions_map is {} or refresh is True:
-            if self.delta_url is None:
-                raise Exception(f"No delta_index path specified for {self.name}")
-            resp = await load_json_url(self.delta_url)
-            if "versions" not in resp:
-                raise ValueError(f"Invalid versions file found at {self.delta_url}")
-            self._available_versions_map = resp.get("versions")
-            if (
-                self.version is not None
-                and self.delta_url is not None
-                and self.version not in self._available_versions_map
-            ):
-                self._available_versions_map[self.version] = self.delta_url
-
-    async def available_versions(self, refresh: bool = False) -> List[str]:
-        await self._load_versions_map(refresh=refresh)
-        return list(self._available_versions_map.keys())
-
-    async def newest_version(self) -> str | None:
-        """
-        Get the newest version available for this dataset. If delta versioning
-        is not implemented for this dataset, return None.
-        """
-        try:
-            available = await self.available_versions(refresh=True)
-            return sorted(available)[-1]
-        except Exception as e:
-            log.warning(f"Failed to get newest version for {self.name}: {e}")
-            return None
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
