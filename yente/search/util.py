@@ -8,7 +8,6 @@ def parse_index_name(index: str) -> Tuple[str, str]:
     Parse a given index name.
 
     Returns:
-        prefix: str         The configured index prefix
         dataset_name: str   The name of the dataset the index is based on
         version: str        The version of the index
     """
@@ -16,8 +15,12 @@ def parse_index_name(index: str) -> Tuple[str, str]:
     if not index.startswith(ENTITY_INDEX):
         raise ValueError("Index created with a different prefix and cannot be parsed.")
     index_end = index[len(ENTITY_INDEX) + 1 :]
+    if "-" not in index_end:
+        raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
     dataset_version = index_version[len(INDEX_VERSION) :]
+    if len(dataset_version) < 1:
+        raise ValueError("Index version must be at least one character long.")
     return (dataset, dataset_version)
 
 

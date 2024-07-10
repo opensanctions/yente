@@ -11,7 +11,11 @@ async def sync_dataset_versions(catalog: Catalog) -> None:
     es = await get_es()
     res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
     for aliased_index in res.body.keys():
-        dataset_name, version = parse_index_name(aliased_index)
+        try:
+            dataset_name, version = parse_index_name(aliased_index)
+        except ValueError:
+            log.warn("Invalid index name: %s" % aliased_index)
+            continue
         dataset = catalog.get(dataset_name)
         if dataset is None:
             log.warn("Dataset has index but no metadata: %s" % dataset_name)

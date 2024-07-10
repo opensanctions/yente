@@ -158,9 +158,12 @@ async def get_index_version(es: AsyncElasticsearch, dataset: Dataset) -> str | N
         return None
     versions: List[str] = []
     for index in resp.keys():
-        ds, version = parse_index_name(index)
-        if ds == dataset.name:
-            versions.append(version)
+        try:
+            ds, version = parse_index_name(index)
+            if ds == dataset.name:
+                versions.append(version)
+        except ValueError:
+            pass
     if len(versions) == 0:
         return None
     # Return the oldest version of the index. If multiple versions are linked to the
