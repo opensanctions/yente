@@ -1,51 +1,38 @@
-from abc import abstractmethod, ABC
-from contextlib import asynccontextmanager
-import time
 import asyncio
-import warnings
-from threading import Lock
-from typing import cast, Any, Dict, List, AsyncGenerator, Coroutine, Tuple
+from contextlib import asynccontextmanager
+from typing import cast, Any, Dict, List, AsyncGenerator, Tuple
 from typing import AsyncIterator
-from structlog.contextvars import get_contextvars
-from elasticsearch import AsyncElasticsearch
+import warnings
+from elasticsearch import AsyncElasticsearch, ElasticsearchWarning
 from elasticsearch.helpers import async_bulk
 from elasticsearch.exceptions import (
-    ElasticsearchWarning,
     BadRequestError,
     NotFoundError,
 )
 from elasticsearch.exceptions import TransportError, ConnectionError
 from followthemoney import model
-from followthemoney.types.date import DateType
 
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.entity import Entity
-from yente.data.dataset import Dataset
 from yente.search.mapping import (
     make_entity_mapping,
     INDEX_SETTINGS,
-    NAMES_FIELD,
-    NAME_PHONETIC_FIELD,
-    NAME_PART_FIELD,
-    NAME_KEY_FIELD,
-)
-from yente.search.util import (
-    parse_index_name,
-    construct_index_name,
 )
 
 log = get_logger(__name__)
+warnings.filterwarnings("ignore", category=ElasticsearchWarning)
+
+# class SearchProvider(ABC):
+#     pass
 
 
-class SearchProvider(ABC):
-    pass
+class SearchProvider(object):
+    # FIXME: Naming this like the future interface so that we can introduce it all over
+    # the app and learn about what the API should work like.
 
-
-class ElasticSearchProvider(SearchProvider):
     @classmethod
-    async def create(cls) -> "ElasticSearchProvider":
+    async def create(cls) -> "SearchProvider":
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
             request_timeout=30,
@@ -71,10 +58,10 @@ class ElasticSearchProvider(SearchProvider):
                 es = AsyncElasticsearch(**kwargs)
                 es_ = es.options(request_timeout=5)
                 await es_.cluster.health(wait_for_status="yellow")
-                return ElasticSearchProvider(es)
+                return SearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to ElasticSearch: %r" % exc)
-                time.sleep(retry**2)
+                await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to ElasticSearch.")
 
@@ -179,19 +166,9 @@ class ElasticSearchProvider(SearchProvider):
 
 
 @asynccontextmanager
-async def with_provider() -> AsyncIterator[ElasticSearchProvider]:
-    provider = await ElasticSearchProvider.create()
+async def with_provider() -> AsyncIterator[SearchProvider]:
+    provider = await SearchProvider.create()
     try:
         yield provider
     finally:
         await provider.close()
-
-
-# Usage example
-async def main():
-    async with with_provider() as provider:
-        indexes = await provider.list_indexes()
-        print("Indexes:", indexes)
-
-
-asyncio.run(main())

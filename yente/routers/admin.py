@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException
 from normality import collapse_spaces
 from starlette.responses import FileResponse
@@ -10,6 +10,8 @@ from yente.logs import get_logger
 from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
+from yente.routers.util import get_request_provider
+from yente.search.provider import SearchProvider
 from yente.search.search import get_index_status
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
@@ -38,10 +40,12 @@ async def healthz() -> StatusResponse:
     response_model=StatusResponse,
     responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
 )
-async def readyz() -> StatusResponse:
+async def readyz(
+    provider: SearchProvider = Depends(get_request_provider),
+) -> StatusResponse:
     """Search index health check. This is used to know if the service has completed
     its index building."""
-    ok = await get_index_status(index=settings.ENTITY_INDEX)
+    ok = await get_index_status(provider, index=settings.ENTITY_INDEX)
     if not ok:
         raise HTTPException(503, detail="Index not ready.")
     return StatusResponse(status="ok")
@@ -58,14 +62,16 @@ async def readyz() -> StatusResponse:
     response_model=DataCatalogModel,
     include_in_schema=False,
 )
-async def catalog() -> DataCatalogModel:
+async def catalog(
+    provider: SearchProvider = Depends(get_request_provider),
+) -> DataCatalogModel:
     """Return the service manifest, which includes a list of all indexed datasets.
 
     The manifest is the configuration file of the yente service. It specifies what
     data sources are included, and how often they should be loaded.
     """
     catalog = await get_catalog()
-    await sync_dataset_versions(catalog)
+    await sync_dataset_versions(provider, catalog)
     response = catalog.to_dict()
     response["current"] = []
     response["outdated"] = []

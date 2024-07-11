@@ -9,7 +9,8 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
-from yente.search.base import get_es, get_opaque_id, query_semaphore
+from yente.search.base import query_semaphore
+from yente.search.provider import SearchProvider
 from yente.search.search import result_entities
 
 log = get_logger(__name__)
@@ -27,7 +28,7 @@ def nest_entity(
 
     # Find other entities pointing to the one we're processing:
     if entity.id is not None:
-        for (prop, adj_id) in inverted.get(entity.id, {}):
+        for prop, adj_id in inverted.get(entity.id, {}):
             if adj_id in path or len(path) > 1:
                 continue
             adj = entities.get(adj_id)
@@ -58,7 +59,9 @@ def nest_entity(
     return serialized
 
 
-async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse:
+async def serialize_entity(
+    provider: SearchProvider, root: Entity, nested: bool = False
+) -> EntityResponse:
     if not nested or root.id is None:
         return EntityResponse.from_entity(root)
     inverted: Inverted = {}
@@ -67,8 +70,6 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
     entities: Entities = {root.id: root}
     next_entities = set(root.get_type_values(registry.entity))
 
-    es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
     while True:
         shoulds = []
         if len(reverse):
@@ -89,7 +90,7 @@ async def serialize_entity(root: Entity, nested: bool = False) -> EntityResponse
 
         try:
             async with query_semaphore:
-                resp = await es_.search(
+                resp = await provider.client.search(
                     index=settings.ENTITY_INDEX,
                     query=query,
                     size=settings.MAX_RESULTS,

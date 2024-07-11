@@ -1,5 +1,5 @@
 from typing import List, Optional, Union
-from fastapi import APIRouter, Path, Query, Response, HTTPException
+from fastapi import APIRouter, Depends, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from followthemoney import model
 import enum
@@ -8,6 +8,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityResponse, SearchResponse
+from yente.search.provider import SearchProvider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
@@ -16,7 +17,7 @@ from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import serialize_entity
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
-from yente.routers.util import get_dataset
+from yente.routers.util import get_dataset, get_request_provider
 from yente.routers.util import PATH_DATASET, TS_PATTERN
 
 log = get_logger(__name__)
@@ -84,6 +85,7 @@ async def search(
         DEFAULT_FACETS,
         title="Facet counts to include in response.",
     ),
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -119,6 +121,7 @@ async def search(
     )
     aggregations = facet_aggregations([f.value for f in facets])
     resp = await search_entities(
+        provider,
         query,
         limit=limit,
         offset=offset,
@@ -165,6 +168,7 @@ async def fetch_entity(
         True,
         title="Include adjacent entities (e.g. addresses, family) in response",
     ),
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
@@ -175,13 +179,13 @@ async def fetch_entity(
     Intro: [entity data model](https://www.opensanctions.org/docs/entities/).
     """
     try:
-        entity = await get_entity(entity_id)
+        entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
         url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
         return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    data = await serialize_entity(entity, nested=nested)
+    data = await serialize_entity(provider, entity, nested=nested)
     log.info(data.caption, action="entity", entity_id=entity_id)
     response.headers.update(settings.CACHE_HEADERS)
     return data

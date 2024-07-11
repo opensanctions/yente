@@ -15,7 +15,8 @@ from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
-from yente.search.base import get_es, get_opaque_id, query_semaphore
+from yente.search.base import query_semaphore
+from yente.search.provider import SearchProvider
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)
@@ -82,17 +83,16 @@ def result_facets(
 
 
 async def search_entities(
+    provider: SearchProvider,
     query: Dict[str, Any],
     limit: int = 5,
     offset: int = 0,
     aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
 ) -> ObjectApiResponse[Any]:
-    es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
     try:
         async with query_semaphore:
-            response = await es_.search(
+            response = await provider.client.search(
                 index=settings.ENTITY_INDEX,
                 query=query,
                 size=limit,
@@ -112,10 +112,8 @@ async def search_entities(
         raise HTTPException(status_code=ae.status_code, detail=ae.body)
 
 
-async def get_entity(entity_id: str) -> Optional[Entity]:
-    es = await get_es()
+async def get_entity(provider: SearchProvider, entity_id: str) -> Optional[Entity]:
     try:
-        es_ = es.options(opaque_id=get_opaque_id())
         query = {
             "bool": {
                 "should": [
@@ -126,7 +124,7 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
             }
         }
         async with query_semaphore:
-            response = await es_.search(
+            response = await provider.client.search(
                 index=settings.ENTITY_INDEX,
                 query=query,
                 size=2,
@@ -147,16 +145,16 @@ async def get_entity(entity_id: str) -> Optional[Entity]:
     return None
 
 
-async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
+async def get_matchable_schemata(
+    provider: SearchProvider, dataset: Dataset
+) -> Set[Schema]:
     """Get the set of schema used in this dataset that are matchable or
     a parent schema to a matchable schema."""
     filter_ = {"terms": {"datasets": dataset.dataset_names}}
     facet = "schemata"
-    es = await get_es()
-    es_ = es.options(opaque_id=get_opaque_id())
     try:
         async with query_semaphore:
-            response = await es_.search(
+            response = await provider.client.search(
                 index=settings.ENTITY_INDEX,
                 query={"bool": {"filter": [filter_]}},
                 size=0,
@@ -175,10 +173,11 @@ async def get_matchable_schemata(dataset: Dataset) -> Set[Schema]:
         return set()
 
 
-async def get_index_status(index: Optional[str] = None) -> bool:
-    es = await get_es()
+async def get_index_status(
+    provider: SearchProvider, index: Optional[str] = None
+) -> bool:
     try:
-        es_ = es.options(request_timeout=5, opaque_id=get_opaque_id())
+        es_ = provider.client.options(request_timeout=5)
         health = await es_.cluster.health(index=index, timeout=0)
         status = health.get("status")
         if status not in ("yellow", "green"):

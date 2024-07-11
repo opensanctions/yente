@@ -1,15 +1,14 @@
 from yente import settings
 from yente.logs import get_logger
-from yente.search.base import get_es, close_es
+from yente.search.provider import SearchProvider
 from yente.search.util import parse_index_name
 from yente.data.manifest import Catalog
 
 log = get_logger(__name__)
 
 
-async def sync_dataset_versions(catalog: Catalog) -> None:
-    es = await get_es()
-    res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
+async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
+    res = await provider.client.indices.get_alias(name=settings.ENTITY_INDEX)
     for aliased_index in res.body.keys():
         try:
             dataset_name, version = parse_index_name(aliased_index)
@@ -27,4 +26,3 @@ async def sync_dataset_versions(catalog: Catalog) -> None:
                 available=dataset.version,
             )
         dataset.index_version = version
-    await close_es()
