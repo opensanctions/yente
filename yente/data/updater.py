@@ -49,7 +49,10 @@ class DatasetUpdater(object):
         sorted_versions = sorted(versions.keys())
         if len(sorted_versions) == 0:
             return obj
-        if obj.base_version not in sorted_versions:
+        # We initially checked if the base_version was in the sorted_versions,
+        # but the base_version can be a version that doesn't have a delta (no changes)
+        # so we need to check if the base_version is older than the oldest delta version.
+        if obj.base_version < min(sorted_versions):
             log.warning(
                 "Loaded version of dataset is older than delta window",
                 dataset=dataset.name,

@@ -2,22 +2,20 @@ import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
 from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import BadRequestError, NotFoundError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
 from yente import settings
+from yente.data.manifest import Catalog
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
 from yente.search.mapping import (
-    make_entity_mapping,
     NAME_PART_FIELD,
     NAME_KEY_FIELD,
-    INDEX_SETTINGS,
     NAMES_FIELD,
     NAME_PHONETIC_FIELD,
 )
@@ -85,71 +83,10 @@ async def iter_entity_docs(
     )
 
 
-async def rollover_index(
-    provider: SearchProvider, alias: str, next_index: str, prefix: str
-) -> None:
-    """Remove all existing indices with a given prefix from the alias and
-    add the new one."""
-    actions = []
-    actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
-    actions.append({"add": {"index": next_index, "alias": alias}})
-    await provider.client.indices.update_aliases(actions=actions)
-    log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
-
-
-async def clone_index(provider: SearchProvider, base_version: str, target_version: str):
-    """Create a copy of the index with the given name."""
-    if base_version == target_version:
-        raise ValueError("Cannot clone an index to itself.")
-    try:
-        await provider.client.indices.put_settings(
-            index=base_version,
-            settings={"index.blocks.read_only": True},
-        )
-        await provider.client.indices.delete(
-            index=target_version, allow_no_indices=True
-        )
-        await provider.client.indices.clone(
-            index=base_version,
-            target=target_version,
-            body={
-                "settings": {"index": {"blocks": {"read_only": False}}},
-            },
-        )
-        log.info("Cloned index", base=base_version, target=target_version)
-    finally:
-        await provider.client.indices.put_settings(
-            index=base_version,
-            settings={"index.blocks.read_only": False},
-        )
-
-
-async def create_index(provider: SearchProvider, index: str):
-    """Create a new index with the given name."""
-    log.info("Create index", index=index)
-    try:
-        schemata = list(model.schemata.values())
-        mapping = make_entity_mapping(schemata)
-        await provider.client.indices.create(
-            index=index,
-            mappings=mapping,
-            settings=INDEX_SETTINGS,
-        )
-    except BadRequestError as exc:
-        log.warning(
-            "Cannot create index: %s" % exc.message,
-            index=index,
-        )
-
-
 async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str | None:
     """Return the currently indexed version of a given dataset."""
-    try:
-        resp = await provider.client.indices.get_alias(name=settings.ENTITY_INDEX)
-    except NotFoundError:
-        return None
     versions: List[str] = []
-    for index in resp.keys():
+    for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             ds, version = parse_index_name(index)
             if ds == dataset.name:
@@ -189,23 +126,16 @@ async def index_entities(
         version=updater.target_version,
     )
     next_index = construct_index_name(dataset.name, updater.target_version)
-    if settings.INDEX_EXISTS_ABORT:
-        exists = await provider.client.indices.exists(index=next_index)
-    else:
-        exists = await provider.client.indices.exists_alias(
-            name=settings.ENTITY_INDEX,
-            index=next_index,
-        )
-    if exists.body and not force:
+    if not force and await provider.exists_index_alias(next_index):
         log.info("Index is up to date.", index=next_index)
         return False
 
     # await es.indices.delete(index=next_index)
     if updater.is_incremental and not force:
         base_index = construct_index_name(dataset.name, updater.base_version)
-        await clone_index(provider, base_index, next_index)
+        await provider.clone_index(base_index, next_index)
     else:
-        await create_index(provider, next_index)
+        await provider.create_index(next_index)
 
     try:
         docs = iter_entity_docs(updater, next_index)
@@ -230,22 +160,43 @@ async def index_entities(
             errors=errors,
             entities_url=dataset.entities_url,
         )
-        is_aliased = await provider.client.indices.exists_alias(
-            name=settings.ENTITY_INDEX,
-            index=next_index,
-        )
-        if not is_aliased.body:
+        aliases = await provider.get_alias_indices(settings.ENTITY_INDEX)
+        if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
-            await provider.client.indices.delete(index=next_index)
+            await provider.delete_index(next_index)
         return False
 
     await provider.refresh(index=next_index)
     dataset_prefix = construct_index_name(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
-    await rollover_index(
-        provider, settings.ENTITY_INDEX, next_index, prefix=dataset_prefix
+    await provider.rollover_index(
+        settings.ENTITY_INDEX,
+        next_index,
+        prefix=dataset_prefix,
     )
     return True
+
+
+async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
+    aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
+    for index in await provider.get_all_indices():
+        if not index.startswith(settings.ENTITY_INDEX):
+            continue
+        if index not in aliased:
+            log.info("Deleting orphaned index", index=index)
+            await provider.delete_index(index)
+        try:
+            ds_name, _ = parse_index_name(index)
+        except ValueError:
+            continue
+        dataset = catalog.get(ds_name)
+        if dataset is None or not dataset.load:
+            log.info(
+                "Deleting index of non-scope dataset",
+                index=index,
+                dataset=ds_name,
+            )
+            await provider.delete_index(index)
 
 
 async def update_index(force: bool = False) -> bool:
@@ -258,9 +209,9 @@ async def update_index(force: bool = False) -> bool:
         for dataset in catalog.datasets:
             _changed = await index_entities_rate_limit(provider, dataset, force)
             changed = changed or _changed
+
+        await delete_old_indices(provider, catalog)
         log.info("Index update complete.", changed=changed)
-        # TODO: what if we just deleted all indexes with the prefix but not linked to
-        # the alias here?
         return changed
 
 

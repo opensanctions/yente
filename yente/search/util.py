@@ -18,6 +18,8 @@ def parse_index_name(index: str) -> Tuple[str, str]:
     if "-" not in index_end:
         raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
+    if not index_version.startswith(INDEX_VERSION):
+        raise ValueError("Index version does not start with the correct prefix.")
     dataset_version = index_version[len(INDEX_VERSION) :]
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")

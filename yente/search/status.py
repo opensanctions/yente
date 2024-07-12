@@ -8,8 +8,7 @@ log = get_logger(__name__)
 
 
 async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
-    res = await provider.client.indices.get_alias(name=settings.ENTITY_INDEX)
-    for aliased_index in res.body.keys():
+    for aliased_index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             dataset_name, version = parse_index_name(aliased_index)
         except ValueError:
