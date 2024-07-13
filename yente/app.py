@@ -78,7 +78,7 @@ async def request_middleware(
 
 
 async def yente_error_handler(request: Request, exc: YenteError) -> Response:
-    log.exception(f"Application error {exc.status}: {exc.detail}")
+    log.exception(f"App error {exc.status}: {exc.detail}")
     return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
 
 
@@ -102,6 +102,7 @@ HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
     ApiError: api_error_handler,
     TransportError: transport_error_handler,
     ValidationError: validation_error_handler,
+    YenteError: yente_error_handler,
 }
 
 

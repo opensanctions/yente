@@ -197,14 +197,13 @@ class SearchProvider(object):
                     aggregations=aggregations,
                     search_type=search_type,
                 )
-                print(type(response.body))
                 return cast(Dict[str, Any], response.body)
         except TransportError as te:
             log.warning(
                 f"Backend connection error: {te.message}",
                 errors=te.errors,
             )
-            raise YenteIndexError(f"Could not connect to index: {te}") from te
+            raise YenteIndexError(f"Could not connect to index: {te.message}") from te
         except ApiError as ae:
             if ae.error == "index_not_found_exception":
                 msg = (
@@ -212,6 +211,8 @@ class SearchProvider(object):
                     " or the initial ingestion of data is still ongoing."
                 )
                 raise IndexNotReadyError(msg) from ae
+            if ae.error == "search_phase_execution_exception":
+                raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
             log.warning(
                 f"API error {ae.status_code}: {ae.message}",
                 index=index,

@@ -1,5 +1,4 @@
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Type
+from typing import AsyncIterator, Type
 from fastapi import Path, Query
 from fastapi import HTTPException
 from nomenklatura.matching import ALGORITHMS, ScoringAlgorithm, get_algorithm
@@ -42,8 +41,7 @@ async def get_dataset(name: str) -> Dataset:
     return dataset
 
 
-@asynccontextmanager
-async def get_request_provider() -> AsyncGenerator[SearchProvider, None]:
+async def get_request_provider() -> AsyncIterator[SearchProvider]:
     async with with_provider() as provider:
         provider.set_trace_id(get_opaque_id())
         yield provider

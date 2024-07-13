@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from banal import as_bool
 from os import environ as env
 from normality import stringify
-from datetime import datetime
+from datetime import datetime, timezone
 from aiocron import Cron  # type: ignore
 import random
 
@@ -171,7 +171,8 @@ LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 # Used to pad out first_seen, last_seen on static collections
-RUN_TIME = datetime.utcnow().isoformat()[:19]
+RUN_DT = datetime.now(timezone.utc)
+RUN_TIME = RUN_DT.isoformat()[:19]
 
 # Authentication settings
 AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")

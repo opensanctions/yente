@@ -14,8 +14,8 @@ class YenteIndexError(YenteError):
 
     STATUS = 500
 
-    def __init__(self, detail: str, index: Optional[str] = None):
-        super().__init__(detail, self.STATUS)
+    def __init__(self, detail: str, status: int = STATUS, index: Optional[str] = None):
+        super().__init__(detail, status)
         self.index = index
 
 

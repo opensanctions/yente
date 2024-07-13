@@ -10,11 +10,12 @@ from followthemoney.types import registry
 from followthemoney.namespace import Namespace
 from followthemoney.util import sanitize_text
 
+from yente import settings
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path
 
 log = get_logger(__name__)
-BOOT_TIME = datetime_iso(datetime.utcnow())
+BOOT_TIME = datetime_iso(settings.RUN_DT)
 
 
 class Dataset(NKDataset):
