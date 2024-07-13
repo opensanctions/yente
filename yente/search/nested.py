@@ -1,7 +1,4 @@
-import json
-from fastapi import HTTPException
 from typing import Dict, List, Set, Tuple, Union, Optional
-from elasticsearch import ApiError
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -9,7 +6,6 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
-from yente.search.base import query_semaphore
 from yente.search.provider import SearchProvider
 from yente.search.search import result_entities
 
@@ -88,21 +84,11 @@ async def serialize_entity(
             }
         }
 
-        try:
-            async with query_semaphore:
-                resp = await provider.client.search(
-                    index=settings.ENTITY_INDEX,
-                    query=query,
-                    size=settings.MAX_RESULTS,
-                )
-        except ApiError as ae:
-            log.error(
-                f"Nested search error {ae.status_code}: {ae.message}",
-                index=settings.ENTITY_INDEX,
-                query_json=json.dumps(query),
-            )
-            raise HTTPException(status_code=500, detail="Error retrieving entity")
-
+        resp = await provider.search(
+            index=settings.ENTITY_INDEX,
+            query=query,
+            size=settings.MAX_RESULTS,
+        )
         reverse = []
         next_entities.clear()
         for adj in result_entities(resp):

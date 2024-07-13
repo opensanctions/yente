@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from structlog.contextvars import clear_contextvars, bind_contextvars
 
 from yente import settings
+from yente.exc import YenteError
 from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
@@ -74,6 +75,11 @@ async def request_middleware(
     )
     clear_contextvars()
     return response
+
+
+async def yente_error_handler(request: Request, exc: YenteError) -> Response:
+    log.exception(f"Application error {exc.status}: {exc.detail}")
+    return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
 
 
 async def api_error_handler(request: Request, exc: ApiError) -> Response:

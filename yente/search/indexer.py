@@ -1,13 +1,13 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
-from elasticsearch.helpers import async_bulk, BulkIndexError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
 from yente import settings
 from yente.data.manifest import Catalog
+from yente.exc import YenteIndexError
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
@@ -139,26 +139,19 @@ async def index_entities(
 
     try:
         docs = iter_entity_docs(updater, next_index)
-        await async_bulk(
-            provider.client, docs, yield_ok=False, stats_only=True, chunk_size=1000
-        )
+        await provider.bulk_index(docs)
     except (
-        BulkIndexError,
+        YenteIndexError,
         KeyboardInterrupt,
         OSError,
         Exception,
         asyncio.TimeoutError,
         asyncio.CancelledError,
     ) as exc:
-        errors = None
-        if isinstance(exc, BulkIndexError):
-            errors = exc.errors
         log.exception(
             "Indexing error: %r" % exc,
             dataset=dataset.name,
             index=next_index,
-            errors=errors,
-            entities_url=dataset.entities_url,
         )
         aliases = await provider.get_alias_indices(settings.ENTITY_INDEX)
         if next_index not in aliases:

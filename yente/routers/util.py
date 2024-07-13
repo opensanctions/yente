@@ -45,9 +45,5 @@ async def get_dataset(name: str) -> Dataset:
 @asynccontextmanager
 async def get_request_provider() -> AsyncGenerator[SearchProvider, None]:
     async with with_provider() as provider:
-        # Inject request tracing
-        provider.client = provider.client.options(
-            request_timeout=10,
-            opaque_id=get_opaque_id(),
-        )
+        provider.set_trace_id(get_opaque_id())
         yield provider

@@ -1,6 +1,5 @@
 import click
 import asyncio
-from typing import Any
 from uvicorn import Config, Server
 
 from yente import settings
@@ -47,12 +46,10 @@ def reindex(force: bool) -> None:
 
 async def _clear_index() -> None:
     async with with_provider() as provider:
-        indices: Any = await provider.client.cat.indices(format="json")
-        for index in indices:
-            index_name: str = index.get("index")
-            if index_name.startswith(settings.ES_INDEX):
-                log.info("Delete index", index=index_name)
-                await provider.client.indices.delete(index=index_name)
+        for index in await provider.get_all_indices():
+            if index.startswith(settings.ES_INDEX):
+                log.info("Delete index", index=index)
+                await provider.delete_index(index=index)
 
 
 @cli.command("clear-index", help="Delete everything in ElasticSearch")

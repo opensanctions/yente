@@ -66,7 +66,9 @@ def make_keyword() -> MappingProperty:
     return {"type": "keyword"}
 
 
-def make_entity_mapping(schemata: Iterable[Schema]) -> Dict[str, Any]:
+def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str, Any]:
+    if schemata is None:
+        schemata = list(model.schemata.values())
     prop_mapping: Dict[str, MappingProperty] = {}
     for schema_name in schemata:
         schema = model.get(schema_name)

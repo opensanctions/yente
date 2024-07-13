@@ -130,7 +130,7 @@ async def search(
     )
     results: List[EntityResponse] = []
     for result in result_entities(resp):
-        results.append(await serialize_entity(result))
+        results.append(await serialize_entity(provider, result))
     output = SearchResponse(
         results=results,
         facets=result_facets(resp, catalog),
