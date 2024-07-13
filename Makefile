@@ -14,11 +14,8 @@ services:
 api: build services
 	docker-compose up --remove-orphans app
 
-unit-test:
-	pytest -v tests/unit
-
-integration-test:
-	pytest -v tests/integration
+test:
+	pytest -v tests
 
 typecheck:
 	mypy --strict yente

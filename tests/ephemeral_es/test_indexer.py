@@ -5,9 +5,7 @@ from .conftest import FIXTURES_PATH
 from yente.settings import ENTITY_INDEX
 from typing import List, Any
 import httpx
-from yente.search.indexer import (
-    delta_update_catalog,
-)
+from yente.search.indexer import update_index
 
 
 @pytest.fixture
@@ -49,7 +47,7 @@ async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
         url="https://data.opensanctions.org/datasets/latest/index.json",
         content=(FIXTURES_PATH / "dataset/t1/index.json").read_bytes(),
     )
-    await delta_update_catalog()
+    await update_index()
     # Pretend that new versions have been created and mock each call to them to a fixture
     for version, url in available_versions["versions"].items():
         httpx_mock.add_response(
@@ -65,7 +63,7 @@ async def test_end_to_end(httpx_mock: Any, sanctions_catalog: Any) -> None:
         url="https://data.opensanctions.org/artifacts/sanctions/20240527134702-zbn/delta.json",
         content=(FIXTURES_PATH / "dataset/t2/delta.json").read_bytes(),
     )
-    await delta_update_catalog()
+    await update_index()
     httpx.post(f"http://localhost:9200/{ENTITY_INDEX}/_refresh")
     resp = httpx.get(f"http://localhost:9200/{ENTITY_INDEX}/_count")
     assert resp.status_code == 200

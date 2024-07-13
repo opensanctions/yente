@@ -4,11 +4,10 @@ import pytest_asyncio
 from uuid import uuid4
 from pathlib import Path
 from fastapi.testclient import TestClient
-import httpx
 
 from yente import settings
 from yente.app import create_app
-from yente.search.base import ESSearchProvider
+from yente.search.provider import with_provider
 
 
 run_id = uuid4().hex
@@ -41,20 +40,12 @@ def sanctions_catalog():
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def search_provider():
-    provider = await ESSearchProvider.create()
-    yield provider
+    async with with_provider() as provider:
+        yield provider
 
 
 def clear_state():
     pass
-
-
-@pytest_asyncio.fixture(scope="function", autouse=True)
-async def clean_es():
-    provider = await ESSearchProvider.create()
-    await provider.delete_index("*")
-    yield
-    await provider.delete_index("*")
 
 
 @pytest.fixture(autouse=True)
