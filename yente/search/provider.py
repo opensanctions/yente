@@ -208,8 +208,8 @@ class SearchProvider(object):
         except ApiError as ae:
             if ae.error == "index_not_found_exception":
                 msg = (
-                    f"Index not ready: {index}. This may be caused by a misconfiguration,"
-                    " or the initial index is still being created."
+                    f"Index {index} does not exist. This may be caused by a misconfiguration,"
+                    " or the initial ingestion of data is still ongoing."
                 )
                 raise IndexNotReadyError(msg) from ae
             log.warning(
