@@ -1,6 +1,5 @@
 # mypy: ignore-errors
 import pytest
-from yente.search.base import Index
 from yente import settings
 from typing import AsyncGenerator, List
 

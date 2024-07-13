@@ -92,7 +92,7 @@ def test_search_filter_include_dataset():
 
 
 def test_search_filter_changed_since():
-    ts = datetime.utcnow() + timedelta(days=1)
+    ts = datetime.now() + timedelta(days=1)
     tx = ts.isoformat(sep="T", timespec="minutes")
     res = client.get(f"/search/default?q=vladimir putin&changed_since={tx}")
     assert res.status_code == 200, res

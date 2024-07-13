@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
-from yente.search.base import ESSearchProvider
+from yente.search.provider import with_provider, SearchProvider
 
 
 run_id = uuid4().hex
 settings.TESTING = True
-FIXTURES_PATH = Path(__file__).parent.parent / "../fixtures/"
+FIXTURES_PATH = Path(__file__).parent / "fixtures"
 VERSIONS_PATH = FIXTURES_PATH / "versions.json"
 MANIFEST_PATH = FIXTURES_PATH / "manifest.yml"
 settings.MANIFEST = str(MANIFEST_PATH)
@@ -30,10 +30,18 @@ def manifest():
     settings.MANIFEST = str(MANIFEST_PATH)
 
 
+@pytest.fixture(scope="function", autouse=False)
+def sanctions_catalog():
+    manifest_tmp = settings.MANIFEST
+    settings.MANIFEST = str(FIXTURES_PATH / "sanctions.yml")
+    yield
+    settings.MANIFEST = manifest_tmp
+
+
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def search_provider():
-    provider = await ESSearchProvider.create()
-    yield provider
+    async with with_provider() as provider:
+        yield provider
 
 
 def clear_state():
