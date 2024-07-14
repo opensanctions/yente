@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from banal import as_bool
@@ -160,9 +161,15 @@ ES_PASSWORD = env_get("YENTE_ELASTICSEARCH_PASSWORD")
 ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
 ES_SNIFF = as_bool(env_str("YENTE_ELASTICSEARCH_SNIFF", "false"))
 ES_CA_CERT = env_get("YENTE_ELASTICSEARCH_CA_PATH")
-ES_INDEX = env_str("YENTE_ELASTICSEARCH_INDEX", "yente")
 ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS", "1"))
-ENTITY_INDEX = f"{ES_INDEX}-entities"
+
+ES_INDEX = env_get("YENTE_ELASTICSEARCH_INDEX")
+if ES_INDEX is not None:
+    warnings.warn(
+        "YENTE_ELASTICSEARCH_INDEX will be replaced by YENTE_INDEX_NAME in a future version"
+    )
+INDEX_NAME = env_str("YENTE_INDEX_NAME", ES_INDEX or "yente")
+ENTITY_INDEX = f"{INDEX_NAME}-entities"
 INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "009")
 assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
 

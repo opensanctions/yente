@@ -43,10 +43,10 @@ jobs:
           pip freeze
       - name: Run mypy strict type check
         run: |
-          mypy --strict yente
+          make typecheck
       - name: Run pytest
         run: |
-          pytest -v tests/unit
+          make test
       - name: Build a distribution
         run: |
           python setup.py sdist bdist_wheel

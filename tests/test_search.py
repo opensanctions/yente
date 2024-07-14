@@ -34,6 +34,11 @@ def test_search_invalid_query():
     assert res.status_code == 200, res
 
 
+def test_search_missing_dataset():
+    res = client.get("/search/banana")
+    assert res.status_code == 404, res
+
+
 def test_search_filter_schema_invalid():
     res = client.get("/search/default?q=angela merkel&schema=Banana")
     assert res.status_code == 400, res
