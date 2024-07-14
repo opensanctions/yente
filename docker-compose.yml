@@ -33,7 +33,8 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     environment:
-      YENTE_ELASTICSEARCH_URL: http://index:9200
+      YENTE_INDEX_TYPE: "elasticsearch"
+      YENTE_INDEX_URL: http://index:9200
       # Set this to a randomly generated string to enable the /updatez API:
       YENTE_UPDATE_TOKEN: ""
     # If you want to index data from the host machine as a custom dataset,

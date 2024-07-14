@@ -18,7 +18,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - index-os-data:/usr/share/elasticsearch/data
+      - index-os-data:/usr/share/opensearch/data
     deploy:
       placement:
         max_replicas_per_node: 1
@@ -32,7 +32,8 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     environment:
-      YENTE_ELASTICSEARCH_URL: http://index:9200
+      YENTE_INDEX_TYPE: "opensearch"
+      YENTE_INDEX_URL: http://index:9200
       # Set this to a randomly generated string to enable the /updatez API:
       YENTE_UPDATE_TOKEN: ""
     # If you want to index data from the host machine as a custom dataset,

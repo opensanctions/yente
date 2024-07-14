@@ -52,12 +52,14 @@ jobs:
           make typecheck
       - name: Run pytest tests with elasticsearch backend
         env:
-          YENTE_ELASTICSEARCH_URL: "http://elasticsearch:9200/"
+          YENTE_INDEX_TYPE: "elasticsearch"
+          YENTE_INDEX_URL: "http://elasticsearch:9200/"
         run: |
           make test
       - name: Run pytest tests with opensearch backend
         env:
-          YENTE_ELASTICSEARCH_URL: "http://opensearch:9200/"
+          YENTE_INDEX_TYPE: "opensearch"
+          YENTE_INDEX_URL: "http://opensearch:9200/"
         run: |
           make test
       - name: Build a distribution
