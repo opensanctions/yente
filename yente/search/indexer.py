@@ -115,6 +115,7 @@ async def index_entities(
     provider: SearchProvider, dataset: Dataset, force: bool
 ) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
+    alias = settings.ENTITY_INDEX
     base_version = await get_index_version(provider, dataset)
     updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
     if not updater.needs_update():
@@ -126,7 +127,7 @@ async def index_entities(
         version=updater.target_version,
     )
     next_index = construct_index_name(dataset.name, updater.target_version)
-    if not force and await provider.exists_index_alias(next_index):
+    if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
         return False
 
@@ -153,7 +154,7 @@ async def index_entities(
             dataset=dataset.name,
             index=next_index,
         )
-        aliases = await provider.get_alias_indices(settings.ENTITY_INDEX)
+        aliases = await provider.get_alias_indices(alias)
         if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
@@ -163,7 +164,7 @@ async def index_entities(
     dataset_prefix = construct_index_name(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
     await provider.rollover_index(
-        settings.ENTITY_INDEX,
+        alias,
         next_index,
         prefix=dataset_prefix,
     )

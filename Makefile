@@ -15,7 +15,7 @@ api: build services
 	docker-compose up --remove-orphans app
 
 test:
-	pytest -v tests
+	pytest --cov-report html --cov-report term --cov=yente -v tests
 
 typecheck:
 	mypy --strict yente

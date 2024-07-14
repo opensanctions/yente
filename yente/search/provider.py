@@ -6,11 +6,11 @@ from typing import Any, Dict, List, Optional, cast
 from typing import AsyncIterator
 from elasticsearch import ApiError, AsyncElasticsearch, ElasticsearchWarning
 from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import BadRequestError, NotFoundError
+from elasticsearch.exceptions import NotFoundError
 from elasticsearch.exceptions import TransportError, ConnectionError
 
 from yente import settings
-from yente.exc import IndexNotReadyError, YenteIndexError
+from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.search.base import query_semaphore
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
@@ -72,7 +72,10 @@ class SearchProvider(object):
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
-        await self.client.indices.refresh(index=index)
+        try:
+            await self.client.indices.refresh(index=index)
+        except NotFoundError as nfe:
+            raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
 
     async def get_all_indices(self) -> List[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
@@ -92,13 +95,14 @@ class SearchProvider(object):
     async def rollover_index(self, alias: str, next_index: str, prefix: str) -> None:
         """Remove all existing indices with a given prefix from the alias and
         add the new one."""
-        actions = []
-        actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
-        actions.append({"add": {"index": next_index, "alias": alias}})
-        await self.client.indices.update_aliases(actions=actions)
-        log.info(
-            "Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index
-        )
+        try:
+            actions = []
+            actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
+            actions.append({"add": {"index": next_index, "alias": alias}})
+            await self.client.indices.update_aliases(actions=actions)
+            log.info("Index is now aliased to: %s" % alias, index=next_index)
+        except (ApiError, TransportError) as te:
+            raise YenteIndexError(f"Could not rollover index: {te}") from te
 
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""
@@ -117,12 +121,14 @@ class SearchProvider(object):
                     "settings": {"index": {"blocks": {"read_only": False}}},
                 },
             )
-            log.info("Cloned index", base=base_version, target=target_version)
-        finally:
             await self.client.indices.put_settings(
                 index=base_version,
                 settings={"index.blocks.read_only": False},
             )
+            log.info("Cloned index", base=base_version, target=target_version)
+        except (ApiError, TransportError) as te:
+            msg = f"Could not clone index {base_version} to {target_version}: {te}"
+            raise YenteIndexError(msg) from te
 
     async def create_index(self, index: str) -> None:
         """Create a new index with the given name."""
@@ -133,14 +139,10 @@ class SearchProvider(object):
                 mappings=make_entity_mapping(),
                 settings=INDEX_SETTINGS,
             )
-        except BadRequestError as exc:
+        except ApiError as exc:
             if exc.error == "resource_already_exists_exception":
                 return
-            log.error(
-                "Cannot create index: %s" % exc.message,
-                index=index,
-                error=exc.error,
-            )
+            raise YenteIndexError(f"Could not create index: {exc}") from exc
 
     async def delete_index(self, index: str) -> None:
         """Delete a given index if it exists."""
@@ -151,19 +153,23 @@ class SearchProvider(object):
         except (ApiError, TransportError) as te:
             raise YenteIndexError(f"Could not delete index: {te}") from te
 
-    async def exists_index_alias(self, index: str) -> bool:
+    async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
-        exists = await self.client.indices.exists_alias(
-            name=settings.ENTITY_INDEX,
-            index=index,
-        )
-        return True if exists.body else False
+        try:
+            exists = await self.client.indices.exists_alias(name=alias, index=index)
+            return True if exists.body else False
+        except NotFoundError:
+            return False
+        except (ApiError, TransportError) as te:
+            raise YenteIndexError(f"Could not check index alias: {te}") from te
 
     async def check_health(self, index: str) -> bool:
         try:
             es_ = self.client.options(request_timeout=5)
             health = await es_.cluster.health(index=index, timeout=0)
             return health.get("status") in ("yellow", "green")
+        except NotFoundError as nfe:
+            raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
         except (ApiError, TransportError) as te:
             log.error(f"Search status failure: {te}")
             return False

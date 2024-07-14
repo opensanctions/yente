@@ -25,5 +25,5 @@ class IndexNotReadyError(YenteIndexError):
     STATUS = 503
 
 
-class NotFoundError(YenteIndexError):
+class YenteNotFoundError(YenteIndexError):
     STATUS = 404

@@ -1,180 +1,79 @@
-# mypy: ignore-errors
 import pytest
 from yente import settings
-from typing import AsyncGenerator, List
+
+from yente.exc import YenteIndexError, YenteNotFoundError
+from yente.search.provider import SearchProvider
 
 
-async def as_generator(lst: List) -> AsyncGenerator:
-    for i in lst:
-        yield i
+@pytest.mark.asyncio
+async def test_provider_core(search_provider: SearchProvider):
+    # Not sure what to test....
+    with pytest.raises(YenteNotFoundError):
+        fake_index = settings.ENTITY_INDEX + "-doesnt-exist"
+        await search_provider.refresh(fake_index)
+        await search_provider.check_health(fake_index)
+
+    temp_index = settings.ENTITY_INDEX + "-provider-admin"
+    await search_provider.create_index(temp_index)
+    await search_provider.refresh(temp_index)
+    assert await search_provider.check_health(temp_index) is True
+    await search_provider.delete_index(temp_index)
 
 
-operations = [
-    {
-        "op": "ADD",
-        "entity": {
-            "id": "1",
-            "name": "test",
-            "schema": "Person",
-            "properties": {},
-        },
-    },
-    {
-        "op": "MOD",
-        "entity": {"id": "1", "name": "Vorgle", "schema": "Person", "properties": {}},
-    },
-    {
-        "op": "DEL",
-        "entity": {"id": "1"},
-    },
-]
+@pytest.mark.asyncio
+async def test_index_lifecycle(search_provider: SearchProvider):
+    # Given a non-existent index
+    # When creating it we should return nothing
+    temp_index = settings.ENTITY_INDEX + "-provider-test"
+    pre_indices = await search_provider.get_all_indices()
+    assert temp_index not in pre_indices
+    await search_provider.create_index(temp_index)
+    post_indices = await search_provider.get_all_indices()
+    assert temp_index in post_indices
+    assert len(post_indices) == len(pre_indices) + 1
+    # If it already exists we expect no error
+    await search_provider.create_index(temp_index)
+
+    with pytest.raises(YenteIndexError):
+        await search_provider.create_index(temp_index + "_FAIL")
+
+    await search_provider.refresh(temp_index)
+
+    await search_provider.delete_index(temp_index)
+    del_indices = await search_provider.get_all_indices()
+    assert temp_index not in del_indices
+    assert len(del_indices) == len(pre_indices)
 
 
-class TestSearchProvider:
-    @pytest.mark.asyncio
-    async def test_upsert_index(self, search_provider):
-        # Given a non-existent index
-        # When creating it we should return nothing
-        res = await search_provider.upsert_index("test")
-        assert res is None
-        assert await search_provider.index_exists("test") is True
-        # If it already exists we expect no error
-        res = await search_provider.upsert_index("test")
-        assert res is None
+@pytest.mark.asyncio
+async def test_alias_management(search_provider: SearchProvider):
+    alias = settings.ENTITY_INDEX + "-alias"
+    prefix = alias + "-prefix"
+    index_v1 = prefix + "-v1"
+    index_v2 = prefix + "-v2"
+    index_fail = prefix + "-fail"
+    await search_provider.create_index(index_v1)
+    await search_provider.clone_index(index_v1, index_v2)
 
-    @pytest.mark.asyncio
-    async def test_delete_index(self, search_provider):
-        # Given an existing index
-        await search_provider.upsert_index("test")
-        # It should be possible to delete it
-        await search_provider.delete_index("test")
-        assert await search_provider.index_exists("test") is False
-        # If it does not exist we do nothing
-        assert await search_provider.index_exists("does_not_exist") is False
-        try:
-            await search_provider.delete_index("does_not_exist")
-        except Exception as e:
-            raise AssertionError(
-                f"Deleting a non-existent index should not raise an error: {e}"
-            )
+    with pytest.raises(YenteIndexError):
+        await search_provider.clone_index(index_fail, index_v2)
 
-    @pytest.mark.asyncio
-    async def test_alias(self, search_provider):
-        # Given an index
-        await search_provider.upsert_index("test_1")
-        # It should be possible to create an alias for it
-        await search_provider.add_alias("test_1", "test_alias")
-        # If the alias already has the index as a source, do nothing
-        try:
-            await search_provider.add_alias("test_1", "test_alias")
-        except Exception as e:
-            raise AssertionError(
-                f"Adding an index to an alias twice should not raise an error: {e}"
-            )
-        # If the index does not exist, raise an error
-        with pytest.raises(Exception):
-            await search_provider.add_alias("does_not_exist", "test_alias")
-        # It should be possible to get the sources for an index
-        await search_provider.upsert_index("test_2")
-        await search_provider.add_alias("test_2", "test_alias")
-        sources = await search_provider.get_alias_sources("test_alias")
-        assert sorted(sources) == ["test_1", "test_2"]
-        # It should be possible to switch the sources for an alias based off of a prefix
-        await search_provider.rollover("test_alias", "test_2", "test_")
-        sources = await search_provider.get_alias_sources("test_alias")
-        assert sorted(sources) == ["test_2"]
+    assert not await search_provider.exists_index_alias(alias, index_v1)
+    assert not await search_provider.exists_index_alias(alias, index_v2)
+    assert await search_provider.get_alias_indices(alias) == []
 
-    @pytest.mark.asyncio
-    async def test_cloning(self, search_provider):
-        # Given an existing index
-        await search_provider.upsert_index("test")
-        # It should be possible to clone it
-        await search_provider.clone_index("test", "test_clone")
-        assert await search_provider.index_exists("test_clone") is True
-        # If the source does not exist, raise an error
-        with pytest.raises(Exception):
-            await search_provider.clone_index("does_not_exist", "test_clone")
-        # If the target already exists, raise an error
-        with pytest.raises(Exception):
-            await search_provider.clone_index("test", "test_clone")
-        # If the source and target are the same, raise an error
-        with pytest.raises(Exception):
-            await search_provider.clone_index("test", "test")
+    with pytest.raises(YenteIndexError):
+        await search_provider.rollover_index(alias, index_fail, prefix=prefix)
+    await search_provider.rollover_index(alias, index_v1, prefix=prefix)
+    assert await search_provider.exists_index_alias(alias, index_v1)
+    assert not await search_provider.exists_index_alias(alias, index_v2)
+    assert await search_provider.get_alias_indices(alias) == [index_v1]
 
-    @pytest.mark.asyncio
-    async def test_updating(self, search_provider):
-        # It should be able to parse all operation types
-        for op in operations:
-            try:
-                search_provider._to_operation(op, "test")
-            except Exception as e:
-                raise AssertionError(f"Operation {op['op']} should be parsable: {e}")
-        # Given an existing index
-        await search_provider.upsert_index("test")
-        # It should be possible to update it with a list of documents
-        docs = [
-            {
-                "op": "ADD",
-                "entity": {
-                    "id": "1",
-                    "name": "test",
-                    "schema": "Person",
-                    "properties": {},
-                },
-            },
-            {
-                "op": "ADD",
-                "entity": {
-                    "id": "2",
-                    "name": "Claude Foobar Michel",
-                    "schema": "Person",
-                    "properties": {},
-                },
-            },
-        ]
-        await search_provider.update(as_generator(docs), "test")
-        await search_provider.refresh("test")
-        assert await search_provider.count("test") == 2
-        # It should be possible to delete a document
-        await search_provider.update(
-            as_generator([{"op": "DEL", "entity": {"id": "2"}}]), "test"
-        )
-        await search_provider.refresh("test")
-        assert await search_provider.count("test") == 1
-        # Modify the document does not change the index count
-        await search_provider.update(
-            as_generator(
-                [
-                    {
-                        "op": "MOD",
-                        "entity": {
-                            "id": "1",
-                            "name": "Theresa May",
-                            "schema": "Person",
-                            "properties": {"hobbies": "Running through wheat fields."},
-                        },
-                    }
-                ]
-            ),
-            "test",
-        )
-        await search_provider.refresh("test")
-        assert await search_provider.count("test") == 1
+    await search_provider.rollover_index(alias, index_v2, prefix=prefix)
+    assert not await search_provider.exists_index_alias(alias, index_v1)
+    assert await search_provider.exists_index_alias(alias, index_v2)
+    assert await search_provider.get_alias_indices(alias) == [index_v2]
 
-
-class TestIndex:
-    @pytest.mark.asyncio
-    async def test_switchover(self, search_provider):
-        # It is possible to make an index the main index
-        index = Index(search_provider, "test", "1")
-        await index.upsert()
-        await index.make_main()
-        indices = await search_provider.get_backing_indexes(settings.ENTITY_INDEX)
-        assert index.name in indices
-        # It is possible to switch over to a new index
-        new_index = Index(search_provider, "test", "2")
-        await new_index.upsert()
-        await new_index.make_main()
-        indices = await search_provider.get_backing_indexes(settings.ENTITY_INDEX)
-        assert new_index.name in indices
-        assert index.name not in indices
+    await search_provider.delete_index(index_v2)
+    assert not await search_provider.exists_index_alias(alias, index_v2)
+    assert await search_provider.get_alias_indices(alias) == []
