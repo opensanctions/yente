@@ -21,6 +21,14 @@ def env_str(name: str, default: str) -> str:
     return default if value is None else value
 
 
+def env_legacy(new_name: str, old_name: str, default: str) -> str:
+    """Transition to a new environment variable name with a warning."""
+    if old_name in env:
+        msg = f"Environment variable {old_name} is deprecated, use {new_name} instead."
+        warnings.warn(msg)
+    return env_str(new_name, env_str(old_name, default))
+
+
 def random_cron() -> str:
     """Randomize the minute of the cron schedule to avoid thundering herd problem."""
     random_minute = str(random.randint(0, 59))
@@ -154,21 +162,26 @@ SCORE_THRESHOLD = 0.70
 # Default cutoff for scores that should not be returned as /match results:
 SCORE_CUTOFF = 0.50
 
-# ElasticSearch settings:
-ES_URL = env_str("YENTE_ELASTICSEARCH_URL", "http://localhost:9200")
-ES_USERNAME = env_get("YENTE_ELASTICSEARCH_USERNAME")
-ES_PASSWORD = env_get("YENTE_ELASTICSEARCH_PASSWORD")
-ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
-ES_SNIFF = as_bool(env_str("YENTE_ELASTICSEARCH_SNIFF", "false"))
-ES_CA_CERT = env_get("YENTE_ELASTICSEARCH_CA_PATH")
-ES_SHARDS = int(env_str("YENTE_ELASTICSEARCH_SHARDS", "1"))
+# ElasticSearch and OpenSearch settings:
+INDEX_TYPE = env_str("YENTE_INDEX_TYPE", "elasticsearch").lower().strip()
+if INDEX_TYPE not in ["elasticsearch", "opensearch"]:
+    raise ValueError(f"Invalid index type: {INDEX_TYPE}")
+_INDEX_URL = "http://localhost:9200"
+INDEX_URL = env_legacy("YENTE_INDEX_URL", "YENTE_ELASTICSEARCH_URL", _INDEX_URL)
 
-ES_INDEX = env_get("YENTE_ELASTICSEARCH_INDEX")
-if ES_INDEX is not None:
-    warnings.warn(
-        "YENTE_ELASTICSEARCH_INDEX will be replaced by YENTE_INDEX_NAME in a future version"
-    )
-INDEX_NAME = env_str("YENTE_INDEX_NAME", ES_INDEX or "yente")
+ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
+# TODO: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-sdk.html
+
+_INDEX_USERNAME = env_legacy("YENTE_INDEX_USERNAME", "YENTE_ELASTICSEARCH_USERNAME", "")
+INDEX_USERNAME = None if _INDEX_USERNAME == "" else _INDEX_USERNAME
+_INDEX_PASSWORD = env_legacy("YENTE_INDEX_PASSWORD", "YENTE_ELASTICSEARCH_PASSWORD", "")
+INDEX_PASSWORD = None if _INDEX_PASSWORD == "" else _INDEX_PASSWORD
+_INDEX_SNIFF = env_legacy("YENTE_INDEX_SNIFF", "YENTE_ELASTICSEARCH_SNIFF", "false")
+INDEX_SNIFF = as_bool(_INDEX_SNIFF)
+_INDEX_CA_CERT = env_legacy("YENTE_INDEX_CA_PATH", "YENTE_ELASTICSEARCH_CA_PATH", "")
+INDEX_CA_CERT = None if _INDEX_CA_CERT == "" else _INDEX_CA_CERT
+INDEX_SHARDS = int(env_legacy("YENTE_INDEX_SHARDS", "YENTE_ELASTICSEARCH_SHARDS", "1"))
+INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{INDEX_NAME}-entities"
 INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "009")
 assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
