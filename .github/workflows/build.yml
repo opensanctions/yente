@@ -28,6 +28,8 @@ jobs:
           node.name: index
           cluster.name: yente-index
           discovery.type: single-node
+          plugins.security.disabled: true
+          OPENSEARCH_INITIAL_ADMIN_PASSWORD: YenteIns3cureDefault
         ports:
           - 9400:9200
 
@@ -52,14 +54,14 @@ jobs:
           make typecheck
       - name: Run pytest tests with elasticsearch backend
         env:
-          YENTE_INDEX_TYPE: "elasticsearch"
-          YENTE_INDEX_URL: "http://elasticsearch:9200/"
+          YENTE_INDEX_TYPE: elasticsearch
+          YENTE_INDEX_URL: http://elasticsearch:9200/
         run: |
           make test
       - name: Run pytest tests with opensearch backend
         env:
-          YENTE_INDEX_TYPE: "opensearch"
-          YENTE_INDEX_URL: "http://opensearch:9400/"
+          YENTE_INDEX_TYPE: opensearch
+          YENTE_INDEX_URL: http://opensearch:9400/
         run: |
           make test
       - name: Build a distribution
