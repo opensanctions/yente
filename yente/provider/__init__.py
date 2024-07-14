@@ -9,11 +9,13 @@ from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 
+__all__ = ["with_provider", "SearchProvider"]
+
 
 @asynccontextmanager
 async def with_provider() -> AsyncIterator[SearchProvider]:
     if settings.INDEX_TYPE == "opensearch":
-        provider = await OpenSearchProvider.create()
+        provider: SearchProvider = await OpenSearchProvider.create()
     else:
         provider = await ElasticSearchProvider.create()
     try:

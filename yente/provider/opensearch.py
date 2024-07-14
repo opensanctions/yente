@@ -1,10 +1,9 @@
 import json
 import asyncio
 import logging
-import warnings
 from typing import Any, Dict, List, Optional, cast
 from typing import AsyncIterator
-from opensearchpy import AsyncOpenSearch, OpenSearchWarning
+from opensearchpy import AsyncOpenSearch
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError
 
@@ -17,7 +16,6 @@ from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
-# warnings.filterwarnings("ignore", category=OpenSearchWarning)
 
 
 class OpenSearchProvider(SearchProvider):
@@ -149,7 +147,8 @@ class OpenSearchProvider(SearchProvider):
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:
-            return await self.client.indices.exists_alias(name=alias, index=index)
+            resp = await self.client.indices.exists_alias(name=alias, index=index)
+            return bool(resp)
         except NotFoundError:
             return False
         except TransportError as te:
@@ -185,7 +184,7 @@ class OpenSearchProvider(SearchProvider):
 
         try:
             async with query_semaphore:
-                body = {"query": query}
+                body: Dict[str, Any] = {"query": query}
                 if aggregations is not None:
                     body["aggregations"] = aggregations
                 if sort is not None:
