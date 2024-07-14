@@ -19,7 +19,7 @@ from yente.search.mapping import (
     NAMES_FIELD,
     NAME_PHONETIC_FIELD,
 )
-from yente.search.provider import SearchProvider, with_provider
+from yente.provider import SearchProvider, with_provider
 from yente.search.util import parse_index_name
 from yente.search.util import construct_index_name
 from yente.data.util import expand_dates, phonetic_names
@@ -168,6 +168,7 @@ async def index_entities(
         next_index,
         prefix=dataset_prefix,
     )
+    log.info("Index is now aliased to: %s" % alias, index=next_index)
     return True
 
 

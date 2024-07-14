@@ -11,7 +11,7 @@ from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.routers.util import get_request_provider
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
 

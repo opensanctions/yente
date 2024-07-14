@@ -8,7 +8,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityResponse, SearchResponse
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict

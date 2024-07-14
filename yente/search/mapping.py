@@ -29,7 +29,7 @@ INDEX_SETTINGS = {
     "index": {
         "refresh_interval": "5s",
         "auto_expand_replicas": "0-all",
-        "number_of_shards": settings.ES_SHARDS,
+        "number_of_shards": settings.INDEX_SHARDS,
     },
 }
 NAMES_FIELD = NameType.group or "names"

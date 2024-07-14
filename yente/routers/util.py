@@ -7,7 +7,7 @@ from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
 from yente.search.base import get_opaque_id
-from yente.search.provider import SearchProvider, with_provider
+from yente.provider import SearchProvider, with_provider
 
 
 PATH_DATASET = Path(

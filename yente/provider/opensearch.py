@@ -1,66 +1,56 @@
 import json
 import asyncio
+import logging
 import warnings
-from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional, cast
 from typing import AsyncIterator
-from elasticsearch import ApiError, AsyncElasticsearch, ElasticsearchWarning
-from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import NotFoundError
-from elasticsearch.exceptions import TransportError, ConnectionError
+from opensearchpy import AsyncOpenSearch, OpenSearchWarning
+from opensearchpy.helpers import async_bulk, BulkIndexError
+from opensearchpy.exceptions import NotFoundError, TransportError
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.search.base import query_semaphore
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
+from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
-warnings.filterwarnings("ignore", category=ElasticsearchWarning)
-
-# class SearchProvider(ABC):
-#     pass
+logging.getLogger("opensearch").setLevel(logging.ERROR)
+# warnings.filterwarnings("ignore", category=OpenSearchWarning)
 
 
-class SearchProvider(object):
-    # FIXME: Naming this like the future interface so that we can introduce it all over
-    # the app and learn about what the API should work like.
-
+class OpenSearchProvider(SearchProvider):
     @classmethod
-    async def create(cls) -> "SearchProvider":
+    async def create(cls) -> "OpenSearchProvider":
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
             request_timeout=30,
             retry_on_timeout=True,
             max_retries=10,
+            hosts=[settings.INDEX_URL],
         )
-        if settings.ES_SNIFF:
+        if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
             kwargs["sniffer_timeout"] = 60
             kwargs["sniff_on_connection_fail"] = True
-        if settings.ES_CLOUD_ID:
-            log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
-            kwargs["cloud_id"] = settings.ES_CLOUD_ID
-        else:
-            kwargs["hosts"] = [settings.ES_URL]
-        if settings.ES_USERNAME and settings.ES_PASSWORD:
-            auth = (settings.ES_USERNAME, settings.ES_PASSWORD)
+        if settings.INDEX_USERNAME and settings.INDEX_PASSWORD:
+            auth = (settings.INDEX_USERNAME, settings.INDEX_PASSWORD)
             kwargs["basic_auth"] = auth
-        if settings.ES_CA_CERT:
-            kwargs["ca_certs"] = settings.ES_CA_CERT
+        if settings.INDEX_CA_CERT:
+            kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
             try:
-                es = AsyncElasticsearch(**kwargs)
-                es_ = es.options(request_timeout=15)
-                await es_.cluster.health(wait_for_status="yellow")
-                return SearchProvider(es)
+                es = AsyncOpenSearch(**kwargs)
+                await es.cluster.health(wait_for_status="yellow")
+                return OpenSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
-                log.error("Cannot connect to ElasticSearch: %r" % exc)
+                log.error("Cannot connect to OpenSearch: %r" % exc)
                 await asyncio.sleep(retry**2)
 
-        raise RuntimeError("Could not connect to ElasticSearch.")
+        raise RuntimeError("Could not connect to OpenSearch.")
 
-    def __init__(self, client: AsyncElasticsearch) -> None:
+    def __init__(self, client: AsyncOpenSearch) -> None:
         self.client = client
 
     async def close(self) -> None:
@@ -68,7 +58,8 @@ class SearchProvider(object):
 
     def set_trace_id(self, id: str) -> None:
         """Set the trace ID for the requests."""
-        self.client = self.client.options(opaque_id=id)
+        # self.client.transport.
+        pass
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
@@ -89,19 +80,21 @@ class SearchProvider(object):
             return list(resp.keys())
         except NotFoundError:
             return []
-        except (ApiError, TransportError) as te:
+        except TransportError as te:
             raise YenteIndexError(f"Could not get alias indices: {te}") from te
 
     async def rollover_index(self, alias: str, next_index: str, prefix: str) -> None:
         """Remove all existing indices with a given prefix from the alias and
         add the new one."""
         try:
-            actions = []
-            actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
-            actions.append({"add": {"index": next_index, "alias": alias}})
-            await self.client.indices.update_aliases(actions=actions)
-            log.info("Index is now aliased to: %s" % alias, index=next_index)
-        except (ApiError, TransportError) as te:
+            body = {
+                "actions": [
+                    {"remove": {"index": f"{prefix}*", "alias": alias}},
+                    {"add": {"index": next_index, "alias": alias}},
+                ]
+            }
+            await self.client.indices.update_aliases(body)
+        except TransportError as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
     async def clone_index(self, base_version: str, target_version: str) -> None:
@@ -111,7 +104,7 @@ class SearchProvider(object):
         try:
             await self.client.indices.put_settings(
                 index=base_version,
-                settings={"index.blocks.read_only": True},
+                body={"settings": {"index.blocks.read_only": True}},
             )
             await self.delete_index(target_version)
             await self.client.indices.clone(
@@ -123,10 +116,10 @@ class SearchProvider(object):
             )
             await self.client.indices.put_settings(
                 index=base_version,
-                settings={"index.blocks.read_only": False},
+                body={"settings": {"index.blocks.read_only": False}},
             )
             log.info("Cloned index", base=base_version, target=target_version)
-        except (ApiError, TransportError) as te:
+        except TransportError as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
@@ -134,12 +127,12 @@ class SearchProvider(object):
         """Create a new index with the given name."""
         log.info("Create index", index=index)
         try:
-            await self.client.indices.create(
-                index=index,
-                mappings=make_entity_mapping(),
-                settings=INDEX_SETTINGS,
-            )
-        except ApiError as exc:
+            body = {
+                "settings": INDEX_SETTINGS,
+                "mappings": make_entity_mapping(),
+            }
+            await self.client.indices.create(index=index, body=body)
+        except TransportError as exc:
             if exc.error == "resource_already_exists_exception":
                 return
             raise YenteIndexError(f"Could not create index: {exc}") from exc
@@ -150,27 +143,25 @@ class SearchProvider(object):
             await self.client.indices.delete(index=index)
         except NotFoundError:
             pass
-        except (ApiError, TransportError) as te:
+        except TransportError as te:
             raise YenteIndexError(f"Could not delete index: {te}") from te
 
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:
-            exists = await self.client.indices.exists_alias(name=alias, index=index)
-            return True if exists.body else False
+            return await self.client.indices.exists_alias(name=alias, index=index)
         except NotFoundError:
             return False
-        except (ApiError, TransportError) as te:
+        except TransportError as te:
             raise YenteIndexError(f"Could not check index alias: {te}") from te
 
     async def check_health(self, index: str) -> bool:
         try:
-            es_ = self.client.options(request_timeout=5)
-            health = await es_.cluster.health(index=index, timeout=0)
+            health = await self.client.cluster.health(index=index, timeout=5)
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
-        except (ApiError, TransportError) as te:
+        except TransportError as te:
             log.error(f"Search status failure: {te}")
             return False
 
@@ -194,23 +185,20 @@ class SearchProvider(object):
 
         try:
             async with query_semaphore:
+                body = {"query": query}
+                if aggregations is not None:
+                    body["aggregations"] = aggregations
+                if sort is not None:
+                    body["sort"] = sort
                 response = await self.client.search(
                     index=index,
-                    query=query,
                     size=size,
                     from_=from_,
-                    sort=sort,
-                    aggregations=aggregations,
+                    body=body,
                     search_type=search_type,
                 )
-                return cast(Dict[str, Any], response.body)
-        except TransportError as te:
-            log.warning(
-                f"Backend connection error: {te.message}",
-                errors=te.errors,
-            )
-            raise YenteIndexError(f"Could not connect to index: {te.message}") from te
-        except ApiError as ae:
+                return cast(Dict[str, Any], response)
+        except TransportError as ae:
             if ae.error == "index_not_found_exception":
                 msg = (
                     f"Index {index} does not exist. This may be caused by a misconfiguration,"
@@ -220,7 +208,7 @@ class SearchProvider(object):
             if ae.error == "search_phase_execution_exception":
                 raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
             log.warning(
-                f"API error {ae.status_code}: {ae.message}",
+                f"API error {ae.status_code}: {ae.error}",
                 index=index,
                 query=json.dumps(query),
             )
@@ -238,12 +226,3 @@ class SearchProvider(object):
             )
         except BulkIndexError as exc:
             raise YenteIndexError(f"Could not index entities: {exc}") from exc
-
-
-@asynccontextmanager
-async def with_provider() -> AsyncIterator[SearchProvider]:
-    provider = await SearchProvider.create()
-    try:
-        yield provider
-    finally:
-        await provider.close()

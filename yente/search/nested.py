@@ -6,7 +6,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.common import EntityResponse
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.search.search import result_entities
 
 log = get_logger(__name__)

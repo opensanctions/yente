@@ -10,7 +10,7 @@ from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)

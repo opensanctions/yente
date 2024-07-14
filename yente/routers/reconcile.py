@@ -32,7 +32,7 @@ from yente.data.freebase import (
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX

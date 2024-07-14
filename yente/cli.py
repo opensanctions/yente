@@ -6,7 +6,7 @@ from yente import settings
 from yente.app import create_app
 from yente.logs import configure_logging, get_logger
 from yente.search.indexer import update_index
-from yente.search.provider import with_provider
+from yente.provider import with_provider
 
 
 log = get_logger("yente")

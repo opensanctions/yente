@@ -12,13 +12,15 @@ services:
       - cluster.name=opensanctions-index
       - discovery.type=single-node
       - bootstrap.memory_lock=true
+      - plugins.security.disabled=true
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=YenteIns3cureDefault"
     ulimits:
       memlock:
         soft: -1
         hard: -1
     volumes:
-      - index-os-data:/usr/share/opensearch/data
+      - index-ops-data:/usr/share/opensearch/data
     deploy:
       placement:
         max_replicas_per_node: 1
@@ -58,4 +60,4 @@ services:
         window: 120s
 
 volumes:
-  index-os-data: null
+  index-ops-data: null

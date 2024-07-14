@@ -2,7 +2,7 @@ import pytest
 from yente import settings
 
 from yente.exc import YenteIndexError, YenteNotFoundError
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 
 
 @pytest.mark.asyncio

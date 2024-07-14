@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
-from yente.search.provider import with_provider
+from yente.provider import with_provider
 
 
 run_id = uuid4().hex

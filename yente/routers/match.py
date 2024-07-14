@@ -7,7 +7,7 @@ from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityMatches
-from yente.search.provider import SearchProvider
+from yente.provider import SearchProvider
 from yente.search.queries import entity_query, FilterDict
 from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
