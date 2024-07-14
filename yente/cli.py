@@ -47,7 +47,7 @@ def reindex(force: bool) -> None:
 async def _clear_index() -> None:
     async with with_provider() as provider:
         for index in await provider.get_all_indices():
-            if index.startswith(settings.ES_INDEX):
+            if index.startswith(settings.INDEX_NAME):
                 log.info("Delete index", index=index)
                 await provider.delete_index(index=index)
 
