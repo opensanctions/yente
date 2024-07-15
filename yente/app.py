@@ -3,7 +3,6 @@ import aiocron  # type: ignore
 from uuid import uuid4
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
-from elasticsearch import ApiError, TransportError
 from pydantic import ValidationError
 from fastapi import FastAPI
 from fastapi import Request, Response
@@ -77,30 +76,18 @@ async def request_middleware(
     return response
 
 
-async def yente_error_handler(request: Request, exc: YenteError) -> Response:
+async def yente_error_handler(req: Request, exc: YenteError) -> Response:
     log.exception(f"App error {exc.status}: {exc.detail}")
     return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
 
 
-async def api_error_handler(request: Request, exc: ApiError) -> Response:
-    log.exception(f"Search error {exc.status_code}: {exc.message}")
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
-
-
-async def transport_error_handler(request: Request, exc: TransportError) -> Response:
-    log.exception(f"Transport: {exc.message}")
-    return JSONResponse(status_code=500, content={"detail": exc.message})
-
-
-async def validation_error_handler(request: Request, exc: ValidationError) -> Response:
+async def validation_error_handler(req: Request, exc: ValidationError) -> Response:
     log.warn(f"Validation error: {exc}")
     body = {"detail": exc.title, "errors": exc.errors()}
     return JSONResponse(status_code=400, content=body)
 
 
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
-    ApiError: api_error_handler,
-    TransportError: transport_error_handler,
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
 }
