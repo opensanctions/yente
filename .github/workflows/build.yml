@@ -41,7 +41,7 @@ jobs:
       - name: Run pytest tests
         env:
           YENTE_INDEX_TYPE: elasticsearch
-          YENTE_INDEX_URL: http://elasticsearch:9200/
+          YENTE_INDEX_URL: http://localhost:9200/
         run: |
           make test
 
@@ -57,7 +57,7 @@ jobs:
           plugins.security.disabled: true
           OPENSEARCH_INITIAL_ADMIN_PASSWORD: YenteIns3cureDefault
         ports:
-          - 9400:9200
+          - 9200:9200
 
     steps:
       - uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
       - name: Run pytest tests with opensearch backend
         env:
           YENTE_INDEX_TYPE: opensearch
-          YENTE_INDEX_URL: http://opensearch:9400/
+          YENTE_INDEX_URL: http://localhost:9200/
         run: |
           make test
 
