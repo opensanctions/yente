@@ -1,8 +1,17 @@
+# mypy: ignore-errors
 import pytest
 from yente import settings
 
 from yente.exc import YenteIndexError, YenteNotFoundError
-from yente.provider import SearchProvider
+from yente.provider import SearchProvider, ElasticSearchProvider, OpenSearchProvider
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", [ElasticSearchProvider, OpenSearchProvider])
+async def test_is_singleton(provider):
+    s1 = await provider.create()
+    s2 = await provider.create()
+    assert id(s1) == id(s2)
 
 
 @pytest.mark.asyncio
