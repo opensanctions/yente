@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 from typing import AsyncIterator
 from threading import Lock
