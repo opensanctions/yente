@@ -44,28 +44,21 @@ class ElasticSearchProvider(SearchProvider):
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
             try:
-                es = ElasticSearchProvider(**kwargs)
-                await es.wait_for_ready()
-                return es
+                es = AsyncElasticsearch(**kwargs)
+                es_ = es.options(request_timeout=15)
+                await es_.cluster.health(wait_for_status="yellow")
+                return ElasticSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to ElasticSearch: %r" % exc)
                 await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to ElasticSearch.")
 
-    def __init__(self, **kwargs: dict[str, Any]) -> None:
-        self._client = AsyncElasticsearch(**kwargs)
-        self.ready = False
+    def __init__(self, client: AsyncElasticsearch) -> None:
+        self._client = client
 
     async def close(self) -> None:
         await self._client.close()
-
-    async def wait_for_ready(self) -> None:
-        if not self.ready:
-            await self.client(request_timeout=15).cluster.health(
-                wait_for_status="yellow"
-            )
-            self.ready = True
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
