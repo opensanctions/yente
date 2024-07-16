@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Any, Dict, List, Optional
 from typing import AsyncIterator
 from threading import Lock
@@ -18,10 +19,6 @@ class SingletonMeta(type):
 
 class SearchProvider(object, metaclass=SingletonMeta):
     async def close(self) -> None:
-        raise NotImplementedError
-
-    def set_trace_id(self, id: str) -> None:
-        """Set the trace ID for the requests."""
         raise NotImplementedError
 
     async def refresh(self, index: str) -> None:

@@ -6,7 +6,7 @@ from nomenklatura.matching import ALGORITHMS, ScoringAlgorithm, get_algorithm
 from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
-from yente.search.base import get_opaque_id
+from yente.search.base import get_trace_id
 from yente.provider import SearchProvider, with_provider
 
 
@@ -43,5 +43,4 @@ async def get_dataset(name: str) -> Dataset:
 
 async def get_request_provider() -> AsyncIterator[SearchProvider]:
     async with with_provider() as provider:
-        provider.set_trace_id(get_opaque_id())
         yield provider

@@ -1,5 +1,5 @@
 import asyncio
-from typing import cast
+from typing import Any
 from structlog.contextvars import get_contextvars
 
 from yente import settings
@@ -10,6 +10,6 @@ log = get_logger(__name__)
 query_semaphore = asyncio.Semaphore(settings.QUERY_CONCURRENCY)
 
 
-def get_opaque_id() -> str:
+def get_trace_id() -> Any:
     ctx = get_contextvars()
-    return cast(str, ctx.get("trace_id"))
+    return ctx.get("trace_id")
