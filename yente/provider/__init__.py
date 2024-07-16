@@ -1,5 +1,6 @@
 from typing import AsyncIterator
 from contextlib import asynccontextmanager
+import asyncio
 
 from yente import settings
 from yente.logs import get_logger
@@ -11,14 +12,26 @@ log = get_logger(__name__)
 
 __all__ = ["with_provider", "SearchProvider"]
 
+PROVIDERS: dict[int, SearchProvider] = {}
+
+
+async def get_provider() -> SearchProvider:
+    if settings.INDEX_TYPE == "opensearch":
+        return await OpenSearchProvider.create()
+    else:
+        return await ElasticSearchProvider.create()
+
 
 @asynccontextmanager
 async def with_provider() -> AsyncIterator[SearchProvider]:
-    if settings.INDEX_TYPE == "opensearch":
-        provider: SearchProvider = await OpenSearchProvider.create()
-    else:
-        provider = await ElasticSearchProvider.create()
     try:
+        loop_id = id(asyncio.get_event_loop())
+        if loop_id in PROVIDERS:
+            provider = PROVIDERS[loop_id]
+        else:
+            provider = await get_provider()
+            PROVIDERS[loop_id] = provider
         yield provider
     finally:
+        PROVIDERS.pop(id(asyncio.get_event_loop()), None)
         await provider.close()

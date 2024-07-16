@@ -1,24 +1,8 @@
 from typing import Any, Dict, List, Optional
 from typing import AsyncIterator
-from threading import Lock
-from asyncio import get_running_loop
 
 
-class SingletonMeta(type):
-    # This is a thread-safe implementation of the Singleton pattern. Shamelessly stolen from
-    # https://refactoring.guru/design-patterns/singleton/python/example#example-1
-    _instances: Dict[str, Any] = {}
-    _lock: Lock = Lock()
-
-    def __call__(cls, *args: Any, **kwds: Any) -> Any:
-        with cls._lock:
-            loop_class = str(hash(get_running_loop())) + str(cls)
-            if loop_class not in cls._instances:
-                cls._instances[loop_class] = super().__call__(*args, **kwds)
-        return cls._instances[loop_class]
-
-
-class SearchProvider(object, metaclass=SingletonMeta):
+class SearchProvider(object):
     async def close(self) -> None:
         raise NotImplementedError
 
