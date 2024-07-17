@@ -49,27 +49,27 @@ class OpenSearchProvider(SearchProvider):
         raise RuntimeError("Could not connect to OpenSearch.")
 
     def __init__(self, client: AsyncOpenSearch) -> None:
-        self._client = client
+        self.client = client
 
     async def close(self) -> None:
-        await self._client.close()
+        await self.client.close()
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
         try:
-            await self.client().indices.refresh(index=index)
+            await self.client.indices.refresh(index=index)
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
 
     async def get_all_indices(self) -> List[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
-        indices: Any = await self.client().cat.indices(format="json")
+        indices: Any = await self.client.cat.indices(format="json")
         return [index.get("index") for index in indices]
 
     async def get_alias_indices(self, alias: str) -> List[str]:
         """Get a list of indices that are aliased to the entity query alias."""
         try:
-            resp = await self.client().indices.get_alias(name=alias)
+            resp = await self.client.indices.get_alias(name=alias)
             return list(resp.keys())
         except NotFoundError:
             return []
@@ -86,7 +86,7 @@ class OpenSearchProvider(SearchProvider):
                     {"add": {"index": next_index, "alias": alias}},
                 ]
             }
-            await self.client().indices.update_aliases(body)
+            await self.client.indices.update_aliases(body)
         except TransportError as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
@@ -95,19 +95,19 @@ class OpenSearchProvider(SearchProvider):
         if base_version == target_version:
             raise ValueError("Cannot clone an index to itself.")
         try:
-            await self.client().indices.put_settings(
+            await self.client.indices.put_settings(
                 index=base_version,
                 body={"settings": {"index.blocks.read_only": True}},
             )
             await self.delete_index(target_version)
-            await self.client().indices.clone(
+            await self.client.indices.clone(
                 index=base_version,
                 target=target_version,
                 body={
                     "settings": {"index": {"blocks": {"read_only": False}}},
                 },
             )
-            await self.client().indices.put_settings(
+            await self.client.indices.put_settings(
                 index=base_version,
                 body={"settings": {"index.blocks.read_only": False}},
             )
@@ -124,7 +124,7 @@ class OpenSearchProvider(SearchProvider):
                 "settings": INDEX_SETTINGS,
                 "mappings": make_entity_mapping(),
             }
-            await self.client().indices.create(index=index, body=body)
+            await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
             if exc.error == "resource_already_exists_exception":
                 return
@@ -133,7 +133,7 @@ class OpenSearchProvider(SearchProvider):
     async def delete_index(self, index: str) -> None:
         """Delete a given index if it exists."""
         try:
-            await self.client().indices.delete(index=index)
+            await self.client.indices.delete(index=index)
         except NotFoundError:
             pass
         except TransportError as te:
@@ -142,7 +142,7 @@ class OpenSearchProvider(SearchProvider):
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:
-            resp = await self.client().indices.exists_alias(name=alias, index=index)
+            resp = await self.client.indices.exists_alias(name=alias, index=index)
             return bool(resp)
         except NotFoundError:
             return False
@@ -151,7 +151,7 @@ class OpenSearchProvider(SearchProvider):
 
     async def check_health(self, index: str) -> bool:
         try:
-            health = await self.client().cluster.health(index=index, timeout=5)
+            health = await self.client.cluster.health(index=index, timeout=5)
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
@@ -184,7 +184,7 @@ class OpenSearchProvider(SearchProvider):
                     body["aggregations"] = aggregations
                 if sort is not None:
                     body["sort"] = sort
-                response = await self.client().search(
+                response = await self.client.search(
                     index=index,
                     size=size,
                     from_=from_,
@@ -212,7 +212,7 @@ class OpenSearchProvider(SearchProvider):
         """Index a list of entities into the search index."""
         try:
             await async_bulk(
-                self.client(),
+                self.client,
                 entities,
                 chunk_size=1000,
                 yield_ok=False,
@@ -220,6 +220,3 @@ class OpenSearchProvider(SearchProvider):
             )
         except BulkIndexError as exc:
             raise YenteIndexError(f"Could not index entities: {exc}") from exc
-
-    def client(self) -> AsyncOpenSearch:
-        return self._client

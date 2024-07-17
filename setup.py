@@ -23,7 +23,7 @@ setup(
         "aiocron==1.8",
         "aiocsv==1.3.2",
         "aiofiles==24.1.0",
-        "types-aiofiles>=24.0,<24.2",
+        "types-aiofiles>=24.0,<25.0",
         "aiohttp[speedups]==3.9.5",
         "elasticsearch[async]==8.14.0",
         "opensearch-py[async]==2.6.0",
