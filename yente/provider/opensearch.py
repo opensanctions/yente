@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, cast
 from typing import AsyncIterator
-from opensearchpy import AsyncOpenSearch
+from opensearchpy import AsyncOpenSearch, AWSV4SignerAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError
 
@@ -34,13 +34,25 @@ class OpenSearchProvider(SearchProvider):
             kwargs["sniff_on_connection_fail"] = True
         if settings.INDEX_USERNAME and settings.INDEX_PASSWORD:
             auth = (settings.INDEX_USERNAME, settings.INDEX_PASSWORD)
-            kwargs["basic_auth"] = auth
+            kwargs["http_auth"] = auth
+        if settings.OPENSEARCH_REGION and settings.OPENSEARCH_SERVICE:
+            from boto3 import Session
+
+            service = settings.OPENSEARCH_SERVICE.lower().strip()
+            if service not in ["es", "aoss"]:
+                raise RuntimeError(f"Invalid OpenSearch service: {service}")
+            credentials = Session().get_credentials()
+            kwargs["http_auth"] = AWSV4SignerAuth(
+                credentials,
+                settings.OPENSEARCH_REGION,
+                settings.OPENSEARCH_SERVICE,
+            )
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
             try:
                 es = AsyncOpenSearch(**kwargs)
-                await es.cluster.health(wait_for_status="yellow")
+                await es.cluster.health(wait_for_status="yellow", timeout=5)
                 return OpenSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to OpenSearch: %r" % exc)

@@ -170,9 +170,6 @@ if INDEX_TYPE not in ["elasticsearch", "opensearch"]:
 _INDEX_URL = "http://localhost:9200"
 INDEX_URL = env_legacy("YENTE_INDEX_URL", "YENTE_ELASTICSEARCH_URL", _INDEX_URL)
 
-ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
-# TODO: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-sdk.html
-
 _INDEX_USERNAME = env_legacy("YENTE_INDEX_USERNAME", "YENTE_ELASTICSEARCH_USERNAME", "")
 INDEX_USERNAME = None if _INDEX_USERNAME == "" else _INDEX_USERNAME
 _INDEX_PASSWORD = env_legacy("YENTE_INDEX_PASSWORD", "YENTE_ELASTICSEARCH_PASSWORD", "")
@@ -186,6 +183,13 @@ INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente"
 ENTITY_INDEX = f"{INDEX_NAME}-entities"
 INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "009")
 assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
+
+# ElasticSearch-only options:
+ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
+
+# OpenSearch-only options:
+OPENSEARCH_REGION = env_get("YENTE_OPENSEARCH_REGION")
+OPENSEARCH_SERVICE = env_get("YENTE_OPENSEARCH_SERVICE")
 
 # Log output can be formatted as JSON:
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
