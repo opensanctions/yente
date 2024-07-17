@@ -69,7 +69,6 @@ class DatasetUpdater(object):
                 continue
             obj.delta_urls.append((version, versions[version]))
 
-        # TODO: is this smart? this avoids running clones when there is not change:
         obj.target_version = max(sorted_versions)
         return obj
 
@@ -92,7 +91,7 @@ class DatasetUpdater(object):
             return False
         if self.force_full:
             return True
-        if self.delta_urls is not None and len(self.delta_urls) < 1:
+        if self.delta_urls is not None and len(self.delta_urls) == 0:
             return False
         if self.target_version == self.base_version:
             return False
