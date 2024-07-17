@@ -18,6 +18,7 @@ from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
 from yente.search.indexer import update_index_threaded
+from yente.provider import close_provider
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.AUTO_REINDEX:
         update_index_threaded()
     yield
+    close_provider()
 
 
 async def request_middleware(
