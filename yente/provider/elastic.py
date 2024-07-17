@@ -154,9 +154,8 @@ class ElasticSearchProvider(SearchProvider):
 
     async def check_health(self, index: str) -> bool:
         try:
-            health = await self.client(request_timeout=5).cluster.health(
-                index=index, timeout=0
-            )
+            client = self.client.options(request_timeout=5)
+            health = await client.cluster.health(index=index, timeout=0)
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
