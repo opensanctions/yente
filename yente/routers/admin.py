@@ -10,8 +10,7 @@ from yente.logs import get_logger
 from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
-from yente.routers.util import get_request_provider
-from yente.provider import SearchProvider
+from yente.provider import SearchProvider, get_provider
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
 
@@ -40,7 +39,7 @@ async def healthz() -> StatusResponse:
     responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
 )
 async def readyz(
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> StatusResponse:
     """Search index health check. This is used to know if the service has completed
     its index building."""
@@ -62,7 +61,7 @@ async def readyz(
     include_in_schema=False,
 )
 async def catalog(
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> DataCatalogModel:
     """Return the service manifest, which includes a list of all indexed datasets.
 

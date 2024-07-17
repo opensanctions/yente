@@ -8,7 +8,7 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityResponse, SearchResponse
-from yente.provider import SearchProvider
+from yente.provider import SearchProvider, get_provider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict
@@ -17,7 +17,7 @@ from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import serialize_entity
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
-from yente.routers.util import get_dataset, get_request_provider
+from yente.routers.util import get_dataset
 from yente.routers.util import PATH_DATASET, TS_PATTERN
 
 log = get_logger(__name__)
@@ -85,7 +85,7 @@ async def search(
         DEFAULT_FACETS,
         title="Facet counts to include in response.",
     ),
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -168,7 +168,7 @@ async def fetch_entity(
         True,
         title="Include adjacent entities (e.g. addresses, family) in response",
     ),
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> Union[RedirectResponse, EntityResponse]:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent

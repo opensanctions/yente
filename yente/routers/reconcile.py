@@ -32,13 +32,12 @@ from yente.data.freebase import (
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
-from yente.provider import SearchProvider
+from yente.provider import SearchProvider, get_provider
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX
 from yente.routers.util import TS_PATTERN, ALGO_HELP
 from yente.routers.util import get_algorithm_by_name, get_dataset
-from yente.routers.util import get_request_provider
 
 
 log = get_logger(__name__)
@@ -58,7 +57,7 @@ router = APIRouter()
 async def reconcile(
     request: Request,
     dataset: str = PATH_DATASET,
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> FreebaseManifest:
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
@@ -127,7 +126,7 @@ async def reconcile_post(
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> Dict[str, FreebaseEntityResult]:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
@@ -218,7 +217,7 @@ async def reconcile_suggest_entity(
         description="Number of suggestions to return",
         le=settings.MAX_PAGE,
     ),
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> FreebaseEntitySuggestResponse:
     """Suggest an entity based on a text query. This is functionally very
     similar to the basic search API, but returns data in the structure assumed
@@ -253,7 +252,7 @@ async def reconcile_suggest_entity(
 async def reconcile_suggest_property(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> FreebasePropertySuggestResponse:
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
@@ -282,7 +281,7 @@ async def reconcile_suggest_property(
 async def reconcile_suggest_type(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
-    provider: SearchProvider = Depends(get_request_provider),
+    provider: SearchProvider = Depends(get_provider),
 ) -> FreebaseTypeSuggestResponse:
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the

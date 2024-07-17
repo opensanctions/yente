@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Type
+from typing import Type
 from fastapi import Path, Query
 from fastapi import HTTPException
 from nomenklatura.matching import ALGORITHMS, ScoringAlgorithm, get_algorithm
@@ -6,7 +6,6 @@ from nomenklatura.matching import ALGORITHMS, ScoringAlgorithm, get_algorithm
 from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
-from yente.provider import SearchProvider, get_provider
 
 
 PATH_DATASET = Path(
@@ -38,8 +37,3 @@ async def get_dataset(name: str) -> Dataset:
     if dataset is None:
         raise HTTPException(404, detail="No such dataset.")
     return dataset
-
-
-async def get_request_provider() -> AsyncIterator[SearchProvider]:
-    """Get a search provider for the current request."""
-    yield await get_provider()
