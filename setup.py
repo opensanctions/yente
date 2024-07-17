@@ -60,7 +60,7 @@ setup(
             "flake8>=2.6.0",
             "black",
             "types-aiofiles>=24.0,<25.0",
-            "types-boto",
+            "boto3-stubs",
         ],
     },
     entry_points={
