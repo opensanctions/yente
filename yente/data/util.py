@@ -12,7 +12,8 @@ from rigour.text.scripts import is_modern_alphabet
 from rigour.text.distance import levenshtein
 from fingerprints import remove_types, clean_name_light
 from nomenklatura.util import fingerprint_name, names_word_list
-from yente.settings import HTTP_PROXY, VERSION, AUTH_TOKEN
+
+from yente import settings
 
 
 @lru_cache(maxsize=5000)
@@ -133,16 +134,16 @@ class Authenticator(httpx.Auth):
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
         response = yield request
-        if response.status_code == 401 and AUTH_TOKEN:
-            request.headers["Authentication"] = f"Token {AUTH_TOKEN}"
+        if response.status_code == 401 and settings.AUTH_TOKEN:
+            request.headers["Authentication"] = f"Token {settings.AUTH_TOKEN}"
             yield request
 
 
 @asynccontextmanager
 async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = httpx.AsyncHTTPTransport(retries=3)
-    proxy = HTTP_PROXY if HTTP_PROXY != "" else None
-    headers = {"User-Agent": f"Yente/{VERSION}"}
+    proxy = settings.HTTP_PROXY if settings.HTTP_PROXY != "" else None
+    headers = {"User-Agent": f"Yente/{settings.VERSION}"}
     async with httpx.AsyncClient(
         transport=transport,
         http2=True,
