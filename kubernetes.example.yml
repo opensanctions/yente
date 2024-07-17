@@ -90,7 +90,7 @@ spec:
               #   secretKeyRef:
               #   name: api-test-secrets
               #     key: update-token
-            - name: YENTE_ELASTICSEARCH_URL
+            - name: YENTE_INDEX_URL
               value: http://yente-index-es-default:9200
             - name: YENTE_MANIFEST
               value: /app/manifests/production.yml
@@ -98,7 +98,7 @@ spec:
               value: "*/30 * * * *"
             - name: YENTE_AUTO_REINDEX
               value: "false"
-            - name: YENTE_ELASTICSEARCH_INDEX
+            - name: YENTE_INDEX_NAME
               value: "yente"
             - name: FORWARDED_ALLOW_IPS
               value: "*"
@@ -184,11 +184,11 @@ spec:
                   value: "8000"
                 - name: YENTE_LOG_JSON
                   value: "true"
-                - name: YENTE_ELASTICSEARCH_URL
+                - name: YENTE_INDEX_URL
                   value: http://yente-index-es-default:9200
                 - name: YENTE_MANIFEST
                   value: /app/manifests/production.yml
-                - name: YENTE_ELASTICSEARCH_INDEX
+                - name: YENTE_INDEX_NAME
                   value: "yente"
           restartPolicy: OnFailure
           volumes:
@@ -209,7 +209,7 @@ kind: Elasticsearch
 metadata:
   name: yente-index
 spec:
-  version: 8.2.2
+  version: 8.14.3
   http:
     tls:
       selfSignedCertificate:
