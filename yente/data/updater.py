@@ -1,6 +1,7 @@
 from typing import Optional, TypedDict, Dict, List, Any
 from typing import AsyncGenerator, Tuple
 
+from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.loader import load_json_url, load_json_lines
@@ -41,6 +42,8 @@ class DatasetUpdater(object):
         if dataset.delta_url is None:
             log.debug("No delta updates available for: %r" % dataset.name)
             return obj
+        if not settings.DELTA_UPDATES:
+            return obj
         if obj.base_version is None or obj.target_version <= obj.base_version:
             return obj
 
@@ -77,7 +80,9 @@ class DatasetUpdater(object):
         """Check if there is sequence of delta entity patches that can be loaded."""
         if self.force_full:
             return False
-        return self.delta_urls is not None and len(self.delta_urls) > 0
+        if not settings.DELTA_UPDATES:
+            return False
+        return self.delta_urls is not None
 
     def needs_update(self) -> bool:
         """Confirm that the dataset needs to be loaded."""
