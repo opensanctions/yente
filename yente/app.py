@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.AUTO_REINDEX:
         update_index_threaded()
     yield
-    close_provider()
+    await close_provider()
 
 
 async def request_middleware(
