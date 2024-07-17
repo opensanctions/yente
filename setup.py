@@ -57,7 +57,7 @@ setup(
             "pytest-cov",
             "pytest-asyncio",
             "pytest-httpx",
-            "anyio==4.3.0",
+            "anyio==4.4.0",
             "flake8>=2.6.0",
             "black",
         ],
