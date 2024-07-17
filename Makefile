@@ -6,19 +6,19 @@ build:
 	docker build -t ghcr.io/opensanctions/yente:latest .
 
 shell: build
-	docker-compose run --rm app bash
+	docker compose run --rm app bash
+
+stop:
+	docker compose down
 
 services:
-	docker-compose up --remove-orphans -d index
+	docker compose -f docker-compose.opensearch.yml up --remove-orphans -d index
 
 api: build services
-	docker-compose up --remove-orphans app
+	docker compose up --remove-orphans app
 
-unit-test:
-	pytest -v tests/unit
-
-integration-test:
-	pytest -v tests/integration
+test:
+	pytest --cov-report html --cov-report term --cov=yente -v tests
 
 typecheck:
 	mypy --strict yente

@@ -24,7 +24,7 @@ class CatalogManifest(BaseModel):
             self.scopes.append(self.scope)
 
         for ds in data["datasets"]:
-            if self.scope is not None:
+            if len(self.scopes):
                 ds["load"] = ds["name"] in self.scopes
             if self.namespace is not None:
                 ds["namespace"] = self.namespace

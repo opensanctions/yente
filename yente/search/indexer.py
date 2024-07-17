@@ -1,44 +1,58 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
-from elasticsearch import AsyncElasticsearch
-from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch.exceptions import BadRequestError
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
 from yente import settings
+from yente.data.manifest import Catalog
+from yente.exc import YenteIndexError
 from yente.logs import get_logger
 from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
-from yente.data.loader import load_json_lines
-from yente.search.base import get_es, close_es, index_lock
-from yente.search.mapping import make_entity_mapping
-from yente.search.mapping import INDEX_SETTINGS
-from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
+from yente.data.updater import DatasetUpdater
+from yente.search.mapping import (
+    NAME_PART_FIELD,
+    NAME_KEY_FIELD,
+    NAMES_FIELD,
+    NAME_PHONETIC_FIELD,
+)
+from yente.provider import SearchProvider, with_provider
+from yente.search.util import parse_index_name
+from yente.search.util import construct_index_name
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
+
 log = get_logger(__name__)
+lock = threading.Lock()
 
 
 async def iter_entity_docs(
-    dataset: Dataset, index: str
+    updater: DatasetUpdater, index: str
 ) -> AsyncGenerator[Dict[str, Any], None]:
-    if dataset.entities_url is None:
-        return
+    dataset = updater.dataset
     datasets = set(dataset.dataset_names)
     idx = 0
-    async for data in load_json_lines(dataset.entities_url, index):
+    ops: Dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
+    async for data in updater.load():
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
+        op_code = data["op"]
         idx += 1
+        ops[op_code] += 1
+        if op_code == "DEL":
+            yield {
+                "_op_type": "delete",
+                "_index": index,
+                "_id": data["entity"]["id"],
+            }
+            continue
 
         try:
-            entity = Entity.from_dict(model, data)
+            entity = Entity.from_dict(model, data["entity"])
             entity.datasets = entity.datasets.intersection(datasets)
             if not len(entity.datasets):
                 entity.datasets.add(dataset.name)
@@ -61,131 +75,139 @@ async def iter_entity_docs(
             yield {"_index": index, "_id": entity_id, "_source": doc}
         except FollowTheMoneyException as exc:
             log.warning("Invalid entity: %s" % exc, data=data)
+    log.info(
+        "Indexed %d entities" % idx,
+        added=ops["ADD"],
+        modified=ops["MOD"],
+        deleted=ops["DEL"],
+    )
+
+
+async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str | None:
+    """Return the currently indexed version of a given dataset."""
+    versions: List[str] = []
+    for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
+        try:
+            ds, version = parse_index_name(index)
+            if ds == dataset.name:
+                versions.append(version)
+        except ValueError:
+            pass
+    if len(versions) == 0:
+        return None
+    # Return the oldest version of the index. If multiple versions are linked to the
+    # alias, it's a sign that a previous index update failed. So we're erring on the
+    # side of caution and returning the oldest version.
+    return min(versions)
 
 
 async def index_entities_rate_limit(
-    es: AsyncElasticsearch, dataset: Dataset, force: bool
+    provider: SearchProvider, dataset: Dataset, force: bool
 ) -> bool:
-    if index_lock.locked():
+    if lock.locked():
         log.info("Index is already being updated", dataset=dataset.name, force=force)
         return False
-    with index_lock:
-        return await index_entities(es, dataset, force=force)
+    with lock:
+        return await index_entities(provider, dataset, force=force)
 
 
-async def index_entities(es: AsyncElasticsearch, dataset: Dataset, force: bool) -> bool:
+async def index_entities(
+    provider: SearchProvider, dataset: Dataset, force: bool
+) -> bool:
     """Index entities in a particular dataset, with versioning of the index."""
-    if not dataset.load:
-        log.debug("Dataset is going to be loaded", dataset=dataset.name)
+    alias = settings.ENTITY_INDEX
+    base_version = await get_index_version(provider, dataset)
+    updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
+    if not updater.needs_update():
         return False
-    if dataset.entities_url is None:
-        log.warning(
-            "Cannot identify resource with FtM entities",
-            dataset=dataset.name,
-        )
-        return False
-
-    # Versioning defaults to the software version instead of a data update date:
-    version = f"{settings.INDEX_VERSION}{dataset.version}"
     log.info(
         "Indexing entities",
         dataset=dataset.name,
         url=dataset.entities_url,
-        version=version,
+        version=updater.target_version,
     )
-    dataset_prefix = f"{settings.ENTITY_INDEX}-{dataset.name}-"
-    next_index = f"{dataset_prefix}{version}"
-    if settings.INDEX_EXISTS_ABORT:
-        exists = await es.indices.exists(index=next_index)
-    else:
-        exists = await es.indices.exists_alias(
-            name=settings.ENTITY_INDEX,
-            index=next_index,
-        )
-    if exists.body and not force:
+    next_index = construct_index_name(dataset.name, updater.target_version)
+    if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
         return False
 
     # await es.indices.delete(index=next_index)
-    log.info("Create index", index=next_index)
-    try:
-        schemata = list(model.schemata.values())
-        mapping = make_entity_mapping(schemata)
-        await es.indices.create(
-            index=next_index,
-            mappings=mapping,
-            settings=INDEX_SETTINGS,
-        )
-    except BadRequestError as exc:
-        log.warning(
-            "Cannot create index: %s" % exc.message,
-            index=next_index,
-        )
+    if updater.is_incremental and not force:
+        base_index = construct_index_name(dataset.name, updater.base_version)
+        await provider.clone_index(base_index, next_index)
+    else:
+        await provider.create_index(next_index)
 
     try:
-        docs = iter_entity_docs(dataset, next_index)
-        await async_bulk(es, docs, yield_ok=False, stats_only=True, chunk_size=1000)
+        docs = iter_entity_docs(updater, next_index)
+        await provider.bulk_index(docs)
     except (
-        BulkIndexError,
+        YenteIndexError,
         KeyboardInterrupt,
         OSError,
         Exception,
         asyncio.TimeoutError,
         asyncio.CancelledError,
     ) as exc:
-        errors = None
-        if isinstance(exc, BulkIndexError):
-            errors = exc.errors
         log.exception(
             "Indexing error: %r" % exc,
             dataset=dataset.name,
             index=next_index,
-            errors=errors,
-            entities_url=dataset.entities_url,
         )
-        is_aliased = await es.indices.exists_alias(
-            name=settings.ENTITY_INDEX,
-            index=next_index,
-        )
-        if not is_aliased.body:
+        aliases = await provider.get_alias_indices(alias)
+        if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
-            await es.indices.delete(index=next_index)
+            await provider.delete_index(next_index)
         return False
 
-    await es.indices.refresh(index=next_index)
-    res = await es.indices.put_alias(index=next_index, name=settings.ENTITY_INDEX)
-    if res.meta.status != 200:
-        log.error("Failed to alias next index", index=next_index)
-        return False
-    log.info("Index is now aliased to: %s" % settings.ENTITY_INDEX, index=next_index)
-
-    res = await es.indices.get_alias(name=settings.ENTITY_INDEX)
-    for aliased_index in res.body.keys():
-        if aliased_index == next_index:
-            continue
-        if aliased_index.startswith(dataset_prefix):
-            log.info("Delete old index", index=aliased_index)
-            res = await es.indices.delete(index=aliased_index)
+    await provider.refresh(index=next_index)
+    dataset_prefix = construct_index_name(dataset.name)
+    # FIXME: we're not actually deleting old indexes here any more!
+    await provider.rollover_index(
+        alias,
+        next_index,
+        prefix=dataset_prefix,
+    )
+    log.info("Index is now aliased to: %s" % alias, index=next_index)
     return True
+
+
+async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
+    aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
+    for index in await provider.get_all_indices():
+        if not index.startswith(settings.ENTITY_INDEX):
+            continue
+        if index not in aliased:
+            log.info("Deleting orphaned index", index=index)
+            await provider.delete_index(index)
+        try:
+            ds_name, _ = parse_index_name(index)
+        except ValueError:
+            continue
+        dataset = catalog.get(ds_name)
+        if dataset is None or not dataset.load:
+            log.info(
+                "Deleting index of non-scope dataset",
+                index=index,
+                dataset=ds_name,
+            )
+            await provider.delete_index(index)
 
 
 async def update_index(force: bool = False) -> bool:
     """Reindex all datasets if there is a new version of their data contenst available,
     return boolean to indicate if the index was changed for any of them."""
-    es_ = await get_es()
-    es = es_.options(request_timeout=300)
-    try:
+    async with with_provider() as provider:
         catalog = await get_catalog()
         log.info("Index update check")
         changed = False
         for dataset in catalog.datasets:
-            _changed = await index_entities_rate_limit(es, dataset, force)
+            _changed = await index_entities_rate_limit(provider, dataset, force)
             changed = changed or _changed
+
+        await delete_old_indices(provider, catalog)
         log.info("Index update complete.", changed=changed)
         return changed
-    finally:
-        await es.close()
-        await close_es()
 
 
 def update_index_threaded(force: bool = False) -> None:

@@ -1,18 +1,19 @@
 import asyncio
 from typing import Dict, List, Optional
-from fastapi import APIRouter, Query, Response, HTTPException
+from fastapi import APIRouter, Depends, Query, Response, HTTPException
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityMatches
+from yente.provider import SearchProvider
 from yente.search.queries import entity_query, FilterDict
 from yente.search.search import search_entities, result_entities, result_total
 from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
-from yente.routers.util import get_dataset, get_algorithm_by_name
+from yente.routers.util import get_dataset, get_algorithm_by_name, get_request_provider
 from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_HELP
 
 log = get_logger(__name__)
@@ -68,6 +69,7 @@ async def match(
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -162,7 +164,7 @@ async def match(
         # get a broad range of candidates to score against. This is a trade-off
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
-        queries.append(search_entities(query, limit=candidates))
+        queries.append(search_entities(provider, query, limit=candidates))
         entities.append((name, entity))
     if not len(queries) and not len(responses):
         raise HTTPException(400, detail="No queries provided.")

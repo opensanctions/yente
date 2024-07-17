@@ -1,13 +1,12 @@
 import click
 import asyncio
-from typing import Any
 from uvicorn import Config, Server
 
 from yente import settings
 from yente.app import create_app
 from yente.logs import configure_logging, get_logger
-from yente.search.base import get_es
 from yente.search.indexer import update_index
+from yente.provider import with_provider
 
 
 log = get_logger("yente")
@@ -46,14 +45,11 @@ def reindex(force: bool) -> None:
 
 
 async def _clear_index() -> None:
-    es = await get_es()
-    indices: Any = await es.cat.indices(format="json")
-    for index in indices:
-        index_name: str = index.get("index")
-        if index_name.startswith(settings.ES_INDEX):
-            log.info("Delete index", index=index_name)
-            await es.indices.delete(index=index_name)
-    await es.close()
+    async with with_provider() as provider:
+        for index in await provider.get_all_indices():
+            if index.startswith(settings.INDEX_NAME):
+                log.info("Delete index", index=index)
+                await provider.delete_index(index=index)
 
 
 @cli.command("clear-index", help="Delete everything in ElasticSearch")

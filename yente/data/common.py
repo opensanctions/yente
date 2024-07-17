@@ -3,6 +3,7 @@ from typing import Dict, List, Union, Optional
 from pydantic import BaseModel, Field
 from nomenklatura.matching.types import MatchingResult, FeatureDocs
 
+from yente import settings
 from yente.data.entity import Entity
 
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
@@ -20,9 +21,9 @@ class EntityResponse(BaseModel):
     datasets: List[str] = Field([], examples=[["us_ofac_sdn"]])
     referents: List[str] = Field([], examples=[["ofac-1234"]])
     target: bool = Field(False)
-    first_seen: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
-    last_seen: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
-    last_change: Optional[datetime] = Field(None, examples=[datetime.utcnow()])
+    first_seen: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
+    last_seen: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
+    last_change: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":

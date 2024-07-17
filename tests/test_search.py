@@ -34,6 +34,11 @@ def test_search_invalid_query():
     assert res.status_code == 200, res
 
 
+def test_search_missing_dataset():
+    res = client.get("/search/banana")
+    assert res.status_code == 404, res
+
+
 def test_search_filter_schema_invalid():
     res = client.get("/search/default?q=angela merkel&schema=Banana")
     assert res.status_code == 400, res
@@ -92,7 +97,7 @@ def test_search_filter_include_dataset():
 
 
 def test_search_filter_changed_since():
-    ts = datetime.utcnow() + timedelta(days=1)
+    ts = datetime.now() + timedelta(days=1)
     tx = ts.isoformat(sep="T", timespec="minutes")
     res = client.get(f"/search/default?q=vladimir putin&changed_since={tx}")
     assert res.status_code == 200, res

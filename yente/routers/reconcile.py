@@ -2,7 +2,7 @@ import json
 import asyncio
 from urllib.parse import urljoin
 from typing import Any, Coroutine, Dict, List, Tuple, Optional
-from fastapi import APIRouter, Query, Form
+from fastapi import APIRouter, Query, Form, Depends
 from fastapi import Request, Response
 from fastapi import HTTPException
 from followthemoney import model
@@ -32,11 +32,13 @@ from yente.data.freebase import (
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import search_entities, result_entities, result_total
 from yente.search.search import get_matchable_schemata
+from yente.provider import SearchProvider
 from yente.scoring import score_results
 from yente.util import match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX
 from yente.routers.util import TS_PATTERN, ALGO_HELP
 from yente.routers.util import get_algorithm_by_name, get_dataset
+from yente.routers.util import get_request_provider
 
 
 log = get_logger(__name__)
@@ -56,6 +58,7 @@ router = APIRouter()
 async def reconcile(
     request: Request,
     dataset: str = PATH_DATASET,
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> FreebaseManifest:
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
@@ -68,7 +71,7 @@ async def reconcile(
     """
     ds = await get_dataset(dataset)
     base_url = typed_url(urljoin(str(request.base_url), f"/reconcile/{dataset}"))
-    schemata = await get_matchable_schemata(ds)
+    schemata = await get_matchable_schemata(provider, ds)
     # Pass on query string (useful for API keys)
     query_string = request.url.query.strip()
     if len(query_string):
@@ -124,16 +127,18 @@ async def reconcile_post(
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> Dict[str, FreebaseEntityResult]:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     ds = await get_dataset(dataset)
-    resp = await reconcile_queries(ds, queries, algorithm, changed_since)
+    resp = await reconcile_queries(provider, ds, queries, algorithm, changed_since)
     response.headers["x-batch-size"] = str(len(resp))
     return resp
 
 
 async def reconcile_queries(
+    provider: SearchProvider,
     dataset: Dataset,
     data: str,
     algorithm: str,
@@ -151,13 +156,14 @@ async def reconcile_queries(
 
     tasks: List[Coroutine[Any, Any, Tuple[str, FreebaseEntityResult]]] = []
     for k, q in queries.items():
-        task = reconcile_query(k, dataset, q, algorithm, changed_since)
+        task = reconcile_query(provider, k, dataset, q, algorithm, changed_since)
         tasks.append(task)
     results: List[Tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
     return dict(results)
 
 
 async def reconcile_query(
+    provider: SearchProvider,
     name: str,
     dataset: Dataset,
     query: Dict[str, Any],
@@ -180,7 +186,7 @@ async def reconcile_query(
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
     proxy = Entity.from_example(example)
     query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
-    resp = await search_entities(query, limit=limit, offset=offset)
+    resp = await search_entities(provider, query, limit=limit, offset=offset)
     algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
     scoreds = [s for s in score_results(algorithm_, proxy, entities, limit=limit)]
@@ -212,6 +218,7 @@ async def reconcile_suggest_entity(
         description="Number of suggestions to return",
         le=settings.MAX_PAGE,
     ),
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> FreebaseEntitySuggestResponse:
     """Suggest an entity based on a text query. This is functionally very
     similar to the basic search API, but returns data in the structure assumed
@@ -223,7 +230,7 @@ async def reconcile_suggest_entity(
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
-    resp = await search_entities(query, limit=limit, offset=offset)
+    resp = await search_entities(provider, query, limit=limit, offset=offset)
     for result in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
@@ -246,12 +253,13 @@ async def reconcile_suggest_entity(
 async def reconcile_suggest_property(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> FreebasePropertySuggestResponse:
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
     filters in OpenRefine."""
     ds = await get_dataset(dataset)
-    schemata = await get_matchable_schemata(ds)
+    schemata = await get_matchable_schemata(provider, ds)
     matches: List[FreebaseProperty] = []
     for prop in model.properties:
         if prop.schema not in schemata:
@@ -274,13 +282,14 @@ async def reconcile_suggest_property(
 async def reconcile_suggest_type(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
+    provider: SearchProvider = Depends(get_request_provider),
 ) -> FreebaseTypeSuggestResponse:
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
     ds = await get_dataset(dataset)
     matches: List[FreebaseType] = []
-    for schema in await get_matchable_schemata(ds):
+    for schema in await get_matchable_schemata(provider, ds):
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(FreebaseType.from_schema(schema))
     result = matches[: settings.MATCH_PAGE]

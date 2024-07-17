@@ -1,0 +1,18 @@
+services:
+  test-index:
+    container_name: test-index
+    extends:
+      file: docker-compose.yml
+      service: index
+    volumes:
+      - index-os-data-test:/usr/share/elasticsearch/data
+    environment:
+      - node.name=index
+      - cluster.name=test-opensanctions-index
+      - action.destructive_requires_name=false
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+volumes:
+  index-os-data-test: null
