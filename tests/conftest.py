@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
-from yente.provider import with_provider
+from yente.search.indexer import update_index
+from yente.provider import with_provider, close_provider
 
 
 run_id = uuid4().hex
@@ -44,21 +45,16 @@ async def search_provider():
         yield provider
 
 
-def clear_state():
-    pass
-
-
-@pytest.fixture(scope="session", autouse=True)
-def load_data():
-    client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def load_data():
+    await update_index(force=True)
     yield
-    clear_state()
 
 
-@pytest.fixture(autouse=True)
-def flush_cached_es():
+@pytest_asyncio.fixture(autouse=True)
+async def flush_cached_es():
     """Reference: https://github.com/pytest-dev/pytest-asyncio/issues/38#issuecomment-264418154"""
     try:
         yield
     finally:
-        clear_state()
+        await close_provider()

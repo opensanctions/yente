@@ -1,6 +1,6 @@
+import asyncio
 from typing import AsyncIterator
 from contextlib import asynccontextmanager
-import asyncio
 
 from yente import settings
 from yente.logs import get_logger
@@ -10,28 +10,43 @@ from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 
-__all__ = ["with_provider", "SearchProvider"]
+__all__ = ["with_provider", "get_provider", "close_provider", "SearchProvider"]
 
 PROVIDERS: dict[int, SearchProvider] = {}
 
 
-async def get_provider() -> SearchProvider:
+def get_id() -> int:
+    return id(asyncio.get_event_loop())
+
+
+async def _create_provider() -> SearchProvider:
+    """Create the search provider based on the configured index type."""
     if settings.INDEX_TYPE == "opensearch":
         return await OpenSearchProvider.create()
     else:
         return await ElasticSearchProvider.create()
 
 
+async def get_provider() -> SearchProvider:
+    """Get the search provider for the current event loop, or create it."""
+    loop_id = get_id()
+    if loop_id not in PROVIDERS:
+        PROVIDERS[loop_id] = await _create_provider()
+    return PROVIDERS[loop_id]
+
+
+async def close_provider() -> None:
+    loop_id = get_id()
+    provider = PROVIDERS.pop(loop_id, None)
+    if provider:
+        await provider.close()
+
+
 @asynccontextmanager
 async def with_provider() -> AsyncIterator[SearchProvider]:
+    # Does not use the loop cache:
     try:
-        loop_id = id(asyncio.get_event_loop())
-        if loop_id in PROVIDERS:
-            provider = PROVIDERS[loop_id]
-        else:
-            provider = await get_provider()
-            PROVIDERS[loop_id] = provider
+        provider = await _create_provider()
         yield provider
     finally:
-        PROVIDERS.pop(id(asyncio.get_event_loop()), None)
         await provider.close()
