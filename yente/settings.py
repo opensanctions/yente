@@ -145,7 +145,7 @@ MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 MATCH_PAGE = int(env_str("YENTE_MATCH_PAGE", "5"))
 
 # How many results to return per /match query at most:
-MAX_MATCHES = int(env_str("YENTE_MAX_MATCHES", "10"))
+MAX_MATCHES = int(env_str("YENTE_MAX_MATCHES", "500"))
 
 # How many candidates to retrieve as a multiplier of the /match limit:
 MATCH_CANDIDATES = int(env_str("YENTE_MATCH_CANDIDATES", "10"))

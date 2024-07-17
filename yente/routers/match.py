@@ -164,6 +164,7 @@ async def match(
         # get a broad range of candidates to score against. This is a trade-off
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
+        candidates = max(20, min(settings.MAX_RESULTS, candidates))
         queries.append(search_entities(provider, query, limit=candidates))
         entities.append((name, entity))
     if not len(queries) and not len(responses):
