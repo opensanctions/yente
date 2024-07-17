@@ -79,7 +79,8 @@ async def request_middleware(
 
 
 async def yente_error_handler(req: Request, exc: YenteError) -> Response:
-    log.exception(f"App error {exc.status}: {exc.detail}")
+    if exc.status > 499:
+        log.exception(f"App error {exc.status}: {exc.detail}")
     return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
 
 
