@@ -125,6 +125,10 @@ async def index_entities(
         dataset=dataset.name,
         url=dataset.entities_url,
         version=updater.target_version,
+        base_version=updater.base_version,
+        incremental=updater.is_incremental,
+        # delta_urls=updater.delta_urls,
+        force=force,
     )
     next_index = construct_index_name(dataset.name, updater.target_version)
     if not force and await provider.exists_index_alias(alias, next_index):
