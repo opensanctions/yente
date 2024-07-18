@@ -44,9 +44,11 @@ async def close_provider() -> None:
 
 @asynccontextmanager
 async def with_provider() -> AsyncIterator[SearchProvider]:
+    provider = None
     # Does not use the loop cache:
     try:
         provider = await _create_provider()
         yield provider
     finally:
-        await provider.close()
+        if provider:
+            await provider.close()

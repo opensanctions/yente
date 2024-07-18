@@ -196,3 +196,8 @@ RUN_TIME = RUN_DT.isoformat()[:19]
 
 # Authentication settings
 AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")
+
+# Setting for OpenSearch hosted in AWS
+USE_AWS_IAM = as_bool(env_str("YENTE_USE_AWS_IAM", "false"))
+IS_AWS_SERVERLESS = as_bool(env_str("YENTE_IS_AWS_SERVERLESS", "false"))
+INDEX_REGION = env_get("YENTE_INDEX_REGION")

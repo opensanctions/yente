@@ -14,6 +14,9 @@ from yente.search.base import query_semaphore
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 
+from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+import boto3
+
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
 
@@ -34,7 +37,14 @@ class OpenSearchProvider(SearchProvider):
             kwargs["sniff_on_connection_fail"] = True
         if settings.INDEX_USERNAME and settings.INDEX_PASSWORD:
             auth = (settings.INDEX_USERNAME, settings.INDEX_PASSWORD)
-            kwargs["basic_auth"] = auth
+            kwargs["http_auth"] = auth
+        if settings.USE_AWS_IAM:
+            if settings.INDEX_REGION is None:
+                raise ValueError("AWS region must be set for AWS IAM.")
+            region = settings.INDEX_REGION
+            credentials = boto3.Session().get_credentials()
+            service = "aoss" if settings.IS_AWS_SERVERLESS else "es"
+            kwargs["http_auth"] = AWSV4SignerAuth(credentials, region, service)
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
