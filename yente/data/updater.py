@@ -98,7 +98,7 @@ class DatasetUpdater(object):
             return True
         if self.delta_urls is not None and len(self.delta_urls) == 0:
             return False
-        if self.target_version == self.base_version:
+        if self.target_version <= self.base_version:
             return False
         return True
 
