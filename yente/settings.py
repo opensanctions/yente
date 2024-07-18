@@ -32,12 +32,12 @@ def env_legacy(new_name: str, old_name: str, default: str) -> str:
 def random_cron() -> str:
     """Randomize the minute of the cron schedule to avoid thundering herd problem."""
     random_minute = str(random.randint(0, 59))
-    return f"{random_minute} */2 * * *"
+    return f"{random_minute} * * * *"
 
 
 VERSION = "3.8.10"
 AUTHOR = "OpenSanctions"
-HOME_PAGE = "https://www.opensanctions.org"
+HOME_PAGE = "https://www.opensanctions.org/"
 EMAIL = "info@opensanctions.org"
 CONTACT = {"name": AUTHOR, "url": HOME_PAGE, "email": EMAIL}
 
