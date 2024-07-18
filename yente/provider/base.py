@@ -1,5 +1,10 @@
+from asyncio import Semaphore
 from typing import Any, Dict, List, Optional
 from typing import AsyncIterator
+
+from yente import settings
+
+query_semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
 
 class SearchProvider(object):

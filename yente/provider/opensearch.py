@@ -10,9 +10,8 @@ from opensearchpy.exceptions import NotFoundError, TransportError
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.base import query_semaphore
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
-from yente.provider.base import SearchProvider
+from yente.provider.base import SearchProvider, query_semaphore
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
