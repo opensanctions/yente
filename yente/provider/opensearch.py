@@ -228,6 +228,8 @@ class OpenSearchProvider(SearchProvider):
                 chunk_size=1000,
                 yield_ok=False,
                 stats_only=True,
+                max_retries=3,
+                initial_backoff=2,
             )
         except BulkIndexError as exc:
             raise YenteIndexError(f"Could not index entities: {exc}") from exc
