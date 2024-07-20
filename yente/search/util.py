@@ -1,6 +1,7 @@
-from yente import settings
-
 from typing import Tuple
+from normality import slugify
+
+from yente import settings
 
 
 def parse_index_name(index: str) -> Tuple[str, str]:
@@ -42,4 +43,7 @@ def construct_index_version(version: str) -> str:
     """Given a version ID, return a version string with the version prefix."""
     if len(version) < 1:
         raise ValueError("Version must be at least one character long.")
-    return f"{settings.INDEX_VERSION}{version}"
+    combined = slugify(f"{settings.INDEX_VERSION}{version}", "-")
+    if combined is None or len(combined) < len(settings.INDEX_VERSION) + 1:
+        raise ValueError("Invalid version: %s%s." % (settings.INDEX_VERSION, version))
+    return combined
