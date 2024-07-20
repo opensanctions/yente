@@ -4,9 +4,9 @@
 
 The yente API is built to provide access to [OpenSanctions data](https://www.opensanctions.org/datasets/), it can also be used to [search and match other data](https://www.opensanctions.org/docs/yente/datasets/), such as [company registries](https://www.opensanctions.org/kyb/) or [custom watchlists](https://www.opensanctions.org/docs/yente/datasets/).
 
-While `yente` is the open source core code base for the [OpenSanctions API](https://api.opensanctions.org), it can also be run [on-premises as a KYC appliance](https://www.opensanctions.org/docs/self-hosted/) so that no customer data leaves the deployment context.
+While `yente` is the open source core code base for the [OpenSanctions API](https://www.opensanctions.org/api/), it can also be run [on-premises as a KYC appliance](https://www.opensanctions.org/docs/self-hosted/) so that no customer data leaves your infrastructure.
 
-* [yente documentation](https://www.opensanctions.org/docs/yente) - install, configure and use the service.
+* [yente documentation](https://www.opensanctions.org/docs/yente/) - install, configure and use the service.
 
 ## Development
 
@@ -22,10 +22,10 @@ This will install a broad range of dependencies, including `numpy`, `scikit-lear
 
 ### Running the server
 
-Once you've set the ``YENTE_ELASTICSEARCH_URL`` environment variable to point to a running instance of ElasticSearch, you can run the web server like this:
+Once you've set the ``YENTE_INDEX_URL`` environment variable to point to a running instance of ElasticSearch or OpenSearch, you can run the web server like this:
 
 ```bash
-python yente/server.py
+yente serve
 ```
 
 ### License and Support
