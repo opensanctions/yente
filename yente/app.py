@@ -19,6 +19,7 @@ from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
+from yente.middleware import TraceContextMiddleware
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
@@ -48,12 +49,8 @@ async def request_middleware(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     start_time = time.time()
-    trace_id = request.headers.get("x-trace-id")
-    if trace_id is None:
-        trace_id = uuid4().hex
     client_ip = request.client.host if request.client else "127.0.0.1"
     bind_contextvars(
-        trace_id=trace_id,
         client_ip=client_ip,
     )
     try:
@@ -62,7 +59,6 @@ async def request_middleware(
         log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
     time_delta = time.time() - start_time
-    response.headers["x-trace-id"] = trace_id
     log.info(
         str(request.url.path),
         action="request",
@@ -108,6 +104,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.middleware("http")(request_middleware)
+    app.add_middleware(TraceContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
