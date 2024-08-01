@@ -13,6 +13,7 @@ from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider, query_semaphore
+from yente.middleware.trace_context import get_trace_context
 
 log = get_logger(__name__)
 warnings.filterwarnings("ignore", category=ElasticsearchWarning)
@@ -54,27 +55,40 @@ class ElasticSearchProvider(SearchProvider):
         raise RuntimeError("Could not connect to ElasticSearch.")
 
     def __init__(self, client: AsyncElasticsearch) -> None:
-        self.client = client
+        self._client = client
+
+    def client(self, **kwargs: Any) -> AsyncElasticsearch:
+        """Get the client with the current context."""
+        if trace_context := get_trace_context():
+            arg_headers = kwargs.get("headers", {})
+            headers = arg_headers | (
+                dict(
+                    traceparent=str(trace_context.traceparent),
+                    tracestate=str(trace_context.tracestate),
+                )
+            )
+            kwargs.update(headers=headers)
+        return self._client.options(**kwargs)
 
     async def close(self) -> None:
-        await self.client.close()
+        await self._client.close()
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
         try:
-            await self.client.indices.refresh(index=index)
+            await self.client().indices.refresh(index=index)
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
 
     async def get_all_indices(self) -> List[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
-        indices: Any = await self.client.cat.indices(format="json")
+        indices: Any = await self.client().cat.indices(format="json")
         return [index.get("index") for index in indices]
 
     async def get_alias_indices(self, alias: str) -> List[str]:
         """Get a list of indices that are aliased to the entity query alias."""
         try:
-            resp = await self.client.indices.get_alias(name=alias)
+            resp = await self.client().indices.get_alias(name=alias)
             return list(resp.keys())
         except NotFoundError:
             return []
@@ -88,7 +102,7 @@ class ElasticSearchProvider(SearchProvider):
             actions = []
             actions.append({"remove": {"index": f"{prefix}*", "alias": alias}})
             actions.append({"add": {"index": next_index, "alias": alias}})
-            await self.client.indices.update_aliases(actions=actions)
+            await self.client().indices.update_aliases(actions=actions)
         except (ApiError, TransportError) as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
@@ -97,19 +111,19 @@ class ElasticSearchProvider(SearchProvider):
         if base_version == target_version:
             raise ValueError("Cannot clone an index to itself.")
         try:
-            await self.client.indices.put_settings(
+            await self.client().indices.put_settings(
                 index=base_version,
                 settings={"index.blocks.read_only": True},
             )
             await self.delete_index(target_version)
-            await self.client.indices.clone(
+            await self.client().indices.clone(
                 index=base_version,
                 target=target_version,
                 body={
                     "settings": {"index": {"blocks": {"read_only": False}}},
                 },
             )
-            await self.client.indices.put_settings(
+            await self.client().indices.put_settings(
                 index=base_version,
                 settings={"index.blocks.read_only": False},
             )
@@ -122,7 +136,7 @@ class ElasticSearchProvider(SearchProvider):
         """Create a new index with the given name."""
         log.info("Create index", index=index)
         try:
-            await self.client.indices.create(
+            await self.client().indices.create(
                 index=index,
                 mappings=make_entity_mapping(),
                 settings=INDEX_SETTINGS,
@@ -135,7 +149,7 @@ class ElasticSearchProvider(SearchProvider):
     async def delete_index(self, index: str) -> None:
         """Delete a given index if it exists."""
         try:
-            await self.client.indices.delete(index=index)
+            await self.client().indices.delete(index=index)
         except NotFoundError:
             pass
         except (ApiError, TransportError) as te:
@@ -144,7 +158,7 @@ class ElasticSearchProvider(SearchProvider):
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:
-            exists = await self.client.indices.exists_alias(name=alias, index=index)
+            exists = await self.client().indices.exists_alias(name=alias, index=index)
             return True if exists.body else False
         except NotFoundError:
             return False
@@ -153,8 +167,9 @@ class ElasticSearchProvider(SearchProvider):
 
     async def check_health(self, index: str) -> bool:
         try:
-            client = self.client.options(request_timeout=5)
-            health = await client.cluster.health(index=index, timeout=0)
+            health = await self.client(request_timeout=5).cluster.health(
+                index=index, timeout=0
+            )
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
@@ -182,7 +197,7 @@ class ElasticSearchProvider(SearchProvider):
 
         try:
             async with query_semaphore:
-                response = await self.client.search(
+                response = await self.client().search(
                     index=index,
                     query=query,
                     size=size,
@@ -218,7 +233,7 @@ class ElasticSearchProvider(SearchProvider):
         """Index a list of entities into the search index."""
         try:
             await async_bulk(
-                self.client,
+                self.client(),
                 entities,
                 chunk_size=1000,
                 yield_ok=False,
