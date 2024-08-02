@@ -3,7 +3,6 @@ from normality import slugify
 from datetime import datetime
 from typing import Dict, Optional, Any
 from nomenklatura.dataset import Dataset as NKDataset
-from nomenklatura.dataset import DataCatalog
 from nomenklatura.dataset.util import type_check
 from nomenklatura.util import iso_to_version, datetime_iso
 from followthemoney.types import registry
@@ -19,12 +18,12 @@ BOOT_TIME = datetime_iso(settings.RUN_DT)
 
 
 class Dataset(NKDataset):
-    def __init__(self, catalog: DataCatalog["Dataset"], data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any]):
         name = data["name"]
         norm_name = slugify(name, sep="_")
         if name != norm_name:
             raise ValueError("Invalid dataset name %r (try: %r)" % (name, norm_name))
-        super().__init__(catalog, data)
+        super().__init__(data)
         self.load = as_bool(data.get("load"), not self.is_collection)
         self.entities_url = self._get_entities_url(data)
         if self.entities_url is not None:
