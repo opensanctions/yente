@@ -28,7 +28,7 @@ setup(
         "opensearch-py[async]==2.6.0",
         "boto3>=1.34.144,<1.35.0",
         "fastapi==0.111.1",
-        "uvicorn[standard]==0.30.4",
+        "uvicorn[standard]==0.30.5",
         "httpx[http2]==0.27.0",
         "python-multipart==0.0.9",
         "email-validator==2.2.0",
