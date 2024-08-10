@@ -1,7 +1,7 @@
 from yente import settings
 from yente.logs import get_logger
 from yente.provider import SearchProvider
-from yente.search.util import parse_index_name
+from yente.search.versions import parse_index_name
 from yente.data.manifest import Catalog
 
 log = get_logger(__name__)

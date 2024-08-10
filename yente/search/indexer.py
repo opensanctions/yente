@@ -20,8 +20,8 @@ from yente.search.mapping import (
     NAME_PHONETIC_FIELD,
 )
 from yente.provider import SearchProvider, with_provider
-from yente.search.util import parse_index_name
-from yente.search.util import construct_index_name
+from yente.search.versions import parse_index_name
+from yente.search.versions import construct_index_name
 from yente.data.util import expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
