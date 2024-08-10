@@ -222,7 +222,8 @@ class ElasticSearchProvider(SearchProvider):
                 entities,
                 chunk_size=1000,
                 yield_ok=False,
-                stats_only=True,
+                # stats_only=True,
             )
         except BulkIndexError as exc:
+            log.error("Bulk index error", errors=exc.errors)
             raise YenteIndexError(f"Could not index entities: {exc}") from exc
