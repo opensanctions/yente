@@ -181,7 +181,7 @@ INDEX_CA_CERT = None if _INDEX_CA_CERT == "" else _INDEX_CA_CERT
 INDEX_SHARDS = int(env_legacy("YENTE_INDEX_SHARDS", "YENTE_ELASTICSEARCH_SHARDS", "1"))
 INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{INDEX_NAME}-entities"
-INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "009")
+INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "010")
 assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
 
 # ElasticSearch-only options:
