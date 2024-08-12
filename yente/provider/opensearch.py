@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast, Tuple
 from typing import AsyncIterator
 from opensearchpy import AsyncOpenSearch, AWSV4SignerAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
@@ -219,17 +219,22 @@ class OpenSearchProvider(SearchProvider):
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
 
-    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> None:
+    async def bulk_index(
+        self, entities: AsyncIterator[Dict[str, Any]]
+    ) -> Tuple[int, int]:
         """Index a list of entities into the search index."""
         try:
-            await async_bulk(
+            n, errors = await async_bulk(
                 self.client,
                 entities,
                 chunk_size=1000,
-                yield_ok=False,
-                stats_only=True,
                 max_retries=3,
                 initial_backoff=2,
+                raise_on_error=False,
             )
+            errors = cast(List[Any], errors)
+            for error in errors:
+                log.error("Bulk index error", error=error)
+            return n, len(errors)
         except BulkIndexError as exc:
             raise YenteIndexError(f"Could not index entities: {exc}") from exc

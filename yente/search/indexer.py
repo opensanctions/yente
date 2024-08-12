@@ -134,17 +134,14 @@ async def index_entities(
     if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
         return False
-
-    # await es.indices.delete(index=next_index)
     if updater.is_incremental and not force:
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
         await provider.create_index(next_index)
-
     try:
         docs = iter_entity_docs(updater, next_index)
-        await provider.bulk_index(docs)
+        n_changed, _ = await provider.bulk_index(docs)
     except (
         YenteIndexError,
         KeyboardInterrupt,
@@ -153,27 +150,22 @@ async def index_entities(
         asyncio.TimeoutError,
         asyncio.CancelledError,
     ) as exc:
-        log.exception(
-            "Indexing error: %r" % exc,
-            dataset=dataset.name,
-            index=next_index,
-        )
         aliases = await provider.get_alias_indices(alias)
         if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
-        return False
+        if not force:
+            return await index_entities(provider, dataset, force=True)
+        raise exc
 
     await provider.refresh(index=next_index)
     dataset_prefix = construct_index_name(dataset.name)
-    # FIXME: we're not actually deleting old indexes here any more!
     await provider.rollover_index(
         alias,
         next_index,
         prefix=dataset_prefix,
     )
-    log.info("Index is now aliased to: %s" % alias, index=next_index)
-    return True
+    return n_changed > 0
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
@@ -205,11 +197,18 @@ async def update_index(force: bool = False) -> bool:
         catalog = await get_catalog()
         log.info("Index update check")
         changed = False
+        exceptions = []
         for dataset in catalog.datasets:
-            _changed = await index_entities_rate_limit(provider, dataset, force)
-            changed = changed or _changed
-
+            try:
+                _changed = await index_entities_rate_limit(provider, dataset, force)
+                changed = changed or _changed
+            except Exception as exc:
+                exceptions.append({"exc": exc, "dataset": dataset.name})
         await delete_old_indices(provider, catalog)
+        if len(exceptions) > 0:
+            for e in exceptions:
+                log.error(f"{e['dataset']} update error: {e['exc']}")
+            raise Exception("One or more indices failed to update.")
         log.info("Index update complete.", changed=changed)
         return changed
 
