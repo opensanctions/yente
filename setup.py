@@ -26,7 +26,7 @@ setup(
         "aiohttp[speedups]==3.10.2",
         "elasticsearch[async]==8.14.0",
         "opensearch-py[async]==2.6.0",
-        "boto3>=1.34.144,<1.35.0",
+        "boto3>=1.34.144,<1.36.0",
         "fastapi==0.112.0",
         "uvicorn[standard]==0.30.5",
         "httpx[http2]==0.27.0",
