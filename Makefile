@@ -12,7 +12,7 @@ stop:
 	docker compose down
 
 services:
-	docker compose -f docker-compose.opensearch.yml up --remove-orphans -d index
+	docker compose -f docker-compose.yml up --remove-orphans -d index
 
 api: build services
 	docker compose up --remove-orphans app
