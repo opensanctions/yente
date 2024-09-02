@@ -141,7 +141,7 @@ async def index_entities(
         await provider.create_index(next_index)
     try:
         docs = iter_entity_docs(updater, next_index)
-        n_changed, _ = await provider.bulk_index(docs)
+        n_changed = await provider.bulk_index(docs)
     except (
         YenteIndexError,
         KeyboardInterrupt,
@@ -155,6 +155,11 @@ async def index_entities(
             log.warn("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
         if not force:
+            log.exception(
+                "Delta indexing error, retrying with full re-index: %r" % exc,
+                dataset=dataset.name,
+                index=next_index,
+            )
             return await index_entities(provider, dataset, force=True)
         raise exc
 

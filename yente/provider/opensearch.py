@@ -219,22 +219,16 @@ class OpenSearchProvider(SearchProvider):
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
 
-    async def bulk_index(
-        self, entities: AsyncIterator[Dict[str, Any]]
-    ) -> Tuple[int, int]:
+    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> int:
         """Index a list of entities into the search index."""
         try:
-            n, errors = await async_bulk(
+            n, _ = await async_bulk(
                 self.client,
                 entities,
                 chunk_size=1000,
                 max_retries=3,
                 initial_backoff=2,
-                raise_on_error=False,
             )
-            errors = cast(List[Any], errors)
-            for error in errors:
-                log.error("Bulk index error", error=error)
-            return n, len(errors)
+            return n
         except BulkIndexError as exc:
             raise YenteIndexError(f"Could not index entities: {exc}") from exc
