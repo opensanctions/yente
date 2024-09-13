@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Type, Dict
+from typing import Iterable, List, Optional, Type, Dict, Tuple
 from nomenklatura.matching.types import ScoringAlgorithm
 
 from yente import settings
@@ -14,7 +14,7 @@ def score_results(
     cutoff: float = 0.0,
     limit: Optional[int] = None,
     weights: Dict[str, float] = {},
-) -> List[ScoredEntityResponse]:
+) -> Tuple[int, List[ScoredEntityResponse]]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
     for proxy in results:
@@ -29,4 +29,4 @@ def score_results(
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
     if limit is not None:
         scored = scored[:limit]
-    return scored
+    return matches, scored

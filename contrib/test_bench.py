@@ -4,10 +4,8 @@ from nomenklatura.matching import get_algorithm
 
 from yente.data.entity import Entity
 from yente.data.common import EntityExample
-from yente.search.base import close_es
 from yente.search.queries import entity_query
 from yente.search.search import search_entities, result_entities
-from yente.data.entity import Entity
 from yente.scoring import score_results
 from yente.routers.util import get_dataset
 
@@ -34,7 +32,7 @@ async def test_example():
         print(ent.id, ent.caption, ent.schema.name)
 
     algorithm = get_algorithm("name-based")
-    scored = score_results(
+    total, scored = score_results(
         algorithm,
         entity,
         ents,
@@ -43,11 +41,9 @@ async def test_example():
         limit=LIMIT,
     )
 
-    print("\n\nSCORED RESULTS:")
+    print("\n\nSCORED RESULTS [%d]:" % total)
     for res in scored:
         print(res.id, res.caption, res.schema_, res.score)
-
-    await close_es()
 
 
 asyncio.run(test_example())

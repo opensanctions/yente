@@ -6,10 +6,10 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
-from yente.data.common import EntityMatches
+from yente.data.common import EntityMatches, TotalSpec
 from yente.provider import SearchProvider, get_provider
 from yente.search.queries import entity_query, FilterDict
-from yente.search.search import search_entities, result_entities, result_total
+from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
 from yente.util import limit_window
 from yente.scoring import score_results
@@ -173,7 +173,7 @@ async def match(
 
     for (name, entity), resp in zip(entities, results):
         ents = result_entities(resp)
-        scored = score_results(
+        total, scored = score_results(
             algorithm_type,
             entity,
             ents,
@@ -182,17 +182,16 @@ async def match(
             limit=limit,
             weights=match.weights,
         )
-        total = result_total(resp)
         log.info(
             f"/match/{ds.name}",
             action="match",
             schema=entity.schema.name,
-            results=total.value,
+            results=total,
         )
         responses[name] = EntityMatches(
             status=200,
             results=scored,
-            total=total,
+            total=TotalSpec(value=total, relation="eq"),
             query=EntityExample.model_validate(entity.to_dict()),
         )
     response.headers["x-batch-size"] = str(len(responses))
