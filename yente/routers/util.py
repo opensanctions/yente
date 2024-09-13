@@ -12,7 +12,7 @@ PATH_DATASET = Path(
     description="Data source or collection name to be queries",
     examples=["default"],
 )
-QUERY_PREFIX = Query("", min_length=1, description="Search prefix")
+QUERY_PREFIX = Query("", min_length=0, description="Search prefix")
 TS_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?$"
 ALGO_LIST = ", ".join([a.NAME for a in ALGORITHMS])
 ALGO_HELP = (
