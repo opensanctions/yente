@@ -1,9 +1,9 @@
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND noninteractive
 
-LABEL org.opencontainers.image.title "OpenSanctions yente"
-LABEL org.opencontainers.image.licenses MIT
-LABEL org.opencontainers.image.source https://github.com/opensanctions/yente
+LABEL org.opencontainers.image.title="OpenSanctions yente"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/opensanctions/yente"
 
 RUN apt-get -qq -y update \
     && apt-get -y upgrade \
