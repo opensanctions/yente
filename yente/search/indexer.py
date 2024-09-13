@@ -101,25 +101,17 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
     return min(versions)
 
 
-async def index_entities_rate_limit(
-    provider: SearchProvider, dataset: Dataset, force: bool
-) -> bool:
-    if lock.locked():
-        log.info("Index is already being updated", dataset=dataset.name, force=force)
-        return False
-    with lock:
-        return await index_entities(provider, dataset, force=force)
-
-
 async def index_entities(
     provider: SearchProvider, dataset: Dataset, force: bool
-) -> bool:
+) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
     alias = settings.ENTITY_INDEX
     base_version = await get_index_version(provider, dataset)
     updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
     if not updater.needs_update():
-        return False
+        if updater.dataset.load:
+            log.info("No update needed", dataset=dataset.name)
+        return
     log.info(
         "Indexing entities",
         dataset=dataset.name,
@@ -133,7 +125,7 @@ async def index_entities(
     next_index = construct_index_name(dataset.name, updater.target_version)
     if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
-        return False
+        return
 
     # await es.indices.delete(index=next_index)
     if updater.is_incremental and not force:
@@ -145,16 +137,9 @@ async def index_entities(
     try:
         docs = iter_entity_docs(updater, next_index)
         await provider.bulk_index(docs)
-    except (
-        YenteIndexError,
-        KeyboardInterrupt,
-        OSError,
-        Exception,
-        asyncio.TimeoutError,
-        asyncio.CancelledError,
-    ) as exc:
+    except YenteIndexError as exc:
         log.exception(
-            "Indexing error: %r" % exc,
+            "Indexing error: %s" % exc.detail,
             dataset=dataset.name,
             index=next_index,
         )
@@ -162,7 +147,7 @@ async def index_entities(
         if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
-        return False
+        raise exc
 
     await provider.refresh(index=next_index)
     dataset_prefix = construct_index_name(dataset.name)
@@ -173,7 +158,6 @@ async def index_entities(
         prefix=dataset_prefix,
     )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
-    return True
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
@@ -198,20 +182,18 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             await provider.delete_index(index)
 
 
-async def update_index(force: bool = False) -> bool:
+async def update_index(force: bool = False) -> None:
     """Reindex all datasets if there is a new version of their data contenst available,
-    return boolean to indicate if the index was changed for any of them."""
+    or create an initial version of the index from scratch."""
     async with with_provider() as provider:
         catalog = await get_catalog()
         log.info("Index update check")
-        changed = False
         for dataset in catalog.datasets:
-            _changed = await index_entities_rate_limit(provider, dataset, force)
-            changed = changed or _changed
+            with lock:
+                await index_entities(provider, dataset, force=force)
 
         await delete_old_indices(provider, catalog)
-        log.info("Index update complete.", changed=changed)
-        return changed
+        log.info("Index update complete.")
 
 
 def update_index_threaded(force: bool = False) -> None:
