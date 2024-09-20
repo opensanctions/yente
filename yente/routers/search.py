@@ -57,11 +57,11 @@ async def search(
     include_dataset: List[str] = Query(
         [], title="Only include the given datasets in results"
     ),
-    exclude_schema: List[str] = Query(
-        [], title="Remove the given types of entities from results"
-    ),
     exclude_dataset: List[str] = Query(
         [], title="Remove the given datasets from results"
+    ),
+    exclude_schema: List[str] = Query(
+        [], title="Remove the given types of entities from results"
     ),
     changed_since: Optional[str] = Query(
         None,
@@ -72,7 +72,7 @@ async def search(
     topics: List[str] = Query(
         [], title="Filter by entity topics (e.g. sanction, role.pep)"
     ),
-    datasets: List[str] = Query([], title="Filter by data sources"),
+    datasets: List[str] = Query([], title="Use `include_dataset` instead"),
     limit: int = Query(10, title="Number of results to return", le=settings.MAX_PAGE),
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
@@ -103,8 +103,8 @@ async def search(
     filters: FilterDict = {
         "countries": countries,
         "topics": topics,
-        "datasets": datasets,
     }
+    include_dataset.extend(datasets)
     if target is not None:
         filters["target"] = target
     query = text_query(

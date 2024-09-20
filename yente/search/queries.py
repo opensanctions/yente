@@ -27,14 +27,16 @@ def filter_query(
     changed_since: Optional[str] = None,
 ) -> Clause:
     filterqs: List[Clause] = []
-    if dataset is not None:
-        ds = [
-            d
-            for d in dataset.dataset_names
-            if (len(include_dataset) == 0 or d in include_dataset)
-            and d not in exclude_dataset
-        ]
-        filterqs.append({"terms": {"datasets": ds}})
+    must_not: List[Clause] = []
+    datasets: List[str] = include_dataset
+    if not len(datasets) and dataset is not None:
+        datasets = dataset.dataset_names
+    for exclude_ds in exclude_dataset:
+        must_not.append({"term": {"datasets": exclude_ds}})
+        if exclude_ds in datasets:
+            datasets.remove(exclude_ds)
+    if len(datasets):
+        filterqs.append({"terms": {"datasets": datasets}})
     if schema is not None:
         schemata = schema.matchable_schemata
         if not schema.matchable:
@@ -50,7 +52,7 @@ def filter_query(
             filterqs.append({"terms": {field: values}})
     if changed_since is not None:
         filterqs.append({"range": {"last_change": {"gt": changed_since}}})
-    must_not: List[Clause] = []
+
     for schema_name in exclude_schema:
         must_not.append({"term": {"schema": schema_name}})
     return {
