@@ -32,7 +32,9 @@ def filter_query(
     if not len(datasets) and dataset is not None:
         datasets = dataset.dataset_names
     for exclude_ds in exclude_dataset:
-        must_not.append({"term": {"datasets": exclude_ds}})
+        # This is logically a bit more consistent, but doesn't describe the use
+        # case of wanting to screen all the entities from datasets X, Y but not Z:
+        # must_not.append({"term": {"datasets": exclude_ds}})
         if exclude_ds in datasets:
             datasets.remove(exclude_ds)
     if len(datasets):
