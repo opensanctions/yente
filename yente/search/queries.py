@@ -39,6 +39,8 @@ def filter_query(
             datasets.remove(exclude_ds)
     if len(datasets):
         filterqs.append({"terms": {"datasets": datasets}})
+    else:
+        filterqs.append({"match_none": {}})
     if schema is not None:
         schemata = schema.matchable_schemata
         if not schema.matchable:
