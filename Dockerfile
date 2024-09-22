@@ -1,5 +1,5 @@
 FROM ubuntu:24.04
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 LABEL org.opencontainers.image.title="OpenSanctions yente"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -20,7 +20,7 @@ RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
     && groupadd -g 10000 -r app \
     && useradd -m -u 10000 -s /bin/false -g app app
 
-ENV LANG='en_US.UTF-8' \
+ENV LANG="en_US.UTF-8" \
     TZ="UTC"
 
 RUN python3 -m venv /venv
