@@ -106,6 +106,9 @@ def entity_query(
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
 ) -> Clause:
+    if not entity.schema.matchable:
+        raise TypeError("Schema is not matchable: %s" % entity.schema.name)
+
     shoulds: List[Clause] = names_query(entity, fuzzy=fuzzy)
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:

@@ -183,8 +183,11 @@ async def reconcile_query(
         properties[prop.name].append(p.get("v"))
 
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
-    proxy = Entity.from_example(example)
-    query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
+    try:
+        proxy = Entity.from_example(example)
+        query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
+    except Exception as exc:
+        raise HTTPException(400, detail=str(exc))
     resp = await search_entities(provider, query, limit=limit, offset=offset)
     algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
