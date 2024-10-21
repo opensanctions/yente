@@ -6,6 +6,7 @@ from followthemoney.helpers import combine_names
 from rigour.names import pick_name
 from nomenklatura.stream import StreamEntity
 
+from yente import settings
 from yente.logs import get_logger
 
 if TYPE_CHECKING:
@@ -38,6 +39,9 @@ class Entity(StreamEntity):
     def from_example(cls, example: "EntityExample") -> "Entity":
         data = {"id": example.id, "schema": example.schema_}
         obj = cls(model, data)
+        if obj.schema.name != settings.BASE_SCHEMA and not obj.schema.matchable:
+            raise TypeError("Non-matchable schema for query: %s" % obj.schema.name)
+
         for prop_name, values in example.properties.items():
             if prop_name not in obj.schema.properties:
                 log.warning(

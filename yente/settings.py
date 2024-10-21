@@ -123,7 +123,7 @@ BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 DATA_PATH = Path(env_str("YENTE_DATA_PATH", "/tmp"))
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 
-BASE_SCHEMA = "LegalEntity"
+BASE_SCHEMA = "Thing"
 PORT = int(env_str("YENTE_PORT", env_str("PORT", "8000")))
 UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 CACHE_HEADERS = {
