@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, cast
 from typing import AsyncIterator
-from opensearchpy import AsyncOpenSearch, AWSV4SignerAuth
+from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError
 
@@ -41,7 +41,7 @@ class OpenSearchProvider(SearchProvider):
             if service not in ["es", "aoss"]:
                 raise RuntimeError(f"Invalid OpenSearch service: {service}")
             credentials = Session().get_credentials()
-            kwargs["http_auth"] = AWSV4SignerAuth(
+            kwargs["http_auth"] = AWSV4SignerAsyncAuth(
                 credentials,
                 settings.OPENSEARCH_REGION,
                 settings.OPENSEARCH_SERVICE,
