@@ -42,7 +42,7 @@ setup(
         "countrynames==1.16.2",
         "fingerprints==1.2.3",
         "pantomime==0.6.1",
-        "cryptography==43.0.1",
+        "cryptography==43.0.3",
     ],
     extras_require={
         "dev": [
