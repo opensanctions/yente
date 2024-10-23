@@ -27,7 +27,7 @@ setup(
         "elasticsearch[async]==8.15.1",
         "opensearch-py[async]==2.7.1",
         "boto3>=1.34.144,<1.36.0",
-        "fastapi==0.115.2",
+        "fastapi==0.115.3",
         "uvicorn[standard]==0.32.0",
         "httpx[http2]==0.27.2",
         "python-multipart==0.0.12",
