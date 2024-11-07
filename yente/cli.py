@@ -23,7 +23,7 @@ def serve() -> None:
     server = Server(
         Config(
             app,
-            host="0.0.0.0",
+            host=settings.HOST,
             port=settings.PORT,
             proxy_headers=True,
             reload=settings.DEBUG,
