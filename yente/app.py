@@ -1,6 +1,5 @@
 import time
 import aiocron  # type: ignore
-from uuid import uuid4
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
 from pydantic import ValidationError
@@ -100,7 +99,8 @@ def create_app() -> FastAPI:
         contact=settings.CONTACT,
         openapi_tags=settings.TAGS,
         exception_handlers=HANDLERS,
-        redoc_url="/",
+        docs_url=None,
+        redoc_url=None,
         lifespan=lifespan,
     )
     app.middleware("http")(request_middleware)

@@ -1,8 +1,9 @@
 from typing import List
 from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException
+from fastapi.openapi.docs import get_redoc_html
+from fastapi.responses import FileResponse, HTMLResponse
 from normality import collapse_spaces
-from starlette.responses import FileResponse
 from nomenklatura.matching import ALGORITHMS
 
 from yente import settings
@@ -16,6 +17,22 @@ from yente.search.status import sync_dataset_versions
 
 log = get_logger(__name__)
 router = APIRouter()
+
+
+@router.get(
+    "/",
+    summary="ReDoc API documentation",
+    include_in_schema=False,
+)
+async def redoc_html() -> HTMLResponse:
+    """Render the ReDoc API documentation renderer script."""
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title=settings.TITLE,
+        redoc_js_url="https://assets.opensanctions.org/scripts/redoc.standalone.js",
+        redoc_favicon_url="https://assets.opensanctions.org/images/favicon-32x32.png",
+        with_google_fonts=False,
+    )
 
 
 @router.get(
