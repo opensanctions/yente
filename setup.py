@@ -39,7 +39,7 @@ setup(
         "text-unidecode==1.3",
         "click==8.1.6",
         "normality==2.5.0",
-        "countrynames==1.16.2",
+        "countrynames==1.16.4",
         "fingerprints==1.2.3",
         "pantomime==0.6.1",
         "cryptography==43.0.3",
