@@ -2,23 +2,17 @@ import httpx
 from pathlib import Path
 from normality import WS
 from urllib.parse import urlparse
-from jellyfish import metaphone
-from functools import lru_cache
 from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set, Generator
 from rigour.text.scripts import is_modern_alphabet
 from rigour.text.distance import levenshtein
+from rigour.text.phonetics import metaphone
 from fingerprints import remove_types, clean_name_light
 from nomenklatura.util import fingerprint_name, names_word_list
 
 from yente import settings
-
-
-@lru_cache(maxsize=5000)
-def _metaphone_cached(word: str) -> str:
-    return metaphone(word)
 
 
 def _clean_phonetic(original: str) -> Optional[str]:
@@ -43,7 +37,7 @@ def phonetic_names(names: List[str]) -> List[str]:
     """Generate phonetic forms of the given names."""
     phonemes: List[str] = []
     for word in names_word_list(names, normalizer=_clean_phonetic, min_length=2):
-        token = _metaphone_cached(word)
+        token = metaphone(word)
         if len(token) > 2:
             phonemes.append(token)
     return phonemes
