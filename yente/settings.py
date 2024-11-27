@@ -108,19 +108,36 @@ TAGS: List[Dict[str, Any]] = [
 
 # Check if we're running in the context of unit tests:
 TESTING = False
+
+# Turn on debug logging and other development features:
 DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
 MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
+
+# Path name for the manifest YAML file:
+# see: https://www.opensanctions.org/docs/yente/datasets/
 MANIFEST = env_str("YENTE_MANIFEST", MANIFEST_DEFAULT_PATH.as_posix())
+
+# Authentication settings:
+AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")
+
 CRON: Optional[Cron] = None
 CRONTAB = env_str("YENTE_CRONTAB", random_cron())
-AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
-STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
-DELTA_UPDATES = as_bool(env_str("YENTE_DELTA_UPDATES", "true"))
-DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
-BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 
+# Whether to automatically reindex the data in the background of the API process:
+AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
+
+# Fetch the entire bulk data file before indexing into the search index:
+STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
+# this would be cached here:
 DATA_PATH = Path(env_str("YENTE_DATA_PATH", "/tmp"))
+
+# Set a proxy for outgoing HTTP requests:
+HTTP_PROXY = env_str("YENTE_HTTP_PROXY", "")
+
+# Whether to enable delta updates for the data:
+DELTA_UPDATES = as_bool(env_str("YENTE_DELTA_UPDATES", "true"))
+
 RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 
 BASE_SCHEMA = "Thing"
@@ -132,8 +149,9 @@ CACHE_HEADERS = {
     "X-Robots-Tag": "none",
 }
 
-# Set a proxy for outgoing HTTP requests:
-HTTP_PROXY = env_str("YENTE_HTTP_PROXY", "")
+# Matcher defaults:
+DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
+BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 
 # How many results to return per page of search results max:
 MAX_PAGE = 500
@@ -156,7 +174,7 @@ MATCH_CANDIDATES = int(env_str("YENTE_MATCH_CANDIDATES", "10"))
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 
 # How many match and search queries to run against ES in parallel:
-QUERY_CONCURRENCY = int(env_str("YENTE_QUERY_CONCURRENCY", "10"))
+QUERY_CONCURRENCY = int(env_str("YENTE_QUERY_CONCURRENCY", "50"))
 
 # Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
@@ -199,6 +217,3 @@ LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 # Used to pad out first_seen, last_seen on static collections
 RUN_DT = datetime.now(timezone.utc)
 RUN_TIME = RUN_DT.isoformat()[:19]
-
-# Authentication settings
-AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")
