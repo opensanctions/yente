@@ -119,7 +119,7 @@ MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
 MANIFEST = env_str("YENTE_MANIFEST", MANIFEST_DEFAULT_PATH.as_posix())
 
 # Authentication settings:
-AUTH_TOKEN = env_get("YENTE_AUTH_TOKEN")
+DATA_TOKEN = env_get("YENTE_DATA_TOKEN")
 
 CRON: Optional[Cron] = None
 CRONTAB = env_str("YENTE_CRONTAB", random_cron())

@@ -127,10 +127,9 @@ class Authenticator(httpx.Auth):
     def auth_flow(
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
-        response = yield request
-        if response.status_code == 401 and settings.AUTH_TOKEN:
-            request.headers["Authentication"] = f"Token {settings.AUTH_TOKEN}"
-            yield request
+        if settings.DATA_AUTH_TOKEN is not None:
+            request.headers["Authentication"] = f"Token {settings.DATA_AUTH_TOKEN}"
+        yield request
 
 
 @asynccontextmanager
