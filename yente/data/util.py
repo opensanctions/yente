@@ -127,8 +127,8 @@ class Authenticator(httpx.Auth):
     def auth_flow(
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
-        if settings.DATA_AUTH_TOKEN is not None:
-            request.headers["Authentication"] = f"Token {settings.DATA_AUTH_TOKEN}"
+        if settings.DATA_TOKEN is not None:
+            request.headers["Authentication"] = f"Token {settings.DATA_TOKEN}"
         yield request
 
 
