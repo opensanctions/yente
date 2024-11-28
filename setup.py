@@ -23,7 +23,7 @@ setup(
         "aiocron==1.8",
         "aiocsv==1.3.2",
         "aiofiles==24.1.0",
-        "aiohttp[speedups]==3.11.7",
+        "aiohttp[speedups]==3.11.8",
         "elasticsearch[async]==8.16.0",
         "opensearch-py[async]==2.7.1",
         "boto3>=1.34.144,<1.36.0",
@@ -42,7 +42,7 @@ setup(
         "countrynames==1.16.4",
         "fingerprints==1.2.3",
         "pantomime==0.6.1",
-        "cryptography==43.0.3",
+        "cryptography==44.0.0",
     ],
     extras_require={
         "dev": [
