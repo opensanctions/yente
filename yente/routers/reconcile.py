@@ -96,6 +96,7 @@ async def reconcile(
         identifierSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         view=FreebaseManifestView(url="https://www.opensanctions.org/entities/{{id}}/"),
+        documentation=typed_url("https://www.opensanctions.org/docs/"),
         batchSize=settings.DEFAULT_PAGE,
         preview=FreebaseManifestPreview(
             url="https://www.opensanctions.org/entities/preview/{{id}}/",
@@ -256,14 +257,14 @@ async def reconcile_extend(
         entities = await asyncio.gather(*queries)
     except EntityRedirect:
         msg = "Please specify the canonical entity ID, not a referent"
-        return HTTPException(400, detail=msg)
+        raise HTTPException(400, detail=msg)
 
     metas: Dict[str, FreebaseExtendResponseMeta] = {}
-    rows: Dict[str, Dict[str, FreebaseExtendResponseValue]] = {e: {} for e in query.ids}
+    resp = FreebaseExtendResponse(meta=[], rows={e: {} for e in query.ids})
     for entity in entities:
         if entity is None:
             continue
-        row: Dict[str, FreebaseExtendResponseValue] = {}
+        row: Dict[str, List[FreebaseExtendResponseValue]] = {}
         for qprop in query.properties:
             prop = entity.schema.get(qprop.id)
             if prop is None:
@@ -276,10 +277,11 @@ async def reconcile_extend(
             if qprop.settings is not None and qprop.settings.limit is not None:
                 if qprop.settings.limit > 0:
                     values = values[: qprop.settings.limit]
-            labels = [prop.type.caption(v) for v in values]
+            labels = [prop.type.caption(v) or v for v in values]
             row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in labels]
-        rows[entity.id] = row
-    return FreebaseExtendResponse(meta=metas.values(), rows=rows)
+        resp.rows[entity.id] = row
+    resp.meta = list(metas.values())
+    return resp
 
 
 @router.get(

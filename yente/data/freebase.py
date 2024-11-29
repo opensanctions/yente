@@ -173,8 +173,8 @@ class FreebaseManifest(BaseModel):
     name: str = Field(..., examples=[settings.TITLE])
     identifierSpace: AnyHttpUrl
     schemaSpace: AnyHttpUrl
-    batchSize: int = Field(settings.MATCH_PAGE)
-    documentation: str = Field("https://www.opensanctions.org/docs/")
+    documentation: AnyHttpUrl
+    batchSize: int
     view: FreebaseManifestView
     preview: FreebaseManifestPreview
     suggest: FreebaseManifestSuggest
