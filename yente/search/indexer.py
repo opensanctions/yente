@@ -110,7 +110,7 @@ async def index_entities(
     updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
     if not updater.needs_update():
         if updater.dataset.load:
-            log.info("No update needed", dataset=dataset.name)
+            log.info("No update needed", dataset=dataset.name, version=base_version)
         return
     log.info(
         "Indexing entities",
