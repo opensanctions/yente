@@ -30,7 +30,7 @@ setup(
         "fastapi==0.115.5",
         "uvicorn[standard]==0.32.1",
         "httpx[http2]==0.27.2",
-        "python-multipart==0.0.17",
+        "python-multipart==0.0.18",
         "email-validator==2.2.0",
         "structlog==24.4.0",
         "pyicu==2.14",
