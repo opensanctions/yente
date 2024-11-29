@@ -29,7 +29,7 @@ setup(
         "boto3>=1.34.144,<1.36.0",
         "fastapi==0.115.5",
         "uvicorn[standard]==0.32.1",
-        "httpx[http2]==0.27.2",
+        "httpx[http2]==0.28.0",
         "python-multipart==0.0.17",
         "email-validator==2.2.0",
         "structlog==24.4.0",
