@@ -137,9 +137,10 @@ async def index_entities(
     try:
         docs = iter_entity_docs(updater, next_index)
         await provider.bulk_index(docs)
-    except YenteIndexError as exc:
+    except (YenteIndexError, Exception) as exc:
+        detail = getattr(exc, "detail", str(exc))
         log.exception(
-            "Indexing error: %s" % exc.detail,
+            "Indexing error: %s" % detail,
             dataset=dataset.name,
             index=next_index,
         )
@@ -147,6 +148,11 @@ async def index_entities(
         if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
+        if updater.is_incremental and not force:
+            # This is tricky: try again with a full reindex if the incremental
+            # indexing failed
+            log.warn("Retrying with full reindex", dataset=dataset.name)
+            return await index_entities(provider, dataset, force=True)
         raise exc
 
     await provider.refresh(index=next_index)
