@@ -12,9 +12,10 @@ def test_reconcile_metadata():
     assert data["identifierSpace"].startswith(url), data
     assert len(data["defaultTypes"]) > 3, data
     assert "suggest" in data, data
+    assert "extend" in data, data
 
 
-def test_reconcile_post():
+def test_reconcile_post_query():
     queries = {"mutti": {"query": "Yevgeny Popov"}}
     resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
     assert resp.status_code == 200, resp.text
@@ -23,8 +24,22 @@ def test_reconcile_post():
     assert res[0]["id"] == "Q18634850", res
 
 
+def test_reconcile_post_extend():
+    query = {"ids": ["Q7747"], "properties": [{"id": "name"}, {"id": "birthDate"}]}
+    resp = client.post("/reconcile/default", data={"extend": json.dumps(query)})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert len(data["meta"]) == 2
+    assert data["meta"][0]["id"] == "name", data["meta"]
+    assert "Q7747" in data["rows"], data
+    assert "name" in data["rows"]["Q7747"], data
+    names = data["rows"]["Q7747"]["name"]
+    assert len(names) > 0, names
+    assert "putin" in "".join([n["str"] for n in names]).lower(), names
+
+
 def test_reconcile_invalid():
-    queries = {"mutti": {"query": 37473874}}
+    queries = {"mutti": {"type": "Banana"}}
     resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
     assert resp.status_code == 400, resp.text
 
@@ -109,3 +124,22 @@ def test_reconcile_suggest_type_prefix_dummy():
     assert "result" in data
     res = data["result"]
     assert len(res) == 0, data
+
+
+def test_reconcile_extend_properties():
+    resp = client.get("/reconcile/default/extend/property?limit=5&type=LegalEntity")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "type" in data
+    assert data["type"] == "LegalEntity", data
+    assert data["limit"] == 5, data
+    props = data["properties"]
+    assert len(props) == 5
+    ids = [p["id"] for p in props]
+    assert "name" in ids
+    assert "country" in ids
+
+
+def test_reconcile_extend_properties_invalid_type():
+    resp = client.get("/reconcile/default/extend/property?limit=5&type=Banana")
+    assert resp.status_code == 400, resp.text

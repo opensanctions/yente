@@ -73,7 +73,9 @@ async def search(
         [], title="Filter by entity topics (e.g. sanction, role.pep)"
     ),
     datasets: List[str] = Query([], title="Use `include_dataset` instead"),
-    limit: int = Query(10, title="Number of results to return", le=settings.MAX_PAGE),
+    limit: int = Query(
+        settings.DEFAULT_PAGE, title="Number of results to return", le=settings.MAX_PAGE
+    ),
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
