@@ -100,7 +100,8 @@ class FreebaseExtendPropertiesResponse(BaseModel):
 
 
 class FreebaseExtendQueryPropertySettings(BaseModel):
-    limit: Optional[int] = 0
+    limit: int = 0
+    render: bool = True
 
 
 class FreebaseExtendQueryProperty(BaseModel):

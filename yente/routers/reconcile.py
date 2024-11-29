@@ -126,6 +126,13 @@ async def reconcile(
                     default=0,
                     help_text="Maximum number of values to return per row (0 for no limit).",
                 ),
+                FreebaseManifestExtendPropertySetting(
+                    name="render",
+                    label="User-facing values",
+                    type="checkbox",
+                    default=True,
+                    help_text="Return readable value (e.g. 'Russia') instead of raw value ('ru').",
+                ),
             ],
         ),
         defaultTypes=[FreebaseType.from_schema(s) for s in schemata],
@@ -274,11 +281,11 @@ async def reconcile_extend(
                     id=prop.name, name=prop.label
                 )
             values = entity.get(prop.name)
-            if qprop.settings is not None and qprop.settings.limit is not None:
-                if qprop.settings.limit > 0:
-                    values = values[: qprop.settings.limit]
-            labels = [prop.type.caption(v) or v for v in values]
-            row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in labels]
+            if qprop.settings.limit > 0:
+                values = values[: qprop.settings.limit]
+            if qprop.settings.render:
+                values = [prop.type.caption(v) or v for v in values]
+            row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in values]
         resp.rows[entity.id] = row
     resp.meta = list(metas.values())
     return resp
