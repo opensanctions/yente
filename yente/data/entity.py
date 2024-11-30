@@ -47,7 +47,7 @@ class Entity(StreamEntity):
                 log.warning(
                     "Invalid example property",
                     prop=prop_name,
-                    value=str(values),
+                    value=repr(values),
                 )
                 continue
             obj.add(prop_name, values, cleaned=False, fuzzy=True)

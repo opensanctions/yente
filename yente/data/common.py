@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Union, Optional
+from typing import Any, Dict, List, Union, Optional
 from pydantic import BaseModel, Field
 from nomenklatura.matching.types import MatchingResult, FeatureDocs
 
@@ -83,7 +83,7 @@ class SearchResponse(ResultsResponse):
 class EntityExample(BaseModel):
     id: Optional[str] = Field(None, examples=["my-entity-id"])
     schema_: str = Field(..., examples=["Person"], alias="schema")
-    properties: Dict[str, Union[str, List[str]]] = Field(
+    properties: Dict[str, Union[str, List[Any]]] = Field(
         ..., examples=[{"name": ["John Doe"]}]
     )
 

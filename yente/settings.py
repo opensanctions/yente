@@ -156,6 +156,9 @@ BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 # How many results to return per page of search results max:
 MAX_PAGE = 500
 
+# How many entities to accept in a /search-type endpoint by default:
+DEFAULT_PAGE = 10
+
 # How many entities to accept in a /match batch at most:
 MAX_BATCH = int(env_str("YENTE_MAX_BATCH", "100"))
 MAX_RESULTS = 9999

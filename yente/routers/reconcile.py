@@ -1,7 +1,7 @@
 import json
 import asyncio
 from urllib.parse import urljoin
-from typing import Any, Coroutine, Dict, List, Tuple, Optional
+from typing import Any, Coroutine, Dict, List, Tuple, Optional, Union
 from fastapi import APIRouter, Query, Form, Depends
 from fastapi import Request, Response
 from fastapi import HTTPException
@@ -17,11 +17,22 @@ from yente.data.dataset import Dataset
 from yente.data.freebase import (
     FreebaseEntity,
     FreebaseEntityResult,
+    FreebaseExtendPropertiesResponse,
+    FreebaseExtendProperty,
+    FreebaseExtendQuery,
+    FreebaseExtendResponse,
+    FreebaseExtendResponseMeta,
+    FreebaseExtendResponseValue,
+    FreebaseManifestExtend,
+    FreebaseManifestExtendPropertySetting,
+    FreebaseManifestExtendPropertySettingChoice,
+    FreebaseManifestExtendProposeProperties,
     FreebaseManifestView,
     FreebaseManifestPreview,
     FreebaseManifestSuggest,
     FreebaseManifestSuggestType,
     FreebaseProperty,
+    FreebaseRenderMethod,
     FreebaseScoredEntity,
     FreebaseType,
     FreebaseEntitySuggestResponse,
@@ -30,11 +41,16 @@ from yente.data.freebase import (
     FreebaseManifest,
 )
 from yente.search.queries import entity_query, prefix_query
-from yente.search.search import search_entities, result_entities, result_total
+from yente.search.search import (
+    get_entity,
+    search_entities,
+    result_entities,
+    result_total,
+)
 from yente.search.search import get_matchable_schemata
 from yente.provider import SearchProvider, get_provider
 from yente.scoring import score_results
-from yente.util import match_prefix, limit_window, typed_url
+from yente.util import EntityRedirect, match_prefix, limit_window, typed_url
 from yente.routers.util import PATH_DATASET, QUERY_PREFIX
 from yente.routers.util import TS_PATTERN, ALGO_HELP
 from yente.routers.util import get_algorithm_by_name, get_dataset
@@ -82,6 +98,8 @@ async def reconcile(
         identifierSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         view=FreebaseManifestView(url="https://www.opensanctions.org/entities/{{id}}/"),
+        documentation=typed_url("https://www.opensanctions.org/docs/"),
+        batchSize=settings.DEFAULT_PAGE,
         preview=FreebaseManifestPreview(
             url="https://www.opensanctions.org/entities/preview/{{id}}/",
             width=430,
@@ -98,6 +116,35 @@ async def reconcile(
                 service_url=base_url, service_path=f"/suggest/property{query_string}"
             ),
         ),
+        extend=FreebaseManifestExtend(
+            propose_properties=FreebaseManifestExtendProposeProperties(
+                service_url=base_url, service_path=f"/extend/property{query_string}"
+            ),
+            propose_settings=[
+                FreebaseManifestExtendPropertySetting(
+                    name="limit",
+                    label="Limit",
+                    type="number",
+                    default=0,
+                    help_text="Maximum number of values to return per row (0 for no limit).",
+                ),
+                FreebaseManifestExtendPropertySetting(
+                    name="render",
+                    label="Value rendering",
+                    type="select",
+                    default=FreebaseRenderMethod.caption,
+                    choices=[
+                        FreebaseManifestExtendPropertySettingChoice(
+                            id=FreebaseRenderMethod.caption, name="User-readable value"
+                        ),
+                        FreebaseManifestExtendPropertySettingChoice(
+                            id=FreebaseRenderMethod.raw, name="Machine-readable value"
+                        ),
+                    ],
+                    help_text="Return readable value (e.g. 'Russia') instead of raw value ('ru').",
+                ),
+            ],
+        ),
         defaultTypes=[FreebaseType.from_schema(s) for s in schemata],
     )
 
@@ -106,7 +153,7 @@ async def reconcile(
     "/reconcile/{dataset}",
     summary="Reconciliation queries",
     tags=["Reconciliation"],
-    response_model=Dict[str, FreebaseEntityResult],
+    response_model=Union[Dict[str, FreebaseEntityResult], FreebaseExtendResponse],
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
@@ -117,6 +164,7 @@ async def reconcile_post(
     response: Response,
     dataset: str = PATH_DATASET,
     queries: str = Form(None, description="JSON-encoded reconciliation queries"),
+    extend: str = Form(None, description="JSON-encoded reconciliation queries"),
     algorithm: str = Query(
         settings.BEST_ALGORITHM,
         title=ALGO_HELP,
@@ -127,9 +175,14 @@ async def reconcile_post(
         title="Match against entities that were updated since the given date",
     ),
     provider: SearchProvider = Depends(get_provider),
-) -> Dict[str, FreebaseEntityResult]:
+) -> Union[Dict[str, FreebaseEntityResult], FreebaseExtendResponse]:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
+    if extend is not None and len(extend.strip()):
+        extend_resp = await reconcile_extend(provider, extend)
+        response.headers["x-batch-size"] = str(len(extend_resp.rows))
+        return extend_resp
+
     ds = await get_dataset(dataset)
     resp = await reconcile_queries(provider, ds, queries, algorithm, changed_since)
     response.headers["x-batch-size"] = str(len(resp))
@@ -200,6 +253,52 @@ async def reconcile_query(
         matches=total,
     )
     return name, FreebaseEntityResult(result=results)
+
+
+async def reconcile_extend(
+    provider: SearchProvider,
+    data: str,
+) -> FreebaseExtendResponse:
+    try:
+        extendq: Any = json.loads(data)
+    except (TypeError, ValueError):
+        raise HTTPException(400, detail="Cannot decode extension request")
+    query = FreebaseExtendQuery.model_validate(extendq)
+
+    if len(query.ids) > settings.MAX_BATCH:
+        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        raise HTTPException(400, detail=msg)
+
+    try:
+        queries = [get_entity(provider, entity_id) for entity_id in query.ids]
+        entities = await asyncio.gather(*queries)
+    except EntityRedirect:
+        msg = "Please specify the canonical entity ID, not a referent"
+        raise HTTPException(400, detail=msg)
+
+    metas: Dict[str, FreebaseExtendResponseMeta] = {}
+    resp = FreebaseExtendResponse(meta=[], rows={e: {} for e in query.ids})
+    for entity in entities:
+        if entity is None:
+            continue
+        row: Dict[str, List[FreebaseExtendResponseValue]] = {}
+        for qprop in query.properties:
+            prop = entity.schema.get(qprop.id)
+            if prop is None:
+                continue
+            if qprop.id not in metas:
+                metas[qprop.id] = FreebaseExtendResponseMeta(
+                    id=prop.name, name=prop.label
+                )
+            values = entity.get(prop.name)
+            if qprop.settings.limit > 0:
+                values = values[: qprop.settings.limit]
+            if qprop.settings.render == FreebaseRenderMethod.caption:
+                values = [prop.type.caption(v) or v for v in values]
+            row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in values]
+        resp.rows[entity.id] = row
+    resp.meta = list(metas.values())
+    return resp
 
 
 @router.get(
@@ -296,3 +395,45 @@ async def reconcile_suggest_type(
             matches.append(FreebaseType.from_schema(schema))
     result = matches[: settings.MATCH_PAGE]
     return FreebaseTypeSuggestResponse(prefix=prefix, result=result)
+
+
+@router.get(
+    "/reconcile/{dataset}/extend/property",
+    summary="Extend properties proposal",
+    tags=["Reconciliation"],
+    response_model=FreebaseExtendPropertiesResponse,
+    include_in_schema=False,
+)
+async def reconcile_extend_properties(
+    dataset: str = PATH_DATASET,
+    type: str = Query(
+        settings.BASE_SCHEMA,
+        min_length=0,
+        description="Type of the entity for which properties should be proposed.",
+    ),
+    limit: int = Query(
+        0,
+        description="Number of suggestions to return.",
+    ),
+) -> FreebaseExtendPropertiesResponse:
+    """Given a type (schema), suggest a set of properties that could be retrieved
+    for data extension."""
+    schema = model.get(type)
+    if schema is None:
+        raise HTTPException(400, detail="Invalid type: %s" % type)
+    properties: List[FreebaseExtendProperty] = []
+    for featured in schema.featured:
+        prop = schema.get(featured)
+        if prop is not None:
+            properties.append(FreebaseExtendProperty(id=prop.name, name=prop.label))
+    for prop in schema.properties.values():
+        if prop.hidden or prop.type == registry.entity:
+            continue
+        if prop.name not in schema.featured:
+            properties.append(FreebaseExtendProperty(id=prop.name, name=prop.label))
+    if limit > 0:
+        properties = properties[:limit]
+    properties = sorted(properties, key=lambda p: p.name)
+    return FreebaseExtendPropertiesResponse(
+        limit=limit, type=schema.name, properties=properties
+    )

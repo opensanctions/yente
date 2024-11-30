@@ -23,4 +23,4 @@ test:
 typecheck:
 	mypy --strict yente
 
-check: typecheck integration-test unit-test
+check: typecheck test

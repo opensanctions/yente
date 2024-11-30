@@ -1,4 +1,5 @@
-from typing import List, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
 from followthemoney import model
@@ -88,6 +89,53 @@ class FreebasePropertySuggestResponse(FreebaseSuggestResponse):
     result: List[FreebaseProperty]
 
 
+class FreebaseExtendProperty(BaseModel):
+    id: str
+    name: str
+
+
+class FreebaseExtendPropertiesResponse(BaseModel):
+    limit: int
+    type: str
+    properties: List[FreebaseExtendProperty]
+
+
+class FreebaseRenderMethod(str, Enum):
+    raw = "raw"
+    caption = "caption"
+
+
+class FreebaseExtendQueryPropertySettings(BaseModel):
+    limit: int = 0
+    render: FreebaseRenderMethod = FreebaseRenderMethod.caption
+
+
+class FreebaseExtendQueryProperty(BaseModel):
+    id: str
+    settings: FreebaseExtendQueryPropertySettings = (
+        FreebaseExtendQueryPropertySettings()
+    )
+
+
+class FreebaseExtendQuery(BaseModel):
+    ids: List[str]
+    properties: List[FreebaseExtendQueryProperty]
+
+
+class FreebaseExtendResponseMeta(BaseModel):
+    id: str
+    name: str
+
+
+class FreebaseExtendResponseValue(BaseModel):
+    str: str
+
+
+class FreebaseExtendResponse(BaseModel):
+    meta: List[FreebaseExtendResponseMeta]
+    rows: Dict[str, Dict[str, List[FreebaseExtendResponseValue]]]
+
+
 class FreebaseManifestView(BaseModel):
     url: str
 
@@ -109,14 +157,41 @@ class FreebaseManifestSuggest(BaseModel):
     property: FreebaseManifestSuggestType
 
 
+class FreebaseManifestExtendProposeProperties(BaseModel):
+    service_url: AnyHttpUrl
+    service_path: str
+
+
+class FreebaseManifestExtendPropertySettingChoice(BaseModel):
+    id: str
+    name: str
+
+
+class FreebaseManifestExtendPropertySetting(BaseModel):
+    name: str
+    label: str
+    type: str
+    default: Any
+    help_text: str
+    choices: List[FreebaseManifestExtendPropertySettingChoice] = []
+
+
+class FreebaseManifestExtend(BaseModel):
+    propose_properties: FreebaseManifestExtendProposeProperties
+    propose_settings: List[FreebaseManifestExtendPropertySetting]
+
+
 class FreebaseManifest(BaseModel):
     versions: List[str] = Field(..., examples=[["0.2"]])
     name: str = Field(..., examples=[settings.TITLE])
     identifierSpace: AnyHttpUrl
     schemaSpace: AnyHttpUrl
+    documentation: AnyHttpUrl
+    batchSize: int
     view: FreebaseManifestView
     preview: FreebaseManifestPreview
     suggest: FreebaseManifestSuggest
+    extend: FreebaseManifestExtend
     defaultTypes: List[FreebaseType]
 
 
