@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from pydantic.networks import AnyHttpUrl
@@ -99,9 +100,14 @@ class FreebaseExtendPropertiesResponse(BaseModel):
     properties: List[FreebaseExtendProperty]
 
 
+class FreebaseRenderMethod(str, Enum):
+    raw = "raw"
+    caption = "caption"
+
+
 class FreebaseExtendQueryPropertySettings(BaseModel):
     limit: int = 0
-    render: bool = True
+    render: FreebaseRenderMethod = FreebaseRenderMethod.caption
 
 
 class FreebaseExtendQueryProperty(BaseModel):
@@ -156,12 +162,18 @@ class FreebaseManifestExtendProposeProperties(BaseModel):
     service_path: str
 
 
+class FreebaseManifestExtendPropertySettingChoice(BaseModel):
+    id: str
+    name: str
+
+
 class FreebaseManifestExtendPropertySetting(BaseModel):
     name: str
     label: str
     type: str
     default: Any
     help_text: str
+    choices: List[FreebaseManifestExtendPropertySettingChoice] = []
 
 
 class FreebaseManifestExtend(BaseModel):

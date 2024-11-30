@@ -25,12 +25,14 @@ from yente.data.freebase import (
     FreebaseExtendResponseValue,
     FreebaseManifestExtend,
     FreebaseManifestExtendPropertySetting,
+    FreebaseManifestExtendPropertySettingChoice,
     FreebaseManifestExtendProposeProperties,
     FreebaseManifestView,
     FreebaseManifestPreview,
     FreebaseManifestSuggest,
     FreebaseManifestSuggestType,
     FreebaseProperty,
+    FreebaseRenderMethod,
     FreebaseScoredEntity,
     FreebaseType,
     FreebaseEntitySuggestResponse,
@@ -128,9 +130,17 @@ async def reconcile(
                 ),
                 FreebaseManifestExtendPropertySetting(
                     name="render",
-                    label="User-facing values",
-                    type="checkbox",
-                    default=True,
+                    label="Value rendering",
+                    type="select",
+                    default=FreebaseRenderMethod.caption,
+                    choices=[
+                        FreebaseManifestExtendPropertySettingChoice(
+                            id=FreebaseRenderMethod.caption, name="User-readable value"
+                        ),
+                        FreebaseManifestExtendPropertySettingChoice(
+                            id=FreebaseRenderMethod.raw, name="Machine-readable value"
+                        ),
+                    ],
                     help_text="Return readable value (e.g. 'Russia') instead of raw value ('ru').",
                 ),
             ],
@@ -283,7 +293,7 @@ async def reconcile_extend(
             values = entity.get(prop.name)
             if qprop.settings.limit > 0:
                 values = values[: qprop.settings.limit]
-            if qprop.settings.render:
+            if qprop.settings.render == FreebaseRenderMethod.caption:
                 values = [prop.type.caption(v) or v for v in values]
             row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in values]
         resp.rows[entity.id] = row
@@ -419,7 +429,7 @@ async def reconcile_extend_properties(
     for prop in schema.properties.values():
         if prop.hidden or prop.type == registry.entity:
             continue
-        if prop not in schema.featured:
+        if prop.name not in schema.featured:
             properties.append(FreebaseExtendProperty(id=prop.name, name=prop.label))
     if limit > 0:
         properties = properties[:limit]
