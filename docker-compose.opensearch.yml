@@ -27,7 +27,7 @@ services:
         condition: on-failure
 
   app:
-    image: ghcr.io/opensanctions/yente:4.1.0
+    image: ghcr.io/opensanctions/yente:4.2.0
     depends_on:
       - index
     ports:
