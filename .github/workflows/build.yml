@@ -28,7 +28,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "poetry"
       - name: Install dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -63,7 +62,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "poetry"
       - name: Install dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -87,22 +85,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: setup.py
       - name: Install dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pip install -U pip setuptools wheel
+          pip install -U pip poetry
           sudo apt-get install -y -qq libicu-dev
-          pip install -q -e ".[dev]"
-          pip freeze
+          poetry install --with dev
       - name: Run mypy strict type check
         run: |
           make typecheck
       - name: Build a distribution
         run: |
-          python setup.py sdist bdist_wheel
+          poetry build
       - name: Publish a Python distribution to PyPI
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
