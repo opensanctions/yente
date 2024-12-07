@@ -34,9 +34,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pip install -U pip
+          pip install -U pip poetry
           sudo apt-get install -y -qq libicu-dev
-          pip install -q -e ".[dev]"
+          poetry install --with dev
           pip freeze
       - name: Run pytest tests
         env:
