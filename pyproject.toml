@@ -18,14 +18,14 @@ yente = "yente.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">3.10.0,<3.13.0"
-elasticsearch = { "extras" = ["async"], version = "8.16.0" }
+elasticsearch = { "extras" = ["async"], version = "8.17.0" }
 opensearch-py = { "extras" = ["async"], version = "2.8.0" }
-uvicorn = { "extras" = ["standard"], version = "0.32.1" }
+uvicorn = { "extras" = ["standard"], version = "0.34.0" }
 httpx = { "extras" = ["http2"], version = "0.28.1" }
 aiohttp = { "extras" = ["speedups"], version = "3.11.10" }
-boto3 = "1.35.81"
+boto3 = "1.35.82"
 fastapi = "0.115.6"
-python-multipart = "0.0.19"
+python-multipart = "0.0.20"
 email-validator = "2.2.0"
 structlog = "24.4.0"
 pyicu = "2.14"
@@ -39,7 +39,7 @@ countrynames = "1.16.5"
 fingerprints = "1.2.3"
 pantomime = "0.6.1"
 cryptography = "44.0.0"
-followthemoney = "3.7.11"
+followthemoney = "3.7.12"
 nomenklatura = "3.14.0"
 rigour = "0.8.2"
 asyncstdlib = "3.13.0"
@@ -53,12 +53,12 @@ ruff = ">=0.4.0,<1.0.0"
 mypy = "1.13.0"
 pytest = "8.3.4"
 pytest-cov = "6.0.0"
-pytest-asyncio = "0.24.0"
+pytest-asyncio = "0.25.0"
 pytest-httpx = "0.35.0"
 flake8 = ">=2.6.0"
 black = "24.10.0"
 types-aiofiles = ">=24.0,<25.0"
-boto3-stubs = "1.35.81"
+boto3-stubs = "1.35.82"
 bump2version = "1.0.1"
 pip = ">10.0.0"
 
