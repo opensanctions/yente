@@ -28,7 +28,7 @@ INDEX_SETTINGS = {
     },
     "index": {
         "refresh_interval": "5s",
-        "auto_expand_replicas": "0-all",
+        "auto_expand_replicas": settings.INDEX_AUTO_REPLICAS,
         "number_of_shards": settings.INDEX_SHARDS,
     },
 }
