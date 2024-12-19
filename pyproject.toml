@@ -23,7 +23,7 @@ opensearch-py = { "extras" = ["async"], version = "2.8.0" }
 uvicorn = { "extras" = ["standard"], version = "0.34.0" }
 httpx = { "extras" = ["http2"], version = "0.28.1" }
 aiohttp = { "extras" = ["speedups"], version = "3.11.10" }
-boto3 = "1.35.82"
+boto3 = "1.35.84"
 fastapi = "0.115.6"
 python-multipart = "0.0.20"
 email-validator = "2.2.0"
