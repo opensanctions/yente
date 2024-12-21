@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "yente"
-version = "4.2.0"
+version = "4.2.1"
 description = "A simple and fast API service for querying FollowTheMoney data, including OpenSanctions."
 authors = ["OpenSanctions <info@opensanctions.org>"]
 license = "MIT"
