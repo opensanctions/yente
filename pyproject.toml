@@ -1,12 +1,51 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
+dependencies = [
+    "elasticsearch[async] == 8.17.0",
+    "opensearch-py[async] == 2.8.0",
+    "uvicorn[standard] == 0.34.0",
+    "httpx[http2] == 0.28.1",
+    "aiohttp[speedups] == 3.11.11",
+    "boto3 ~= 1.35.85",
+    "fastapi == 0.115.6",
+    "python-multipart == 0.0.20",
+    "email-validator == 2.2.0",
+    "structlog == 24.4.0",
+    "pyicu == 2.14",
+    "jellyfish == 1.1.3",
+    "anyio == 4.7.0",
+    "orjson == 3.10.13",
+    "text-unidecode == 1.3",
+    "click ~= 8.1.6",
+    "normality == 2.5.0",
+    "countrynames == 1.16.5",
+    "fingerprints == 1.2.3",
+    "pantomime == 0.6.1",
+    "cryptography == 44.0.0",
+    "followthemoney == 3.7.12",
+    "nomenklatura == 3.14.0",
+    "rigour == 0.8.2",
+    "asyncstdlib == 3.13.0",
+    "aiocron == 1.8",
+    "aiocsv == 1.3.2",
+    "aiofiles == 24.1.0",
+    "mypy (>=1.14.1,<2.0.0)",
+    "boto3-stubs (>=1.35.94,<2.0.0)",
+
+    # for nk:
+    "scikit-learn == 1.5.0",
+]
 name = "yente"
 version = "4.2.1"
 description = "A simple and fast API service for querying FollowTheMoney data, including OpenSanctions."
-authors = ["OpenSanctions <info@opensanctions.org>"]
+authors = [{ name = "OpenSanctions", email = "info@opensanctions.org" }]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "yente", from = "." }]
+requires-python = ">=3.10,<=3.13"
 
 [project.urls]
 Documentation = "https://www.opensanctions.org/docs/yente/"
@@ -16,55 +55,19 @@ Issues = "https://github.com/opensanctions/yente/issues"
 [tool.poetry.scripts]
 yente = "yente.cli:cli"
 
-[tool.poetry.dependencies]
-python = ">3.10.0,<3.13.0"
-elasticsearch = { "extras" = ["async"], version = "8.17.0" }
-opensearch-py = { "extras" = ["async"], version = "2.8.0" }
-uvicorn = { "extras" = ["standard"], version = "0.34.0" }
-httpx = { "extras" = ["http2"], version = "0.28.1" }
-aiohttp = { "extras" = ["speedups"], version = "3.11.11" }
-boto3 = "1.35.85"
-fastapi = "0.115.6"
-python-multipart = "0.0.20"
-email-validator = "2.2.0"
-structlog = "24.4.0"
-pyicu = "2.14"
-jellyfish = "1.1.3"
-anyio = "4.7.0"
-orjson = "3.10.12"
-text-unidecode = "1.3"
-click = "8.1.6"
-normality = "2.5.0"
-countrynames = "1.16.5"
-fingerprints = "1.2.3"
-pantomime = "0.6.1"
-cryptography = "44.0.0"
-followthemoney = "3.7.12"
-nomenklatura = "3.14.0"
-rigour = "0.8.2"
-asyncstdlib = "3.13.0"
-aiocron = "1.8"
-aiocsv = "1.3.2"
-aiofiles = "24.1.0"
-
-
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.8.4,<1.0.0"
-mypy = "1.13.0"
-pytest = "8.3.4"
-pytest-cov = "6.0.0"
-pytest-asyncio = "0.25.0"
-pytest-httpx = "0.35.0"
+mypy = "~=1.13"
+pytest = "~=8.3"
+pytest-cov = "~=6.0"
+pytest-asyncio = "~=0.25"
+pytest-httpx = "~=0.35"
 flake8 = ">=2.6.0"
 black = "24.10.0"
 types-aiofiles = ">=24.0,<25.0"
-boto3-stubs = "1.35.85"
+boto3-stubs = "~=1.35.85"
 bump2version = "1.0.1"
 pip = ">10.0.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore:Elasticsearch built-in security:"]
