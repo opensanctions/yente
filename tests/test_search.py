@@ -126,7 +126,7 @@ def test_search_filter_countries_operator():
     assert len(results) > 0, results
 
     res = client.get(
-        "/search/default?q=vladimir putin&filter_op=and&countries=ke&countries=ru"
+        "/search/default?q=vladimir putin&filter_op=AND&countries=ke&countries=ru"
     )
     assert res.status_code == 200, res
     results = res.json()["results"]
