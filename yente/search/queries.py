@@ -23,8 +23,8 @@ class Operator(str, enum.Enum):
 
 
 def filter_query(
+    scope_dataset: Dataset,
     shoulds: List[Clause],
-    scope_dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
     include_dataset: List[str] = [],
@@ -132,9 +132,9 @@ def entity_query(
             shoulds.append({"match": {"text": value}})
 
     return filter_query(
+        dataset,
         shoulds,
         filters=filters,
-        scope_dataset=dataset,
         schema=entity.schema,
         include_dataset=include_dataset,
         exclude_schema=exclude_schema,
@@ -181,8 +181,8 @@ def text_query(
         }
         # log.info("Query", should=should)
     return filter_query(
+        dataset,
         [should],
-        scope_dataset=dataset,
         schema=schema,
         filters=filters,
         include_dataset=include_dataset,
@@ -201,7 +201,7 @@ def prefix_query(
         should: Clause = {"match_none": {}}
     else:
         should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
-    return filter_query([should], scope_dataset=dataset)
+    return filter_query(dataset, [should])
 
 
 def facet_aggregations(fields: List[str] = []) -> Clause:
