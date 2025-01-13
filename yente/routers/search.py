@@ -11,7 +11,7 @@ from yente.data.common import EntityResponse, SearchResponse
 from yente.provider import SearchProvider, get_provider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
-from yente.search.queries import FilterDict
+from yente.search.queries import FilterDict, Operator
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import serialize_entity
@@ -28,7 +28,6 @@ class Facet(str, enum.Enum):
     DATASETS = "datasets"
     SCHEMA = "schema"
     COUNTRIES = "countries"
-    NAMES = "names"
     IDENTIFIERS = "identifiers"
     TOPICS = "topics"
     GENDERS = "genders"
@@ -55,10 +54,13 @@ async def search(
         settings.BASE_SCHEMA, title="Types of entities that can match the search"
     ),
     include_dataset: List[str] = Query(
-        [], title="Only include the given datasets in results"
+        [],
+        title="Restrict the search scope to datasets (that are in the given scope) to search entities within.",
+        description="Limit the results to entities that are part of at least one of the given datasets.",
     ),
     exclude_dataset: List[str] = Query(
-        [], title="Remove the given datasets from results"
+        [],
+        title="Remove specific datasets (that are in the given scope) from the search scope.",
     ),
     exclude_schema: List[str] = Query(
         [], title="Remove the given types of entities from results"
@@ -72,7 +74,10 @@ async def search(
     topics: List[str] = Query(
         [], title="Filter by entity topics (e.g. sanction, role.pep)"
     ),
-    datasets: List[str] = Query([], title="Use `include_dataset` instead"),
+    datasets: List[str] = Query(
+        [],
+        title="Filter by dataset names, for faceting use (respects operator choice).",
+    ),
     limit: int = Query(
         settings.DEFAULT_PAGE, title="Number of results to return", le=settings.MAX_PAGE
     ),
@@ -80,12 +85,22 @@ async def search(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
     sort: List[str] = Query([], title="Sorting criteria"),
-    target: Optional[bool] = Query(None, title="Include only targeted entities"),
+    target: Optional[bool] = Query(
+        None,
+        title="Include only targeted entities",
+        description="Please specify a list of topics of concern, instead.",
+        deprecated=True,
+    ),
     fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
     simple: bool = Query(False, title="Use simple syntax for user-facing query boxes"),
     facets: List[Facet] = Query(
         DEFAULT_FACETS,
         title="Facet counts to include in response.",
+    ),
+    filter_op: Operator = Query(
+        "OR",
+        title="Define behaviour of multiple filters on one field",
+        description="Logic to use when combining multiple filters on the same field (topics, countries, datasets). Please specify AND for new integrations (to override a legacy default) and when building a faceted user interface.",
     ),
     provider: SearchProvider = Depends(get_provider),
 ) -> SearchResponse:
@@ -105,8 +120,8 @@ async def search(
     filters: FilterDict = {
         "countries": countries,
         "topics": topics,
+        "datasets": datasets,
     }
-    include_dataset.extend(datasets)
     if target is not None:
         filters["target"] = target
     query = text_query(
@@ -117,9 +132,10 @@ async def search(
         fuzzy=fuzzy,
         simple=simple,
         include_dataset=include_dataset,
-        exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
+        exclude_schema=exclude_schema,
         changed_since=changed_since,
+        filter_op=filter_op,
     )
     aggregations = facet_aggregations([f.value for f in facets])
     resp = await search_entities(

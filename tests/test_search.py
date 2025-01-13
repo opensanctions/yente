@@ -119,6 +119,20 @@ def test_search_filter_countries_remove():
     assert len(results) == 0, results
 
 
+def test_search_filter_countries_operator():
+    res = client.get("/search/default?q=vladimir putin&countries=ke&countries=ru")
+    assert res.status_code == 200, res
+    results = res.json()["results"]
+    assert len(results) > 0, results
+
+    res = client.get(
+        "/search/default?q=vladimir putin&filter_op=and&countries=ke&countries=ru"
+    )
+    assert res.status_code == 200, res
+    results = res.json()["results"]
+    assert len(results) == 0, results
+
+
 def test_search_facet_datasets_default():
     res = client.get("/search/default")
     assert res.status_code == 200, res
