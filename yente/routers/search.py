@@ -147,7 +147,6 @@ async def search(
         dataset=ds.name,
         results=output.total.value,
     )
-    response.headers.update(settings.CACHE_HEADERS)
     return output
 
 
@@ -188,6 +187,5 @@ async def fetch_entity(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     data = await serialize_entity(provider, entity, nested=nested)
-    log.info(data.caption, action="entity", entity_id=entity_id)
-    response.headers.update(settings.CACHE_HEADERS)
+    log.info(f"Fetch {data.id} [{data.schema_}]", action="entity", entity_id=entity_id)
     return data
