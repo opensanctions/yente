@@ -32,9 +32,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pip install -U pip poetry
           sudo apt-get install -y -qq libicu-dev
-          poetry install --with dev
+          pip install -U pip pyicu
+          pip install -e ".[dev]"
       - name: Run pytest tests
         env:
           YENTE_INDEX_TYPE: elasticsearch
@@ -66,9 +66,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pip install -U pip poetry
           sudo apt-get install -y -qq libicu-dev
-          poetry install --with dev
+          pip install -U pip pyicu
+          pip install -e ".[dev]"
       - name: Run pytest tests with opensearch backend
         env:
           YENTE_INDEX_TYPE: opensearch
@@ -89,9 +89,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pip install -U pip poetry
           sudo apt-get install -y -qq libicu-dev
-          poetry install --with dev
+          pip install -U pip pyicu
+          pip install -e ".[dev]"
       - name: Run mypy strict type check
         run: |
           make typecheck
