@@ -97,7 +97,7 @@ jobs:
           make typecheck
       - name: Build a distribution
         run: |
-          poetry build
+          python3 -m build --wheel
       - name: Publish a Python distribution to PyPI
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1

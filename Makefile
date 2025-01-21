@@ -18,9 +18,9 @@ api: build services
 	docker compose up --remove-orphans app
 
 test:
-	poetry run pytest --cov-report html --cov-report term --cov=yente -v tests
+	pytest --cov-report html --cov-report term --cov=yente -v tests
 
 typecheck:
-	poetry run mypy --strict yente
+	mypy --strict yente
 
 check: typecheck test
