@@ -63,6 +63,7 @@ async def match(
     fuzzy: bool = Query(
         settings.MATCH_FUZZY,
         title="Use slow matching for candidate generation, does not affect scores",
+        deprecated=True,
     ),
     changed_since: Optional[str] = Query(
         None,

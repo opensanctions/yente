@@ -1,5 +1,6 @@
+import enum
 from pprint import pprint  # noqa
-from typing import Any, Dict, Generator, List, Tuple, Union, Optional
+from typing import Any, Dict, Generator, List, Set, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
@@ -16,31 +17,38 @@ FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
 
 
+class Operator(str, enum.Enum):
+    AND = "AND"
+    OR = "OR"
+
+
 def filter_query(
+    scope_dataset: Dataset,
     shoulds: List[Clause],
-    dataset: Optional[Dataset] = None,
     schema: Optional[Schema] = None,
     filters: FilterDict = {},
     include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    filter_op: Operator = Operator.AND,
 ) -> Clause:
     filterqs: List[Clause] = []
     must_not: List[Clause] = []
-    datasets: List[str] = include_dataset
-    if not len(datasets) and dataset is not None:
-        datasets = dataset.dataset_names
-    for exclude_ds in exclude_dataset:
+
+    datasets: Set[str] = set(scope_dataset.dataset_names)
+    if len(include_dataset):
+        datasets = datasets.intersection(include_dataset)
+    if len(exclude_dataset):
         # This is logically a bit more consistent, but doesn't describe the use
         # case of wanting to screen all the entities from datasets X, Y but not Z:
         # must_not.append({"term": {"datasets": exclude_ds}})
-        if exclude_ds in datasets:
-            datasets.remove(exclude_ds)
+        datasets = datasets.difference(exclude_dataset)
     if len(datasets):
-        filterqs.append({"terms": {"datasets": datasets}})
+        filterqs.append({"terms": {"datasets": list(datasets)}})
     else:
         filterqs.append({"match_none": {}})
+
     if schema is not None:
         schemata = schema.matchable_schemata
         if not schema.matchable:
@@ -53,7 +61,12 @@ def filter_query(
             continue
         values = [v for v in values if len(v)]
         if len(values):
-            filterqs.append({"terms": {field: values}})
+            if filter_op == Operator.OR:
+                filterqs.append({"terms": {field: values}})
+                continue
+            elif filter_op == Operator.AND:
+                for v in values:
+                    filterqs.append({"term": {field: v}})
     if changed_since is not None:
         filterqs.append({"range": {"last_change": {"gt": changed_since}}})
 
@@ -119,9 +132,9 @@ def entity_query(
             shoulds.append({"match": {"text": value}})
 
     return filter_query(
+        dataset,
         shoulds,
         filters=filters,
-        dataset=dataset,
         schema=entity.schema,
         include_dataset=include_dataset,
         exclude_schema=exclude_schema,
@@ -141,6 +154,7 @@ def text_query(
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    filter_op: Operator = Operator.AND,
 ) -> Clause:
     if not len(query.strip()):
         should: Clause = {"match_all": {}}
@@ -167,14 +181,15 @@ def text_query(
         }
         # log.info("Query", should=should)
     return filter_query(
+        dataset,
         [should],
-        dataset=dataset,
         schema=schema,
         filters=filters,
         include_dataset=include_dataset,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
+        filter_op=filter_op,
     )
 
 
@@ -186,7 +201,7 @@ def prefix_query(
         should: Clause = {"match_none": {}}
     else:
         should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
-    return filter_query([should], dataset=dataset)
+    return filter_query(dataset, [should])
 
 
 def facet_aggregations(fields: List[str] = []) -> Clause:
