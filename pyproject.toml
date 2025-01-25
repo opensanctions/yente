@@ -10,13 +10,13 @@ authors = [{ name = "OpenSanctions", email = "info@opensanctions.org" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 dependencies = [
-    "elasticsearch[async] == 8.17.0",
+    "elasticsearch[async] == 8.17.1",
     "opensearch-py[async] == 2.8.0",
     "uvicorn[standard] == 0.34.0",
     "httpx[http2] == 0.28.1",
     "aiohttp[speedups] == 3.11.11",
     "boto3 ~= 1.36.2",
-    "fastapi == 0.115.6",
+    "fastapi == 0.115.7",
     "python-multipart == 0.0.20",
     "email-validator == 2.2.0",
     "structlog == 25.1.0",
@@ -32,7 +32,7 @@ dependencies = [
     "pantomime == 0.6.1",
     "cryptography == 44.0.0",
     "followthemoney == 3.8.0",
-    "nomenklatura == 3.14.0",
+    "nomenklatura == 3.15.1",
     "rigour == 0.8.4",
     "asyncstdlib == 3.13.0",
     "aiocron == 1.8",
