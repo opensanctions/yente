@@ -36,6 +36,9 @@ ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+RUN useradd -u 10000 -s /bin/false app
+USER app
+
 WORKDIR /app
 COPY --from=build /opt/venv /opt/venv
 COPY --from=build /app /app
