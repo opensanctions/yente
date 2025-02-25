@@ -15,7 +15,7 @@ dependencies = [
     "uvicorn[standard] == 0.34.0",
     "httpx[http2] == 0.28.1",
     "aiohttp[speedups] == 3.11.12",
-    "boto3 ~= 1.36.2",
+    "boto3 >= 1.36.2,< 1.38.0",
     "fastapi == 0.115.8",
     "python-multipart == 0.0.20",
     "email-validator == 2.2.0",
