@@ -60,11 +60,6 @@ async def match(
     topics: List[str] = Query(
         [], title="Only return results that match the given topics"
     ),
-    fuzzy: bool = Query(
-        settings.MATCH_FUZZY,
-        title="Use slow matching for candidate generation, does not affect scores",
-        deprecated=True,
-    ),
     changed_since: Optional[str] = Query(
         None,
         pattern=TS_PATTERN,
@@ -149,7 +144,6 @@ async def match(
                 ds,
                 entity,
                 filters=filters,
-                fuzzy=fuzzy,
                 include_dataset=include_dataset,
                 exclude_schema=exclude_schema,
                 exclude_dataset=exclude_dataset,

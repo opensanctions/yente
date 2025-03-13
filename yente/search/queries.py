@@ -82,7 +82,7 @@ def filter_query(
     }
 
 
-def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
+def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     names.extend(entity.get("weakAlias", quiet=True))
     shoulds: List[Clause] = []
@@ -94,8 +94,6 @@ def names_query(entity: EntityProxy, fuzzy: bool = True) -> List[Clause]:
                 "boost": 3.0,
             }
         }
-        if fuzzy:
-            match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
     for key in index_name_keys(names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
@@ -113,13 +111,12 @@ def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
     filters: FilterDict = {},
-    fuzzy: bool = True,
     include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
 ) -> Clause:
-    shoulds: List[Clause] = names_query(entity, fuzzy=fuzzy)
+    shoulds: List[Clause] = names_query(entity)
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
@@ -128,8 +125,6 @@ def entity_query(
             shoulds.append(query)
         elif prop.type.group is not None:
             shoulds.append({"term": {prop.type.group: value}})
-        elif fuzzy:
-            shoulds.append({"match": {"text": value}})
 
     return filter_query(
         dataset,

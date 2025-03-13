@@ -238,7 +238,7 @@ async def reconcile_query(
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
     try:
         proxy = Entity.from_example(example)
-        query = entity_query(dataset, proxy, fuzzy=False, changed_since=changed_since)
+        query = entity_query(dataset, proxy, changed_since=changed_since)
     except Exception as exc:
         raise HTTPException(400, detail=str(exc))
     resp = await search_entities(provider, query, limit=limit, offset=offset)
