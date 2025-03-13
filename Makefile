@@ -1,3 +1,4 @@
+.PHONY: build all shell stop services api test typecheck check
 
 all:
 	make api

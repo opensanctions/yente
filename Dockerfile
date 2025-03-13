@@ -41,8 +41,8 @@ ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 RUN apt-get update && apt-get install -y \
-      libicu72 \
-      ca-certificates \
+    libicu72 \
+    ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -56,4 +56,4 @@ COPY --from=build /app /app
 # Install locale definition - test with `locale -a`
 COPY --from=build /usr/lib/locale/locale-archive /usr/lib/locale/locale-archive
 
-CMD ["yente", "serve"]
+CMD ["uvicorn", "--workers", "1", "yente.asgi:app"]
