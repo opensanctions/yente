@@ -30,7 +30,7 @@ dependencies = [
     "countrynames == 1.16.6",
     "fingerprints == 1.2.3",
     "pantomime == 0.6.1",
-    "cryptography == 44.0.1",
+    "cryptography == 44.0.2",
     "followthemoney == 3.8.0",
     "nomenklatura == 3.15.2",
     "rigour == 0.8.4",
