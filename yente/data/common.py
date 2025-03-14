@@ -32,7 +32,6 @@ class EntityResponse(BaseModel):
 
 EntityResponse.model_rebuild()
 
-
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
     features: Dict[str, float]
@@ -79,6 +78,22 @@ class SearchResponse(ResultsResponse):
     results: List[EntityResponse]
     facets: Dict[str, SearchFacet]
 
+
+class AdjacentResultsResponse(BaseModel):
+    results: List[EntityResponse]
+    total: TotalSpec
+
+
+class EntityAdjacentResponse(BaseModel):
+    entity: EntityResponse
+    adjacent: Dict[str, AdjacentResultsResponse]
+    limit: int = Field(..., examples=[20])
+    offset: int = Field(0, examples=[0])
+
+
+class PropAdjacentResponse(AdjacentResultsResponse):
+    limit: int = Field(..., examples=[20])
+    offset: int = Field(0, examples=[0])
 
 class EntityExample(BaseModel):
     id: Optional[str] = Field(None, examples=["my-entity-id"])
