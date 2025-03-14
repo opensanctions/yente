@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List, Set, Tuple, Union, Optional
 from followthemoney.property import Property
 from followthemoney.types import registry
@@ -5,7 +6,13 @@ from followthemoney.types import registry
 from yente import settings
 from yente.logs import get_logger
 from yente.data.entity import Entity
-from yente.data.common import EntityResponse
+from yente.data.common import (
+    AdjacentResultsResponse,
+    EntityAdjacentResponse,
+    EntityResponse,
+    PropAdjacentResponse,
+    TotalSpec,
+)
 from yente.provider import SearchProvider
 from yente.search.search import result_entities
 
@@ -107,3 +114,73 @@ async def serialize_entity(
                     inverted[value].add((prop.reverse, adj.id))
 
     return nest_entity(root, entities, inverted, set())
+
+
+async def adjacent_prop(
+    provider: SearchProvider, entity: Entity, prop: Property, limit: int, offset: int
+) -> List[PropAdjacentResponse]:
+    if prop.stub:
+        # Incoming edges
+        query = {
+            "bool": {
+                "should": [
+                    {"terms": {f"properties.{prop.reverse.name}": [entity.id]}},
+                    {"terms": {"schema": [prop.reverse.schema.name]}},
+                ],
+                "minimum_should_match": 2,
+            }
+        }
+        resp = await provider.search(
+            index=settings.ENTITY_INDEX,
+            query=query,
+            size=limit,
+            from_=offset,
+        )
+        entities = list(result_entities(resp))
+        # TODO: add other side of interstitial entities
+        return PropAdjacentResponse(
+            results=[EntityResponse.from_entity(e) for e in entities],
+            total=TotalSpec(value=resp["hits"]["total"]["value"], relation="eq"),
+            limit=limit,
+            offset=offset,
+        )
+    else:
+        # TODO: Add outgoing edges
+        return PropAdjacentResponse(
+            results=[],
+            total=TotalSpec(value=0, relation="eq"),
+            limit=limit,
+            offset=offset,
+        )
+
+
+async def adjacents(
+    provider: SearchProvider, entity: Entity, limit: int, offset: int
+) -> EntityAdjacentResponse:
+    tasks = []
+    async with asyncio.TaskGroup() as tg:
+        for prop_name, prop in entity.schema.properties.items():
+            if prop.type != registry.entity:
+                continue
+            tasks.append(
+                (
+                    prop_name,
+                    tg.create_task(
+                        adjacent_prop(provider, entity, prop, limit, offset)
+                    ),
+                )
+            )
+    responses = {}
+    for prop_name, task in tasks:
+        prop_response = task.result()
+        if prop_response.total.value:
+            responses[prop_name] = AdjacentResultsResponse(
+                results=prop_response.results,
+                total=prop_response.total,
+            )
+    return EntityAdjacentResponse(
+        entity=EntityResponse.from_entity(entity),
+        adjacent=responses,
+        limit=limit,
+        offset=offset,
+    )
