@@ -66,3 +66,97 @@ def test_entity_nested():
     asset = own["properties"]["asset"][0]
     assert asset["schema"] == "Company", asset
     assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
+
+
+def test_adjacent():
+    res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert data["limit"] == 10, data
+    assert data["offset"] == 0, data
+
+    entity = data["entity"]
+    assert entity["caption"] == "Herr Christoph Alexander Kahl", entity
+    
+    props = data["adjacent"]
+    addr = [
+        a
+        for a in props["addressEntity"]["results"]
+        if a["id"] == "012a13cddb445def96357093c4ebb30c3c5ab41d"
+    ][0]
+    assert addr["schema"] == "Address", addr
+    assert "Pferdmengesstr" in addr["properties"]["full"][0], addr
+    assert len(props["addressEntity"]["results"]) == 2, props
+    assert props["addressEntity"]["total"]["value"] == 2, props
+
+    assert len(props["ownershipOwner"]["results"]) == 2, props
+    assert props["ownershipOwner"]["total"]["value"] == 2, props
+    own = [
+        o
+        for o in props["ownershipOwner"]["results"]
+        if o["id"] == "b89c677ed30888623500bfbfdb384d3eec259070"
+    ][0]
+    assert own["schema"] == "Ownership", own
+    assert own["properties"]["owner"] == [
+        "281d01c426ce39ddf80aa0e46574843c1ba8bfc9"
+    ], own
+
+    assert len(own["properties"]["asset"]) == 1, own
+    asset = own["properties"]["asset"][0]
+    assert asset["schema"] == "Company", asset
+    assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
+
+
+def test_adjacent_limit():
+    res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent?limit=1")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert data["limit"] == 1, data
+    
+    props = data["adjacent"]
+    assert len([
+        a
+        for a in props["addressEntity"]["results"]
+        if a["id"] == "012a13cddb445def96357093c4ebb30c3c5ab41d"
+    ]) == 1, props
+    assert len(props["addressEntity"]["results"]) == 1, props
+    assert props["addressEntity"]["total"]["value"] == 2, props
+
+    assert len(props["ownershipOwner"]["results"]) == 1, props
+    assert props["ownershipOwner"]["total"]["value"] == 2, props
+    assert len([
+        o
+        for o in props["ownershipOwner"]["results"]
+        if o["id"] == "b89c677ed30888623500bfbfdb384d3eec259070"
+    ]) == 1, props
+
+    asset = props["ownershipOwner"]["results"][0]["properties"]["asset"][0]
+    assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
+
+
+def test_adjacent_offset():
+    res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent?limit=1&offset=1")
+    assert res.status_code == 200, res
+    data = res.json()
+    assert data["limit"] == 1, data
+    assert data["offset"] == 1, data
+    
+    props = data["adjacent"]
+    assert len([
+        a
+        for a in props["addressEntity"]["results"]
+        if a["id"] == "012a13cddb445def96357093c4ebb30c3c5ab41d"
+    ]) == 1, props
+    assert len(props["addressEntity"]["results"]) == 1, props
+    assert props["addressEntity"]["total"]["value"] == 2, props
+
+    assert len(props["ownershipOwner"]["results"]) == 1, props
+    assert props["ownershipOwner"]["total"]["value"] == 2, props
+    assert len([
+        o
+        for o in props["ownershipOwner"]["results"]
+        if o["id"] == "b89c677ed30888623500bfbfdb384d3eec259070"
+    ]) == 1, props
+
+    asset = props["ownershipOwner"]["results"][0]["properties"]["asset"][0]
+    assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
