@@ -10,7 +10,6 @@ def test_entity_fetch():
     res = client.get("/entities/Q7747")
     assert res.status_code == 200, res
     data = res.json()
-    from pprint import pprint; pprint(data); assert False
     assert data["id"] == "Q7747"
     assert data["schema"] == "Person"
     assert "eu_fsf" in data["datasets"]
@@ -27,16 +26,43 @@ def test_entity_fetch():
     assert isinstance(sanc, dict), sanc
     assert sanc["schema"] == "Sanction", sanc
 
-    # for fam in props["familyPerson"]:
-    #     famprops = fam["properties"]
-    #     assert len(famprops["relative"]) > 0, famprops
-    #     for rel in famprops["relative"]:
-    #         if isinstance(rel, dict):
-    #             assert rel["id"] != data["id"], rel
-    #         else:
-    #             assert rel != data["id"], rel
-    #     for rel in famprops.get("relative", []):
-    #         if isinstance(rel, dict):
-    #             assert rel["id"] != data["id"], rel
-    #         else:
-    #             assert rel != data["id"], rel
+
+def test_entity_not_nested():
+    res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9?nested=false")
+    assert res.status_code == 200, res
+    data = res.json()
+    props = data["properties"]
+    assert "012a13cddb445def96357093c4ebb30c3c5ab41d" in props["addressEntity"], props
+    assert len(props["addressEntity"]) == 2, props
+    assert "ownershipOwner" not in props
+
+
+def test_entity_nested():
+    res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9")
+    assert res.status_code == 200, res
+    data = res.json()
+    props = data["properties"]
+    addr = [
+        a
+        for a in props["addressEntity"]
+        if a["id"] == "012a13cddb445def96357093c4ebb30c3c5ab41d"
+    ][0]
+    assert addr["schema"] == "Address", addr
+    assert "Pferdmengesstr" in addr["properties"]["full"][0], addr
+    assert len(props["addressEntity"]) == 2, props
+
+    assert len(props["ownershipOwner"]) == 2, props
+    own = [
+        o
+        for o in props["ownershipOwner"]
+        if o["id"] == "b89c677ed30888623500bfbfdb384d3eec259070"
+    ][0]
+    assert own["schema"] == "Ownership", own
+    assert own["properties"]["owner"] == [
+        "281d01c426ce39ddf80aa0e46574843c1ba8bfc9"
+    ], own
+
+    assert len(own["properties"]["asset"]) == 1, own
+    asset = own["properties"]["asset"][0]
+    assert asset["schema"] == "Company", asset
+    assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
