@@ -56,4 +56,5 @@ COPY --from=build /app /app
 # Install locale definition - test with `locale -a`
 COPY --from=build /usr/lib/locale/locale-archive /usr/lib/locale/locale-archive
 
-CMD ["uvicorn", "--workers", "1", "yente.asgi:app"]
+# CMD ["uvicorn", "--workers", "1", "yente.asgi:app"]
+CMD ["yente", "serve"]
