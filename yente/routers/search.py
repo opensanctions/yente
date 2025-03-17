@@ -20,7 +20,7 @@ from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict, Operator
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
-from yente.search.nested import adjacent_prop, adjacents, serialize_entity
+from yente.search.nested import get_adjacent_prop, get_adjacents, serialize_entity
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
 from yente.routers.util import get_dataset
@@ -252,7 +252,7 @@ async def fetch_entity(
         entity_id=entity_id,
     )
 
-    return await adjacents(provider, entity, limit=limit, offset=offset)
+    return await get_adjacents(provider, entity, limit=limit, offset=offset)
 
 
 @router.get(
@@ -301,7 +301,7 @@ async def fetch_entity(
         prop_name=prop_name,
     )
 
-    return await adjacent_prop(
+    return await get_adjacent_prop(
         provider,
         entity,
         entity.schema.properties[prop_name],

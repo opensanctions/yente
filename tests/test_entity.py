@@ -10,6 +10,7 @@ def test_entity_fetch():
     res = client.get("/entities/Q7747")
     assert res.status_code == 200, res
     data = res.json()
+    from pprint import pprint; pprint(data); assert False
     assert data["id"] == "Q7747"
     assert data["schema"] == "Person"
     assert "eu_fsf" in data["datasets"]

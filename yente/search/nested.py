@@ -1,5 +1,7 @@
 import asyncio
 from typing import Dict, List, Set, Tuple, Union, Optional
+from pprint import pprint, pformat
+
 from followthemoney.property import Property
 from followthemoney.types import registry
 
@@ -14,7 +16,7 @@ from yente.data.common import (
     TotalSpec,
 )
 from yente.provider import SearchProvider
-from yente.search.search import result_entities
+from yente.search.search import result_entities, result_total
 
 log = get_logger(__name__)
 
@@ -24,8 +26,19 @@ Inverted = Dict[str, Set[Tuple[Property, str]]]
 
 
 def nest_entity(
-    entity: Entity, entities: Entities, inverted: Inverted, path: Set[Optional[str]]
+    entity: Entity, entities: Entities, inverted: Inverted, path: Set[Optional[str]], truncate_ids: bool = False
 ) -> EntityResponse:
+    """
+    Args:
+        inverted: A mapping of entity IDs to a set of tuples of
+            (property, entity_id) where entity_id refers to the entity we're
+            processing via property.
+        path: Entity IDs already processed further up the tree.
+            Prevents repetition in a path.
+    """
+    print(
+        f"nest_entity schema={entity.schema.name} id={entity.id} path={path} inverted={inverted.get(entity.id, 'FOOBAR')}"
+    )
     props: Dict[str, List[Value]] = {}
     next_path = set([entity.id]).union(path)
 
@@ -36,7 +49,7 @@ def nest_entity(
                 continue
             adj = entities.get(adj_id)
             if adj is not None:
-                nested = nest_entity(adj, entities, inverted, next_path)
+                nested = nest_entity(adj, entities, inverted, next_path, truncate_ids)
                 props.setdefault(prop.name, [])
                 props[prop.name].append(nested)
 
@@ -50,10 +63,11 @@ def nest_entity(
                 continue
             adj = entities.get(value)
             if adj is not None:
-                nested = nest_entity(adj, entities, inverted, next_path)
+                nested = nest_entity(adj, entities, inverted, next_path, truncate_ids)
                 values.append(nested)
             else:
-                values.append(value)
+                if not truncate_ids:
+                    values.append(value)
         props[prop.name] = values
         if not len(values):
             props.pop(prop.name)
@@ -116,45 +130,88 @@ async def serialize_entity(
     return nest_entity(root, entities, inverted, set())
 
 
-async def adjacent_prop(
-    provider: SearchProvider, entity: Entity, prop: Property, limit: int, offset: int
-) -> List[PropAdjacentResponse]:
-    if prop.stub:
-        # Incoming edges
+async def get_adjacent_prop(
+    provider: SearchProvider, root: Entity, query_prop: Property, limit: int, offset: int
+) -> PropAdjacentResponse:
+    inverted: Inverted = {}
+    reverse = [root.id]
+    size = limit
+
+    entities: Entities = {root.id: root}
+    next_entities: Set[str] = set()
+    if not query_prop.stub:
+        next_entities.update(root.get(query_prop))
+
+    while True:
+        queries = []
+        if len(reverse):
+            queries.append(
+                {
+                    "bool": {
+                        "must": [
+                            {"terms": {f"properties.{query_prop.reverse.name}": reverse}},
+                            {"terms": {"schema": [query_prop.reverse.schema.name]}},
+                        ]
+                    }
+                }
+            )
+
+        if len(next_entities):
+            queries.append(
+                {"bool": {"must": [{"ids": {"values": list(next_entities)}}]}}
+            )
+
+        if not len(queries):
+            break
         query = {
             "bool": {
-                "should": [
-                    {"terms": {f"properties.{prop.reverse.name}": [entity.id]}},
-                    {"terms": {"schema": [prop.reverse.schema.name]}},
-                ],
-                "minimum_should_match": 2,
+                "should": queries,
+                "minimum_should_match": 1,
+                "must_not": [{"ids": {"values": list(entities.keys())}}],
             }
         }
+
         resp = await provider.search(
             index=settings.ENTITY_INDEX,
             query=query,
-            size=limit,
+            size=size,
             from_=offset,
         )
-        entities = list(result_entities(resp))
-        # TODO: add other side of interstitial entities
-        return PropAdjacentResponse(
-            results=[EntityResponse.from_entity(e) for e in entities],
-            total=TotalSpec(value=resp["hits"]["total"]["value"], relation="eq"),
-            limit=limit,
-            offset=offset,
-        )
-    else:
-        # TODO: Add outgoing edges
-        return PropAdjacentResponse(
-            results=[],
-            total=TotalSpec(value=0, relation="eq"),
-            limit=limit,
-            offset=offset,
-        )
+
+        # Clear up root-specifics after first iteration
+        if reverse:
+            total = result_total(resp)
+        reverse = []
+        size = settings.MAX_RESULTS
+        next_entities.clear()
+
+        for adj in result_entities(resp):
+            if adj.id is None:
+                continue
+            entities[adj.id] = adj
+
+            for prop, value in adj.itervalues():
+                if prop.type != registry.entity:
+                    continue
+                if adj.schema.edge and value not in entities:
+                    next_entities.add(value)
+
+                inverted.setdefault(value, set())
+                if prop.reverse is not None:
+                    inverted[value].add((prop.reverse, adj.id))
+
+    nested = nest_entity(root, entities, inverted, set(), truncate_ids=True)
+    results = nested.properties.get(query_prop.name, [])
+    pprint(("results", query_prop, results))
+    return PropAdjacentResponse(
+        results=results,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
-async def adjacents(
+async def get_adjacents(
     provider: SearchProvider, entity: Entity, limit: int, offset: int
 ) -> EntityAdjacentResponse:
     tasks = []
@@ -162,14 +219,10 @@ async def adjacents(
         for prop_name, prop in entity.schema.properties.items():
             if prop.type != registry.entity:
                 continue
-            tasks.append(
-                (
-                    prop_name,
-                    tg.create_task(
-                        adjacent_prop(provider, entity, prop, limit, offset)
-                    ),
-                )
+            task = tg.create_task(
+                get_adjacent_prop(provider, entity, prop, limit, offset)
             )
+            tasks.append((prop_name, task))
     responses = {}
     for prop_name, task in tasks:
         prop_response = task.result()
