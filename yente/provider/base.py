@@ -4,10 +4,11 @@ from typing import AsyncIterator
 
 from yente import settings
 
-query_semaphore = Semaphore(settings.QUERY_CONCURRENCY)
-
 
 class SearchProvider(object):
+    def __init__(self) -> None:
+        self.semaphore = Semaphore(settings.QUERY_CONCURRENCY)
+
     async def close(self) -> None:
         raise NotImplementedError
 

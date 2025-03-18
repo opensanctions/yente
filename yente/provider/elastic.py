@@ -12,7 +12,7 @@ from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
-from yente.provider.base import SearchProvider, query_semaphore
+from yente.provider.base import SearchProvider
 from yente.middleware.trace_context import get_trace_context
 
 log = get_logger(__name__)
@@ -55,6 +55,7 @@ class ElasticSearchProvider(SearchProvider):
         raise RuntimeError("Could not connect to ElasticSearch.")
 
     def __init__(self, client: AsyncElasticsearch) -> None:
+        super().__init__()
         self._client = client
 
     def client(self, **kwargs: Any) -> AsyncElasticsearch:
@@ -196,7 +197,7 @@ class ElasticSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with query_semaphore:
+            async with self.semaphore:
                 response = await self.client().search(
                     index=index,
                     query=query,
