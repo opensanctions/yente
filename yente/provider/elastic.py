@@ -40,6 +40,8 @@ class ElasticSearchProvider(SearchProvider):
         if settings.INDEX_USERNAME and settings.INDEX_PASSWORD:
             auth = (settings.INDEX_USERNAME, settings.INDEX_PASSWORD)
             kwargs["basic_auth"] = auth
+        if settings.INDEX_API_KEY:
+            kwargs["api_key"] = settings.INDEX_API_KEY
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
