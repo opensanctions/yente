@@ -20,7 +20,7 @@ from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict, Operator
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
-from yente.search.nested import get_adjacent_prop, get_adjacents, serialize_entity
+from yente.search.nested import get_nested_entity, get_adjacent_entities
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
 from yente.routers.util import get_dataset
@@ -154,7 +154,7 @@ async def search(
     )
     results: List[EntityResponse] = []
     for result in result_entities(resp):
-        results.append(await serialize_entity(provider, result))
+        results.append(EntityResponse.from_entity(result))
     output = SearchResponse(
         results=results,
         facets=result_facets(resp, catalog),
@@ -208,7 +208,10 @@ async def fetch_entity(
         return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    data = await serialize_entity(provider, entity, nested=nested)
+    if nested:
+        data, _total = await get_nested_entity(provider, entity)
+    else:
+        data = EntityResponse.from_entity(entity)
     log.info(f"Fetch {data.id} [{data.schema_}]", action="entity", entity_id=entity_id)
     return data
 
@@ -223,7 +226,7 @@ async def fetch_entity(
         500: {"model": ErrorResponse, "description": "Server error"},
     },
 )
-async def fetch_entity(
+async def fetch_adjacent_entities(
     response: Response,
     entity_id: str = Path(
         description="ID of the entity to retrieve", examples=["Q7747"]
@@ -252,7 +255,7 @@ async def fetch_entity(
         action="adjacent",
         entity_id=entity_id,
     )
-    return await get_adjacents(
+    return await get_adjacent_entities(
         provider,
         entity,
         limit=limit,
@@ -271,7 +274,7 @@ async def fetch_entity(
         500: {"model": ErrorResponse, "description": "Server error"},
     },
 )
-async def fetch_entity(
+async def fetch_adjacent_by_prop(
     response: Response,
     entity_id: str = Path(
         description="ID of the entity to retrieve", examples=["Q7747"]
@@ -307,11 +310,19 @@ async def fetch_entity(
         entity_id=entity_id,
         prop_name=prop_name,
     )
-    return await get_adjacent_prop(
+    prop = entity.schema.properties[prop_name]
+    nested, total = await get_nested_entity(
         provider,
         entity,
-        entity.schema.properties[prop_name],
+        prop,
+        parse_sorts(sort, default="_doc"),
+        limit,
+        offset,
+    )
+    results = nested.properties.get(prop.name, [])
+    return PropAdjacentResponse(
+        results=results,
+        total=total,
         limit=limit,
         offset=offset,
-        sort=parse_sorts(sort, default="_doc"),
     )

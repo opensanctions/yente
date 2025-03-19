@@ -77,27 +77,78 @@ def nest_entity(
     return serialized
 
 
-async def serialize_entity(
-    provider: SearchProvider, root: Entity, nested: bool = False
-) -> EntityResponse:
-    if not nested or root.id is None:
-        return EntityResponse.from_entity(root)
+def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set[str]:
+    if prop is None:
+        return set(entity.get_type_values(registry.entity))
+    elif prop.schema.edge:
+        return set()
+    return set(entity.get(prop))
+
+
+def make_outbound_query(next_entities: List[str]) -> Dict[str, Any] | None:
+    if not next_entities:
+        return None
+    return {"bool": {"must": [{"ids": {"values": list(next_entities)}}]}}
+
+
+def make_inbound_query(
+    inbound_ids: List[str], prop: Optional[Property] = None
+) -> Dict[str, Any] | None:
+    if not inbound_ids:
+        return None
+    if prop is None or prop.reverse is None:
+        return {"bool": {"must": [{"terms": {"entities": inbound_ids}}]}}
+    else:
+        return {
+            "bool": {
+                "must": [
+                    {"terms": {f"properties.{prop.reverse.name}": inbound_ids}},
+                    {"terms": {"schema": [prop.reverse.schema.name]}},
+                ]
+            }
+        }
+
+
+async def get_nested_entity(
+    provider: SearchProvider,
+    root: Entity,
+    prop: Optional[Property] = None,
+    sort: List[Any] = [],
+    limit: int = settings.MAX_RESULTS,
+    offset: int = 0,
+) -> Tuple[EntityResponse, TotalSpec]:
+    """
+    Fetches adjacent entities up to one edge away from the root, nested within
+    the provided entity.
+
+    When prop is provided, only that property is considered for nesting.
+
+    When pagination options are supplied, other entity ids are dropped.
+
+    Also returns the number of directly-adjacent entities available.
+    """
     inverted: Inverted = {}
-    reverse = [root.id]
-
+    inbound_ids = [root.id]
+    outbound_ids: Set[str] = initial_outbound_ids(root, prop)
     entities: Entities = {root.id: root}
-    next_entities = set(root.get_type_values(registry.entity))
+    total = None
 
+    # The first iteration is outbound references from the root, and/or
+    # inbound references from interstitial entities to the root,
+    # and must be paginated. The second iteration is outbound references from
+    # interstitial entities and must not be paginated.
     while True:
         shoulds = []
-        if len(reverse):
-            shoulds.append({"terms": {"entities": reverse}})
-
-        if len(next_entities):
-            shoulds.append({"ids": {"values": list(next_entities)}})
+        inbound_query = make_inbound_query(inbound_ids, prop)
+        if inbound_query:
+            shoulds.append(inbound_query)
+        outbound_query = make_outbound_query(outbound_ids)
+        if outbound_query:
+            shoulds.append(outbound_query)
 
         if not len(shoulds):
             break
+
         query = {
             "bool": {
                 "should": shoulds,
@@ -105,150 +156,62 @@ async def serialize_entity(
                 "must_not": [{"ids": {"values": list(entities.keys())}}],
             }
         }
-
         resp = await provider.search(
             index=settings.ENTITY_INDEX,
             query=query,
-            size=settings.MAX_RESULTS,
-        )
-        reverse = []
-        next_entities.clear()
-        for adj in result_entities(resp):
-            if adj.id is None:
-                continue
-            entities[adj.id] = adj
-
-            for prop, value in adj.itervalues():
-                if prop.type != registry.entity:
-                    continue
-                if adj.schema.edge and value not in entities:
-                    next_entities.add(value)
-
-                inverted.setdefault(value, set())
-                if prop.reverse is not None:
-                    inverted[value].add((prop.reverse, adj.id))
-
-    return nest_entity(root, entities, inverted, set())
-
-
-async def get_adjacent_prop(
-    provider: SearchProvider,
-    root: Entity,
-    query_prop: Property,
-    limit: int,
-    offset: int,
-    sort: List[Any],
-) -> PropAdjacentResponse:
-    inverted: Inverted = {}
-    reverse = [root.id]
-    size = limit
-    total = None
-    query_offset = offset
-
-    entities: Entities = {root.id: root}
-    next_entities: Set[str] = set()
-    if not query_prop.stub:
-        next_entities.update(root.get(query_prop))
-
-    while True:
-        queries = []
-        if len(reverse) and query_prop.reverse is not None:
-            queries.append(
-                {
-                    "bool": {
-                        "must": [
-                            {
-                                "terms": {
-                                    f"properties.{query_prop.reverse.name}": reverse
-                                }
-                            },
-                            {"terms": {"schema": [query_prop.reverse.schema.name]}},
-                        ]
-                    }
-                }
-            )
-
-        if len(next_entities):
-            queries.append(
-                {"bool": {"must": [{"ids": {"values": list(next_entities)}}]}}
-            )
-
-        if not len(queries):
-            break
-        query = {
-            "bool": {
-                "should": queries,
-                "minimum_should_match": 1,
-                "must_not": [{"ids": {"values": list(entities.keys())}}],
-            }
-        }
-        resp = await provider.search(
-            index=settings.ENTITY_INDEX,
-            query=query,
-            size=size,
-            from_=query_offset,
+            size=limit,
+            from_=offset,
             sort=sort,
         )
 
-        # The first iteration is either outbound references from the root,
-        # or inbound references from interstitial entities to the root,
-        # and must be paginated.
-        # The second iteration is outbound references from interstitial entities
-        # and must not be paginated.
-        #
-        # Prepare for second iteration
         if total is None:
             total = result_total(resp)
-        reverse = []
-        size = settings.MAX_RESULTS
-        query_offset = 0
-        next_entities.clear()
+        # Prepare for second iteration
+        limit = settings.MAX_RESULTS
+        offset = 0
+        inbound_ids = []
+        outbound_ids.clear()
 
-        # Handle results
         for adj in result_entities(resp):
             if adj.id is None:
                 continue
             entities[adj.id] = adj
 
-            for prop, value in adj.itervalues():
-                if prop.type != registry.entity:
+            for adj_prop, value in adj.itervalues():
+                if adj_prop.type != registry.entity:
                     continue
                 if adj.schema.edge and value not in entities:
-                    next_entities.add(value)
+                    outbound_ids.add(value)
 
                 inverted.setdefault(value, set())
-                if prop.reverse is not None:
-                    inverted[value].add((prop.reverse, adj.id))
+                if adj_prop.reverse is not None:
+                    inverted[value].add((adj_prop.reverse, adj.id))
 
-    nested = nest_entity(root, entities, inverted, set(), truncate_ids=True)
-    results = nested.properties.get(query_prop.name, [])
-    return PropAdjacentResponse(
-        results=results,
-        total=total,
-        limit=limit,
-        offset=offset,
-    )
+    truncate_ids = limit or offset
+    nested = nest_entity(root, entities, inverted, set(), truncate_ids)
+    return nested, total
 
 
-async def get_adjacents(
+async def get_adjacent_entities(
     provider: SearchProvider, entity: Entity, limit: int, offset: int, sort: List[Any]
 ) -> EntityAdjacentResponse:
+    """Queries the requested page of results for each property of type Entity."""
     tasks = []
     async with asyncio.TaskGroup() as tg:
         for prop_name, prop in entity.schema.properties.items():
             if prop.type != registry.entity:
                 continue
             task = tg.create_task(
-                get_adjacent_prop(provider, entity, prop, limit, offset, sort)
+                get_nested_entity(provider, entity, prop, sort, limit, offset)
             )
             tasks.append((prop_name, task))
     responses = {}
     for prop_name, task in tasks:
-        prop_response = task.result()
-        if prop_response.total.value:
+        prop_response, total = task.result()
+        if total.value:
             responses[prop_name] = AdjacentResultsResponse(
-                results=prop_response.results,
-                total=prop_response.total,
+                results=prop_response.properties.get(prop_name, []),
+                total=total,
             )
     return EntityAdjacentResponse(
         entity=EntityResponse.from_entity(entity),
