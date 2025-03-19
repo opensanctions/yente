@@ -40,9 +40,6 @@ def nest_entity(
         path: Entity IDs already processed further up the tree.
             Prevents repetition in a path.
     """
-    print(
-        f"nest_entity schema={entity.schema.name} id={entity.id} path={path} inverted={inverted.get(entity.id, 'FOOBAR')}"
-    )
     props: Dict[str, List[Value]] = {}
     next_path = set([entity.id]).union(path)
 
@@ -183,7 +180,6 @@ async def get_adjacent_prop(
                 "must_not": [{"ids": {"values": list(entities.keys())}}],
             }
         }
-
         resp = await provider.search(
             index=settings.ENTITY_INDEX,
             query=query,
@@ -192,13 +188,21 @@ async def get_adjacent_prop(
             sort=sort,
         )
 
-        # Clear up root-specifics after first iteration
+        # The first iteration is either outbound references from the root,
+        # or inbound references from interstitial entities to the root,
+        # and must be paginated.
+        # The second iteration is outbound references from interstitial entities
+        # and must not be paginated.
+        #
+        # Prepare for second iteration
         if reverse:
             total = result_total(resp)
         reverse = []
         size = settings.MAX_RESULTS
+        offset = 0
         next_entities.clear()
 
+        # Handle results
         for adj in result_entities(resp):
             if adj.id is None:
                 continue
@@ -216,7 +220,6 @@ async def get_adjacent_prop(
 
     nested = nest_entity(root, entities, inverted, set(), truncate_ids=True)
     results = nested.properties.get(query_prop.name, [])
-    pprint(("results", query_prop, results))
     return PropAdjacentResponse(
         results=results,
         total=total,

@@ -163,4 +163,4 @@ def test_adjacent_offset():
     ]) == 1, props
     asset = props["ownershipOwner"]["results"][0]["properties"]["asset"][0]
     print("asset", asset)
-    assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
+    assert asset["properties"]["name"][0] == "Fake Holding GmbH", asset
