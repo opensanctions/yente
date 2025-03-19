@@ -142,6 +142,8 @@ async def get_adjacent_prop(
     inverted: Inverted = {}
     reverse = [root.id]
     size = limit
+    total = None
+    query_offset = offset
 
     entities: Entities = {root.id: root}
     next_entities: Set[str] = set()
@@ -150,7 +152,7 @@ async def get_adjacent_prop(
 
     while True:
         queries = []
-        if len(reverse):
+        if len(reverse) and query_prop.reverse is not None:
             queries.append(
                 {
                     "bool": {
@@ -184,7 +186,7 @@ async def get_adjacent_prop(
             index=settings.ENTITY_INDEX,
             query=query,
             size=size,
-            from_=offset,
+            from_=query_offset,
             sort=sort,
         )
 
@@ -195,11 +197,11 @@ async def get_adjacent_prop(
         # and must not be paginated.
         #
         # Prepare for second iteration
-        if reverse:
+        if total is None:
             total = result_total(resp)
         reverse = []
         size = settings.MAX_RESULTS
-        offset = 0
+        query_offset = 0
         next_entities.clear()
 
         # Handle results

@@ -298,7 +298,7 @@ async def fetch_entity(
         return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    if prop_name not in entity.schema.properties:
+    if prop_name not in entity.schema.properties or entity.schema.properties[prop_name].type != registry.entity:
         raise HTTPException(404, detail="No such property!")
 
     log.info(
