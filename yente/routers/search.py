@@ -229,6 +229,7 @@ async def fetch_entity(
         description="ID of the entity to retrieve", examples=["Q7747"]
     ),
     provider: SearchProvider = Depends(get_provider),
+    sort: List[str] = Query([], title="Sorting criteria"),
     limit: int = Query(
         settings.DEFAULT_PAGE,
         title="Number of results per property to return",
@@ -251,8 +252,13 @@ async def fetch_entity(
         action="adjacent",
         entity_id=entity_id,
     )
-
-    return await get_adjacents(provider, entity, limit=limit, offset=offset)
+    return await get_adjacents(
+        provider,
+        entity,
+        limit=limit,
+        offset=offset,
+        sort=parse_sorts(sort, default="_doc"),
+    )
 
 
 @router.get(
@@ -275,6 +281,7 @@ async def fetch_entity(
         examples=["address", "ownershipOwner"],
     ),
     provider: SearchProvider = Depends(get_provider),
+    sort: List[str] = Query([], title="Sorting criteria"),
     limit: int = Query(
         settings.DEFAULT_PAGE,
         title="Number of results per property to return",
@@ -300,11 +307,11 @@ async def fetch_entity(
         entity_id=entity_id,
         prop_name=prop_name,
     )
-
     return await get_adjacent_prop(
         provider,
         entity,
         entity.schema.properties[prop_name],
         limit=limit,
         offset=offset,
+        sort=parse_sorts(sort, default="_doc"),
     )

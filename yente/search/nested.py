@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Set, Tuple, Union, Optional
+from typing import Any, Dict, List, Set, Tuple, Union, Optional
 from pprint import pprint, pformat
 
 from followthemoney.property import Property
@@ -26,7 +26,11 @@ Inverted = Dict[str, Set[Tuple[Property, str]]]
 
 
 def nest_entity(
-    entity: Entity, entities: Entities, inverted: Inverted, path: Set[Optional[str]], truncate_ids: bool = False
+    entity: Entity,
+    entities: Entities,
+    inverted: Inverted,
+    path: Set[Optional[str]],
+    truncate_ids: bool = False,
 ) -> EntityResponse:
     """
     Args:
@@ -131,7 +135,12 @@ async def serialize_entity(
 
 
 async def get_adjacent_prop(
-    provider: SearchProvider, root: Entity, query_prop: Property, limit: int, offset: int
+    provider: SearchProvider,
+    root: Entity,
+    query_prop: Property,
+    limit: int,
+    offset: int,
+    sort: List[Any],
 ) -> PropAdjacentResponse:
     inverted: Inverted = {}
     reverse = [root.id]
@@ -149,7 +158,11 @@ async def get_adjacent_prop(
                 {
                     "bool": {
                         "must": [
-                            {"terms": {f"properties.{query_prop.reverse.name}": reverse}},
+                            {
+                                "terms": {
+                                    f"properties.{query_prop.reverse.name}": reverse
+                                }
+                            },
                             {"terms": {"schema": [query_prop.reverse.schema.name]}},
                         ]
                     }
@@ -176,6 +189,7 @@ async def get_adjacent_prop(
             query=query,
             size=size,
             from_=offset,
+            sort=sort,
         )
 
         # Clear up root-specifics after first iteration
@@ -212,7 +226,7 @@ async def get_adjacent_prop(
 
 
 async def get_adjacents(
-    provider: SearchProvider, entity: Entity, limit: int, offset: int
+    provider: SearchProvider, entity: Entity, limit: int, offset: int, sort: List[Any]
 ) -> EntityAdjacentResponse:
     tasks = []
     async with asyncio.TaskGroup() as tg:
@@ -220,7 +234,7 @@ async def get_adjacents(
             if prop.type != registry.entity:
                 continue
             task = tg.create_task(
-                get_adjacent_prop(provider, entity, prop, limit, offset)
+                get_adjacent_prop(provider, entity, prop, limit, offset, sort)
             )
             tasks.append((prop_name, task))
     responses = {}

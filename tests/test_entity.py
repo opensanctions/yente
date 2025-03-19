@@ -108,6 +108,7 @@ def test_adjacent():
 
 
 def test_adjacent_limit():
+    """Get the first of two adjacent entities"""
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent?limit=1")
     assert res.status_code == 200, res
     data = res.json()
@@ -117,7 +118,7 @@ def test_adjacent_limit():
     assert len([
         a
         for a in props["addressEntity"]["results"]
-        if a["id"] == "012a13cddb445def96357093c4ebb30c3c5ab41d"
+        if a["id"] == "582e64e961eaf537d8a80856520d601519a5fb98"
     ]) == 1, props
     assert len(props["addressEntity"]["results"]) == 1, props
     assert props["addressEntity"]["total"]["value"] == 2, props
@@ -135,13 +136,16 @@ def test_adjacent_limit():
 
 
 def test_adjacent_offset():
+    """ Get the second of two adjacent entities """
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent?limit=1&offset=1")
     assert res.status_code == 200, res
     data = res.json()
     assert data["limit"] == 1, data
     assert data["offset"] == 1, data
-    
+    from pprint import pprint
+    pprint(("response", data))
     props = data["adjacent"]
+    # It's the other address from test_adjacent_limit
     assert len([
         a
         for a in props["addressEntity"]["results"]
@@ -155,8 +159,8 @@ def test_adjacent_offset():
     assert len([
         o
         for o in props["ownershipOwner"]["results"]
-        if o["id"] == "b89c677ed30888623500bfbfdb384d3eec259070"
+        if o["id"] == "b89c677ed30888623500bbbbbbbbbbbbbbbbbbbb"
     ]) == 1, props
-
     asset = props["ownershipOwner"]["results"][0]["properties"]["asset"][0]
+    print("asset", asset)
     assert asset["properties"]["name"][0] == "Fake Invest GmbH", asset
