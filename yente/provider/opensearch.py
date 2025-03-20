@@ -191,7 +191,7 @@ class OpenSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with self.semaphore:
+            async with self.query_semaphore:
                 body: Dict[str, Any] = {"query": query}
                 if aggregations is not None:
                     body["aggregations"] = aggregations

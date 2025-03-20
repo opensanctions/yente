@@ -4,7 +4,6 @@ from typing import Any, AsyncGenerator, Dict, List
 from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
-from followthemoney.types import registry
 
 from yente import settings
 from yente.data.manifest import Catalog
@@ -71,11 +70,6 @@ async def iter_entity_docs(
             doc[NAME_PHONETIC_FIELD] = phonetic_names(names)
             doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             doc["text"] = texts
-            #for prop in entity.iterprops():
-            #    if prop.type != registry.entity:
-            #        continue
-            #    doc[prop.qname] = [id_ for id_ in entity.get(prop)]
-            #    print(doc)
 
             entity_id = doc.pop("id")
             yield {"_index": index, "_id": entity_id, "_source": doc}

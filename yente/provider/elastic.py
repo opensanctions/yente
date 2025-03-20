@@ -197,7 +197,7 @@ class ElasticSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with self.semaphore:
+            async with self.query_semaphore:
                 response = await self.client().search(
                     index=index,
                     query=query,

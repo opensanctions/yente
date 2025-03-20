@@ -7,7 +7,7 @@ from yente import settings
 
 class SearchProvider(object):
     def __init__(self) -> None:
-        self.semaphore = Semaphore(settings.QUERY_CONCURRENCY)
+        self.query_semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
     async def close(self) -> None:
         raise NotImplementedError

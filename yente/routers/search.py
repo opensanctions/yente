@@ -1,4 +1,3 @@
-import asyncio
 from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
@@ -270,7 +269,7 @@ async def fetch_adjacent_entities(
     response_model=PropAdjacentResponse,
     responses={
         307: {"description": "The entity was merged into another ID"},
-        404: {"model": ErrorResponse, "description": "Entity not found"},
+        404: {"model": ErrorResponse, "description": "Entity or property not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
 )
@@ -301,7 +300,10 @@ async def fetch_adjacent_by_prop(
         return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    if prop_name not in entity.schema.properties or entity.schema.properties[prop_name].type != registry.entity:
+    if (
+        prop_name not in entity.schema.properties
+        or entity.schema.properties[prop_name].type != registry.entity
+    ):
         raise HTTPException(404, detail="No such property!")
 
     log.info(

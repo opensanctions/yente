@@ -32,6 +32,7 @@ class EntityResponse(BaseModel):
 
 EntityResponse.model_rebuild()
 
+
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
     features: Dict[str, float]
@@ -80,7 +81,7 @@ class SearchResponse(ResultsResponse):
 
 
 class AdjacentResultsResponse(BaseModel):
-    results: List[EntityResponse]
+    results: List[Union[str, "EntityResponse"]]
     total: TotalSpec
 
 
@@ -94,6 +95,7 @@ class EntityAdjacentResponse(BaseModel):
 class PropAdjacentResponse(AdjacentResultsResponse):
     limit: int = Field(..., examples=[20])
     offset: int = Field(0, examples=[0])
+
 
 class EntityExample(BaseModel):
     id: Optional[str] = Field(None, examples=["my-entity-id"])

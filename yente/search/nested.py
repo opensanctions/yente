@@ -1,6 +1,5 @@
 import asyncio
-from typing import Any, Dict, List, Set, Tuple, Union, Optional
-from pprint import pprint, pformat
+from typing import Any, Dict, Iterable, List, Set, Tuple, Union, Optional
 
 from followthemoney.property import Property
 from followthemoney.types import registry
@@ -12,7 +11,6 @@ from yente.data.common import (
     AdjacentResultsResponse,
     EntityAdjacentResponse,
     EntityResponse,
-    PropAdjacentResponse,
     TotalSpec,
 )
 from yente.provider import SearchProvider
@@ -85,10 +83,10 @@ def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set
     return set(entity.get(prop))
 
 
-def make_outbound_query(next_entities: List[str]) -> Dict[str, Any] | None:
+def make_outbound_query(next_entities: Iterable[str]) -> Dict[str, Any] | None:
     if not next_entities:
         return None
-    return {"bool": {"must": [{"ids": {"values": list(next_entities)}}]}}
+    return {"ids": {"values": list(next_entities)}}
 
 
 def make_inbound_query(
@@ -97,7 +95,7 @@ def make_inbound_query(
     if not inbound_ids:
         return None
     if prop is None or prop.reverse is None:
-        return {"bool": {"must": [{"terms": {"entities": inbound_ids}}]}}
+        return {"terms": {"entities": inbound_ids}}
     else:
         return {
             "bool": {
@@ -123,7 +121,7 @@ async def get_nested_entity(
 
     When prop is provided, only that property is considered for nesting.
 
-    When pagination options are supplied, other entity ids are dropped.
+    When pagination options are supplied, adjacent ids beyond the specified page are dropped.
 
     Also returns the number of directly-adjacent entities available.
     """
@@ -136,7 +134,9 @@ async def get_nested_entity(
     # The first iteration is outbound references from the root, and/or
     # inbound references from interstitial entities to the root,
     # and must be paginated. The second iteration is outbound references from
-    # interstitial entities and must not be paginated.
+    # interstitial entities and must not be paginated. We assume that interstitial
+    # entities are always connecting one entity to close to one other entities
+    # to avoid getting into the notion of paginating a second step in a graph.
     while True:
         shoulds = []
         inbound_query = make_inbound_query(inbound_ids, prop)
@@ -187,8 +187,9 @@ async def get_nested_entity(
                 if adj_prop.reverse is not None:
                     inverted[value].add((adj_prop.reverse, adj.id))
 
-    truncate_ids = limit or offset
+    truncate_ids = bool(limit) or bool(offset)
     nested = nest_entity(root, entities, inverted, set(), truncate_ids)
+    assert total is not None  # we expect to have had at least one iteration which sets total.
     return nested, total
 
 
