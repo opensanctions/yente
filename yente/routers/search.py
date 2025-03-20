@@ -224,6 +224,7 @@ async def fetch_entity(
         404: {"model": ErrorResponse, "description": "Entity not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
+    include_in_schema=False,  # Hide while we try it out.
 )
 async def fetch_adjacent_entities(
     response: Response,
@@ -272,6 +273,7 @@ async def fetch_adjacent_entities(
         404: {"model": ErrorResponse, "description": "Entity or property not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
+    include_in_schema=False,  # Hide while we try it out.
 )
 async def fetch_adjacent_by_prop(
     response: Response,
