@@ -40,9 +40,11 @@ ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libicu72 \
     ca-certificates \
+    curl # for health checks \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
