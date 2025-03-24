@@ -20,7 +20,7 @@ dependencies = [
     "python-multipart == 0.0.20",
     "email-validator == 2.2.0",
     "structlog == 25.2.0",
-    "pyicu == 2.14",
+    "pyicu == 2.15",
     "jellyfish == 1.1.3",
     "anyio == 4.8.0",
     "orjson == 3.10.15",
