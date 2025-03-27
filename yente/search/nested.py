@@ -28,7 +28,7 @@ def nest_entity(
     entities: Entities,
     inverted: Inverted,
     path: Set[Optional[str]],
-    truncate_ids: bool = False,
+    include_unretrieved_ids: bool = True,
 ) -> EntityResponse:
     """
     Args:
@@ -37,6 +37,10 @@ def nest_entity(
             processing via property.
         path: Entity IDs already processed further up the tree.
             Prevents repetition in a path.
+        include_unretrieved_ids: Whether IDs that don't occur in `entities`
+            should be included as prop values. True is suggested to highlight
+            missing entities, False is suggested for paginated results.
+
     """
     props: Dict[str, List[Value]] = {}
     next_path = set([entity.id]).union(path)
@@ -48,7 +52,9 @@ def nest_entity(
                 continue
             adj = entities.get(adj_id)
             if adj is not None:
-                nested = nest_entity(adj, entities, inverted, next_path, truncate_ids)
+                nested = nest_entity(
+                    adj, entities, inverted, next_path, include_unretrieved_ids
+                )
                 props.setdefault(prop.name, [])
                 props[prop.name].append(nested)
 
@@ -62,10 +68,12 @@ def nest_entity(
                 continue
             adj = entities.get(value)
             if adj is not None:
-                nested = nest_entity(adj, entities, inverted, next_path, truncate_ids)
+                nested = nest_entity(
+                    adj, entities, inverted, next_path, include_unretrieved_ids
+                )
                 values.append(nested)
             else:
-                if not truncate_ids:
+                if include_unretrieved_ids:
                     values.append(value)
         props[prop.name] = values
         if not len(values):
@@ -122,6 +130,9 @@ async def get_nested_entity(
     When prop is provided, only that property is considered for nesting.
 
     When pagination options are supplied, adjacent ids beyond the specified page are dropped.
+    Pagination is only applied to the first degree to avoid the complexity of second-degree
+    pagination. We assume interstitial entities link one entity to one or close to one other
+    entity.
 
     Also returns the number of directly-adjacent entities available.
     """
@@ -131,12 +142,9 @@ async def get_nested_entity(
     entities: Entities = {root.id: root}
     total = None
 
-    # The first iteration is outbound references from the root, and/or
-    # inbound references from interstitial entities to the root,
-    # and must be paginated. The second iteration is outbound references from
-    # interstitial entities and must not be paginated. We assume that interstitial
-    # entities are always connecting one entity to close to one other entities
-    # to avoid getting into the notion of paginating a second step in a graph.
+    # We exit the loop when there are no more queries. We only query inbound IDs
+    # on the first iteration, meaning we can only discover new outbound IDs on the
+    # first or second iteration, so this should exit on (max) the third iteration.
     while True:
         shoulds = []
         inbound_query = make_inbound_query(inbound_ids, prop)
@@ -146,6 +154,7 @@ async def get_nested_entity(
         if outbound_query:
             shoulds.append(outbound_query)
 
+        # Loop exit condition
         if not len(shoulds):
             break
 
@@ -187,9 +196,11 @@ async def get_nested_entity(
                 if adj_prop.reverse is not None:
                     inverted[value].add((adj_prop.reverse, adj.id))
 
-    truncate_ids = bool(limit) or bool(offset)
-    nested = nest_entity(root, entities, inverted, set(), truncate_ids)
-    assert total is not None  # we expect to have had at least one iteration which sets total.
+    include_unretrieved_ids = not bool(limit) and not bool(offset)
+    nested = nest_entity(root, entities, inverted, set(), include_unretrieved_ids)
+    assert (
+        total is not None
+    )  # we expect to have had at least one iteration which sets total.
     return nested, total
 
 
@@ -213,10 +224,10 @@ async def get_adjacent_entities(
             responses[prop_name] = AdjacentResultsResponse(
                 results=prop_response.properties.get(prop_name, []),
                 total=total,
+                limit=limit,
+                offset=offset,
             )
     return EntityAdjacentResponse(
         entity=EntityResponse.from_entity(entity),
         adjacent=responses,
-        limit=limit,
-        offset=offset,
     )

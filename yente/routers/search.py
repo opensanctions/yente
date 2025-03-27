@@ -8,9 +8,9 @@ import enum
 from yente import settings
 from yente.logs import get_logger
 from yente.data.common import (
+    AdjacentResultsResponse,
     EntityAdjacentResponse,
     ErrorResponse,
-    PropAdjacentResponse,
 )
 from yente.data.common import EntityResponse, SearchResponse
 from yente.provider import SearchProvider, get_provider
@@ -267,9 +267,9 @@ async def fetch_adjacent_entities(
 @router.get(
     "/entities/{entity_id}/adjacent/{prop_name}",
     tags=["Data access"],
-    response_model=PropAdjacentResponse,
+    response_model=AdjacentResultsResponse,
     responses={
-        307: {"description": "The entity was merged into another ID"},
+        308: {"description": "The entity was merged into another ID"},
         404: {"model": ErrorResponse, "description": "Entity or property not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
@@ -294,7 +294,7 @@ async def fetch_adjacent_by_prop(
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
-) -> Union[RedirectResponse, PropAdjacentResponse]:
+) -> Union[RedirectResponse, AdjacentResultsResponse]:
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
@@ -324,7 +324,7 @@ async def fetch_adjacent_by_prop(
         offset,
     )
     results = nested.properties.get(prop.name, [])
-    return PropAdjacentResponse(
+    return AdjacentResultsResponse(
         results=results,
         total=total,
         limit=limit,

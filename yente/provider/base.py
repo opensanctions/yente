@@ -7,6 +7,8 @@ from yente import settings
 
 class SearchProvider(object):
     def __init__(self) -> None:
+        # We create a provider instance per event loop. Semaphone gets attached
+        # to the event loop, so it has to be scoped to the provider instance.
         self.query_semaphore = Semaphore(settings.QUERY_CONCURRENCY)
 
     async def close(self) -> None:

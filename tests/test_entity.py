@@ -75,8 +75,6 @@ def test_adjacent():
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent")
     assert res.status_code == 200
     data = res.json()
-    assert data["limit"] == 10
-    assert data["offset"] == 0
 
     entity = data["entity"]
     assert entity["caption"] == "Herr Christoph Alexander Kahl"
@@ -89,6 +87,8 @@ def test_adjacent():
     assert "Pferdmengesstr" in addr["properties"]["full"][0]
     assert len(adjacent["addressEntity"]["results"]) == 2
     assert adjacent["addressEntity"]["total"]["value"] == 2
+    assert adjacent["addressEntity"]["limit"] == 10
+    assert adjacent["addressEntity"]["offset"] == 0
 
     payments = adjacent["paymentPayer"]["results"]
     assert len(payments) == 2
@@ -112,13 +112,13 @@ def test_adjacent_limit():
     )
     assert res.status_code == 200
     data = res.json()
-    assert data["limit"] == 1
 
     adjacent = data["adjacent"]
     addresses = adjacent["addressEntity"]["results"]
     assert len(addresses) == 1
     by_id(addresses, "582e64e961eaf537d8a80856520d601519a5fb98")
     assert adjacent["addressEntity"]["total"]["value"] == 2
+    assert adjacent["addressEntity"]["limit"] == 1
 
     payments = adjacent["paymentPayer"]["results"]
     assert len(payments) == 1
@@ -141,14 +141,14 @@ def test_adjacent_offset():
     )
     assert res.status_code == 200
     data = res.json()
-    assert data["limit"] == 1
-    assert data["offset"] == 1
 
     adjacent = data["adjacent"]
     addresses = adjacent["addressEntity"]["results"]
     by_id(addresses, "012a13cddb445def96357093c4ebb30c3c5ab41d")
     assert len(addresses) == 1
     assert adjacent["addressEntity"]["total"]["value"] == 2
+    assert adjacent["addressEntity"]["limit"] == 1
+    assert adjacent["addressEntity"]["offset"] == 1
 
     payments = adjacent["paymentPayer"]["results"]
     assert len(payments) == 1

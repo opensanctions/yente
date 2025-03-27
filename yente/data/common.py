@@ -80,21 +80,13 @@ class SearchResponse(ResultsResponse):
     facets: Dict[str, SearchFacet]
 
 
-class AdjacentResultsResponse(BaseModel):
+class AdjacentResultsResponse(ResultsResponse):
     results: List[Union[str, "EntityResponse"]]
-    total: TotalSpec
 
 
 class EntityAdjacentResponse(BaseModel):
     entity: EntityResponse
     adjacent: Dict[str, AdjacentResultsResponse]
-    limit: int = Field(..., examples=[20])
-    offset: int = Field(0, examples=[0])
-
-
-class PropAdjacentResponse(AdjacentResultsResponse):
-    limit: int = Field(..., examples=[20])
-    offset: int = Field(0, examples=[0])
 
 
 class EntityExample(BaseModel):
