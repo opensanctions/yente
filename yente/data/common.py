@@ -80,6 +80,15 @@ class SearchResponse(ResultsResponse):
     facets: Dict[str, SearchFacet]
 
 
+class AdjacentResultsResponse(ResultsResponse):
+    results: List[Union[str, "EntityResponse"]]
+
+
+class EntityAdjacentResponse(BaseModel):
+    entity: EntityResponse
+    adjacent: Dict[str, AdjacentResultsResponse]
+
+
 class EntityExample(BaseModel):
     id: Optional[str] = Field(None, examples=["my-entity-id"])
     schema_: str = Field(..., examples=["Person"], alias="schema")

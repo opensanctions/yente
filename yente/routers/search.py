@@ -2,11 +2,16 @@ from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from followthemoney import model
+from followthemoney.types import registry
 import enum
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.common import ErrorResponse
+from yente.data.common import (
+    AdjacentResultsResponse,
+    EntityAdjacentResponse,
+    ErrorResponse,
+)
 from yente.data.common import EntityResponse, SearchResponse
 from yente.provider import SearchProvider, get_provider
 from yente.search.queries import parse_sorts, text_query
@@ -14,7 +19,7 @@ from yente.search.queries import facet_aggregations
 from yente.search.queries import FilterDict, Operator
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
-from yente.search.nested import serialize_entity
+from yente.search.nested import get_nested_entity, get_adjacent_entities
 from yente.data import get_catalog
 from yente.util import limit_window, EntityRedirect
 from yente.routers.util import get_dataset
@@ -148,7 +153,7 @@ async def search(
     )
     results: List[EntityResponse] = []
     for result in result_entities(resp):
-        results.append(await serialize_entity(provider, result))
+        results.append(EntityResponse.from_entity(result))
     output = SearchResponse(
         results=results,
         facets=result_facets(resp, catalog),
@@ -202,6 +207,126 @@ async def fetch_entity(
         return RedirectResponse(status_code=308, url=url)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
-    data = await serialize_entity(provider, entity, nested=nested)
+    if nested:
+        data, _total = await get_nested_entity(provider, entity)
+    else:
+        data = EntityResponse.from_entity(entity)
     log.info(f"Fetch {data.id} [{data.schema_}]", action="entity", entity_id=entity_id)
     return data
+
+
+@router.get(
+    "/entities/{entity_id}/adjacent",
+    tags=["Data access"],
+    response_model=EntityAdjacentResponse,
+    responses={
+        307: {"description": "The entity was merged into another ID"},
+        404: {"model": ErrorResponse, "description": "Entity not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+    include_in_schema=False,  # Hide while we try it out.
+)
+async def fetch_adjacent_entities(
+    response: Response,
+    entity_id: str = Path(
+        description="ID of the entity to retrieve", examples=["Q7747"]
+    ),
+    provider: SearchProvider = Depends(get_provider),
+    sort: List[str] = Query([], title="Sorting criteria"),
+    limit: int = Query(
+        settings.DEFAULT_PAGE,
+        title="Number of results per property to return",
+        le=settings.MAX_PAGE,
+    ),
+    offset: int = Query(
+        0, title="Start at result with given offset", le=settings.MAX_OFFSET
+    ),
+) -> Union[RedirectResponse, EntityAdjacentResponse]:
+    try:
+        entity = await get_entity(provider, entity_id)
+    except EntityRedirect as redir:
+        url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
+        return RedirectResponse(status_code=308, url=url)
+    if entity is None:
+        raise HTTPException(404, detail="No such entity!")
+
+    log.info(
+        f"Fetch {entity.id} [{entity.schema.name}]",
+        action="adjacent",
+        entity_id=entity_id,
+    )
+    return await get_adjacent_entities(
+        provider,
+        entity,
+        limit=limit,
+        offset=offset,
+        sort=parse_sorts(sort, default="_doc"),
+    )
+
+
+@router.get(
+    "/entities/{entity_id}/adjacent/{prop_name}",
+    tags=["Data access"],
+    response_model=AdjacentResultsResponse,
+    responses={
+        308: {"description": "The entity was merged into another ID"},
+        404: {"model": ErrorResponse, "description": "Entity or property not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+    include_in_schema=False,  # Hide while we try it out.
+)
+async def fetch_adjacent_by_prop(
+    response: Response,
+    entity_id: str = Path(
+        description="ID of the entity to retrieve", examples=["Q7747"]
+    ),
+    prop_name: str = Path(
+        description="Name of the property to fetch adjacent entities for",
+        examples=["address", "ownershipOwner"],
+    ),
+    provider: SearchProvider = Depends(get_provider),
+    sort: List[str] = Query([], title="Sorting criteria"),
+    limit: int = Query(
+        settings.DEFAULT_PAGE,
+        title="Number of results per property to return",
+        le=settings.MAX_PAGE,
+    ),
+    offset: int = Query(
+        0, title="Start at result with given offset", le=settings.MAX_OFFSET
+    ),
+) -> Union[RedirectResponse, AdjacentResultsResponse]:
+    try:
+        entity = await get_entity(provider, entity_id)
+    except EntityRedirect as redir:
+        url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
+        return RedirectResponse(status_code=308, url=url)
+    if entity is None:
+        raise HTTPException(404, detail="No such entity!")
+    if (
+        prop_name not in entity.schema.properties
+        or entity.schema.properties[prop_name].type != registry.entity
+    ):
+        raise HTTPException(404, detail="No such property!")
+
+    log.info(
+        f"Fetch {entity.id} [{entity.schema.name}:{prop_name}]",
+        action="adjacent_prop",
+        entity_id=entity_id,
+        prop_name=prop_name,
+    )
+    prop = entity.schema.properties[prop_name]
+    nested, total = await get_nested_entity(
+        provider,
+        entity,
+        prop,
+        parse_sorts(sort, default="_doc"),
+        limit,
+        offset,
+    )
+    results = nested.properties.get(prop.name, [])
+    return AdjacentResultsResponse(
+        results=results,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

@@ -11,7 +11,7 @@ from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
-from yente.provider.base import SearchProvider, query_semaphore
+from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
@@ -61,6 +61,7 @@ class OpenSearchProvider(SearchProvider):
         raise RuntimeError("Could not connect to OpenSearch.")
 
     def __init__(self, client: AsyncOpenSearch) -> None:
+        super().__init__()
         self.client = client
 
     async def close(self) -> None:
@@ -190,7 +191,7 @@ class OpenSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with query_semaphore:
+            async with self.query_semaphore:
                 body: Dict[str, Any] = {"query": query}
                 if aggregations is not None:
                     body["aggregations"] = aggregations
