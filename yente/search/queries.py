@@ -115,6 +115,7 @@ def entity_query(
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    filter_op: Operator = Operator.AND,
 ) -> Clause:
     shoulds: List[Clause] = names_query(entity)
     for prop, value in entity.itervalues():
@@ -130,6 +131,7 @@ def entity_query(
         dataset,
         shoulds,
         filters=filters,
+        filter_op=filter_op,
         schema=entity.schema,
         include_dataset=include_dataset,
         exclude_schema=exclude_schema,
