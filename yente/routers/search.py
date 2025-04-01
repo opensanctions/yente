@@ -217,6 +217,7 @@ async def fetch_entity(
 
 @router.get(
     "/entities/{entity_id}/adjacent",
+    name="Fetch Adjacent Entities*",
     tags=["Data access"],
     response_model=EntityAdjacentResponse,
     responses={
@@ -241,7 +242,10 @@ async def fetch_adjacent_entities(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
 ) -> Union[RedirectResponse, EntityAdjacentResponse]:
-    """Retrieve entities adjacent to a given entity e.g. passports, sanctions, associates.
+    """***Beta:** This endpoint is released for wider testing and is not yet recommended
+    for production use. We welcome feedback. Its interface may change without announcement.
+
+    Retrieve entities adjacent to a given entity e.g. passports, sanctions, associates.
 
     This endpoint offers the same information as adjacent entities nested in
     [`/entities/{entity_id}`](#tag/Data-access/operation/fetch_entity_entities__entity_id__get),
@@ -272,7 +276,7 @@ async def fetch_adjacent_entities(
 @router.get(
     "/entities/{entity_id}/adjacent/{property_name}",
     tags=["Data access"],
-    name="Fetch Adjacent by Property",
+    name="Fetch Adjacent by Property*",
     response_model=AdjacentResultsResponse,
     responses={
         308: {"description": "The entity was merged into another ID"},
@@ -283,7 +287,8 @@ async def fetch_adjacent_entities(
 async def fetch_adjacent_by_prop(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity whose peers are requested", examples=["Q7747"]
+        description="ID of the entity whose peers are requested",
+        examples=["Q7747"],
     ),
     property_name: str = Path(
         description="Name of the property to fetch adjacent entities for",
@@ -300,7 +305,10 @@ async def fetch_adjacent_by_prop(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
 ) -> Union[RedirectResponse, AdjacentResultsResponse]:
-    """Retrieve entities adjacent to a given entity for a specific property.
+    """***Beta:** This endpoint is released for wider testing and is not yet recommended
+    for production use. We welcome feedback. Its interface may change without announcement.
+
+    Retrieve entities adjacent to a given entity for a specific property.
 
     This endpoint offers the same information as adjacent entities nested in
     [`/entities/{entity_id}`](#tag/Data-access/operation/fetch_entity_entities__entity_id__get),
