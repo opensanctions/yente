@@ -229,7 +229,7 @@ async def fetch_entity(
 async def fetch_adjacent_entities(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity whose peers are requested", examples=["Q7747"]
+        description="ID of the entity whose graph context was requested", examples=["Q7747"]
     ),
     provider: SearchProvider = Depends(get_provider),
     sort: List[str] = Query([], title="Sorting criteria"),
@@ -287,7 +287,7 @@ async def fetch_adjacent_entities(
 async def fetch_adjacent_by_prop(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity whose peers are requested",
+        description="ID of the entity hose graph context was requested",
         examples=["Q7747"],
     ),
     property_name: str = Path(
