@@ -176,7 +176,7 @@ async def search(
     tags=["Data access"],
     response_model=EntityResponse,
     responses={
-        307: {"description": "The entity was merged into another ID"},
+        308: {"description": "The entity was merged into another ID"},
         404: {"model": ErrorResponse, "description": "Entity not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
@@ -217,19 +217,19 @@ async def fetch_entity(
 
 @router.get(
     "/entities/{entity_id}/adjacent",
+    name="Fetch Adjacent Entities*",
     tags=["Data access"],
     response_model=EntityAdjacentResponse,
     responses={
-        307: {"description": "The entity was merged into another ID"},
+        308: {"description": "The entity was merged into another ID"},
         404: {"model": ErrorResponse, "description": "Entity not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
-    include_in_schema=False,  # Hide while we try it out.
 )
 async def fetch_adjacent_entities(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity to retrieve", examples=["Q7747"]
+        description="ID of the entity whose graph context was requested", examples=["Q7747"]
     ),
     provider: SearchProvider = Depends(get_provider),
     sort: List[str] = Query([], title="Sorting criteria"),
@@ -242,6 +242,15 @@ async def fetch_adjacent_entities(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
 ) -> Union[RedirectResponse, EntityAdjacentResponse]:
+    """***Beta:** This endpoint is released for wider testing and is not yet recommended
+    for production use. We welcome feedback. Its interface may change without announcement.
+
+    Retrieve entities adjacent to a given entity e.g. passports, sanctions, associates.
+
+    This endpoint offers the same information as adjacent entities nested in
+    [`/entities/{entity_id}`](#tag/Data-access/operation/fetch_entity_entities__entity_id__get),
+    but offers pagination for cases where the number of results is potentially very large.
+    """
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
@@ -265,22 +274,23 @@ async def fetch_adjacent_entities(
 
 
 @router.get(
-    "/entities/{entity_id}/adjacent/{prop_name}",
+    "/entities/{entity_id}/adjacent/{property_name}",
     tags=["Data access"],
+    name="Fetch Adjacent by Property*",
     response_model=AdjacentResultsResponse,
     responses={
         308: {"description": "The entity was merged into another ID"},
         404: {"model": ErrorResponse, "description": "Entity or property not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
-    include_in_schema=False,  # Hide while we try it out.
 )
 async def fetch_adjacent_by_prop(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity to retrieve", examples=["Q7747"]
+        description="ID of the entity hose graph context was requested",
+        examples=["Q7747"],
     ),
-    prop_name: str = Path(
+    property_name: str = Path(
         description="Name of the property to fetch adjacent entities for",
         examples=["address", "ownershipOwner"],
     ),
@@ -295,6 +305,15 @@ async def fetch_adjacent_by_prop(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
 ) -> Union[RedirectResponse, AdjacentResultsResponse]:
+    """***Beta:** This endpoint is released for wider testing and is not yet recommended
+    for production use. We welcome feedback. Its interface may change without announcement.
+
+    Retrieve entities adjacent to a given entity for a specific property.
+
+    This endpoint offers the same information as adjacent entities nested in
+    [`/entities/{entity_id}`](#tag/Data-access/operation/fetch_entity_entities__entity_id__get),
+    but offers pagination for cases where the number of results is potentially very large.
+    """
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
@@ -303,18 +322,18 @@ async def fetch_adjacent_by_prop(
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     if (
-        prop_name not in entity.schema.properties
-        or entity.schema.properties[prop_name].type != registry.entity
+        property_name not in entity.schema.properties
+        or entity.schema.properties[property_name].type != registry.entity
     ):
         raise HTTPException(404, detail="No such property!")
 
     log.info(
-        f"Fetch {entity.id} [{entity.schema.name}:{prop_name}]",
+        f"Fetch {entity.id} [{entity.schema.name}:{property_name}]",
         action="adjacent_prop",
         entity_id=entity_id,
-        prop_name=prop_name,
+        property_name=property_name,
     )
-    prop = entity.schema.properties[prop_name]
+    prop = entity.schema.properties[property_name]
     nested, total = await get_nested_entity(
         provider,
         entity,

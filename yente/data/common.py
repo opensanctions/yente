@@ -81,7 +81,27 @@ class SearchResponse(ResultsResponse):
 
 
 class AdjacentResultsResponse(ResultsResponse):
-    results: List[Union[str, "EntityResponse"]]
+    results: List[Union[str, EntityResponse]] = Field(
+        [],
+        examples=[
+            [
+                {
+                    "id": "ds-abc-own-123",
+                    "schema": "Ownership",
+                    "properties": {
+                        "asset": [
+                            {
+                                "id": "NK-1234",
+                                "caption": "Company 1 Ltd.",
+                                "schema": "Comany",
+                                "properties": {"name": ["Company 1 Ltd."]},
+                            }
+                        ]
+                    },
+                }
+            ]
+        ],
+    )
 
 
 class EntityAdjacentResponse(BaseModel):
