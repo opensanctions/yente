@@ -30,8 +30,11 @@ def parse_index_name(index: str) -> Tuple[str, str]:
         raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
     sys_version = system_version()
-    if not index_version.startswith(sys_version):
-        raise ValueError("Index version does not start with the correct prefix.")
+    # FIXME: We don't want to verify this, since old indexes can still be around and need
+    # to be handled. The side effects of disabling this check seem positive, but we should
+    # verify this.
+    # if not index_version.startswith(sys_version):
+    #     raise ValueError("Index version does not start with the correct prefix.")
     dataset_version = index_version[len(sys_version) :]
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")

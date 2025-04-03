@@ -176,7 +176,9 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             await provider.delete_index(index)
         try:
             ds_name, _ = parse_index_name(index)
-        except ValueError:
+        except ValueError as exc:
+            log.warn("Invalid index name: %s, deleting." % exc, index=index)
+            await provider.delete_index(index)
             continue
         dataset = catalog.get(ds_name)
         if dataset is None or not dataset.load:
