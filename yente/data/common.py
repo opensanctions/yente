@@ -37,6 +37,7 @@ class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
     features: Dict[str, float]
     match: bool = False
+    token: Optional[str] = None
 
     @classmethod
     def from_entity_result(
