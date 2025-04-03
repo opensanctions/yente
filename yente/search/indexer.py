@@ -88,7 +88,7 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
     versions: List[str] = []
     for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
-            ds, version = parse_index_name(index)
+            ds, version = parse_index_name(index, match_system_version=True)
             if ds == dataset.name:
                 versions.append(version)
         except ValueError:
