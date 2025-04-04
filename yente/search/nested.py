@@ -86,7 +86,7 @@ def nest_entity(
 def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set[str]:
     if prop is None:
         return set(entity.get_type_values(registry.entity))
-    elif prop.schema.edge:
+    elif prop.type != registry.entity:
         return set()
     return set(entity.get(prop))
 
