@@ -14,7 +14,7 @@ def system_version() -> str:
     return f"{settings.INDEX_VERSION}{ftm_version}-"
 
 
-def parse_index_name(index: str) -> Tuple[str, str]:
+def parse_index_name(index: str, match_system_version: bool = False) -> Tuple[str, str]:
     """
     Parse a given index name.
 
@@ -33,8 +33,8 @@ def parse_index_name(index: str) -> Tuple[str, str]:
     # FIXME: We don't want to verify this, since old indexes can still be around and need
     # to be handled. The side effects of disabling this check seem positive, but we should
     # verify this.
-    # if not index_version.startswith(sys_version):
-    #     raise ValueError("Index version does not start with the correct prefix.")
+    if match_system_version and not index_version.startswith(sys_version):
+        raise ValueError("Index version does not start with the correct prefix.")
     dataset_version = index_version[len(sys_version) :]
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")
