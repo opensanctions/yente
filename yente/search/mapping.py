@@ -54,11 +54,18 @@ def make_field(
 
 
 def make_type_field(
-    type_: PropertyType, copy_to: Optional[List[str]] = None
+    type_: PropertyType,
+    copy_to: Optional[List[str]] = None,
+    existing: Optional[MappingProperty] = None,
 ) -> MappingProperty:
     field_type = "keyword" if type_.group else "text"
     if type_ in TEXT_TYPES:
         field_type = "text"
+
+    # keyword type trumps text type for conflicting property types
+    # e.g. UnknownLink/Email:subject
+    if existing and existing["type"] == "keyword" and field_type == "text":
+        return existing
     return make_field(field_type, copy_to=copy_to)
 
 
@@ -84,7 +91,11 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
             # to facet on them.
             if prop.type.group is not None and not excluded:
                 copy_to.append(prop.type.group)
-            prop_mapping[name] = make_type_field(prop.type, copy_to=copy_to)
+            prop_mapping[name] = make_type_field(
+                prop.type,
+                copy_to=copy_to,
+                existing=prop_mapping.get(name, None),
+            )
 
     mapping = {
         "schema": make_keyword(),
