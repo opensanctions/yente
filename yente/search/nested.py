@@ -86,7 +86,7 @@ def nest_entity(
 def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set[str]:
     if prop is None:
         return set(entity.get_type_values(registry.entity))
-    elif prop.schema.edge:
+    elif prop.type != registry.entity:
         return set()
     return set(entity.get(prop))
 
@@ -189,6 +189,12 @@ async def get_nested_entity(
             for adj_prop, value in adj.itervalues():
                 if adj_prop.type != registry.entity:
                     continue
+
+                # Loop-limiting condition:
+                #
+                # This expands in the next iteration, but only on edges.
+                # So we look beyond an adjacent edge like Directorship found from
+                # a Director, but not beyond a Director found from a Directorship.
                 if adj.schema.edge and value not in entities:
                     outbound_ids.add(value)
 

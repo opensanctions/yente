@@ -66,6 +66,19 @@ def test_entity_nested():
     assert cdu["schema"] == "Organization"
     assert cdu["properties"]["name"] == ["CDU"]
 
+    # Nested on an interstitial entity
+    res = client.get(f"/entities/{pmt['id']}")
+    assert res.status_code == 200
+    data = res.json()
+    data["schema"] == "Payment"
+    props = data["properties"]
+    assert len(props["payer"]) == 1
+    assert props["payer"][0]["id"] == "281d01c426ce39ddf80aa0e46574843c1ba8bfc9"
+    assert len(props["beneficiary"]) == 2
+    assert "c326dd8021ee75fe9608f31ecb4e2e7388144102" in [
+        b["id"] for b in props["beneficiary"]
+    ]
+
 
 def test_adjacent():
     """
@@ -104,6 +117,26 @@ def test_adjacent():
     assert cdu["schema"] == "Organization"
     assert cdu["properties"]["name"] == ["CDU"]
 
+    # Adjacent on an interstitial entity
+    res = client.get(f"/entities/{pmt['id']}/adjacent")
+    assert res.status_code == 200
+    data = res.json()
+    data["entity"]["schema"] == "Payment"
+    adj = data["adjacent"]
+    # We have adjacent payer and beneficiary entities (not just IDs)
+    assert len(adj["payer"]["results"]) == 1
+    payer = adj["payer"]["results"][0]
+    assert payer["id"] == "281d01c426ce39ddf80aa0e46574843c1ba8bfc9"
+    assert len(adj["beneficiary"]["results"]) == 2
+    assert "c326dd8021ee75fe9608f31ecb4e2e7388144102" in [
+        b["id"] for b in adj["beneficiary"]["results"]
+    ]
+    # We don't traverse beyond the first Thing
+    payer["properties"].keys() == {"addressEntity", "country", "name"}
+    assert len(payer["properties"]["addressEntity"]) == 2
+    for addr in payer["properties"]["addressEntity"]:
+        assert type(addr) == str
+
 
 def test_adjacent_limit():
     """Get the first of two adjacent entities for outgoing and incoming edges"""
@@ -132,6 +165,16 @@ def test_adjacent_limit():
     len([b for b in beneficiaries if b["schema"] == "Organization"]) == 2
     fake_org = by_id(beneficiaries, "fake-org")
     assert fake_org["properties"]["name"] == ["Fake"]
+
+    # Adjacent on an interstitial entity
+    res = client.get(f"/entities/{pmt['id']}/adjacent?limit=1")
+    assert res.status_code == 200
+    data = res.json()
+    data["entity"]["schema"] == "Payment"
+    adj = data["adjacent"]
+    # results are limited
+    assert len(adj["payer"]["results"]) == 1
+    assert len(adj["beneficiary"]["results"]) == 1
 
 
 def test_adjacent_offset():
