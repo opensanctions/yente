@@ -1,5 +1,5 @@
 # Define the base image to use for both stages
-ARG python_image=python:3.12-slim
+ARG python_image=python:3.13.3-slim
 
 # ------------------------------------------------------------------------
 # Stage 1: Build and install dependencies
