@@ -31,7 +31,7 @@ dependencies = [
     "fingerprints == 1.2.3",
     "pantomime == 0.6.1",
     "cryptography == 44.0.2",
-    "followthemoney == 3.8.2",
+    "followthemoney == 3.8.4",
     "nomenklatura == 3.17.2",
     "rigour == 0.9.10",
     "asyncstdlib == 3.13.1",
