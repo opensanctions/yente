@@ -1,76 +1,89 @@
 import httpx
+import unicodedata
 from pathlib import Path
-from normality import WS
+from functools import lru_cache
 from urllib.parse import urlparse
 from followthemoney.types import registry
+from followthemoney.schema import Schema
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Iterable, Optional, Set, Generator
+from normality import collapse_spaces, ascii_text
+from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
 from rigour.text.scripts import is_modern_alphabet
-from rigour.text.distance import levenshtein
-from rigour.text.phonetics import metaphone
-from fingerprints import remove_types, clean_name_light
-from nomenklatura.util import fingerprint_name, names_word_list
+from rigour.text import levenshtein, metaphone
+from rigour.names import tokenize_name, remove_person_prefixes
+from rigour.names import replace_org_types_compare
 
 from yente import settings
 
 
-def _clean_phonetic(original: str) -> Optional[str]:
-    # We're being extra picky what phonemes are put into the search index,
-    # so that we can reduce the number of false positives.
-    if not is_modern_alphabet(original):
+def preprocess_name(name: Optional[str]) -> Optional[str]:
+    """Preprocess a name for comparison."""
+    if name is None:
         return None
-    return fingerprint_name(original)
+    name = unicodedata.normalize("NFC", name)
+    name = name.lower()
+    return collapse_spaces(name)
 
 
-def expand_dates(dates: List[str]) -> List[str]:
-    """Expand a date into less precise versions of itself."""
-    expanded = set(dates)
-    for date in dates:
-        for prec in (Precision.DAY, Precision.MONTH, Precision.YEAR):
-            if len(date) > prec.value:
-                expanded.add(date[: prec.value])
-    return list(expanded)
+@lru_cache(maxsize=2000)
+def clean_tokenize_name(schema: Schema, name: str) -> List[str]:
+    """Tokenize a name and clean it up."""
+    name = preprocess_name(name) or name
+    if schema.name in ("LegalEntity", "Organization", "Company", "PublicBody"):
+        name = replace_org_types_compare(name, normalizer=preprocess_name)
+    elif schema.name in ("LegalEntity", "Person"):
+        name = remove_person_prefixes(name)
+    return tokenize_name(name)
 
 
-def phonetic_names(names: List[str]) -> List[str]:
+def phonetic_names(schema: Schema, names: List[str]) -> Set[str]:
     """Generate phonetic forms of the given names."""
-    phonemes: List[str] = []
-    for word in names_word_list(names, normalizer=_clean_phonetic, min_length=2):
-        token = metaphone(word)
-        if len(token) > 2:
-            phonemes.append(token)
+    phonemes: Set[str] = set()
+    for name in names:
+        for token in clean_tokenize_name(schema, name):
+            if len(token) < 3 or not is_modern_alphabet(token):
+                continue
+            if token.isnumeric():
+                continue
+            phoneme = metaphone(ascii_text(token))
+            if len(phoneme) > 2:
+                phonemes.add(phoneme)
     return phonemes
 
 
-def _name_parts(name: Optional[str]) -> Iterable[str]:
-    if name is None:
-        return
-    for part in name.split(WS):
-        if len(part) > 1:
-            yield part
-
-
-def index_name_parts(names: List[str]) -> List[str]:
+def index_name_parts(schema: Schema, names: List[str]) -> Set[str]:
     """Generate a list of indexable name parts from the given names."""
-    parts: List[str] = []
+    parts: Set[str] = set()
     for name in names:
-        fp = fingerprint_name(name)
-        parts.extend(_name_parts(fp))
-        cleaned = remove_types(name, clean=clean_name_light)
-        parts.extend(_name_parts(cleaned))
+        for token in clean_tokenize_name(schema, name):
+            if len(token) < 2:
+                continue
+            parts.add(token)
+            # TODO: put name and company symbol lookups here
+            if is_modern_alphabet(token):
+                ascii_token = ascii_text(token)
+                if ascii_token is not None and len(ascii_token) > 1:
+                    parts.add(ascii_token)
     return parts
 
 
-def index_name_keys(names: List[str]) -> List[str]:
+def index_name_keys(schema: Schema, names: List[str]) -> Set[str]:
     """Generate a indexable name keys from the given names."""
     keys: Set[str] = set()
     for name in names:
-        for key in (fingerprint_name(name), clean_name_light(name)):
-            if key is not None:
-                key = key.replace(" ", "")
-                keys.add(key)
-    return list(keys)
+        tokens = clean_tokenize_name(schema, name)
+        ascii_tokens: List[str] = []
+        for token in tokens:
+            if token.isnumeric() or not is_modern_alphabet(token):
+                ascii_tokens.append(token)
+                continue
+            ascii_token = ascii_text(token) or token
+            ascii_tokens.append(ascii_token)
+        ascii_name = "".join(sorted(ascii_tokens))
+        if len(ascii_name) > 5:
+            keys.add(ascii_name)
+    return keys
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:
@@ -81,12 +94,12 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
     toto in the index before the Python comparison algo later checks all of
     them.
 
-    This is a bit over the top and will come back to haunt me."""
+    This is a bit over the top and will come back to haunt us."""
     if len(names) <= limit:
         return names
     picked: List[str] = []
-    fingerprinted_ = [fingerprint_name(n) for n in names]
-    names = [n for n in fingerprinted_ if n is not None]
+    processed_ = [preprocess_name(n) for n in names]
+    names = [n for n in processed_ if n is not None]
 
     # Centroid:
     picked_name = registry.name.pick(names)
@@ -109,6 +122,16 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
         picked.append(pick)
 
     return picked
+
+
+def expand_dates(dates: List[str]) -> List[str]:
+    """Expand a date into less precise versions of itself."""
+    expanded = set(dates)
+    for date in dates:
+        for prec in (Precision.DAY, Precision.MONTH, Precision.YEAR):
+            if len(date) > prec.value:
+                expanded.add(date[: prec.value])
+    return list(expanded)
 
 
 def get_url_local_path(url: str) -> Optional[Path]:
