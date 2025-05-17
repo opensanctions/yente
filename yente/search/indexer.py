@@ -65,9 +65,9 @@ async def iter_entity_docs(
             names.extend(entity.get("weakAlias", quiet=True))
             name_parts = index_name_parts(entity.schema, names)
             texts.extend(name_parts)
-            doc[NAME_PART_FIELD] = name_parts
-            doc[NAME_KEY_FIELD] = index_name_keys(entity.schema, names)
-            doc[NAME_PHONETIC_FIELD] = phonetic_names(entity.schema, names)
+            doc[NAME_PART_FIELD] = list(name_parts)
+            doc[NAME_KEY_FIELD] = list(index_name_keys(entity.schema, names))
+            doc[NAME_PHONETIC_FIELD] = list(phonetic_names(entity.schema, names))
             if DateType.group is not None:
                 doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             doc["text"] = texts

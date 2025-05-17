@@ -37,50 +37,53 @@ def clean_tokenize_name(schema: Schema, name: str) -> List[str]:
     return tokenize_name(name)
 
 
-def phonetic_names(schema: Schema, names: List[str]) -> List[str]:
+def phonetic_names(schema: Schema, names: List[str]) -> Set[str]:
     """Generate phonetic forms of the given names."""
-    phonemes: List[str] = []
+    phonemes: Set[str] = set()
     for name in names:
         for token in clean_tokenize_name(schema, name):
             if len(token) < 3 or not is_modern_alphabet(token):
                 continue
             if token.isnumeric():
                 continue
-            phoneme = metaphone(token)
-            if len(phoneme) < 3:
-                phonemes.append(phoneme)
+            phoneme = metaphone(ascii_text(token))
+            if len(phoneme) > 2:
+                phonemes.add(phoneme)
     return phonemes
 
 
-def index_name_parts(schema: Schema, names: List[str]) -> List[str]:
+def index_name_parts(schema: Schema, names: List[str]) -> Set[str]:
     """Generate a list of indexable name parts from the given names."""
-    parts: List[str] = []
+    parts: Set[str] = set()
     for name in names:
         for token in clean_tokenize_name(schema, name):
-            parts.append(token)
+            if len(token) < 2:
+                continue
+            parts.add(token)
             # TODO: put name and company symbol lookups here
             if is_modern_alphabet(token):
                 ascii_token = ascii_text(token)
-                if ascii_token is not None:
-                    parts.append(ascii_token)
+                if ascii_token is not None and len(ascii_token) > 1:
+                    parts.add(ascii_token)
     return parts
 
 
-def index_name_keys(schema: Schema, names: List[str]) -> List[str]:
+def index_name_keys(schema: Schema, names: List[str]) -> Set[str]:
     """Generate a indexable name keys from the given names."""
     keys: Set[str] = set()
     for name in names:
         tokens = clean_tokenize_name(schema, name)
         ascii_tokens: List[str] = []
         for token in tokens:
-            if is_modern_alphabet(token) or token.isnumeric():
+            if token.isnumeric() or not is_modern_alphabet(token):
                 ascii_tokens.append(token)
+                continue
             ascii_token = ascii_text(token) or token
             ascii_tokens.append(ascii_token)
-        tokens = "".join(sorted(ascii_tokens))
-        if len(tokens) > 5:
-            keys.add(tokens)
-    return list(keys)
+        ascii_name = "".join(sorted(ascii_tokens))
+        if len(ascii_name) > 5:
+            keys.add(ascii_name)
+    return keys
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:
