@@ -63,18 +63,19 @@ async def iter_entity_docs(
             doc = entity.to_full_dict(matchable=True)
             names: List[str] = doc.get(NAMES_FIELD, [])
             names.extend(entity.get("weakAlias", quiet=True))
-            name_parts = index_name_parts(names)
+            name_parts = index_name_parts(entity.schema, names)
             texts.extend(name_parts)
             doc[NAME_PART_FIELD] = name_parts
-            doc[NAME_KEY_FIELD] = index_name_keys(names)
-            doc[NAME_PHONETIC_FIELD] = phonetic_names(names)
-            doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
+            doc[NAME_KEY_FIELD] = index_name_keys(entity.schema, names)
+            doc[NAME_PHONETIC_FIELD] = phonetic_names(entity.schema, names)
+            if DateType.group is not None:
+                doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             doc["text"] = texts
 
             entity_id = doc.pop("id")
             yield {"_index": index, "_id": entity_id, "_source": doc}
         except FollowTheMoneyException as exc:
-            log.warning("Invalid entity: %s" % exc, data=data)
+            log.error("Invalid entity: %s" % exc, data=data)
     log.info(
         "Indexed %d entities" % idx,
         added=ops["ADD"],

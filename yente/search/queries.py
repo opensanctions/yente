@@ -95,13 +95,13 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             }
         }
         shoulds.append({"match": match})
-    for key in index_name_keys(names):
+    for key in index_name_keys(entity.schema, names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
-    for token in set(index_name_parts(names)):
+    for token in set(index_name_parts(entity.schema, names)):
         term = {NAME_PART_FIELD: {"value": token, "boost": 1.0}}
         shoulds.append({"term": term})
-    for phoneme in set(phonetic_names(names)):
+    for phoneme in set(phonetic_names(entity.schema, names)):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
         shoulds.append({"term": term})
     return shoulds
