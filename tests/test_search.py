@@ -133,6 +133,15 @@ def test_search_filter_countries_operator():
     assert len(results) == 0, results
 
 
+def test_search_filter():
+    res = client.get(
+        "/search/default?q=vladimir putin&filter=properties.birthDate:1972-01-26§"
+    )
+    assert res.status_code == 200, res
+    results = res.json()["results"]
+    assert len(results) == 0, results
+
+
 def test_search_facet_datasets_default():
     res = client.get("/search/default")
     assert res.status_code == 200, res

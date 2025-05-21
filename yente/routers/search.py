@@ -16,7 +16,7 @@ from yente.data.common import EntityResponse, SearchResponse
 from yente.provider import SearchProvider, get_provider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
-from yente.search.queries import FilterDict, Operator
+from yente.search.queries import Filters, Operator
 from yente.search.search import get_entity, search_entities
 from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import get_nested_entity, get_adjacent_entities
@@ -52,7 +52,6 @@ DEFAULT_FACETS = [Facet.COUNTRIES, Facet.TOPICS, Facet.DATASETS]
     },
 )
 async def search(
-    response: Response,
     q: str = Query("", title="Query text"),
     dataset: str = PATH_DATASET,
     schema: str = Query(
@@ -82,6 +81,11 @@ async def search(
     datasets: List[str] = Query(
         [],
         title="Filter by dataset names, for faceting use (respects operator choice).",
+    ),
+    filter: List[str] = Query(
+        [],
+        title="Filter by entity properties (e.g. programId, birthDate)",
+        description="Use the syntax `field:value` to filter on a specific field. Properties are indexed as fields named `properties.birthDate:1985`.",
     ),
     limit: int = Query(
         settings.DEFAULT_PAGE, title="Number of results to return", le=settings.MAX_PAGE
@@ -122,13 +126,18 @@ async def search(
     schema_obj = model.get(schema)
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
-    filters: FilterDict = {
-        "countries": countries,
-        "topics": topics,
-        "datasets": datasets,
-    }
+
+    filters: Filters = [("countries", c) for c in countries]
+    filters.extend([("topics", t) for t in topics])
+    filters.extend([("datasets", d) for d in datasets])
+    for flt in filter:
+        try:
+            field, value = flt.split(":", 1)
+            filters.append((field, value))
+        except ValueError:
+            raise HTTPException(400, detail="Invalid filter: %r" % flt)
     if target is not None:
-        filters["target"] = target
+        filters.append(("target", target))
     query = text_query(
         ds,
         schema_obj,
@@ -229,7 +238,8 @@ async def fetch_entity(
 async def fetch_adjacent_entities(
     response: Response,
     entity_id: str = Path(
-        description="ID of the entity whose graph context was requested", examples=["Q7747"]
+        description="ID of the entity whose graph context was requested",
+        examples=["Q7747"],
     ),
     provider: SearchProvider = Depends(get_provider),
     sort: List[str] = Query([], title="Sorting criteria"),
