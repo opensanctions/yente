@@ -136,10 +136,34 @@ class EntityMatchResponse(BaseModel):
     limit: int = Field(..., examples=[5])
 
 
+class DatasetPublisherModel(BaseModel):
+    name: Optional[str] = None
+    acronym: Optional[str] = None
+    url: Optional[str] = None
+    country: Optional[str] = None
+    description: Optional[str] = None
+    official: bool = False
+
+
+class DatasetCoverageModel(BaseModel):
+    start: Optional[str] = None
+    end: Optional[str] = None
+    countries: List[str] = []
+    schedule: Optional[str] = None
+    frequency: Optional[str] = None
+
+
 class DatasetModel(BaseModel):
     name: str
     title: str
     summary: Optional[str] = None
+    description: Optional[str] = None
+    last_export: Optional[str] = None
+    last_change: Optional[str] = None
+    entity_count: Optional[int] = None
+    thing_count: Optional[int] = None
+    category: Optional[str] = None
+    tags: List[str] = []
     url: Optional[str] = None
     load: bool
     entities_url: Optional[str] = None
@@ -147,6 +171,9 @@ class DatasetModel(BaseModel):
     index_version: Optional[str] = None
     index_current: bool = False
     children: List[str]
+    datasets: List[str]
+    publisher: Optional[DatasetPublisherModel] = None
+    coverage: Optional[DatasetCoverageModel] = None
 
 
 class DataCatalogModel(BaseModel):

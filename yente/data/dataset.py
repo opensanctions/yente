@@ -32,14 +32,15 @@ class Dataset(NKDataset):
                 self.entities_url = entities_path.as_uri()
 
         if self.version is None:
-            ts = data.get("last_export", BOOT_TIME)
+            ts: Optional[str] = data.get("last_export", BOOT_TIME)
             if self.entities_url is not None:
                 path = get_url_local_path(self.entities_url)
                 if path is not None and path.exists():
                     mtime = path.stat().st_mtime
                     mdt = datetime.fromtimestamp(mtime)
                     ts = datetime_iso(mdt)
-            self.version = iso_to_version(ts) or "static"
+            if ts is not None:
+                self.version = iso_to_version(ts) or "static"
 
         self.delta_url = data.get("delta_url", None)
 
