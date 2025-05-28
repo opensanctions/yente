@@ -33,7 +33,7 @@ dependencies = [
     "cryptography == 45.0.2",
     "followthemoney == 3.8.4",
     "nomenklatura == 3.17.3",
-    "rigour == 0.12.1",
+    "rigour == 0.12.2",
     "asyncstdlib == 3.13.1",
     "aiocron == 2.1",
     "aiocsv == 1.3.2",
