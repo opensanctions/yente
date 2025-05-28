@@ -1,5 +1,6 @@
 import enum
 from pprint import pprint  # noqa
+from collections import defaultdict
 from typing import Any, Dict, Generator, List, Set, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
@@ -13,8 +14,9 @@ from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 
 log = get_logger(__name__)
-FilterDict = Dict[str, Union[bool, str, List[str]]]
 Clause = Dict[str, Any]
+FilterSpec = Tuple[str, Union[str, bool]]
+Filters = List[FilterSpec]
 
 
 class Operator(str, enum.Enum):
@@ -26,7 +28,7 @@ def filter_query(
     scope_dataset: Dataset,
     shoulds: List[Clause],
     schema: Optional[Schema] = None,
-    filters: FilterDict = {},
+    filters: Filters = [],
     include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
@@ -55,18 +57,19 @@ def filter_query(
             schemata.update(schema.descendants)
         names = [s.name for s in schemata]
         filterqs.append({"terms": {"schema": names}})
-    for field, values in filters.items():
-        if isinstance(values, (bool, str)):
-            filterqs.append({"term": {field: {"value": values}}})
+
+    filters_agg = defaultdict(list)
+    for field, value in filters:
+        filters_agg[field].append(value)
+
+    for field, values in filters_agg.items():
+        if filter_op == Operator.OR:
+            filterqs.append({"terms": {field: values}})
             continue
-        values = [v for v in values if len(v)]
-        if len(values):
-            if filter_op == Operator.OR:
-                filterqs.append({"terms": {field: values}})
-                continue
-            elif filter_op == Operator.AND:
-                for v in values:
-                    filterqs.append({"term": {field: v}})
+        elif filter_op == Operator.AND:
+            for v in values:
+                filterqs.append({"term": {field: v}})
+
     if changed_since is not None:
         filterqs.append({"range": {"last_change": {"gt": changed_since}}})
 
@@ -95,13 +98,13 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             }
         }
         shoulds.append({"match": match})
-    for key in index_name_keys(names):
+    for key in index_name_keys(entity.schema, names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
-    for token in set(index_name_parts(names)):
+    for token in index_name_parts(entity.schema, names):
         term = {NAME_PART_FIELD: {"value": token, "boost": 1.0}}
         shoulds.append({"term": term})
-    for phoneme in set(phonetic_names(names)):
+    for phoneme in phonetic_names(entity.schema, names):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
         shoulds.append({"term": term})
     return shoulds
@@ -110,7 +113,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
 def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
-    filters: FilterDict = {},
+    filters: Filters = [],
     include_dataset: List[str] = [],
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
@@ -144,7 +147,7 @@ def text_query(
     dataset: Dataset,
     schema: Schema,
     query: str,
-    filters: FilterDict = {},
+    filters: Filters = [],
     fuzzy: bool = False,
     simple: bool = False,
     include_dataset: List[str] = [],

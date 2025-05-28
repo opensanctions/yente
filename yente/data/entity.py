@@ -45,7 +45,7 @@ class Entity(StreamEntity):
         for prop_name, values in example.properties.items():
             if prop_name not in obj.schema.properties:
                 log.warning(
-                    "Invalid example property",
+                    "Invalid query property",
                     prop=prop_name,
                     value=repr(values),
                 )

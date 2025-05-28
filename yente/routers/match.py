@@ -8,7 +8,7 @@ from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityMatches, TotalSpec
 from yente.provider import SearchProvider, get_provider
-from yente.search.queries import entity_query, FilterDict, Operator
+from yente.search.queries import entity_query, Filters, Operator
 from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
 from yente.util import limit_window
@@ -130,7 +130,7 @@ async def match(
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
 
-    filters: FilterDict = {"topics": topics}
+    filters: Filters = [("topics", t) for t in topics]
     queries = []
     entities = []
     responses: Dict[str, EntityMatches] = {}
