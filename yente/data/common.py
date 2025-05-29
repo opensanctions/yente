@@ -170,8 +170,8 @@ class DatasetModel(BaseModel):
     version: str
     index_version: Optional[str] = None
     index_current: bool = False
-    children: List[str]
-    datasets: List[str]
+    children: List[str] = []
+    datasets: List[str] = []
     publisher: Optional[DatasetPublisherModel] = None
     coverage: Optional[DatasetCoverageModel] = None
 
