@@ -14,7 +14,7 @@ dependencies = [
     "opensearch-py[async] == 2.8.0",
     "uvicorn[standard] == 0.34.2",
     "httpx[http2] == 0.28.1",
-    "aiohttp[speedups] == 3.12.2",
+    "aiohttp[speedups] == 3.12.6",
     "boto3 ~= 1.37",
     "fastapi == 0.115.12",
     "python-multipart == 0.0.20",
