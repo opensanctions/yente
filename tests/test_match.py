@@ -1,3 +1,5 @@
+from unittest import mock
+
 from .conftest import client
 
 EXAMPLE = {
@@ -159,3 +161,21 @@ def test_id_pass_through():
     res = resp.json()["responses"]["no1"]
     assert res["query"]["schema"] == "Person"
     assert res["query"]["id"] == "ermakov"
+
+
+def test_fuzzy_names():
+    query = {"queries": {"a": {"schema": "Person", "properties": {"name": "Viadimit Putln"}}}}
+
+    with mock.patch("yente.settings.MATCH_FUZZY", False):
+        resp = client.post("/match/default", json=query)
+        data = resp.json()
+        res = data["responses"]["a"]
+        assert len(res["results"]) == 0, res
+
+    with mock.patch("yente.settings.MATCH_FUZZY", True):
+        resp = client.post("/match/default", json=query)
+        data = resp.json()
+        res = data["responses"]["a"]
+        assert len(res["results"]) > 0, res
+        assert res["results"][0]["id"] == "Q7747", res["results"][0]
+        assert res["results"][0]["score"] > 0.5, res["results"][0]

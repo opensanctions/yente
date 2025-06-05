@@ -12,6 +12,7 @@ from yente.data.util import pick_names, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
+from yente import settings
 
 log = get_logger(__name__)
 Clause = Dict[str, Any]
@@ -97,6 +98,8 @@ def names_query(entity: EntityProxy) -> List[Clause]:
                 "boost": 3.0,
             }
         }
+        if settings.MATCH_FUZZY:
+            match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
     for key in index_name_keys(entity.schema, names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
