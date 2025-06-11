@@ -9,6 +9,7 @@ from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExamp
 from yente.data.common import EntityMatches, TotalSpec
 from yente.provider import SearchProvider, get_provider
 from yente.search.queries import entity_query, Filters, Operator
+from yente.search.queries import DEFAULT_SORTS
 from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
 from yente.util import limit_window
@@ -161,7 +162,8 @@ async def match(
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
         candidates = max(20, min(settings.MAX_RESULTS, candidates))
-        queries.append(search_entities(provider, query, limit=candidates))
+        qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
+        queries.append(qry)
         entities.append((name, entity))
     if not len(queries) and not len(responses):
         raise HTTPException(400, detail="No queries provided.")

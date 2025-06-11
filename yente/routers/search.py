@@ -279,7 +279,7 @@ async def fetch_adjacent_entities(
         entity,
         limit=limit,
         offset=offset,
-        sort=parse_sorts(sort, default="_doc"),
+        sort=parse_sorts(sort, defaults=["_doc"]),
     )
 
 
@@ -348,7 +348,7 @@ async def fetch_adjacent_by_prop(
         provider,
         entity,
         prop,
-        parse_sorts(sort, default="_doc"),
+        parse_sorts(sort, defaults=["_doc"]),
         limit,
         offset,
     )
