@@ -11,29 +11,18 @@ EXAMPLE = {
     },
 }
 
-ERMAKOV = {
+MANY_NAMES = {
     "properties": {
         "name": [
-            "ERMAKOV Valery Nikolaevich",
-            "Ermacov Valeryi Nycolaevych",
-            "Ermakov Valerij Nikolaevich",
-            "Ermakov Valerij Nikolaevič",
-            "Ermakov Valerijj Nikolaevich",
-            "Ermakov Valeriy Nikolaevich",
-            "Ermakov Valery Nykolaevych",
-            "Ermakov Valeryi Nykolaevych",
-            "Ermakov Valeryy Nikolaevich",
-            "Ermakov Valeryy Nykolaevych",
-            "Ermakov Valerȳĭ Nȳkolaevȳch",
-            "Iermakov Valerii Mykolaiovych",
-            "Jermakov Valerij Mikolajovich",
-            "Jermakov Valerij Mikolajovič",
-            "Jermakov Valerij Mykolajovyč",
-            "Yermakov Valerii Mykolaiovych",
-            "Yermakov Valerij Mykolajovych",
-            "Yermakov Valeriy Mykolayovych",
-            "Êrmakov Valerìj Mikolajovič",
-            "ЕРМАКОВ Валерий Николаевич",
+            "Boris Borisovich ROTENBERG",
+            "Boris Borissowitsch Rotenberg",
+            "Борис Борисович Ротенберг",
+            "Борис Ротенберг",
+            "Ротенберг Борис Борисович",
+            "Boris Borisovich Rotenberg ",
+            "Rotenberh Borys Borysovych",
+            "Ротенберг Борис Борисович",
+            "Борис Борисович Ротенберг",
         ]
     },
     "schema": "Person",
@@ -80,17 +69,17 @@ def test_match_no_schema():
     assert resp.status_code == 400, resp.text
 
 
-def test_match_ermakov():
-    query = {"queries": {"ermakov": ERMAKOV}}
+def test_match_many_names():
+    query = {"queries": {"q": MANY_NAMES}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text
-    results = resp.json()["responses"]["ermakov"]["results"]
+    results = resp.json()["responses"]["q"]["results"]
     assert len(results) > 0, results
 
     params = {"fuzzy": "false"}
     resp = client.post("/match/default", json=query, params=params)
     assert resp.status_code == 200, resp.text
-    results2 = resp.json()["responses"]["ermakov"]["results"]
+    results2 = resp.json()["responses"]["q"]["results"]
     assert len(results) == len(results2), results2
 
 
@@ -153,18 +142,20 @@ def test_filter_topic():
 
 
 def test_id_pass_through():
-    body = dict(ERMAKOV)
-    body["id"] = "ermakov"
+    body = dict(MANY_NAMES)
+    body["id"] = "rotenberg"
     query = {"queries": {"no1": body}}
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 200, resp.text
     res = resp.json()["responses"]["no1"]
     assert res["query"]["schema"] == "Person"
-    assert res["query"]["id"] == "ermakov"
+    assert res["query"]["id"] == "rotenberg"
 
 
 def test_fuzzy_names():
-    query = {"queries": {"a": {"schema": "Person", "properties": {"name": "Viadimit Putln"}}}}
+    query = {
+        "queries": {"a": {"schema": "Person", "properties": {"name": "Viadimit Putln"}}}
+    }
 
     with mock.patch("yente.settings.MATCH_FUZZY", False):
         resp = client.post("/match/default", json=query)
