@@ -100,6 +100,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
     mapping = {
         "schema": make_keyword(),
         "caption": make_field("keyword"),
+        "entity_id": make_field("keyword"),
         "datasets": make_keyword(),
         "referents": make_keyword(),
         "target": make_field("boolean"),

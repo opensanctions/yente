@@ -60,7 +60,10 @@ async def iter_entity_docs(
                 entity = dataset.ns.apply(entity)
 
             texts = entity.pop("indexText")
-            doc = entity.to_full_dict(matchable=True)
+            doc = entity.to_dict()
+            entity_id = doc.pop("id")
+            doc["entity_id"] = entity_id
+
             names: List[str] = doc.get(NAMES_FIELD, [])
             names.extend(entity.get("weakAlias", quiet=True))
             name_parts = index_name_parts(entity.schema, names)
@@ -71,8 +74,6 @@ async def iter_entity_docs(
             if DateType.group is not None:
                 doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
             doc["text"] = texts
-
-            entity_id = doc.pop("id")
             yield {"_index": index, "_id": entity_id, "_source": doc}
         except FollowTheMoneyException as exc:
             log.error("Invalid entity: %s" % exc, data=data)
