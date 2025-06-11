@@ -18,8 +18,9 @@ log = get_logger(__name__)
 Clause = Dict[str, Any]
 FilterSpec = Tuple[str, Union[str, bool]]
 Filters = List[FilterSpec]
+Sort = Union[str, Dict[str, Dict[str, str]]]
 
-DEFAULT_SORTS = [
+DEFAULT_SORTS: List[Sort] = [
     {"_score": {"order": "desc"}},
     {"_id": {"order": "asc"}},
 ]
@@ -229,9 +230,9 @@ def iter_sorts(sorts: List[str]) -> Generator[Tuple[str, str], None, None]:
         yield sort, order
 
 
-def parse_sorts(sorts: List[str], defaults: List[Any] = DEFAULT_SORTS) -> List[Any]:
+def parse_sorts(sorts: List[str], defaults: List[Sort] = DEFAULT_SORTS) -> List[Any]:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
-    objs: List[Any] = []
+    objs: List[Sort] = []
     for sort, order in iter_sorts(sorts):
         objs.append({sort: {"order": order, "missing": "_last"}})
     objs.extend(defaults)
