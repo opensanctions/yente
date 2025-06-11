@@ -60,7 +60,8 @@ async def iter_entity_docs(
                 entity = dataset.ns.apply(entity)
 
             texts = entity.pop("indexText")
-            doc = entity.to_dict()
+            # doc = entity.to_dict()
+            doc = entity.to_full_dict(matchable=True)
             entity_id = doc.pop("id")
             doc["entity_id"] = entity_id
 
