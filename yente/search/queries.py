@@ -22,7 +22,7 @@ Sort = Union[str, Dict[str, Dict[str, str]]]
 
 DEFAULT_SORTS: List[Sort] = [
     {"_score": {"order": "desc"}},
-    # {"entity_id": {"order": "asc"}},
+    {"entity_id": {"order": "asc"}},
 ]
 
 
