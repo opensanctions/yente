@@ -17,6 +17,7 @@ class CatalogManifest(BaseModel):
 
     # The URL to load the catalog from.
     url: str
+    auth_token: Optional[str] = None
     scope: Optional[str] = None
     scopes: List[str] = []
     namespace: Optional[bool] = None
@@ -25,7 +26,7 @@ class CatalogManifest(BaseModel):
 
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch the datasets from the catalog."""
-        data = await load_yaml_url(self.url)
+        data = await load_yaml_url(self.url, auth_token=self.auth_token)
         if self.scope is not None:
             self.scopes.append(self.scope)
 
@@ -38,6 +39,8 @@ class CatalogManifest(BaseModel):
                 ds["resource_name"] = self.resource_name
             if self.resource_type is not None:
                 ds["resource_type"] = self.resource_type
+            if self.auth_token is not None:
+                ds["auth_token"] = self.auth_token
 
         return cast(List[Dict[str, Any]], data["datasets"])
 

@@ -120,6 +120,11 @@ MANIFEST = env_str("YENTE_MANIFEST", MANIFEST_DEFAULT_PATH.as_posix())
 
 # Authentication settings:
 DATA_TOKEN = env_get("YENTE_DATA_TOKEN")
+if DATA_TOKEN is not None:
+    warnings.warn(
+        "YENTE_DATA_TOKEN environment variable is deprecated, use auth_token in manifest instead.",
+        DeprecationWarning,
+    )
 
 CRON: Optional[Cron] = None
 CRONTAB = env_str("YENTE_CRONTAB", random_cron())

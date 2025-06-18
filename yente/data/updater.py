@@ -47,7 +47,9 @@ class DatasetUpdater(object):
         if obj.base_version is None or obj.target_version <= obj.base_version:
             return obj
 
-        index: DeltaIndex = await load_json_url(dataset.delta_url)
+        index: DeltaIndex = await load_json_url(
+            dataset.delta_url, auth_token=dataset.auth_token
+        )
         versions = index.get("versions", {})
         sorted_versions = sorted(versions.keys())
         if len(sorted_versions) == 0:
@@ -97,7 +99,7 @@ class DatasetUpdater(object):
         if self.force_full:
             return True
         if self.target_version is None:
-            raise False
+            return False
         if self.delta_urls is not None and len(self.delta_urls) == 0:
             return False
         if self.base_version is not None and self.target_version <= self.base_version:
@@ -110,11 +112,15 @@ class DatasetUpdater(object):
             if self.dataset.entities_url is None:
                 raise RuntimeError("No entities for dataset: %s" % self.dataset.name)
             base_name = f"{self.dataset.name}-{self.target_version}"
-            async for data in load_json_lines(self.dataset.entities_url, base_name):
+            async for data in load_json_lines(
+                self.dataset.entities_url, base_name, auth_token=self.dataset.auth_token
+            ):
                 yield {"op": "ADD", "entity": data}
             return
 
         for version, url in self.delta_urls:
             base_name = f"{self.dataset.name}-delta-{version}"
-            async for data in load_json_lines(url, base_name):
+            async for data in load_json_lines(
+                url, base_name, auth_token=self.dataset.auth_token
+            ):
                 yield data

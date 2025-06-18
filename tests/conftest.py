@@ -65,7 +65,7 @@ async def flush_cached_es():
 
 @contextmanager
 def patch_catalog_response(response_data: dict):
-    """Context manager to patch the http client for catalog responses."""
+    """Context manager to patch AsyncClient for catalog responses."""
     mock_response = Mock()
     mock_response.content = orjson.dumps(response_data)
 
@@ -74,4 +74,4 @@ def patch_catalog_response(response_data: dict):
     ) as mock_client_constructor:
         mock_client = mock_client_constructor.return_value.__aenter__.return_value
         mock_client.get.return_value = mock_response
-        yield mock_client
+        yield mock_client, mock_client_constructor

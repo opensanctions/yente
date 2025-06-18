@@ -1,3 +1,4 @@
+import warnings
 import httpx
 import unicodedata
 from pathlib import Path
@@ -15,6 +16,9 @@ from rigour.names import tokenize_name, remove_person_prefixes
 from rigour.names import replace_org_types_compare
 
 from yente import settings
+from yente.logs import get_logger
+
+log = get_logger(__name__)
 
 
 def preprocess_name(name: Optional[str]) -> Optional[str]:
@@ -147,16 +151,30 @@ def get_url_local_path(url: str) -> Optional[Path]:
 
 
 class Authenticator(httpx.Auth):
+    def __init__(self, auth_token: Optional[str] = None):
+        self.auth_token = auth_token
+
     def auth_flow(
         self, request: httpx.Request
     ) -> Generator[httpx.Request, httpx.Response, None]:
+        if self.auth_token:
+            request.headers["Authorization"] = f"Token {self.auth_token}"
+
         if settings.DATA_TOKEN is not None:
+            warnings.warn(
+                "settings.DATA_TOKEN (which sets the Authentication header) is deprecated "
+                "and will be removed in a future release of Yente. Use auth_token in "
+                "manifest instead (which sets the Authorization header).",
+                DeprecationWarning,
+            )
             request.headers["Authentication"] = f"Token {settings.DATA_TOKEN}"
         yield request
 
 
 @asynccontextmanager
-async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
+async def httpx_session(
+    auth_token: Optional[str] = None,
+) -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = httpx.AsyncHTTPTransport(retries=3)
     proxy = settings.HTTP_PROXY if settings.HTTP_PROXY != "" else None
     headers = {"User-Agent": f"Yente/{settings.VERSION}"}
@@ -166,6 +184,7 @@ async def httpx_session() -> AsyncGenerator[httpx.AsyncClient, None]:
         timeout=None,
         proxy=proxy,
         headers=headers,
-        auth=Authenticator(),
+        auth=Authenticator(auth_token),
+        follow_redirects=True,
     ) as client:
         yield client
