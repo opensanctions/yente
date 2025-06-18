@@ -3,8 +3,8 @@ from pathlib import Path
 from followthemoney import model
 
 from yente.data import get_catalog
-from yente.data.loader import load_json_lines
 from yente.data.manifest import Catalog, Manifest
+from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
 from yente.data.util import (
     phonetic_names,
@@ -19,6 +19,37 @@ from .conftest import patch_catalog_response
 async def test_manifest():
     catalog = await get_catalog()
     assert len(catalog.datasets), catalog.datasets
+
+
+@pytest.mark.asyncio
+async def test_manifest_with_auth_token():
+    # Clear any cached catalog instance
+    Catalog.instance = None
+
+    catalog_response_data = {"datasets": []}
+
+    with patch_catalog_response(catalog_response_data) as (
+        mock_client,
+        mock_client_constructor,
+    ):
+        await Catalog.load(
+            manifest=Manifest.model_validate(
+                {
+                    "catalogs": [
+                        {
+                            "url": "https://delivery.example.com/datasets/latest/index.json",
+                            "auth_token": "secretsecret",
+                        }
+                    ],
+                }
+            )
+        )
+        # Assert that AsyncClient was constructed with the correct auth parameter
+        mock_client_constructor.assert_called_once()
+        client_constructor_kwargs = mock_client_constructor.call_args.kwargs
+        assert client_constructor_kwargs["auth"].auth_token == "secretsecret"
+
+        mock_client.get.assert_called_once()
 
 
 @pytest.mark.asyncio

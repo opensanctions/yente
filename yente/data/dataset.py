@@ -26,6 +26,7 @@ class Dataset(NKDataset):
         super().__init__(data)
         self.load = as_bool(data.get("load"), not self.is_collection)
         self.entities_url = self._get_entities_url(data)
+        self.auth_token = data.get("auth_token", None)
         if self.entities_url is not None:
             entities_path = get_url_local_path(self.entities_url)
             if entities_path is not None:
