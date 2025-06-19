@@ -1,6 +1,6 @@
 # yente
 
-`yente` is an open source data match-making API. The service provides several HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies or vessels that are subject to international sanctions. 
+`yente` is an open source data match-making API. The service provides several HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies or vessels that are subject to international sanctions.
 
 The yente API is built to provide access to [OpenSanctions data](https://www.opensanctions.org/datasets/), it can also be used to [search and match other data](https://www.opensanctions.org/docs/yente/datasets/), such as [company registries](https://www.opensanctions.org/kyb/) or [custom watchlists](https://www.opensanctions.org/docs/yente/datasets/).
 
@@ -15,7 +15,9 @@ While `yente` is the open source core code base for the [OpenSanctions API](http
 ```bash
 git clone https://github.com/opensanctions/yente.git
 cd yente
-pip install -e .
+pip install -e '.[dev]'
+# Install pre-commit hooks with useful checks
+pre-commit install
 ```
 
 This will install a broad range of dependencies, including `numpy`, `scikit-learn` and `pyicu`, which are binary packages that may require a local build environment. For `pyicu` in particular, refer to the [package documentation](https://pypi.org/project/PyICU/).

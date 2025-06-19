@@ -65,6 +65,7 @@ dev = [
     "boto3-stubs ~= 1.37",
     "bump2version == 1.0.1",
     "pip >10.0.0",
+    "pre-commit",
 ]
 
 [tool.hatch.build.targets.sdist]
