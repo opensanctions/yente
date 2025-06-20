@@ -64,6 +64,9 @@ async def iter_entity_docs(
             doc = entity.to_full_dict(matchable=True)
             entity_id = doc.pop("id")
             doc["entity_id"] = entity_id
+            # Total number of values in the entity, used to up-score on
+            # large (i.e. important) entities.
+            doc["num_values"] = sum([len(v) for v in doc["properties"].values()])
 
             names: List[str] = doc.get(NAMES_FIELD, [])
             names.extend(entity.get("weakAlias", quiet=True))
