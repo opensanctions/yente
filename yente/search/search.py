@@ -83,9 +83,32 @@ async def search_entities(
     aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
 ) -> Dict[str, Any]:
+    # Wrap query in function_score to up-score important entities.
+    function_score_query = {
+        "function_score": {
+            "query": query,
+            "functions": [
+                {
+                    "field_value_factor": {
+                        "field": "entity_values_count",
+                        # This is a bit of a jiggle factor. Currently, very large documents (like Vladimir Putin)
+                        # have a entity_values_count of ~200, so get a +10 boost.
+                        # The order is modifier(factor * value)
+                        "factor": 0.5,
+                        "modifier": "sqrt",
+                        # Used only if this is an old index that doesn't have entity_values_count yet
+                        # (until the first reindex after the upgrade is completed).
+                        "missing": 0,
+                    }
+                }
+            ],
+            "boost_mode": "sum",
+        }
+    }
+
     return await provider.search(
         index=settings.ENTITY_INDEX,
-        query=query,
+        query=function_score_query,
         size=limit,
         sort=sort,
         from_=offset,

@@ -87,6 +87,10 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     entity_id = doc.pop("id")
     doc["entity_id"] = entity_id
 
+    # Total number of values in the entity, used to up-score on
+    # large (i.e. important) entities.
+    doc["entity_values_count"] = sum([len(v) for v in doc["properties"].values()])
+
     names: List[str] = entity.get_type_values(registry.name, matchable=True)
     names.extend(entity.get("weakAlias", quiet=True))
 

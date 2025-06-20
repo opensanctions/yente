@@ -37,7 +37,7 @@ class SearchProvider(object):
     async def create_index(
         self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
     ) -> None:
-        """Create a new index with the given name, mappings, and settings."""
+        """Create a new index if it doesn't exist yet."""
         raise NotImplementedError
 
     async def delete_index(self, index: str) -> None:
