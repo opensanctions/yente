@@ -4,6 +4,7 @@ from followthemoney import model
 
 from yente.data import get_catalog
 from yente.data.loader import load_json_lines
+from yente.data.manifest import Catalog, Manifest
 from yente.data.util import get_url_local_path
 from yente.data.util import (
     phonetic_names,
@@ -11,6 +12,7 @@ from yente.data.util import (
     index_name_parts,
     index_name_keys,
 )
+from .conftest import patch_catalog_response
 
 
 @pytest.mark.asyncio
@@ -30,6 +32,39 @@ async def test_local_dataset():
     async for line in load_json_lines(ds.entities_url, "test"):
         lines.append(line)
     assert len(lines) > 10, lines
+
+
+@pytest.mark.asyncio
+async def test_catalog_and_local_dataset():
+    """Test that a datasets and catalog datasets are both loaded into the internal catalog."""
+    # Clear any cached catalog instance
+    Catalog.instance = None
+
+    catalog_response_data = {"datasets": [{"name": "eu_fsf", "title": "EU FSF"}]}
+
+    with patch_catalog_response(catalog_response_data):
+        catalog = await Catalog.load(
+            manifest=Manifest.model_validate(
+                {
+                    "catalogs": [
+                        {
+                            # The response is mocked, so we can use any URL.
+                            "url": "https://data.example.com/datasets/latest/index.json",
+                        }
+                    ],
+                    "datasets": [
+                        {
+                            "name": "parteispenden",
+                            "title": "German political party donations",
+                        }
+                    ],
+                }
+            )
+        )
+
+    assert len(catalog.datasets) == 2
+    assert catalog.has("eu_fsf")
+    assert catalog.has("parteispenden")
 
 
 def test_get_url_local_path():

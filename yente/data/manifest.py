@@ -72,10 +72,10 @@ class Catalog(DataCatalog[Dataset]):
     instance: Optional["Catalog"] = None
 
     @classmethod
-    async def load(cls) -> "Catalog":
+    async def load(cls, manifest: Optional[Manifest] = None) -> "Catalog":
         catalog = cls(Dataset, {})
 
-        manifest = await Manifest.load()
+        manifest = manifest or await Manifest.load()
         # Populate the internal catalog from all datasets/catalogs specified in the manifest.
         for dataset_spec in await manifest.fetch_datasets():
             catalog.make_dataset(dataset_spec)
