@@ -3,7 +3,10 @@ import pytest
 import pytest_asyncio
 from uuid import uuid4
 from pathlib import Path
+from unittest.mock import Mock, patch
+from contextlib import contextmanager
 from fastapi.testclient import TestClient
+import orjson
 
 from yente import settings
 from yente.app import create_app
@@ -58,3 +61,17 @@ async def flush_cached_es():
         yield
     finally:
         await close_provider()
+
+
+@contextmanager
+def patch_catalog_response(response_data: dict):
+    """Context manager to patch the http client for catalog responses."""
+    mock_response = Mock()
+    mock_response.content = orjson.dumps(response_data)
+
+    with patch(
+        "yente.data.util.httpx.AsyncClient", autospec=True
+    ) as mock_client_constructor:
+        mock_client = mock_client_constructor.return_value.__aenter__.return_value
+        mock_client.get.return_value = mock_response
+        yield mock_client
