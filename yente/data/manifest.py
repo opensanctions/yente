@@ -1,4 +1,3 @@
-import itertools
 from typing import List, Optional, Dict, Any, cast
 
 from nomenklatura.dataset import DataCatalog
@@ -18,8 +17,6 @@ class CatalogManifest(BaseModel):
 
     # The URL to load the catalog from.
     url: str
-    # The authentication token to use when loading the catalog and its datasets.
-    auth_token: Optional[str] = None
     scope: Optional[str] = None
     scopes: List[str] = []
     namespace: Optional[bool] = None
@@ -28,7 +25,7 @@ class CatalogManifest(BaseModel):
 
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch the datasets from the catalog."""
-        data = await load_yaml_url(self.url, auth_token=self.auth_token)
+        data = await load_yaml_url(self.url)
         if self.scope is not None:
             self.scopes.append(self.scope)
 
@@ -41,15 +38,13 @@ class CatalogManifest(BaseModel):
                 ds["resource_name"] = self.resource_name
             if self.resource_type is not None:
                 ds["resource_type"] = self.resource_type
-            if self.auth_token is not None:
-                ds["auth_token"] = self.auth_token
 
         return cast(List[Dict[str, Any]], data["datasets"])
 
 
 class Manifest(BaseModel):
     """A manifest (usually loaded from a YAML configuration file) that specifies datasets
-    to be loaded, either directly or via catalogs."""
+    to be loaded, directly and via catalogs."""
 
     catalogs: List[CatalogManifest] = []
     datasets: List[Dict[str, Any]] = []
@@ -63,13 +58,12 @@ class Manifest(BaseModel):
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch all datasets specified in the manifest."""
 
+        all_datasets = []
+        all_datasets.extend(self.datasets)
+        for catalog in self.catalogs:
+            all_datasets.extend(await catalog.fetch_datasets())
         # TODO: load remote metadata from a `metadata_url` on each dataset?
-        return list(
-            itertools.chain(
-                self.datasets,
-                *[await catalog.fetch_datasets() for catalog in self.catalogs],
-            )
-        )
+        return all_datasets
 
 
 class Catalog(DataCatalog[Dataset]):
@@ -78,10 +72,10 @@ class Catalog(DataCatalog[Dataset]):
     instance: Optional["Catalog"] = None
 
     @classmethod
-    async def load(cls, manifest: Optional[Manifest] = None) -> "Catalog":
+    async def load(cls) -> "Catalog":
         catalog = cls(Dataset, {})
 
-        manifest = manifest or await Manifest.load()
+        manifest = await Manifest.load()
         # Populate the internal catalog from all datasets/catalogs specified in the manifest.
         for dataset_spec in await manifest.fetch_datasets():
             catalog.make_dataset(dataset_spec)
