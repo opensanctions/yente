@@ -16,7 +16,7 @@ dependencies = [
     "httpx[http2] == 0.28.1",
     "aiohttp[speedups] == 3.12.13",
     "boto3 ~= 1.37",
-    "fastapi == 0.115.13",
+    "fastapi == 0.115.14",
     "python-multipart == 0.0.20",
     "email-validator == 2.2.0",
     "structlog == 25.4.0",
