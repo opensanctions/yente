@@ -66,6 +66,11 @@ async def match(
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
+    exclude_entity_ids: List[str] = Query(
+        [],
+        title="A list of entities IDs to exclude from matching",
+        description="The entity IDs supplied here do not have to be canonical. Supplying any of the referents of a merged entity will exclude that entity. This parameter may be useful for example to exclude false-positive matches that have been decided upon by a human.",
+    ),
     provider: SearchProvider = Depends(get_provider),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
@@ -150,6 +155,7 @@ async def match(
                 exclude_schema=exclude_schema,
                 exclude_dataset=exclude_dataset,
                 changed_since=changed_since,
+                exclude_entity_ids=exclude_entity_ids,
             )
         except Exception as exc:
             log.info("Cannot parse example entity: %s" % str(exc))

@@ -170,3 +170,23 @@ def test_fuzzy_names():
         assert len(res["results"]) > 0, res
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
         assert res["results"][0]["score"] > 0.5, res["results"][0]
+
+
+def test_exclude_entity_ids():
+    query = {"queries": {"q": EXAMPLE}}
+
+    # First test: no exclusions should return Q7747 as first result
+    resp = client.post("/match/default", json=query)
+    assert resp.json()["responses"]["q"]["results"][0]["id"] == "Q7747"
+
+    # Second test: exclude canonical ID Q7747
+    resp = client.post(
+        "/match/default", json=query, params={"exclude_entity_ids": ["Q7747"]}
+    )
+    assert len(resp.json()["responses"]["q"]["results"]) == 0
+
+    # Third test: exclude referent ID gb-hmt-14196 (canonical ID is Q7747)
+    resp = client.post(
+        "/match/default", json=query, params={"exclude_entity_ids": ["gb-hmt-14196"]}
+    )
+    assert len(resp.json()["responses"]["q"]["results"]) == 0

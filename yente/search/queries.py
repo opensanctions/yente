@@ -40,6 +40,7 @@ def filter_query(
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    exclude_entity_ids: List[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     filterqs: List[Clause] = []
@@ -82,6 +83,12 @@ def filter_query(
 
     for schema_name in exclude_schema:
         must_not.append({"term": {"schema": schema_name}})
+
+    # Exclude entities by any ID in the cluster
+    if exclude_entity_ids:
+        must_not.append({"terms": {"entity_id": exclude_entity_ids}})
+        must_not.append({"terms": {"referents": exclude_entity_ids}})
+
     return {
         "bool": {
             "filter": filterqs,
@@ -127,6 +134,7 @@ def entity_query(
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    exclude_entity_ids: List[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     shoulds: List[Clause] = names_query(entity)
@@ -149,6 +157,7 @@ def entity_query(
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
+        exclude_entity_ids=exclude_entity_ids,
     )
 
 
@@ -163,6 +172,7 @@ def text_query(
     exclude_schema: List[str] = [],
     exclude_dataset: List[str] = [],
     changed_since: Optional[str] = None,
+    exclude_entity_ids: List[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     if not len(query.strip()):
@@ -198,6 +208,7 @@ def text_query(
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
         changed_since=changed_since,
+        exclude_entity_ids=exclude_entity_ids,
         filter_op=filter_op,
     )
 
