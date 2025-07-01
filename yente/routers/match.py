@@ -70,6 +70,7 @@ async def match(
         [],
         title="A list of entities IDs to exclude from matching",
         description="The entity IDs supplied here do not have to be canonical. Supplying any of the referents of a merged entity will exclude that entity. This parameter may be useful for example to exclude false-positive matches that have been decided upon by a human.",
+        max_length=50,
     ),
     provider: SearchProvider = Depends(get_provider),
 ) -> EntityMatchResponse:
