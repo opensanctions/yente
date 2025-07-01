@@ -66,6 +66,8 @@ async def match(
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
+    # This list applies to all queries, but really only makes sense with a single query.
+    # Our API design currently doesn't support per-query options such as this one.
     exclude_entity_ids: List[str] = Query(
         [],
         title="A list of entities IDs to exclude from matching",
