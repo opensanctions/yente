@@ -1,3 +1,4 @@
+import os.path
 from typing import List, Optional, Dict, Any, cast
 
 from nomenklatura.dataset import DataCatalog
@@ -17,6 +18,7 @@ class CatalogManifest(BaseModel):
 
     # The URL to load the catalog from.
     url: str
+    # Token to set in the Authorization header. Also supports environment variable expansion.
     auth_token: Optional[str] = None
     scope: Optional[str] = None
     scopes: List[str] = []
@@ -26,7 +28,10 @@ class CatalogManifest(BaseModel):
 
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch the datasets from the catalog."""
-        data = await load_yaml_url(self.url, auth_token=self.auth_token)
+        auth_token_expanded = (
+            os.path.expandvars(self.auth_token) if self.auth_token else None
+        )
+        data = await load_yaml_url(self.url, auth_token=auth_token_expanded)
         if self.scope is not None:
             self.scopes.append(self.scope)
 
@@ -39,8 +44,8 @@ class CatalogManifest(BaseModel):
                 ds["resource_name"] = self.resource_name
             if self.resource_type is not None:
                 ds["resource_type"] = self.resource_type
-            if self.auth_token is not None:
-                ds["auth_token"] = self.auth_token
+            if auth_token_expanded is not None:
+                ds["auth_token"] = auth_token_expanded
 
         return cast(List[Dict[str, Any]], data["datasets"])
 

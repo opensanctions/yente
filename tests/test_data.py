@@ -53,6 +53,39 @@ async def test_manifest_with_auth_token():
 
 
 @pytest.mark.asyncio
+async def test_manifest_with_auth_token_env_expansion(monkeypatch):
+    # Clear any cached catalog instance
+    Catalog.instance = None
+
+    monkeypatch.setenv("TEST_CATALOG_AUTH_TOKEN", "secretenv")
+
+    catalog_response_data = {"datasets": []}
+
+    with patch_catalog_response(catalog_response_data) as (
+        mock_client,
+        mock_client_constructor,
+    ):
+        await Catalog.load(
+            manifest=Manifest.model_validate(
+                {
+                    "catalogs": [
+                        {
+                            "url": "https://delivery.example.com/datasets/latest/index.json",
+                            "auth_token": "$TEST_CATALOG_AUTH_TOKEN",
+                        }
+                    ],
+                }
+            )
+        )
+        # Assert that AsyncClient was constructed with the correct auth parameter
+        mock_client_constructor.assert_called_once()
+        client_constructor_kwargs = mock_client_constructor.call_args.kwargs
+        assert client_constructor_kwargs["auth"].auth_token == "secretenv"
+
+        mock_client.get.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_local_dataset():
     catalog = await get_catalog()
     ds = catalog.require("parteispenden")
