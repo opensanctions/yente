@@ -2,7 +2,7 @@ import os.path
 from typing import List, Optional, Dict, Any, cast
 
 from nomenklatura.dataset import DataCatalog
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from yente import settings
 from yente.data.dataset import Dataset
@@ -26,12 +26,17 @@ class CatalogManifest(BaseModel):
     resource_name: Optional[str] = None
     resource_type: Optional[str] = None
 
+    @field_validator("auth_token")
+    @classmethod
+    def expand_auth_token(cls, v: Optional[str]) -> Optional[str]:
+        """Expand environment variables in the auth_token."""
+        if v is not None:
+            return os.path.expandvars(v)
+        return v
+
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch the datasets from the catalog."""
-        auth_token_expanded = (
-            os.path.expandvars(self.auth_token) if self.auth_token else None
-        )
-        data = await load_yaml_url(self.url, auth_token=auth_token_expanded)
+        data = await load_yaml_url(self.url, auth_token=self.auth_token)
         if self.scope is not None:
             self.scopes.append(self.scope)
 
@@ -44,8 +49,8 @@ class CatalogManifest(BaseModel):
                 ds["resource_name"] = self.resource_name
             if self.resource_type is not None:
                 ds["resource_type"] = self.resource_type
-            if auth_token_expanded is not None:
-                ds["auth_token"] = auth_token_expanded
+            if self.auth_token is not None:
+                ds["auth_token"] = self.auth_token
 
         return cast(List[Dict[str, Any]], data["datasets"])
 
