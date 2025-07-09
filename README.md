@@ -30,6 +30,12 @@ Once you've set the ``YENTE_INDEX_URL`` environment variable to point to a runni
 yente serve
 ```
 
-### License and Support
+
+### Releasing
+
+    bump2version --verbose minor # or patch
+    git push && git push --tags
+
+## License and Support
 
 ``yente`` is licensed according to the MIT license terms documented in ``LICENSE``. Using the service in a commercial context may require a [data license for OpenSanctions data](https://www.opensanctions.org/licensing/).
