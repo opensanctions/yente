@@ -37,7 +37,7 @@ services:
       # Set this to a randomly generated string to enable the /updatez API:
       YENTE_UPDATE_TOKEN: ""
     # If you want to index data from the host machine as a custom dataset,
-    # create a volume mount here to make that data accessible from the 
+    # create a volume mount here to make that data accessible from the
     # container:
     # volumes:
     #   - "/path/on/the/host/computer:/data"
