@@ -30,6 +30,15 @@ INDEX_SETTINGS = {
         "refresh_interval": "5s",
         "auto_expand_replicas": settings.INDEX_AUTO_REPLICAS,
         "number_of_shards": settings.INDEX_SHARDS,
+        "similarity": {
+            # We use this for names, to avoid over-penalizing entities with many names.
+            "weak_length_norm": {
+                # BM25 is the default similarity algorithm.
+                "type": "BM25",
+                # 0.75 is the default
+                "b": 0.25,
+            }
+        },
     },
 }
 NAMES_FIELD = NameType.group or "names"
@@ -39,7 +48,9 @@ NAME_PHONETIC_FIELD = "name_phonetic"
 
 
 def make_field(
-    type_: str, copy_to: Optional[List[str]] = None, format: Optional[str] = None
+    type_: str,
+    copy_to: Optional[List[str]] = None,
+    format: Optional[str] = None,
 ) -> MappingProperty:
     spec: MappingProperty = {"type": type_}
     if type_ == "keyword":
@@ -97,7 +108,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
                 existing=prop_mapping.get(name, None),
             )
 
-    mapping = {
+    mapping: dict[str, Any] = {
         "schema": make_keyword(),
         "caption": make_field("keyword"),
         "entity_id": make_field("keyword"),
@@ -105,6 +116,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         "referents": make_keyword(),
         "target": make_field("boolean"),
         "text": make_field("text"),
+        "num_values": make_field("integer"),
         NAME_PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_field("keyword", copy_to=["text"]),
         NAME_KEY_FIELD: make_field("keyword"),
@@ -120,6 +132,10 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         if t.group in mapping:
             raise RuntimeError("Double mapping field: %s" % t.group)
         mapping[t.group] = make_type_field(t)
+
+    # No length normalization for names. Merged entities have a lot of names,
+    # and we don't want to penalize them for that.
+    mapping[NAMES_FIELD]["similarity"] = "weak_length_norm"
 
     drop_fields = [t.group for t in registry.groups.values()]
     drop_fields.append("text")
