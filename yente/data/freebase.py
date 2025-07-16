@@ -41,6 +41,7 @@ class FreebaseEntity(BaseModel):
     @classmethod
     def from_proxy(cls, proxy: EntityProxy) -> "FreebaseEntity":
         type_ = [FreebaseType.from_schema(proxy.schema)]
+        assert proxy.id is not None, "EntityProxy must have an ID"
         return FreebaseEntity(
             id=proxy.id,
             name=proxy.caption,

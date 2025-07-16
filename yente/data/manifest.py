@@ -1,7 +1,7 @@
 import os.path
 from typing import List, Optional, Dict, Any, cast
 
-from nomenklatura.dataset import DataCatalog
+from followthemoney.dataset import DataCatalog
 from pydantic import BaseModel, field_validator
 
 from yente import settings
@@ -71,7 +71,7 @@ class Manifest(BaseModel):
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
         """Fetch all datasets specified in the manifest."""
 
-        all_datasets = []
+        all_datasets: List[Dict[str, Any]] = []
         all_datasets.extend(self.datasets)
         for catalog in self.catalogs:
             all_datasets.extend(await catalog.fetch_datasets())
@@ -87,8 +87,8 @@ class Catalog(DataCatalog[Dataset]):
     @classmethod
     async def load(cls, manifest: Optional[Manifest] = None) -> "Catalog":
         catalog = cls(Dataset, {})
-
         manifest = manifest or await Manifest.load()
+
         # Populate the internal catalog from all datasets/catalogs specified in the manifest.
         for dataset_spec in await manifest.fetch_datasets():
             catalog.make_dataset(dataset_spec)
