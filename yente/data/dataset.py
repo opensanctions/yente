@@ -4,7 +4,7 @@ from pydantic import Field, FilePath, computed_field, field_validator
 from rigour.time import datetime_iso
 from nomenklatura.util import iso_to_version
 from followthemoney.dataset import Dataset as FollowTheMoneyDataset
-from followthemoney.dataset.dataset import DatasetModel as FollowTheMoneyDatasetModel
+from followthemoney.dataset.dataset import DatasetModel
 from followthemoney.dataset.util import Url
 from followthemoney.namespace import Namespace
 
@@ -13,10 +13,9 @@ from yente.logs import get_logger
 from yente.data.util import get_url_local_path
 
 log = get_logger(__name__)
-BOOT_TIME = datetime_iso(settings.RUN_DT)
 
 
-class YenteDatasetModel(FollowTheMoneyDatasetModel):
+class YenteDatasetModel(DatasetModel):
     load: Optional[bool] = None
     entities_url: Optional[str] = None
     path: Optional[FilePath] = Field(None, exclude=True)
@@ -44,11 +43,9 @@ class YenteDatasetModel(FollowTheMoneyDatasetModel):
 
 
 class Dataset(FollowTheMoneyDataset):
-    Model = YenteDatasetModel
-
     def __init__(self, data: Dict[str, Any]):
         super().__init__(data)
-        self.model: YenteDatasetModel = self.Model.model_validate(data)
+        self.model: YenteDatasetModel = YenteDatasetModel.model_validate(data)
 
         if self.model.load is None:
             self.model.load = not self.is_collection
@@ -56,7 +53,7 @@ class Dataset(FollowTheMoneyDataset):
             self.model.entities_url = self._get_entities_url(data)
 
         if self.model.version is None:
-            ts: Optional[str] = data.get("last_export", BOOT_TIME)
+            ts: Optional[str] = data.get("last_export", datetime_iso(settings.RUN_DT))
             if self.model.entities_url is not None:
                 path = get_url_local_path(self.model.entities_url)
                 if path is not None and path.exists():
