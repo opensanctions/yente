@@ -37,7 +37,7 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     await refresh_catalog()
     catalog = await get_catalog()
     dataset = catalog.get("sanctions")
-    updater = await DatasetUpdater.build(dataset, dataset.version)
+    updater = await DatasetUpdater.build(dataset, dataset.model.version)
     assert not updater.needs_update()
 
     updater = await DatasetUpdater.build(dataset, None)
@@ -50,10 +50,10 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     for op in operations:
         assert op["op"] == "ADD"
 
-    base_version = dataset.version
-    dataset.version = "20240528134729-3iv"
+    base_version = dataset.model.version
+    dataset.model.version = "20240528134729-3iv"
     url = f"https://data.opensanctions.org/artifacts/sanctions/{dataset.version}/delta.json"
-    dataset.delta_url = url
+    dataset.model.delta_url = url
     delta_index_path = FIXTURES_PATH / "dataset/t2/delta.json"
 
     with open(delta_index_path, "r") as f:
