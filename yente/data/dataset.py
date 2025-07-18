@@ -67,7 +67,7 @@ class Dataset(FollowTheMoneyDataset):
 
     def _get_entities_url(self, data: Dict[str, Any]) -> Optional[str]:
         if self.model.path is not None:
-            return self.model.path.as_uri()
+            return self.model.path.resolve().as_uri()
         resource_name = self.model.resource_name
         resource_type = self.model.resource_type
         for resource in self.model.resources:
