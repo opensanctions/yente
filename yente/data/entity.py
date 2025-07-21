@@ -13,6 +13,33 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
+# Topics that are considered "target" entities, duplicated from zavod
+TARGET_TOPICS = {
+    "corp.disqual",
+    "crime.boss",
+    "crime.fin",
+    "crime.fraud",
+    "crime.terror",
+    "crime.theft",
+    "crime.traffick",
+    "crime.war",
+    "crime",
+    "debarment",
+    "export.control",
+    "export.risk",
+    "poi",
+    "reg.action",
+    "reg.warn",
+    "role.oligarch",
+    "role.pep",
+    "role.rca",
+    "sanction.counter",
+    "sanction.linked",
+    "sanction",
+    "wanted",
+}
+
+
 class Entity(ValueEntity):
     """Entity for sanctions list entries and adjacent objects."""
 
@@ -63,3 +90,14 @@ class Entity(ValueEntity):
             if hint is not None and hint not in countries:
                 obj.add("country", hint, cleaned=True)
         return obj
+
+    @property
+    def target(self) -> bool:
+        topics = self.get("topics", quiet=True)
+        return len(TARGET_TOPICS.intersection(topics)) > 0
+
+    def to_dict(self, matchable: bool = False) -> Dict[str, Any]:
+        data = super().to_dict()
+        # Will be written to the index as well as returned to the client
+        data["target"] = self.target
+        return data
