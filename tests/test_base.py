@@ -53,12 +53,10 @@ def test_updatez_get():
     assert res.status_code == 405, res.text
 
 
-def test_updatez_no_token_configured():
-    before = settings.UPDATE_TOKEN
-    settings.UPDATE_TOKEN = ""
-    res = client.post(f"/updatez?token={before}")
+def test_updatez_no_token_configured(monkeypatch):
+    monkeypatch.setattr(settings, "UPDATE_TOKEN", "")
+    res = client.post(f"/updatez?token={settings.UPDATE_TOKEN}")
     assert res.status_code == 403, res.text
-    settings.UPDATE_TOKEN = before
 
 
 def test_updatez_no_token():
