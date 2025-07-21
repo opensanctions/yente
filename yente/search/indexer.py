@@ -1,7 +1,6 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
-from followthemoney import model
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
@@ -52,7 +51,7 @@ async def iter_entity_docs(
             continue
 
         try:
-            entity = Entity.from_dict(model, data["entity"])
+            entity = Entity.from_dict(data["entity"])
             entity.datasets = entity.datasets.intersection(datasets)
             if not len(entity.datasets):
                 entity.datasets.add(dataset.name)
@@ -112,13 +111,13 @@ async def index_entities(
     base_version = await get_index_version(provider, dataset)
     updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
     if not updater.needs_update():
-        if updater.dataset.load:
+        if updater.dataset.model.load:
             log.info("No update needed", dataset=dataset.name, version=base_version)
         return
     log.info(
         "Indexing entities",
         dataset=dataset.name,
-        url=dataset.entities_url,
+        url=dataset.model.entities_url,
         version=updater.target_version,
         base_version=updater.base_version,
         incremental=updater.is_incremental,
@@ -184,7 +183,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             await provider.delete_index(index)
             continue
         dataset = catalog.get(ds_name)
-        if dataset is None or not dataset.load:
+        if dataset is None or not dataset.model.load:
             log.info(
                 "Deleting index of non-scope dataset",
                 index=index,
