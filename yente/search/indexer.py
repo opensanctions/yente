@@ -60,6 +60,10 @@ async def iter_entity_docs(
                 entity = dataset.ns.apply(entity)
 
             texts = entity.pop("indexText")
+
+            # TODO: entity.to_dict should be enough here, the copy_to magic in the ES mapper should
+            # handle making the type fields, but alas, it doesn't seem to be working.
+            # See tracking issue https://github.com/opensanctions/yente/issues/806
             # doc = entity.to_dict()
             doc = entity.to_full_dict(matchable=True)
             entity_id = doc.pop("id")
