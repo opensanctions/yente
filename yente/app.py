@@ -41,12 +41,12 @@ async def warm_up() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await warm_up()
     log.info(
         "Setting up background refresh",
         crontab=settings.CRONTAB,
         auto_reindex=settings.AUTO_REINDEX,
     )
-    await refresh_catalog()
     settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
     yield
     await close_provider()
