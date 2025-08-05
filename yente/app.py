@@ -30,16 +30,24 @@ async def cron_task() -> None:
         update_index_threaded()
 
 
+async def warm_up() -> None:
+    """Warm up the application by loading the catalog and updating the index."""
+    log.info("Warming up application...")
+    await refresh_catalog()
+    if settings.AUTO_REINDEX:
+        update_index_threaded()
+    # TODO: warm up the scoring algorithms
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await warm_up()
     log.info(
         "Setting up background refresh",
         crontab=settings.CRONTAB,
         auto_reindex=settings.AUTO_REINDEX,
     )
     settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
-    if settings.AUTO_REINDEX:
-        update_index_threaded()
     yield
     await close_provider()
 
