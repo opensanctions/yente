@@ -1,9 +1,7 @@
 from typing import Generator, Set
 from typing import Any, Dict, List, Optional
-from followthemoney import model
-from followthemoney.schema import Schema
-from followthemoney.types import registry
-from nomenklatura.dataset import DataCatalog
+from followthemoney import model, registry, Schema
+from followthemoney.dataset import DataCatalog
 
 from yente import settings
 from yente.logs import get_logger
@@ -22,7 +20,7 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
-    entity = Entity.from_dict(model, source)
+    entity = Entity.from_dict(source)
     entity.datasets = set(source["datasets"])
     return entity
 
@@ -61,7 +59,7 @@ def result_facets(
                 value.label = key
                 ds = catalog.get(key)
                 if ds is not None:
-                    value.label = ds.title or key
+                    value.label = ds.model.title or key
             if field == "schema":
                 facet.label = "Entity types"
                 value.label = key

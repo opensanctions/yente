@@ -222,7 +222,7 @@ def test_search_no_targets():
     data = res.json()
     assert "results" in data, data
     results = data.get("results")
-    assert not len(results), results
+    assert len(results) == 0
     # for res in results:
     #     assert res["target"] == False, res
 
@@ -233,7 +233,7 @@ def test_search_targets():
     data = res.json()
     assert "results" in data, data
     results = data.get("results")
-    assert len(results), results
+    assert len(results) > 0
     for res in results:
         assert res["target"] is True, res
 

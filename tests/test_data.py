@@ -89,11 +89,11 @@ async def test_manifest_with_auth_token_env_expansion(monkeypatch):
 async def test_local_dataset():
     catalog = await get_catalog()
     ds = catalog.require("parteispenden")
-    assert ds.load
-    assert ds.entities_url is not None
-    assert "donations.ijson" in ds.entities_url
+    assert ds.model.load
+    assert ds.model.entities_url is not None
+    assert "donations.ijson" in ds.model.entities_url
     lines = list()
-    async for line in load_json_lines(ds.entities_url, "test"):
+    async for line in load_json_lines(ds.model.entities_url, "test"):
         lines.append(line)
     assert len(lines) > 10, lines
 

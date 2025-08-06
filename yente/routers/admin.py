@@ -87,16 +87,16 @@ async def catalog(
     """
     catalog = await get_catalog()
     await sync_dataset_versions(provider, catalog)
-    response = catalog.to_dict()
-    response["current"] = []
-    response["outdated"] = []
+    model = DataCatalogModel(datasets=[], current=[], outdated=[])
     for dataset in catalog.datasets:
-        if dataset.load and dataset.index_version == dataset.version:
-            response["current"].append(dataset.name)
-        elif dataset.index_version is not None:
-            response["outdated"].append(dataset.name)
-    response["index_stale"] = len(response["outdated"]) > 0
-    return DataCatalogModel.model_validate(response)
+        if dataset.model.load and dataset.model.index_current:
+            model.current.append(dataset.name)
+        elif dataset.model.index_version is not None:
+            model.outdated.append(dataset.name)
+        dataset.model.children = set([c.name for c in dataset.children])
+        model.datasets.append(dataset.model)
+    model.index_stale = len(model.outdated) > 0
+    return model
 
 
 @router.get(

@@ -94,7 +94,7 @@ async def reconcile(
 
     return FreebaseManifest(
         versions=["0.2"],
-        name=f"{ds.title} ({settings.TITLE})",
+        name=f"{ds.model.title} ({settings.TITLE})",
         identifierSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         view=FreebaseManifestView(url="https://www.opensanctions.org/entities/{{id}}/"),
@@ -296,7 +296,8 @@ async def reconcile_extend(
             if qprop.settings.render == FreebaseRenderMethod.caption:
                 values = [prop.type.caption(v) or v for v in values]
             row[qprop.id] = [FreebaseExtendResponseValue(str=v) for v in values]
-        resp.rows[entity.id] = row
+        if entity.id is not None:
+            resp.rows[entity.id] = row
     resp.meta = list(metas.values())
     return resp
 
