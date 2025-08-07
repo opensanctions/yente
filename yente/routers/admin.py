@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import FileResponse, HTMLResponse
-from normality import collapse_spaces
+from normality import squash_spaces
 from nomenklatura.matching import ALGORITHMS
 
 from yente import settings
@@ -114,7 +114,7 @@ async def algorithms() -> AlgorithmResponse:
     for algo in ALGORITHMS:
         desc = Algorithm(
             name=algo.NAME,
-            description=collapse_spaces(algo.__doc__ or ""),
+            description=squash_spaces(algo.__doc__ or ""),
             features=algo.get_feature_docs(),
         )
         algorithms.append(desc)
