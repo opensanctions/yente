@@ -2,6 +2,7 @@ import time
 import aiocron  # type: ignore
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
+import nomenklatura.matching
 from pydantic import ValidationError
 from fastapi import FastAPI
 from fastapi import Request, Response
@@ -16,6 +17,7 @@ from yente.exc import YenteError
 from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
+from yente.data.entity import Entity
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
 from yente.middleware import TraceContextMiddleware
@@ -36,7 +38,33 @@ async def warm_up() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
-    # TODO: warm up the scoring algorithms
+
+    log.debug("Warming up matcher algorithms...")
+    # This is the pragmatic and easy way to warm up the matcher algorithms. If anyone feels the call to
+    # do it the elegant way, implement a warm up function in each of the algorithms that in turn calls
+    # some eager loading functions in rigour, don't let this stop you, hack away!
+    fake_person = Entity.from_dict(
+        {
+            "schema": "Person",
+            "id": "warm-up-person",
+            "properties": {"name": "Mrs. Warm Up", "country": "United States"},
+        }
+    )
+    fake_company = Entity.from_dict(
+        {
+            "schema": "Company",
+            "id": "warm-up-company",
+            "properties": {
+                "name": "Warm-Up Company",
+                # Using the country name instead of the ISO code to trigger loading the country names data
+                "country": "Russia",
+            },
+        }
+    )
+    for entity in [fake_person, fake_company]:
+        for algo in nomenklatura.matching.ALGORITHMS:
+            config = algo.default_config()
+            algo.compare(entity, entity, config)
 
 
 @asynccontextmanager
