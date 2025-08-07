@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
 from yente.logs import get_logger
@@ -187,7 +188,7 @@ async def match(
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
-            weights=match.weights,
+            config=ScoringConfig(weights=match.weights, config={}),
         )
         log.info(
             f"/match/{ds.name}",
@@ -204,6 +205,6 @@ async def match(
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
         responses=responses,
-        matcher=algorithm_type.explain(),
+        matcher=algorithm_type.get_feature_docs(),
         limit=limit,
     )
