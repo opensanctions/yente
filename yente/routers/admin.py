@@ -112,6 +112,8 @@ async def algorithms() -> AlgorithmResponse:
     """
     algorithms: List[Algorithm] = []
     for algo in ALGORITHMS:
+        if algo.NAME in settings.HIDDEN_ALGORITHMS:
+            continue
         desc = Algorithm(
             name=algo.NAME,
             description=squash_spaces(algo.__doc__ or ""),
