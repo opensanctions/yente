@@ -1,0 +1,5 @@
+catalogs:
+  - url: "https://delivery.opensanctions.com/datasets/latest/index.json"
+    auth_token: "$OPENSANCTIONS_DELIVERY_TOKEN"
+    scope: default
+    resource_name: entities.ftm.json
