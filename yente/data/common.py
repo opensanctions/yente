@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Union, Optional
 from pydantic import BaseModel, Field
-from nomenklatura.matching.types import MatchingResult, FeatureDocs
+from nomenklatura.matching.types import MatchingResult, FeatureDocs, ConfigVar
 
 from yente import settings
 from yente.data.dataset import YenteDatasetModel
@@ -121,6 +121,11 @@ class EntityExample(BaseModel):
 
 class EntityMatchQuery(BaseModel):
     weights: Dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
+    config: Dict[str, Union[str, int, float, bool]] = Field(
+        default_factory=dict,
+        description="Algorithm-specific configuration parameters.",
+        examples=[{"nm_number_mismatch": 0.4}],
+    )
     queries: Dict[str, EntityExample]
 
 
@@ -148,6 +153,9 @@ class Algorithm(BaseModel):
     name: str
     description: Optional[str] = None
     features: FeatureDocs
+    config: Dict[str, ConfigVar] = Field(
+        description="Algorithm-specific configuration parameters.",
+    )
 
 
 class AlgorithmResponse(BaseModel):
