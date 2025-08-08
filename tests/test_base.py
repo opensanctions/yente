@@ -30,6 +30,15 @@ def test_algorithms():
     assert "algorithms" in data
     assert len(data["algorithms"]) > 3
 
+    # Ensure that the logic-v2 algorithm is visible and that
+    # the configuration options are exposed
+    logic_v2 = next(
+        (a for a in data["algorithms"] if a["name"] == "UNSTABLE-logic-v2"), None
+    )
+    assert logic_v2 is not None
+    assert logic_v2["config"] is not None
+    assert logic_v2["config"]["nm_number_mismatch"] is not None
+
 
 def test_catalog():
     res = client.get("/catalog")

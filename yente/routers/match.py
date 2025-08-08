@@ -136,6 +136,13 @@ async def match(
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
     algorithm_type = get_algorithm_by_name(algorithm)
 
+    for config_key in match.config.keys():
+        if config_key not in algorithm_type.CONFIG:
+            raise HTTPException(
+                400,
+                detail=f"Invalid configuration parameter: {config_key} for algorithm {algorithm_type.NAME}",
+            )
+
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
@@ -188,7 +195,7 @@ async def match(
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
-            config=ScoringConfig(weights=match.weights, config={}),
+            config=ScoringConfig(weights=match.weights, config=match.config),
         )
         log.info(
             f"/match/{ds.name}",
