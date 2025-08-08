@@ -131,6 +131,34 @@ def test_match_include_dataset():
     assert len(res["results"]) == 0, res
 
 
+def test_match_logic_v2_with_algorithm_config():
+    query = {"queries": {"vv": EXAMPLE}, "config": {"nm_number_mismatch": 0.4}}
+    with mock.patch(
+        "nomenklatura.matching.logic_v2.model.LogicV2.compare"
+    ) as mock_compare:
+        mock_compare.return_value = mock.MagicMock()
+        mock_compare.return_value.score = 0.8
+        mock_compare.return_value.features = {}
+        mock_compare.return_value.explanations = {}
+
+        resp = client.post(
+            "/match/default", json=query, params={"algorithm": "UNSTABLE-logic-v2"}
+        )
+
+        # Check that the config is passed properly to the compare method
+        assert mock_compare.called
+        _, call_kwargs = mock_compare.call_args
+        assert call_kwargs["config"].config.get("nm_number_mismatch") == 0.4
+
+    assert resp.status_code == 200, resp.text
+
+    query = {"queries": {"vv": EXAMPLE}, "config": {"invalid_option": 0.4}}
+    resp = client.post(
+        "/match/default", json=query, params={"algorithm": "UNSTABLE-logic-v2"}
+    )
+    assert resp.status_code == 400, resp.text
+
+
 def test_filter_topic():
     query = {"queries": {"vv": EXAMPLE}}
     params = {"algorithm": "name-based", "topics": "crime.cyber"}
