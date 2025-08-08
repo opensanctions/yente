@@ -31,6 +31,17 @@ def test_algorithms():
     assert len(data["algorithms"]) > 3
 
 
+def test_algorithms_hidden(monkeypatch):
+    res = client.get("/algorithms")
+    visible_algorithms = [a["name"] for a in res.json()["algorithms"]]
+    assert "logic-v1" in visible_algorithms
+
+    monkeypatch.setattr(settings, "HIDDEN_ALGORITHMS", ["logic-v1"])
+    res = client.get("/algorithms")
+    visible_algorithms = [a["name"] for a in res.json()["algorithms"]]
+    assert "logic-v1" not in visible_algorithms
+
+
 def test_catalog():
     res = client.get("/catalog")
     assert res.status_code == 200, res
