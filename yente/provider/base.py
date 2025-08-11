@@ -1,6 +1,5 @@
 from asyncio import Semaphore
-from typing import Any, Dict, List, Optional
-from typing import AsyncIterator
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
 
 from yente import settings
 
@@ -63,6 +62,8 @@ class SearchProvider(object):
         """Search for entities in the index."""
         raise NotImplementedError
 
-    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> None:
-        """Index a list of entities into the search index."""
+    async def bulk_index(
+        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+    ) -> None:
+        """Perform an iterable of bulk actions to the search index."""
         raise NotImplementedError
