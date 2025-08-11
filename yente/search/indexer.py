@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
@@ -12,11 +12,14 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
+from yente.search.lock import acquire_lock, refresh_lock, release_lock
 from yente.search.mapping import (
+    INDEX_SETTINGS,
     NAME_PART_FIELD,
     NAME_KEY_FIELD,
     NAMES_FIELD,
     NAME_PHONETIC_FIELD,
+    make_entity_mapping,
 )
 from yente.provider import SearchProvider, with_provider
 from yente.search.versions import parse_index_name
@@ -118,6 +121,7 @@ async def index_entities(
         if updater.dataset.model.load:
             log.info("No update needed", dataset=dataset.name, version=base_version)
         return
+
     log.info(
         "Indexing entities",
         dataset=dataset.name,
@@ -133,16 +137,42 @@ async def index_entities(
         log.info("Index is up to date.", index=next_index)
         return
 
+    lock_acquired = await acquire_lock(provider, next_index)
+    if not lock_acquired:
+        log.warning(
+            "Failed to acquire lock, skipping index",
+            dataset=dataset.name,
+            index=next_index,
+        )
+        return
+
     # await es.indices.delete(index=next_index)
     if updater.is_incremental and not force:
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
-        await provider.create_index(next_index)
+        await provider.create_index(
+            next_index, mappings=make_entity_mapping(), settings=INDEX_SETTINGS
+        )
 
     try:
         docs = iter_entity_docs(updater, next_index)
-        await provider.bulk_index(docs)
+
+        # Little wrapper to refresh the lock every now and then
+        async def refresh_lock_iterator(
+            it: AsyncIterable[Dict[str, Any]],
+        ) -> AsyncIterable[Dict[str, Any]]:
+            idx = 0
+            async for item in it:
+                idx += 1
+                # Refresh the lock every 10,000 documents. Should be enough not to
+                # lose the lock, expiration time is lock.LOCK_EXPIRATION_TIME (currently 5 minutes)
+                if idx % 10000 == 0:
+                    await refresh_lock(provider, next_index)
+                yield item
+
+        await provider.bulk_index(refresh_lock_iterator(docs))
+
     except (YenteIndexError, Exception) as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
@@ -160,6 +190,8 @@ async def index_entities(
             log.warn("Retrying with full reindex", dataset=dataset.name)
             return await index_entities(provider, dataset, force=True)
         raise exc
+    finally:
+        await release_lock(provider, next_index)
 
     await provider.refresh(index=next_index)
     dataset_prefix = construct_index_name(dataset.name)

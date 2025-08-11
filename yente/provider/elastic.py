@@ -10,7 +10,6 @@ from elasticsearch import TransportError, ConnectionError
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 from yente.middleware.trace_context import get_trace_context
 
@@ -132,14 +131,16 @@ class ElasticSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
+    async def create_index(
+        self, index: str, *, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
         """Create a new index with the given name."""
         log.info("Create index", index=index)
         try:
             await self.client().indices.create(
                 index=index,
-                mappings=make_entity_mapping(),
-                settings=INDEX_SETTINGS,
+                mappings=mappings,
+                settings=settings,
             )
         except ApiError as exc:
             if exc.error == "resource_already_exists_exception":
@@ -237,6 +238,20 @@ class ElasticSearchProvider(SearchProvider):
         ) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
+
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        try:
+            async with self.query_semaphore:
+                response = await self.client().get(index=index, id=doc_id)
+                return cast(Dict[str, Any], response.body)
+        except NotFoundError:
+            return None
+        except Exception as exc:
+            raise YenteIndexError(f"Error getting document: {exc}") from exc
 
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]

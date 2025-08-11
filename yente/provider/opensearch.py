@@ -4,12 +4,11 @@ import logging
 from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
 from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
-from opensearchpy.exceptions import NotFoundError, TransportError
+from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
@@ -128,13 +127,15 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
+    async def create_index(
+        self, index: str, *, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
         """Create a new index with the given name."""
         log.info("Create index", index=index)
         try:
             body = {
-                "settings": INDEX_SETTINGS,
-                "mappings": make_entity_mapping(),
+                "settings": settings,
+                "mappings": mappings,
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
@@ -228,6 +229,20 @@ class OpenSearchProvider(SearchProvider):
         ) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
+
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        try:
+            async with self.query_semaphore:
+                response = await self.client.get(index=index, id=doc_id)
+                return cast(Dict[str, Any], response)
+        except NotFoundError:
+            return None
+        except Exception as exc:
+            raise YenteIndexError(f"Error getting document: {exc}") from exc
 
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
