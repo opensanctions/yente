@@ -36,12 +36,12 @@ ALGO_HELP = (
 
 def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
     """Return the scoring algorithm class with the given name."""
-    name = name.strip()
-    if name == "best":
-        name = settings.BEST_ALGORITHM
+    name_clean = name.lower().strip()
+    if name_clean == "best":
+        name_clean = settings.BEST_ALGORITHM
     algorithm = None
     for a in ENABLED_ALGORITHMS:
-        if a.NAME == name:
+        if a.NAME == name_clean:
             return a
     if algorithm is None:
         raise HTTPException(400, detail=f"Invalid algorithm: {name}")
