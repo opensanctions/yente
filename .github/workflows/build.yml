@@ -23,7 +23,7 @@ jobs:
           - 9200:9200
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -57,7 +57,7 @@ jobs:
           - 9200:9200
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-elasticsearch, test-opensearch]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [package-python]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Docker meta
