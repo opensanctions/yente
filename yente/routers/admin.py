@@ -4,7 +4,6 @@ from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import FileResponse, HTMLResponse
 from normality import squash_spaces
-from nomenklatura.matching import ALGORITHMS
 
 from yente import settings
 from yente.logs import get_logger
@@ -12,6 +11,7 @@ from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.provider import SearchProvider, get_provider
+from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
 
@@ -111,7 +111,9 @@ async def algorithms() -> AlgorithmResponse:
     See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/).
     """
     algorithms: List[Algorithm] = []
-    for algo in ALGORITHMS:
+    for algo in ENABLED_ALGORITHMS:
+        if algo.NAME in settings.HIDDEN_ALGORITHMS:
+            continue
         desc = Algorithm(
             name=algo.NAME,
             description=squash_spaces(algo.__doc__ or ""),
