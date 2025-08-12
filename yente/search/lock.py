@@ -30,6 +30,7 @@ async def ensure_lock_index(provider: SearchProvider) -> None:
             # Single shard eliminates cross-shard consistency issues (but not split-brain
             # issues, which is what _primary_term is for)
             "number_of_shards": 1,
+            "auto_expand_replicas": settings.INDEX_AUTO_REPLICAS,
         },
     )
 
