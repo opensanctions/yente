@@ -8,7 +8,6 @@ from normality import stringify
 from datetime import datetime, timezone
 from aiocron import Cron  # type: ignore
 import random
-import nomenklatura.matching
 
 
 def env_get(name: str) -> Optional[str]:
@@ -155,13 +154,10 @@ UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
 BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 HIDDEN_ALGORITHMS = [
-    algo for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "").split(",") if algo != ""
+    algo
+    for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "UNSTABLE-logic-v2").split(",")
+    if algo != ""
 ]
-# Ensure that all hidden algorithms are valid
-assert all(
-    algo in [a.NAME for a in nomenklatura.matching.ALGORITHMS]
-    for algo in HIDDEN_ALGORITHMS
-), "Invalid algorithm name in YENTE_HIDDEN_ALGORITHMS"
 
 
 # How many results to return per page of search results max:

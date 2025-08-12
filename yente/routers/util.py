@@ -33,6 +33,11 @@ ALGO_HELP = (
     f"Scoring algorithm to use, options: {ALGO_LIST} (best: {settings.BEST_ALGORITHM})"
 )
 
+# Ensure that all hidden algorithms are valid
+assert all(
+    algo in [a.NAME for a in ENABLED_ALGORITHMS] for algo in settings.HIDDEN_ALGORITHMS
+), "Invalid algorithm name in YENTE_HIDDEN_ALGORITHMS"
+
 
 def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
     """Return the scoring algorithm class with the given name."""
