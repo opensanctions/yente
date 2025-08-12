@@ -30,6 +30,7 @@ async def ensure_lock_index(provider: SearchProvider) -> None:
             # Single shard eliminates cross-shard consistency issues (but not split-brain
             # issues, which is what _primary_term is for)
             "number_of_shards": 1,
+            "auto_expand_replicas": settings.INDEX_AUTO_REPLICAS,
         },
     )
 
@@ -78,9 +79,14 @@ async def acquire_lock(provider: SearchProvider, index: str) -> bool:
 async def _overwrite_lock(
     provider: SearchProvider, index: str, only_if_expired: bool
 ) -> bool:
-    """Attempt to acquire an expired lock using optimistic concurrency control.
+    """Attempt to acquire a lock using optimistic concurrency control.
 
-    Uses seq_no and primary_term to ensure atomic updates and prevent race conditions.
+    Note that this method is used for both acquiring an expired lock (if only_if_expired is True)
+    and refreshing a lock (if only_if_expired is False). Refreshing a lock is required because reindex
+    operations often take longer than the lock expiration time. When refreshing but the lock
+    is expired, we only warn.
+
+    Uses seq_no and primary_term to prevent race conditions.
     seq_no tracks the document's version across all shards, while primary_term ensures
     we're updating the document on the same primary shard that last modified it. See
     https://www.elastic.co/docs/reference/elasticsearch/rest-apis/optimistic-concurrency-control
@@ -100,9 +106,10 @@ async def _overwrite_lock(
             # The lock is still valid
             if only_if_expired:
                 # ...and only_if_expired is True, so we won't overwrite it
+                # This is the "other process holding lock" case
                 return False
         else:
-            # The lock is expired
+            # The lock is expired, probably another process failed to clean it up
             if only_if_expired:
                 log.debug(f"Acquiring expired lock for {index}")
             else:
@@ -117,16 +124,18 @@ async def _overwrite_lock(
             "_op_type": "update",
             "_index": get_lock_index_name(),
             "_id": index,
-            # doc is used for the partial update
+            # doc (instead of _source)is used for the partial update
             "doc": {"acquired_at": to_millis_timestamp(datetime.now())},
-            # Use optimistic concurrency control to update the expired lock
-            # seq_no and primary_term ensure atomic updates and prevent conflicts
+            # optimistic concurrency control to prevent a race condition
+            # where two processes write the lock and both think they succeeded.
+            # This will cause one of them to fail with a conflict error.
             "if_seq_no": hit["_seq_no"],
             "if_primary_term": hit["_primary_term"],
         }
 
         await provider.bulk_index([update_op])
 
+        # No conflict error, so we succeeded in acquiring the lock
         return True
 
     except YenteIndexError:
