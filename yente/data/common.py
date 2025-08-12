@@ -1,7 +1,11 @@
 from datetime import datetime
 from typing import Any, Dict, List, Union, Optional
 from pydantic import BaseModel, Field
-from nomenklatura.matching.types import MatchingResult, FeatureDocs, ConfigVar
+from nomenklatura.matching.types import (
+    MatchingResult,
+    FeatureDocs,
+    AlgorithmDocs,
+)
 
 from yente import settings
 from yente.data.dataset import YenteDatasetModel
@@ -152,10 +156,10 @@ class DataCatalogModel(BaseModel):
 class Algorithm(BaseModel):
     name: str
     description: Optional[str] = None
-    features: FeatureDocs
-    config: Dict[str, ConfigVar] = Field(
-        description="Algorithm-specific configuration parameters.",
+    features: FeatureDocs = Field(
+        deprecated=True, description="Deprecated, use docs instead"
     )
+    docs: AlgorithmDocs
 
 
 class AlgorithmResponse(BaseModel):
