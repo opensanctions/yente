@@ -170,9 +170,9 @@ async def index_entities(
             idx = 0
             async for item in it:
                 idx += 1
-                # Refresh the lock every 10,000 documents. Should be enough not to
+                # Refresh the lock every 50,000 documents. Should be enough not to
                 # lose the lock, expiration time is lock.LOCK_EXPIRATION_TIME (currently 5 minutes)
-                if idx % 10000 == 0:
+                if idx % 50000 == 0:
                     await refresh_lock(provider, next_index)
                 yield item
 
