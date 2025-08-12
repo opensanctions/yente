@@ -38,8 +38,9 @@ def test_algorithms(monkeypatch):
         (a for a in data["algorithms"] if a["name"] == "UNSTABLE-logic-v2"), None
     )
     assert logic_v2 is not None
-    assert logic_v2["config"] is not None
-    assert logic_v2["config"]["nm_number_mismatch"] is not None
+    assert logic_v2["docs"] is not None
+    assert logic_v2["docs"]["config"] is not None
+    assert logic_v2["docs"]["config"]["nm_number_mismatch"] is not None
 
 
 def test_algorithms_hidden(monkeypatch):

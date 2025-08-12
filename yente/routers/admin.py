@@ -118,7 +118,7 @@ async def algorithms() -> AlgorithmResponse:
             name=algo.NAME,
             description=squash_spaces(algo.__doc__ or ""),
             features=algo.get_feature_docs(),
-            config=algo.CONFIG,
+            docs=algo.get_docs(),
         )
         algorithms.append(desc)
     return AlgorithmResponse(
