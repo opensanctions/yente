@@ -12,7 +12,12 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
-from yente.search.lock import LOCK_INDEX, acquire_lock, refresh_lock, release_lock
+from yente.search.lock import (
+    get_lock_index_name,
+    acquire_lock,
+    refresh_lock,
+    release_lock,
+)
 from yente.search.mapping import (
     INDEX_SETTINGS,
     NAME_PART_FIELD,
@@ -210,7 +215,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         if not index.startswith(settings.ENTITY_INDEX):
             continue
         # The lock index lives in the same namespace and shouldn't be garbage collected
-        if index in [LOCK_INDEX]:
+        if index in [get_lock_index_name()]:
             continue
         if index not in aliased:
             log.info("Deleting orphaned index", index=index)
