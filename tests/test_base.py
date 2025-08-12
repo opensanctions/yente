@@ -23,7 +23,9 @@ def test_manifest():
     assert len(data["datasets"]) > 5
 
 
-def test_algorithms():
+def test_algorithms(monkeypatch):
+    # Don't hide logic-v2 for this test
+    monkeypatch.setattr(settings, "HIDDEN_ALGORITHMS", [])
     res = client.get("/algorithms")
     assert res.status_code == 200, res
     data = res.json()
