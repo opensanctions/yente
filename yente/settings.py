@@ -153,6 +153,12 @@ UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
 # Matcher defaults:
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
 BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
+HIDDEN_ALGORITHMS = [
+    algo
+    for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "UNSTABLE-logic-v2").split(",")
+    if algo != ""
+]
+
 
 # How many results to return per page of search results max:
 MAX_PAGE = 500
