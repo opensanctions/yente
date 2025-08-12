@@ -4,7 +4,7 @@ from unittest.mock import patch
 from datetime import datetime, timedelta
 
 from yente.search.lock import (
-    LOCK_INDEX,
+    get_lock_index_name,
     acquire_lock,
     release_lock,
     refresh_lock,
@@ -18,7 +18,7 @@ TEST_INDEX_NAME = "test-index"
 async def test_lock(search_provider: SearchProvider):
     """Test the happy case: acquire, refresh, release"""
     # Clean slate: delete any old lock index
-    await search_provider.delete_index(LOCK_INDEX)
+    await search_provider.delete_index(get_lock_index_name())
 
     acquired = await acquire_lock(search_provider, TEST_INDEX_NAME)
     assert acquired is True
@@ -46,7 +46,7 @@ async def test_lock(search_provider: SearchProvider):
 async def test_lock_not_expired(search_provider: SearchProvider):
     """Test that acquiring the lock again after one minute will fail, but after 10 minutes will work"""
     # Clean slate: delete any old lock index
-    await search_provider.delete_index(LOCK_INDEX)
+    await search_provider.delete_index(get_lock_index_name())
 
     # Acquire initial lock
     acquired = await acquire_lock(search_provider, TEST_INDEX_NAME)

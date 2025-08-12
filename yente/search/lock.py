@@ -4,18 +4,21 @@ from yente.exc import YenteIndexError
 from yente.provider.base import SearchProvider
 
 
-LOCK_INDEX = settings.ENTITY_INDEX + "-locks"
 LOCK_EXPIRATION_TIME = timedelta(minutes=5)
 
 log = logs.get_logger(__name__)
 
 
+def get_lock_index_name() -> str:
+    return f"{settings.ENTITY_INDEX}-locks"
+
+
 async def ensure_lock_index(provider: SearchProvider) -> None:
-    if LOCK_INDEX in await provider.get_all_indices():
+    if get_lock_index_name() in await provider.get_all_indices():
         return
 
     await provider.create_index(
-        LOCK_INDEX,
+        get_lock_index_name(),
         mappings={
             "properties": {
                 "index": {"type": "keyword"},
@@ -52,7 +55,7 @@ async def acquire_lock(provider: SearchProvider, index: str) -> bool:
         await provider.bulk_index(
             [
                 {
-                    "_index": LOCK_INDEX,
+                    "_index": get_lock_index_name(),
                     "_id": f"{index}",
                     # Create is important here, otherwise we won't get the exception on conflict
                     "_op_type": "create",
@@ -87,7 +90,7 @@ async def _overwrite_lock(
         # Get the current lock document to check if it's expired
         # Needs get_document because the _seq_no and _primary_term
         # are not returned by search.
-        hit = await provider.get_document(LOCK_INDEX, index)
+        hit = await provider.get_document(get_lock_index_name(), index)
         if not hit:
             return False
 
@@ -112,7 +115,7 @@ async def _overwrite_lock(
         # Use doc to update specific fields
         update_op = {
             "_op_type": "update",
-            "_index": LOCK_INDEX,
+            "_index": get_lock_index_name(),
             "_id": index,
             # doc is used for the partial update
             "doc": {"acquired_at": to_millis_timestamp(datetime.now())},
@@ -146,7 +149,7 @@ async def release_lock(provider: SearchProvider, index: str) -> None:
             [
                 {
                     "_op_type": "delete",
-                    "_index": LOCK_INDEX,
+                    "_index": get_lock_index_name(),
                     "_id": index,
                 }
             ]
