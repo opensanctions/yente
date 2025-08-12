@@ -46,7 +46,7 @@ def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
         name_clean = settings.BEST_ALGORITHM
     algorithm = None
     for a in ENABLED_ALGORITHMS:
-        if a.NAME == name_clean:
+        if a.NAME.lower() == name_clean:
             return a
     if algorithm is None:
         raise HTTPException(400, detail=f"Invalid algorithm: {name}")
