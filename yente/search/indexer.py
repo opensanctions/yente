@@ -1,6 +1,8 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List
+from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
@@ -15,7 +17,6 @@ from yente.data.updater import DatasetUpdater
 from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_KEY_FIELD,
-    NAMES_FIELD,
     NAME_PHONETIC_FIELD,
     make_entity_mapping,
     INDEX_SETTINGS,
@@ -60,27 +61,11 @@ async def iter_entity_docs(
             if dataset.ns is not None:
                 entity = dataset.ns.apply(entity)
 
-            texts = entity.pop("indexText")
-
-            # TODO: entity.to_dict should be enough here, the copy_to magic in the ES mapper should
-            # handle making the type fields, but alas, it doesn't seem to be working.
-            # See tracking issue https://github.com/opensanctions/yente/issues/806
-            # doc = entity.to_dict()
-            doc = entity.to_full_dict(matchable=True)
-            entity_id = doc.pop("id")
-            doc["entity_id"] = entity_id
-
-            names: List[str] = doc.get(NAMES_FIELD, [])
-            names.extend(entity.get("weakAlias", quiet=True))
-            name_parts = index_name_parts(entity.schema, names)
-            texts.extend(name_parts)
-            doc[NAME_PART_FIELD] = list(name_parts)
-            doc[NAME_KEY_FIELD] = list(index_name_keys(entity.schema, names))
-            doc[NAME_PHONETIC_FIELD] = list(phonetic_names(entity.schema, names))
-            if DateType.group is not None:
-                doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
-            doc["text"] = texts
-            yield {"_index": index, "_id": entity_id, "_source": doc}
+            yield {
+                "_index": index,
+                "_id": entity.id,
+                "_source": build_indexable_entity_doc(entity),
+            }
         except FollowTheMoneyException as exc:
             log.error("Invalid entity: %s" % exc, data=data)
     log.info(
@@ -89,6 +74,30 @@ async def iter_entity_docs(
         modified=ops["MOD"],
         deleted=ops["DEL"],
     )
+
+
+def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
+    doc = entity.to_dict(matchable=True)
+    entity_id = doc.pop("id")
+    doc["entity_id"] = entity_id
+
+    # TODO(Leon Handreke): to_full_dict used to pass matchable=False (I think?)
+    # but that doesn't seem right? Does it matter, are there non-matchable names fields
+    # currently?
+    names: List[str] = entity.get_type_values(registry.name, matchable=True)
+    names.extend(entity.get("weakAlias", quiet=True))
+
+    name_parts = index_name_parts(entity.schema, names)
+    doc[NAME_PART_FIELD] = list(name_parts)
+    doc[NAME_KEY_FIELD] = list(index_name_keys(entity.schema, names))
+    doc[NAME_PHONETIC_FIELD] = list(phonetic_names(entity.schema, names))
+    if DateType.group is not None:
+        doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
+
+    # TODO(Leon Handreke): Is name_parts needed here? All the fields get a copy_to text anyways in the mapper
+    doc["text"] = entity.pop("indexText") + list(name_parts)
+
+    return doc
 
 
 async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str | None:
