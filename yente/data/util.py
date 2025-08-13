@@ -1,4 +1,6 @@
+import itertools
 import warnings
+from followthemoney import EntityProxy
 import httpx
 import unicodedata
 from pathlib import Path
@@ -14,6 +16,8 @@ from rigour.text.scripts import is_modern_alphabet
 from rigour.text import levenshtein, metaphone
 from rigour.names import tokenize_name, remove_person_prefixes
 from rigour.names import replace_org_types_compare
+from rigour.names.tokenize import normalize_name
+from rigour.names import tag_person_name, Name, tag_org_name
 
 from yente import settings
 from yente.logs import get_logger
@@ -88,6 +92,31 @@ def index_name_keys(schema: Schema, names: List[str]) -> Set[str]:
         if len(ascii_name) > 5:
             keys.add(ascii_name)
     return keys
+
+
+def build_name_symbols(entity: EntityProxy) -> Set[str]:
+    """Build a list of name symbols for the given entity or None if we can't build symbols for this schema."""
+    names: List[str] = entity.get_type_values(registry.name, matchable=True)
+
+    # normalizer should be the same as that one used in logic-v2 to make the @lru_cache do most of the work
+    # For both Person and Organization, build all symbols for all names
+    if entity.schema.is_a("Person"):
+        return set(
+            itertools.chain.from_iterable(
+                [str(s) for s in tag_person_name(Name(name), normalize_name).symbols]
+                for name in names
+            )
+        )
+    elif entity.schema.is_a("Organization"):
+        return set(
+            itertools.chain.from_iterable(
+                [str(s) for s in tag_org_name(Name(name), normalize_name).symbols]
+                for name in names
+            )
+        )
+    else:
+        # We can't build name symbols for this schema
+        return set()
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:

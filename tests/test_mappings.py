@@ -80,3 +80,59 @@ async def test_mappings_copy_to(search_provider):
         temp_index, {"bool": {"must": [{"match": {"text": "vladimir"}}]}}
     )
     assert len(search_result["hits"]["hits"]) == 1, "Failed to match name on text"
+
+
+@pytest.mark.asyncio
+async def test_name_symbols_indexed_person(search_provider):
+    """Test that name symbols are indexed correctly for people."""
+    entity = Entity.from_dict(
+        {
+            "id": "Q7747",
+            "schema": "Person",
+            "properties": {
+                "name": ["Vladimir Putin"],
+                "citizenship": ["ru"],
+                "topics": ["sanction"],
+            },
+            "datasets": ["test"],
+            "referents": [],
+            "first_seen": "2023-01-01T00:00:00",
+            "last_seen": "2023-01-01T00:00:00",
+            "last_change": "2023-01-01T00:00:00",
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+    from pprint import pprint
+
+    pprint(doc)
+
+    assert "[NAME:30524893]" in doc["name_symbols"]  # Putin
+
+
+@pytest.mark.asyncio
+async def test_name_symbols_indexed_org(search_provider):
+    """Test that name symbols are indexed correctly for organizations."""
+    entity = Entity.from_dict(
+        {
+            "id": "Q1234",
+            "schema": "Company",
+            "properties": {
+                "name": ["Gazprom Bank OOO"],
+                "topics": ["sanction"],
+            },
+            "datasets": ["test"],
+            "referents": [],
+            "first_seen": "2023-01-01T00:00:00",
+            "last_seen": "2023-01-01T00:00:00",
+            "last_change": "2023-01-01T00:00:00",
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+    from pprint import pprint
+
+    pprint(doc)
+
+    assert "[ORGCLS:LLC]" in doc["name_symbols"]
+    assert "[SYMBOL:BANK]" in doc["name_symbols"]
