@@ -152,18 +152,8 @@ async def index_entities(
         log.info("Index is up to date.", index=next_index)
         return
 
+    # Acquire lock
     lock_acquired = await acquire_lock(provider, next_index)
-    is_partial_reindex = updater.is_incremental and not force
-    await audit_log.log_audit_message(
-        provider,
-        next_index,
-        (
-            AuditLogMessageType.PARTIAL_REINDEX_STARTED
-            if is_partial_reindex
-            else AuditLogMessageType.FULL_REINDEX_STARTED
-        ),
-    )
-
     if not lock_acquired:
         log.warning(
             "Failed to acquire lock, skipping index",
@@ -171,6 +161,22 @@ async def index_entities(
             index=next_index,
         )
         return
+
+    # Log audit message
+    is_partial_reindex = updater.is_incremental and not force
+    audit_log_reindex_type = (
+        audit_log.AuditLogReindexType.PARTIAL
+        if is_partial_reindex
+        else audit_log.AuditLogReindexType.FULL
+    )
+    await audit_log.log_audit_message(
+        provider,
+        message_type=AuditLogMessageType.REINDEX_STARTED,
+        index=next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        reindex_type=audit_log_reindex_type,
+    )
 
     # await es.indices.delete(index=next_index)
     if is_partial_reindex:
@@ -199,12 +205,11 @@ async def index_entities(
         await provider.bulk_index(refresh_lock_iterator(docs))
         await audit_log.log_audit_message(
             provider,
-            next_index,
-            (
-                AuditLogMessageType.PARTIAL_REINDEX_COMPLETED
-                if is_partial_reindex
-                else AuditLogMessageType.FULL_REINDEX_COMPLETED
-            ),
+            message_type=AuditLogMessageType.REINDEX_COMPLETED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            reindex_type=audit_log_reindex_type,
         )
 
     except (YenteIndexError, Exception) as exc:
@@ -216,12 +221,11 @@ async def index_entities(
         )
         await audit_log.log_audit_message(
             provider,
-            next_index,
-            (
-                AuditLogMessageType.PARTIAL_REINDEX_FAILED
-                if is_partial_reindex
-                else AuditLogMessageType.FULL_REINDEX_FAILED
-            ),
+            AuditLogMessageType.REINDEX_FAILED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            reindex_type=audit_log_reindex_type,
         )
 
         aliases = await provider.get_alias_indices(alias)
@@ -245,8 +249,11 @@ async def index_entities(
     )
     await audit_log.log_audit_message(
         provider,
-        next_index,
         AuditLogMessageType.INDEX_ALIAS_ROLLOVER_COMPLETE,
+        index=next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        reindex_type=audit_log_reindex_type,
     )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
 
