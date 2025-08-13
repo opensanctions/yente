@@ -13,13 +13,15 @@ def get_audit_log_index_name() -> str:
     return f"{settings.ENTITY_INDEX}-audit-log"
 
 
+class AuditLogReindexType(StrEnum):
+    FULL = "full"
+    PARTIAL = "partial"
+
+
 class AuditLogMessageType(StrEnum):
-    FULL_REINDEX_STARTED = "full_reindex_started"
-    FULL_REINDEX_COMPLETED = "full_reindex_completed"
-    FULL_REINDEX_FAILED = "full_reindex_failed"
-    PARTIAL_REINDEX_STARTED = "partial_reindex_started"
-    PARTIAL_REINDEX_COMPLETED = "partial_reindex_completed"
-    PARTIAL_REINDEX_FAILED = "partial_reindex_failed"
+    REINDEX_STARTED = "reindex_started"
+    REINDEX_COMPLETED = "reindex_completed"
+    REINDEX_FAILED = "reindex_failed"
     INDEX_ALIAS_ROLLOVER_COMPLETE = "index_alias_rollover_complete"
     # TODO: REINDEX_PROGRESS?
 
@@ -32,8 +34,13 @@ async def ensure_audit_log_index(provider: SearchProvider) -> None:
         get_audit_log_index_name(),
         mappings={
             "properties": {
+                "alias_index": {"type": "keyword"},
                 "index": {"type": "keyword"},
+                "dataset": {"type": "keyword"},
+                "dataset_version": {"type": "keyword"},
+                "yente_version": {"type": "keyword"},
                 "message_type": {"type": "keyword"},
+                "reindex_type": {"type": "keyword"},
                 "timestamp": {"type": "date", "format": "epoch_millis"},
             }
         },
@@ -45,7 +52,13 @@ async def ensure_audit_log_index(provider: SearchProvider) -> None:
 
 
 async def log_audit_message(
-    provider: SearchProvider, index: str, message_type: AuditLogMessageType
+    provider: SearchProvider,
+    message_type: AuditLogMessageType,
+    *,
+    index: str,
+    dataset: str,
+    dataset_version: str,
+    reindex_type: AuditLogReindexType,
 ) -> None:
     """Log an audit message to the audit log index."""
     await ensure_audit_log_index(provider)
@@ -59,8 +72,13 @@ async def log_audit_message(
                 "_index": get_audit_log_index_name(),
                 "_id": doc_id,
                 "_source": {
+                    "alias_index": settings.ENTITY_INDEX,
                     "index": index,
+                    "dataset": dataset,
+                    "dataset_version": dataset_version,
+                    "yente_version": settings.VERSION,
                     "message_type": message_type,
+                    "reindex_type": reindex_type,
                     "timestamp": timestamp,
                 },
             }
