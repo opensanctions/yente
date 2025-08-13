@@ -121,6 +121,9 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
             raise RuntimeError("Double mapping field: %s" % t.group)
         mapping[t.group] = make_type_field(t)
 
+    # These fields will be pruned from the _source field after the document has been
+    # indexed, but before the _source field is stored. We can still search on these fields,
+    # even though they are not in the stored and returned _source.
     drop_fields = [t.group for t in registry.groups.values()]
     drop_fields.append("text")
     drop_fields.append(NAME_PHONETIC_FIELD)
