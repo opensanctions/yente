@@ -8,9 +8,9 @@ from followthemoney.types import registry
 
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import pick_names, phonetic_names
+from yente.data.util import build_index_name_symbols, pick_names, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
-from yente.search.mapping import NAMES_FIELD, NAME_PHONETIC_FIELD
+from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD, NAME_PHONETIC_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 from yente import settings
 
@@ -123,6 +123,9 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     for phoneme in phonetic_names(entity.schema, names):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
         shoulds.append({"term": term})
+    for symbol in build_index_name_symbols(entity):
+        shoulds.append({"term": {NAME_SYMBOLS_FIELD: symbol}})
+
     return shoulds
 
 

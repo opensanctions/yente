@@ -99,3 +99,59 @@ def test_colliding_prop_names():
     # CallForTenders:authority is an entity, Identification:authority is a string
     assert set(prop_mapping["authority"]["copy_to"]) == set(["text", "entities"])
     assert prop_mapping["authority"]["type"] == "keyword"
+
+
+@pytest.mark.asyncio
+async def test_name_symbols_indexed_person(search_provider):
+    """Test that name symbols are indexed correctly for people."""
+    entity = Entity.from_dict(
+        {
+            "id": "Q7747",
+            "schema": "Person",
+            "properties": {
+                "name": ["Vladimir Putin"],
+                "citizenship": ["ru"],
+                "topics": ["sanction"],
+            },
+            "datasets": ["test"],
+            "referents": [],
+            "first_seen": "2023-01-01T00:00:00",
+            "last_seen": "2023-01-01T00:00:00",
+            "last_change": "2023-01-01T00:00:00",
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+    from pprint import pprint
+
+    pprint(doc)
+
+    assert "NAME:30524893" in doc["name_symbols"]  # Putin
+
+
+@pytest.mark.asyncio
+async def test_name_symbols_indexed_org(search_provider):
+    """Test that name symbols are indexed correctly for organizations."""
+    entity = Entity.from_dict(
+        {
+            "id": "Q1234",
+            "schema": "Company",
+            "properties": {
+                "name": ["Gazprom Bank OOO"],
+                "topics": ["sanction"],
+            },
+            "datasets": ["test"],
+            "referents": [],
+            "first_seen": "2023-01-01T00:00:00",
+            "last_seen": "2023-01-01T00:00:00",
+            "last_change": "2023-01-01T00:00:00",
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+    from pprint import pprint
+
+    pprint(doc)
+
+    assert "ORGCLS:LLC" in doc["name_symbols"]
+    assert "SYMBOL:BANK" in doc["name_symbols"]
