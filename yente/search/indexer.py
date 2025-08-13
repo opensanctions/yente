@@ -18,6 +18,8 @@ from yente.search.lock import (
     refresh_lock,
     release_lock,
 )
+from yente.search import audit_log
+from yente.search.audit_log import get_audit_log_index_name, AuditLogMessageType
 from yente.search.mapping import (
     INDEX_SETTINGS,
     NAME_PART_FIELD,
@@ -142,6 +144,7 @@ async def index_entities(
         log.info("Index is up to date.", index=next_index)
         return
 
+    # Acquire lock
     lock_acquired = await acquire_lock(provider, next_index)
     if not lock_acquired:
         log.warning(
@@ -151,8 +154,24 @@ async def index_entities(
         )
         return
 
+    # Log audit message
+    is_partial_reindex = updater.is_incremental and not force
+    audit_log_reindex_type = (
+        audit_log.AuditLogReindexType.PARTIAL
+        if is_partial_reindex
+        else audit_log.AuditLogReindexType.FULL
+    )
+    await audit_log.log_audit_message(
+        provider,
+        message_type=AuditLogMessageType.REINDEX_STARTED,
+        index=next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        reindex_type=audit_log_reindex_type,
+    )
+
     # await es.indices.delete(index=next_index)
-    if updater.is_incremental and not force:
+    if is_partial_reindex:
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
@@ -177,6 +196,14 @@ async def index_entities(
                 yield item
 
         await provider.bulk_index(refresh_lock_iterator(docs))
+        await audit_log.log_audit_message(
+            provider,
+            message_type=AuditLogMessageType.REINDEX_COMPLETED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            reindex_type=audit_log_reindex_type,
+        )
 
     except (YenteIndexError, Exception) as exc:
         detail = getattr(exc, "detail", str(exc))
@@ -185,6 +212,15 @@ async def index_entities(
             dataset=dataset.name,
             index=next_index,
         )
+        await audit_log.log_audit_message(
+            provider,
+            AuditLogMessageType.REINDEX_FAILED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            reindex_type=audit_log_reindex_type,
+        )
+
         aliases = await provider.get_alias_indices(alias)
         if next_index not in aliases:
             log.warn("Deleting partial index", index=next_index)
@@ -206,6 +242,14 @@ async def index_entities(
         next_index,
         prefix=dataset_prefix,
     )
+    await audit_log.log_audit_message(
+        provider,
+        AuditLogMessageType.INDEX_ALIAS_ROLLOVER_COMPLETE,
+        index=next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        reindex_type=audit_log_reindex_type,
+    )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
 
 
@@ -214,8 +258,8 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
     for index in await provider.get_all_indices():
         if not index.startswith(settings.ENTITY_INDEX):
             continue
-        # The lock index lives in the same namespace and shouldn't be garbage collected
-        if index in [get_lock_index_name()]:
+        # The lock and audit log indices live in the same namespace and shouldn't be garbage collected
+        if index in [get_lock_index_name(), get_audit_log_index_name()]:
             continue
         if index not in aliased:
             log.info("Deleting orphaned index", index=index)
