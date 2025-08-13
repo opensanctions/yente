@@ -17,13 +17,14 @@ from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_KEY_FIELD,
     NAME_PHONETIC_FIELD,
+    NAME_SYMBOLS_FIELD,
     make_entity_mapping,
     INDEX_SETTINGS,
 )
 from yente.provider import SearchProvider, with_provider
 from yente.search.versions import parse_index_name
 from yente.search.versions import construct_index_name
-from yente.data.util import expand_dates, phonetic_names
+from yente.data.util import build_index_name_symbols, expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
 
@@ -89,6 +90,10 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     doc[NAME_PHONETIC_FIELD] = list(phonetic_names(entity.schema, names))
     if DateType.group is not None:
         doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
+
+    name_symbols = build_index_name_symbols(entity)
+    if name_symbols:
+        doc[NAME_SYMBOLS_FIELD] = name_symbols
 
     # TODO(Leon Handreke): Is name_parts needed here? All the fields get a copy_to text anyways in the mapper
     doc["text"] = entity.pop("indexText") + list(name_parts)
