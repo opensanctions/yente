@@ -67,10 +67,13 @@ async def acquire_lock(provider: SearchProvider, index: str) -> bool:
                 }
             ]
         )
-    except YenteIndexError:
+    except YenteIndexError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
         # we don't get detailed error information, so the error we're catching isn't
         # guaranteed to be a conflict error. But that's the intention here.
+        log.debug(
+            f"Lock already exists for {index}, will try to overwrite, but only if expired. Response: {e}"
+        )
         return await _overwrite_lock(provider, index, only_if_expired=True)
 
     return True
@@ -84,7 +87,7 @@ async def _overwrite_lock(
     Note that this method is used for both acquiring an expired lock (if only_if_expired is True)
     and refreshing a lock (if only_if_expired is False). Refreshing a lock is required because reindex
     operations often take longer than the lock expiration time. When refreshing but the lock
-    is expired, we only warn.
+    is expired, we warn and proceed with overwriting the lock
 
     Uses seq_no and primary_term to prevent race conditions.
     seq_no tracks the document's version across all shards, while primary_term ensures
@@ -138,12 +141,15 @@ async def _overwrite_lock(
         # No conflict error, so we succeeded in acquiring the lock
         return True
 
-    except YenteIndexError:
+    except YenteIndexError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
         # we don't get detailed error information, so the error we're catching isn't
         # guaranteed to be a conflict error.
         # If it's a conflict error, someone beat us to it (i.e. someone else acquired the lock)
         # after we read it and the write failed because of our (_seq_no, _primary_term)
+        log.debug(
+            f"Failed to update lock for {index}, probably someone else acquired it before us. Response: {e}"
+        )
         return False
 
 
@@ -163,9 +169,9 @@ async def release_lock(provider: SearchProvider, index: str) -> None:
                 }
             ]
         )
-    except YenteIndexError:
+    except YenteIndexError as e:
         log.warning(
-            f"Failed to release lock for {index}, maybe it was already released or never acquired?"
+            f"Failed to release lock for {index}, maybe it was already released or never acquired? Response: {e}"
         )
 
 
