@@ -43,7 +43,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # Install runtime dependencies
 #   - curl is for docker compose healthchecks
 RUN apt-get update && apt-get install -y \
-    libicu72 \
+    libicu76 \
     ca-certificates \
     curl \
     && apt-get clean \
