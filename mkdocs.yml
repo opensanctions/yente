@@ -33,6 +33,9 @@ plugins:
           options:
             show_root_heading: true
             show_object_full_path: false
+          inventories:
+            - http://rigour.followthemoney.tech/objects.inv
+            - http://followthemoney.tech/objects.inv
 
 markdown_extensions:
   - admonition
