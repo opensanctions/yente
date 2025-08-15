@@ -68,6 +68,13 @@ dev = [
     "pip >10.0.0",
     "pre-commit",
 ]
+docs = [
+    "pillow",
+    "cairosvg",
+    "mkdocs",
+    "mkdocstrings[python]",
+    "mkdocs-material",
+]
 
 [tool.hatch.build.targets.sdist]
 only-include = ["yente", "LICENSE", "README.md"]
