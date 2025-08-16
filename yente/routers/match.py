@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
 from yente.logs import get_logger
@@ -135,6 +136,13 @@ async def match(
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
     algorithm_type = get_algorithm_by_name(algorithm)
 
+    for config_key in match.config.keys():
+        if config_key not in algorithm_type.CONFIG:
+            raise HTTPException(
+                400,
+                detail=f"Invalid configuration parameter: {config_key} for algorithm {algorithm_type.NAME}",
+            )
+
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
@@ -187,7 +195,7 @@ async def match(
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
-            weights=match.weights,
+            config=ScoringConfig(weights=match.weights, config=match.config),
         )
         log.info(
             f"/match/{ds.name}",
@@ -204,6 +212,6 @@ async def match(
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
         responses=responses,
-        matcher=algorithm_type.explain(),
+        matcher=algorithm_type.get_feature_docs(),
         limit=limit,
     )

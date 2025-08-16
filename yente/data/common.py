@@ -1,9 +1,14 @@
 from datetime import datetime
 from typing import Any, Dict, List, Union, Optional
 from pydantic import BaseModel, Field
-from nomenklatura.matching.types import MatchingResult, FeatureDocs
+from nomenklatura.matching.types import (
+    MatchingResult,
+    FeatureDocs,
+    AlgorithmDocs,
+)
 
 from yente import settings
+from yente.data.dataset import YenteDatasetModel
 from yente.data.entity import Entity
 
 EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
@@ -120,6 +125,11 @@ class EntityExample(BaseModel):
 
 class EntityMatchQuery(BaseModel):
     weights: Dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
+    config: Dict[str, Union[str, int, float, bool]] = Field(
+        default_factory=dict,
+        description="Algorithm-specific configuration parameters.",
+        examples=[{"nm_number_mismatch": 0.4}],
+    )
     queries: Dict[str, EntityExample]
 
 
@@ -136,48 +146,8 @@ class EntityMatchResponse(BaseModel):
     limit: int = Field(..., examples=[5])
 
 
-class DatasetPublisherModel(BaseModel):
-    name: Optional[str] = None
-    acronym: Optional[str] = None
-    url: Optional[str] = None
-    country: Optional[str] = None
-    description: Optional[str] = None
-    official: bool = False
-
-
-class DatasetCoverageModel(BaseModel):
-    start: Optional[str] = None
-    end: Optional[str] = None
-    countries: List[str] = []
-    schedule: Optional[str] = None
-    frequency: Optional[str] = None
-
-
-class DatasetModel(BaseModel):
-    name: str
-    title: str
-    summary: Optional[str] = None
-    description: Optional[str] = None
-    last_export: Optional[str] = None
-    last_change: Optional[str] = None
-    entity_count: Optional[int] = None
-    thing_count: Optional[int] = None
-    category: Optional[str] = None
-    tags: List[str] = []
-    url: Optional[str] = None
-    load: bool
-    entities_url: Optional[str] = None
-    version: str
-    index_version: Optional[str] = None
-    index_current: bool = False
-    children: List[str] = []
-    datasets: List[str] = []
-    publisher: Optional[DatasetPublisherModel] = None
-    coverage: Optional[DatasetCoverageModel] = None
-
-
 class DataCatalogModel(BaseModel):
-    datasets: List[DatasetModel]
+    datasets: List[YenteDatasetModel]
     current: List[str]
     outdated: List[str]
     index_stale: bool = False
@@ -186,7 +156,10 @@ class DataCatalogModel(BaseModel):
 class Algorithm(BaseModel):
     name: str
     description: Optional[str] = None
-    features: FeatureDocs
+    features: FeatureDocs = Field(
+        deprecated=True, description="Deprecated, use docs instead"
+    )
+    docs: AlgorithmDocs
 
 
 class AlgorithmResponse(BaseModel):

@@ -23,12 +23,35 @@ def test_manifest():
     assert len(data["datasets"]) > 5
 
 
-def test_algorithms():
+def test_algorithms(monkeypatch):
+    # Don't hide logic-v2 for this test
+    monkeypatch.setattr(settings, "HIDDEN_ALGORITHMS", [])
     res = client.get("/algorithms")
     assert res.status_code == 200, res
     data = res.json()
     assert "algorithms" in data
     assert len(data["algorithms"]) > 3
+
+    # Ensure that the logic-v2 algorithm is visible and that
+    # the configuration options are exposed
+    logic_v2 = next(
+        (a for a in data["algorithms"] if a["name"] == "UNSTABLE-logic-v2"), None
+    )
+    assert logic_v2 is not None
+    assert logic_v2["docs"] is not None
+    assert logic_v2["docs"]["config"] is not None
+    assert logic_v2["docs"]["config"]["nm_number_mismatch"] is not None
+
+
+def test_algorithms_hidden(monkeypatch):
+    res = client.get("/algorithms")
+    visible_algorithms = [a["name"] for a in res.json()["algorithms"]]
+    assert "logic-v1" in visible_algorithms
+
+    monkeypatch.setattr(settings, "HIDDEN_ALGORITHMS", ["logic-v1"])
+    res = client.get("/algorithms")
+    visible_algorithms = [a["name"] for a in res.json()["algorithms"]]
+    assert "logic-v1" not in visible_algorithms
 
 
 def test_catalog():

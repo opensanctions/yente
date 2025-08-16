@@ -8,7 +8,7 @@ from followthemoney.types import registry
 from followthemoney.schema import Schema
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from normality import collapse_spaces, ascii_text
+from normality import squash_spaces, ascii_text
 from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
 from rigour.text.scripts import is_modern_alphabet
 from rigour.text import levenshtein, metaphone
@@ -27,7 +27,7 @@ def preprocess_name(name: Optional[str]) -> Optional[str]:
         return None
     name = unicodedata.normalize("NFC", name)
     name = name.lower()
-    return collapse_spaces(name)
+    return squash_spaces(name)
 
 
 @lru_cache(maxsize=2000)
