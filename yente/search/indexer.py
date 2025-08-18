@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
@@ -14,9 +14,8 @@ from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
 from yente.search.audit_log import (
-    acquire_lock,
-    refresh_lock,
-    release_lock,
+    acquire_reindex_lock,
+    refresh_reindex_lock,
 )
 from yente.search import audit_log
 from yente.search.audit_log import get_audit_log_index_name, AuditLogMessageType
@@ -152,8 +151,20 @@ async def index_entities(
         log.info("Index is up to date.", index=next_index)
         return
 
+    is_partial_reindex = updater.is_incremental and not force
+    audit_log_reindex_type = (
+        audit_log.AuditLogReindexType.PARTIAL
+        if is_partial_reindex
+        else audit_log.AuditLogReindexType.FULL
+    )
     # Acquire lock
-    lock_acquired = await acquire_lock(provider, next_index)
+    lock_acquired = await acquire_reindex_lock(
+        provider,
+        next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        reindex_type=audit_log_reindex_type,
+    )
     if not lock_acquired:
         log.warning(
             "Failed to acquire lock, skipping index",
@@ -162,23 +173,6 @@ async def index_entities(
         )
         return
 
-    # Log audit message
-    is_partial_reindex = updater.is_incremental and not force
-    audit_log_reindex_type = (
-        audit_log.AuditLogReindexType.PARTIAL
-        if is_partial_reindex
-        else audit_log.AuditLogReindexType.FULL
-    )
-    await audit_log.log_audit_message(
-        provider,
-        message_type=AuditLogMessageType.REINDEX_STARTED,
-        index=next_index,
-        dataset=dataset.name,
-        dataset_version=updater.target_version,
-        reindex_type=audit_log_reindex_type,
-    )
-
-    # await es.indices.delete(index=next_index)
     if is_partial_reindex:
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
@@ -189,6 +183,7 @@ async def index_entities(
 
     try:
         docs = iter_entity_docs(updater, next_index)
+
         # Little wrapper to refresh the lock every now and then
         async def refresh_lock_iterator(
             it: AsyncIterable[Dict[str, Any]],
@@ -196,20 +191,25 @@ async def index_entities(
             idx = 0
             async for item in it:
                 idx += 1
-                # Refresh the lock every 10,000 documents. Should be enough not to
+                # Refresh the lock every 50,000 documents. Should be enough not to
                 # lose the lock, expiration time is lock.LOCK_EXPIRATION_TIME (currently 5 minutes)
-                if idx % 10000 == 0:
-                    await refresh_lock(provider, next_index)
+                if idx % 50000 == 0:
+                    lock_refreshed = await refresh_reindex_lock(provider, next_index)
+                    if not lock_refreshed:
+                        log.warning(
+                            f"Failed to refresh reindex lock for index {next_index}, continuing anyway"
+                        )
                 yield item
 
         await provider.bulk_index(refresh_lock_iterator(docs))
-        await audit_log.log_audit_message(
+
+        await audit_log.release_reindex_lock(
             provider,
-            message_type=AuditLogMessageType.REINDEX_COMPLETED,
-            index=next_index,
+            next_index,
             dataset=dataset.name,
             dataset_version=updater.target_version,
             reindex_type=audit_log_reindex_type,
+            success=True,
         )
 
     except (YenteIndexError, Exception) as exc:
@@ -219,13 +219,13 @@ async def index_entities(
             dataset=dataset.name,
             index=next_index,
         )
-        await audit_log.log_audit_message(
+        await audit_log.release_reindex_lock(
             provider,
-            AuditLogMessageType.REINDEX_FAILED,
-            index=next_index,
+            next_index,
             dataset=dataset.name,
             dataset_version=updater.target_version,
             reindex_type=audit_log_reindex_type,
+            success=False,
         )
 
         aliases = await provider.get_alias_indices(alias)
