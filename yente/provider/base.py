@@ -34,8 +34,10 @@ class SearchProvider(object):
         """Create a copy of the index with the given name."""
         raise NotImplementedError
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index with the given name, mappings, and settings."""
         raise NotImplementedError
 
     async def delete_index(self, index: str) -> None:

@@ -9,7 +9,6 @@ from opensearchpy.exceptions import NotFoundError, TransportError
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
@@ -128,13 +127,15 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index with the given name, mappings, and settings."""
         log.info("Create index", index=index)
         try:
             body = {
-                "settings": INDEX_SETTINGS,
-                "mappings": make_entity_mapping(),
+                "settings": settings,
+                "mappings": mappings,
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:

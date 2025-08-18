@@ -17,6 +17,8 @@ from yente.search.mapping import (
     NAME_KEY_FIELD,
     NAMES_FIELD,
     NAME_PHONETIC_FIELD,
+    make_entity_mapping,
+    INDEX_SETTINGS,
 )
 from yente.provider import SearchProvider, with_provider
 from yente.search.versions import parse_index_name
@@ -138,7 +140,9 @@ async def index_entities(
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
-        await provider.create_index(next_index)
+        await provider.create_index(
+            next_index, mappings=make_entity_mapping(), settings=INDEX_SETTINGS
+        )
 
     try:
         docs = iter_entity_docs(updater, next_index)
