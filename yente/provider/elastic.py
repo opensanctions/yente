@@ -10,7 +10,6 @@ from elasticsearch import TransportError, ConnectionError
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 from yente.middleware.trace_context import get_trace_context
 
@@ -132,14 +131,16 @@ class ElasticSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index with the given name, mappings, and settings."""
         log.info("Create index", index=index)
         try:
             await self.client().indices.create(
                 index=index,
-                mappings=make_entity_mapping(),
-                settings=INDEX_SETTINGS,
+                mappings=mappings,
+                settings=settings,
             )
         except ApiError as exc:
             if exc.error == "resource_already_exists_exception":
