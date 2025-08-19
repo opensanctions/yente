@@ -5,7 +5,7 @@ Many (especially regulated) deployments of `yente` are behind a firewall. In ord
 It's hard to give generalised advice on this that applies to all secured environments, but some general hints include:
 
 * The yente software is distributed as a Docker container (`ghcr.io/opensanctions/yente`), which can be mirrored in a local Docker registry before being deployed.
-* In order to update itself, yente needs to fetch fresh data releases from OpenSanctions. In order to do so, it will attempt to make HTTPS connections to these two hosts: `data.opensanctions.org`, `mirror.opensanctions.net`. Permitting the deployed yente container to access these two hosts is the easiest firewall configuration option.
+* In order to update itself, yente needs to fetch fresh data releases from OpenSanctions. In order to do so, it will attempt to make HTTPS connections to `data.opensanctions.org`. Permitting the deployed yente container to access this host is the easiest firewall configuration option.
 * Some of our customers have also chosen to use an internal CI/CD process to build custom Docker containers on top of the official yente releases. These can include copies the data files used by the software to index itself, and a modified manifest file that details the location of the static data.
 
 ### Using local data without an internet connection
