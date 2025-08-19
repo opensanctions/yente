@@ -7,7 +7,7 @@ hide:
 
 The Yente service is built to require a minimum of configuration, but several environment variables can be used to change its behavior.
 
-### Index-related settings
+## Index-related settings
 
 | Env. variable | Default | Description |
 | ------ | ------ | ------ |
@@ -15,10 +15,10 @@ The Yente service is built to require a minimum of configuration, but several en
 | `YENTE_INDEX_USERNAME` | - | Username for the search provider. **Required** if connection using Elastic Cloud. |
 | `YENTE_INDEX_PASSWORD` | - | Elasticsearch password. **Required** if connection using Elastic Cloud. |
 | `YENTE_INDEX_NAME`   | `yente`   | The prefix name that will be used for the search index. |
-| `YENTE_INDEX_TYPE` | `elasticsearch` | Should be one of `elasticsearch` or [`opensearch`](/faq/83/opensearch/), depending on what provider you use. |
+| `YENTE_INDEX_TYPE` | `elasticsearch` | Should be one of `elasticsearch` or [`opensearch`](opensearch.md), depending on what provider you use. |
 | `YENTE_ELASTICSEARCH_CLOUD_ID`   | - | If you are using [Elastic Cloud](https://www.elastic.co/cloud) and want to use the ID rather than endpoint URL. |
-| `YENTE_OPENSEARCH_REGION` | - | Specifies your region if [you are using AWS hosted OpenSearch]({{ config.extra.opensanctions_url }}/faq/83/opensearch/). |
-| `YENTE_OPENSEARCH_SERVICE` | - | Should be `aoss` if [you are using Amazon OpenSearch]({{ config.extra.opensanctions_url }}/faq/83/opensearch/) Serverless Service and `es` if you are using the default Amazon OpenSearch Service. |
+| `YENTE_OPENSEARCH_REGION` | - | Specifies your region if [you are using AWS hosted OpenSearch](opensearch.md). |
+| `YENTE_OPENSEARCH_SERVICE` | - | Should be `aoss` if [you are using Amazon OpenSearch](opensearch.md) Serverless Service and `es` if you are using the default Amazon OpenSearch Service. |
 
 ## Managing data updates
 
