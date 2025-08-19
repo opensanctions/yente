@@ -1,8 +1,11 @@
+---
+hide:
+  - toc
+---
+
 # Configuring yente
 
 The Yente service is built to require a minimum of configuration, but several environment variables can be used to define the search provider to use, and to define a custom data manifest.
-
-**yente:** [Intro](/docs/yente) · [Deployment](/docs/yente/deploy/) · **Settings** · [Custom datasets](/docs/yente/datasets/) · [FAQ](/faq/?section=yente&section=API)
 
 The API server has a few operations-related settings, which are passed as environment variables. The settings include:
 
@@ -41,12 +44,3 @@ You can change this behavior in two ways:
 * If you wish to manually run an indexing process, you can do so by calling the script `yente reindex`. This command must be invoked inside the application container. For example, in a docker-compose based environment, the full command would be: `docker-compose run yente reindex`.
 
 The production settings for api.opensanctions.org use these two options in conjunction to move reindexing to a separate Kubernetes CronJob that allows for stricter resource management.
-
-<!-- ::: yente.settings
-    options:
-      show_root_heading: false
-      show_signature: false
-      show_source: false
-      members:
-        - MANIFEST
-         -->
