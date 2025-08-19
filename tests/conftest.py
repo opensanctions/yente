@@ -53,6 +53,12 @@ async def load_data():
     await update_index(force=True)
     yield
 
+    # Clean up the indices created by this test run
+    async with with_provider() as provider:
+        for index in await provider.get_all_indices():
+            if index.startswith(settings.INDEX_NAME):
+                await provider.delete_index(index)
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def flush_cached_es():
