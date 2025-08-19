@@ -9,9 +9,13 @@ theme:
     primary: custom
     accent: custom
   custom_dir: docs/overrides
+  features:
+    - navigation.sections
 extra_css: [stylesheets/extra.css]
 
 extra:
+  opensanctions_url: https://www.opensanctions.org
+  opensanctions_api_url: https://api.opensanctions.org
   social:
     - icon: material/forum
       link: https://discuss.opensanctions.org/
@@ -25,6 +29,7 @@ extra:
 plugins:
   - search
   - autorefs
+  - macros
   # - social
   - mkdocstrings:
       default_handler: python
@@ -49,4 +54,13 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  
+  - Deployment: deploy.md
+  - Settings: settings.md
+  - Custom Datasets: datasets.md
+  - FAQ: https://www.opensanctions.org/faq/?section=yente
+
+  - Related projects:
+    - followthemoney: https://followthemoney.tech/
+    - nomenklatura: https://github.com/opensanctions/nomenklatura/
+    - rigour: https://rigour.followthemoney.tech/
+    - OpenSanctions: https://www.opensanctions.org/
