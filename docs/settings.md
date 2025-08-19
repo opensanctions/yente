@@ -32,7 +32,7 @@ You can change this behavior using the following configuration options:
 | `YENTE_CRONTAB`   | `0 * * * *`   | Gives the frequency at which new data will be indexed as a [crontab](https://crontab.guru/).   |
 | `YENTE_AUTO_REINDEX`   | `true`   | Can be set to ``false`` to disable automatic data updates. Data will only be refreshed and re-indexed when running ``yente reindex``.   |
 
-When running more than one Yente container, `YENTE_AUTO_REINDEX` must be set to `false` to avoid multiple workers clashing. In this scenario, `yente reindex` should be run using an external cron mechanism. For more information, see the documentation on [how to deploy yente](deploy.md).
+When running more than one Yente container, `YENTE_AUTO_REINDEX` must be set to `false` to avoid multiple workers clashing. In this scenario, `yente reindex` should be run using an external cron mechanism. For more information, see the documentation on [how to deploy yente](deploy/).
 
 ## Other settings
 
