@@ -1,10 +1,10 @@
-# yente - the matchmaker
+# yente - the [matchmaker](https://www.youtube.com/watch?v=jVGNdB6iEeA)
 
-The yente API is built to provide access to [OpenSanctions data](/datasets/), it can also be used to [search and match other data](/docs/yente/datasets/), such as [company registries](/kyb/) or [custom watchlists](/docs/yente/datasets/).
+yente is an open source screening API service that powers the [hosted OpenSanctions API]({{ config.extra.opensanctions_url }}//api/). It provides functions search, retrieve or match FollowTheMoney entities, including people, companies or vessels that are subject to international sanctions.
 
-While `yente` is the open source core code base for the [OpenSanctions API](https://api.opensanctions.org), it can also be run [on-premises as a KYC appliance](/docs/self-hosted/) so that no customer data leaves the deployment context. The software is distributed as a Docker image with a pre-defined `docker-compose.yml` configuration that also provisions the requisite ElasticSearch index.
+Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opensanctions_url}}/datasets/), but it can also be used to [search and match other data](datasets/), such as [company registries]({{ config.extra.opensanctions_url }}/kyb/) or [custom watchlists](datasets/). It can also be run [on-premises as a KYC appliance](/docs/self-hosted/) so that no customer data leaves the deployment context.
 
-## Using the software
+## Deploying and configuring yente
 
 **Note:** this documentation is only relevant to users who plan to [self-host]({{ config.extra.opensanctions_url }}/docs/on-premise/) the API. [Click here]({{ config.extra.opensanctions_url }}/api/) if you'd prefer to use our hosted API service.
 
@@ -12,11 +12,13 @@ While `yente` is the open source core code base for the [OpenSanctions API](http
 * [Settings and configuration](settings.md)
 * [Adding custom datasets](datasets.md)
 * Frequently asked questions: [API functionality]({{ config.extra.opensanctions_url }}/faq/?section=API), [yente Software]({{ config.extra.opensanctions_url }}/faq/?section=yente)
-* [GitHub repository](https://github.com/opensanctions/yente)
-* [Report an issue](https://github.com/opensanctions/yente/issues/new)
 
 ## Using the API
 
-* Tutorial: [Building a screening client]({{ config.extra.opensanctions_url }}/docs/api/matching/)
-* [API endpoints]({{ config.extra.opensanctions_api_url }})
-    * [openapi.json]({{ config.extra.opensanctions_api_url}}/openapi.json)
+To start using the API, see our documentation on [how to get started]({{ config.extra.opensanctions_url}}/docs/api/) and [how to build a simple client for the matching API]({{ config.extra.opensanctions_url }}). While the documentation focuses on the [hosted OpenSanctions API]({{ config.extra.opensanctions_url }}//api/), it also applies to self-hosted yente instances.
+
+Full [reference documentation for the API endpoints](https://api.opensanctions.org/) is available at the root of your self-hosted yente instance.
+
+## Get involved
+
+Yente is developed as an open source project [on GitHub](https://github.com/opensanctions/yente). We welcome [issue reports](https://github.com/opensanctions/yente/issues) and contributions!
