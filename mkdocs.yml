@@ -54,7 +54,9 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  - Deployment: deploy.md
+  - Deployment:
+    - Overview: deploy/
+    - Restrictive firewalls: deploy/firewall.md
   - Settings: settings.md
   - Custom Datasets: datasets.md
   - FAQ: https://www.opensanctions.org/faq/?section=yente

@@ -8,7 +8,7 @@ While `yente` is the open source core code base for the [OpenSanctions API](http
 
 **Note:** this documentation is only relevant to users who plan to [self-host]({{ config.extra.opensanctions_url }}/docs/on-premise/) the API. [Click here]({{ config.extra.opensanctions_url }}/api/) if you'd prefer to use our hosted API service.
 
-* [Deploy yente in your infrastructure](deploy.md)
+* [Deploy yente in your infrastructure](deploy/)
 * [Settings and configuration](settings.md)
 * [Adding custom datasets](datasets.md)
 * Frequently asked questions: [API functionality]({{ config.extra.opensanctions_url }}/faq/?section=API), [yente Software]({{ config.extra.opensanctions_url }}/faq/?section=yente)
