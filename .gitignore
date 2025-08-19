@@ -31,6 +31,8 @@ share/python-wheels/
 MANIFEST
 .DS_Store
 manifests/local.yml
+# We're not using uv (for now)
+/uv.lock
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
