@@ -179,8 +179,14 @@ async def acquire_reindex_lock(
 
     # Check if there's already an active lock
     most_recent_doc = await _get_most_recent_audit_log_message(provider, index)
-    if most_recent_doc and _lock_is_valid(most_recent_doc):
-        return False
+    if most_recent_doc:
+        if _lock_is_valid(most_recent_doc):
+            log.debug(
+                f"Found an active lock for index {index}, someone else is already reindexing"
+            )
+            return False
+
+        log.debug(f"Found an expired lock for index {index}")
 
     # Write a tentative message
     tentative_lock_doc_id = await log_audit_message(
@@ -192,10 +198,27 @@ async def acquire_reindex_lock(
         reindex_type=reindex_type,
     )
 
-    # Check if someone else wrote a newer message (race condition)
-    # Whether we choose the newest or the oldest tentative lock message as the winning one is
-    # not important, as long as we're consistent between the two processes.
-    most_recent_after = await _get_most_recent_audit_log_message(provider, index)
+    # Check if someone else wrote a message before us (race condition)
+    # We choose the oldest tentative lock message as the winning one
+    # as that's the most successful strategy when we assume write operations
+    # to be processed in order.
+    result = await provider.search(
+        get_audit_log_index_name(),
+        {
+            "bool": {
+                "must": [
+                    {"term": {"index": index}},
+                    {
+                        "term": {
+                            "message_type": AuditLogMessageType.REINDEX_LOCK_TENTATIVE
+                        }
+                    },
+                ]
+            }
+        },
+        sort=[{"timestamp": {"order": "asc"}}],
+        size=1,
+    )
 
     # Clean up the tentative message, just to keep things tidy.
     await provider.bulk_index(
@@ -210,8 +233,13 @@ async def acquire_reindex_lock(
     # Refresh the index to make the delete operation visible
     await provider.refresh(get_audit_log_index_name())
 
-    if most_recent_after and most_recent_after["_id"] != tentative_lock_doc_id:
-        # Someone else wrote a newer message, we lost the race
+    hits = result.get("hits", {}).get("hits", [])
+    oldest_tentative_lock_doc_id = hits[0]["_id"] if hits else None
+    if (
+        oldest_tentative_lock_doc_id
+        and oldest_tentative_lock_doc_id != tentative_lock_doc_id
+    ):
+        # Someone else wrote a message before us, we lost the race
         log.debug(
             f"Found a newer tentative lock for index {index}, someone else won the race"
         )
