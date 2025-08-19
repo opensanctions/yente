@@ -30,6 +30,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 .DS_Store
+site/
 manifests/local.yml
 # We're not using uv (for now)
 /uv.lock
