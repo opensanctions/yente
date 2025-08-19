@@ -1,4 +1,4 @@
-.PHONY: build all shell stop services api test typecheck check
+.PHONY: build all shell stop services api test typecheck check docs
 
 all:
 	make api
@@ -25,3 +25,6 @@ typecheck:
 	mypy --strict yente
 
 check: typecheck test
+
+docs:
+	mkdocs build -c -d site
