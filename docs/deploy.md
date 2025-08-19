@@ -1,5 +1,3 @@
-**yente:** [Intro](/docs/yente) · **Deployment** · [Settings](/docs/yente/settings/) · [Custom datasets](/docs/yente/datasets/) · [FAQ](/faq/?section=yente&section=API)
-
 ## Requirements
 
 Running `yente` requires a server that can run host the main screening application (a lightweight Python application) and the ElasticSearch backend used to store and query entity information. In total, we anticipate 500 MB memory per Python service, and 2-4GB of memory plus 8-10GB of disk volume size for the ElasticSearch index. Running ElasticSearch on SSD-backed hard drives will produce a significant performance gain.
@@ -20,7 +18,7 @@ docker-compose up
 
 This will make the service available on Port 8000 of the local machine. You may have to wait for five to ten minutes until the service has finished indexing the data when it is first started.
 
-**Next:** [Configure yente](/docs/yente/settings/)
+**Next:** [Configure yente](settings.md)
 
 ### ...with Kubernetes
 

@@ -72,6 +72,7 @@ docs = [
     "pillow",
     "cairosvg",
     "mkdocs",
+    "mkdocs-macros-plugin",
     "mkdocstrings[python]",
     "mkdocs-material",
 ]
