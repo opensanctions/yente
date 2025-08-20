@@ -1,3 +1,5 @@
+from collections import defaultdict
+import itertools
 from typing import Any, Dict, Iterable, List, Optional, Union
 from followthemoney import model
 from followthemoney.schema import Schema
@@ -6,6 +8,9 @@ from followthemoney.types.common import PropertyType
 from followthemoney.types.name import NameType
 
 from yente import settings
+from yente.logs import get_logger
+
+log = get_logger(__name__)
 
 MappingProperty = Dict[str, Union[List[str], str]]
 
@@ -56,16 +61,10 @@ def make_field(
 def make_type_field(
     type_: PropertyType,
     copy_to: Optional[List[str]] = None,
-    existing: Optional[MappingProperty] = None,
 ) -> MappingProperty:
     field_type = "keyword" if type_.group else "text"
     if type_ in TEXT_TYPES:
         field_type = "text"
-
-    # keyword type trumps text type for conflicting property types
-    # e.g. UnknownLink/Email:subject
-    if existing and existing["type"] == "keyword" and field_type == "text":
-        return existing
     return make_field(field_type, copy_to=copy_to)
 
 
@@ -76,7 +75,10 @@ def make_keyword() -> MappingProperty:
 def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str, Any]:
     if schemata is None:
         schemata = list(model.schemata.values())
-    prop_mapping: Dict[str, MappingProperty] = {}
+    # Multiple schemata can have the same property name, but we flatten them
+    # into a single field in the search index. That's why we collect a list of
+    # fields for each property name first and resolve them later.
+    prop_name_to_fields: Dict[str, List[MappingProperty]] = defaultdict(list)
     for schema_name in schemata:
         schema = model.get(schema_name)
         assert schema is not None, schema_name
@@ -91,11 +93,28 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
             # to facet on them.
             if prop.type.group is not None and not excluded:
                 copy_to.append(prop.type.group)
-            prop_mapping[name] = make_type_field(
-                prop.type,
-                copy_to=copy_to,
-                existing=prop_mapping.get(name, None),
+            prop_name_to_fields[name].append(
+                make_type_field(prop.type, copy_to=copy_to)
             )
+
+    prop_mapping: Dict[str, MappingProperty] = {}
+    for prop_name, fields in prop_name_to_fields.items():
+        merged_copy_to = list(
+            set(itertools.chain.from_iterable([f["copy_to"] for f in fields]))
+        )
+        text_fields = [f for f in fields if f["type"] == "text"]
+        keyword_fields = [f for f in fields if f["type"] == "keyword"]
+
+        # All fields within a group (text/keyword) are usually the same. We choose the
+        # last one cause that's what we used to do, but it really doesn't matter.
+        # keyword has precedence over text
+        # Currently, only authority causes a collision (some are string, some are entity)
+        selected_field = keyword_fields[-1] if keyword_fields else text_fields[-1]
+        # We merge the copy_to fields, just so that search still behaves as expected.
+        # even in the case of multiple fields with the same name.
+        selected_field["copy_to"] = merged_copy_to
+
+        prop_mapping[prop_name] = selected_field
 
     mapping = {
         "schema": make_keyword(),

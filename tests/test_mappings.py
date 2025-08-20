@@ -89,3 +89,13 @@ async def test_mappings_copy_to(search_provider):
     finally:
         # Clean up the test index
         await search_provider.delete_index(temp_index)
+
+
+def test_colliding_prop_names():
+    """Test that we can handle multiple properties with the same property name."""
+    mapping = make_entity_mapping()
+    # Yo dawg, I heard you like properties
+    prop_mapping = mapping["properties"]["properties"]["properties"]
+    # CallForTenders:authority is an entity, Identification:authority is a string
+    assert set(prop_mapping["authority"]["copy_to"]) == set(["text", "entities"])
+    assert prop_mapping["authority"]["type"] == "keyword"
