@@ -2,13 +2,13 @@
 
 yente is an open source screening API service that powers the [hosted OpenSanctions API]({{ config.extra.opensanctions_url }}//api/). It provides functions search, retrieve or match FollowTheMoney entities, including people, companies or vessels that are subject to international sanctions.
 
-Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opensanctions_url}}/datasets/), but it can also be used to [search and match other data](datasets/), such as [company registries]({{ config.extra.opensanctions_url }}/kyb/) or [custom watchlists](datasets/). It can also be run [on-premises as a KYC appliance](/docs/self-hosted/) so that no customer data leaves the deployment context.
+Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opensanctions_url}}/datasets/), but it can also be used to [search and match other data](datasets.md), such as [company registries]({{ config.extra.opensanctions_url }}/kyb/) or [custom watchlists](datasets.md). It can also be run [on-premises as a KYC appliance]({{ config.extra.opensanctions_url }}/docs/on-premise/) so that no customer data leaves the deployment context.
 
 ## Deploying and configuring yente
 
 **Note:** this documentation is only relevant to users who plan to [self-host]({{ config.extra.opensanctions_url }}/docs/on-premise/) the API. [Click here]({{ config.extra.opensanctions_url }}/api/) if you'd prefer to use our hosted API service.
 
-* [Deploy yente in your infrastructure](deploy/)
+* [Deploy yente in your infrastructure](deploy/index.md)
 * [Settings and configuration](settings.md)
 * [Adding custom datasets](datasets.md)
 * Frequently asked questions: [API functionality]({{ config.extra.opensanctions_url }}/faq/?section=API), [yente Software]({{ config.extra.opensanctions_url }}/faq/?section=yente)

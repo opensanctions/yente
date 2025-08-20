@@ -18,8 +18,6 @@ docker-compose up
 
 This will make the service available on Port 8000 of the local machine. You may have to wait for five to ten minutes until the service has finished indexing the data when it is first started.
 
-**Next:** [Configure yente](settings.md)
-
 ### ...with Kubernetes
 
 When scaling out, we recommend using Kubernetes or another managed cloud service (e.g. Google Cloud Run) to run multiple container instances of Yente. You will need to run both of the services defined in the compose file (the API and ElasticSearch instance). In this configuration, the yente workers must run with `YENTE_AUTO_REINDEX` disabled. You should configure a separate job that is launched periodically (for example, a Kubernetes CronJob) to perform reindexing to avoid multiple yente workers stepping on eachother's toes.

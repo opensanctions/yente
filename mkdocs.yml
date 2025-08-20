@@ -56,11 +56,12 @@ nav:
   - Overview: index.md
   - FAQ: https://www.opensanctions.org/faq/?section=yente
   - Deployment:
-    - Overview: deploy/
+    - Overview: deploy/index.md
     - Restrictive firewalls: deploy/firewall.md
   - Configuration:
     - Settings: settings.md
     - Custom Datasets: datasets.md
+    - Search Providers: opensearch.md
 
   - Related projects:
     - followthemoney: https://followthemoney.tech/
