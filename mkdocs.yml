@@ -54,12 +54,13 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
+  - FAQ: https://www.opensanctions.org/faq/?section=yente
   - Deployment:
     - Overview: deploy/
     - Restrictive firewalls: deploy/firewall.md
-  - Settings: settings.md
-  - Custom Datasets: datasets.md
-  - FAQ: https://www.opensanctions.org/faq/?section=yente
+  - Configuration:
+    - Settings: settings.md
+    - Custom Datasets: datasets.md
 
   - Related projects:
     - followthemoney: https://followthemoney.tech/
