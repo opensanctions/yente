@@ -99,7 +99,7 @@ class OpenSearchProvider(SearchProvider):
                     {"add": {"index": next_index, "alias": alias}},
                 ]
             }
-            await self.client.indices.update_aliases(body)
+            await self.client.indices.update_aliases(body=body)
         except TransportError as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
