@@ -2,6 +2,8 @@ import random
 import click
 import csv
 import asyncio
+import subprocess
+import sys
 from datetime import date
 from typing import List, Dict, Type, Union, Any
 from pathlib import Path
@@ -16,6 +18,7 @@ from rich.progress import (
 )
 import statistics
 from dataclasses import dataclass
+import orjson
 
 from yente.data.dataset import Dataset
 from yente.provider.base import SearchProvider
@@ -167,14 +170,13 @@ def calculate_algorithm_statistics(
     results: List[
         tuple[PersonRecord, Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]]]
     ],
-) -> Dict[Type[ScoringAlgorithm], Dict[str, Any]]:
+) -> Dict[str, Any]:
     """Calculate statistics for each algorithm across all persons."""
-    if not results:
-        return {}
+    assert results, "No results to calculate statistics from"
 
     # Get all algorithms from the first result
     algorithms = list(results[0][1].keys())
-    stats = {}
+    stats: Dict[str, Any] = {"total_persons": len(results)}
 
     for algorithm in algorithms:
         top_scores = []
@@ -219,7 +221,7 @@ def calculate_algorithm_statistics(
             (name, score) for name, score in top_persons_with_scores[:5]
         ]
 
-        stats[algorithm] = {
+        stats[algorithm.NAME] = {
             "top_mean": statistics.mean(top_scores),
             "median_mean": statistics.mean(median_scores),
             "lowest_mean": statistics.mean(lowest_scores),
@@ -231,73 +233,6 @@ def calculate_algorithm_statistics(
     return stats
 
 
-def visualize_results(
-    results: List[
-        tuple[PersonRecord, Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]]]
-    ],
-) -> None:
-    """Visualize benchmark results in a table format."""
-    if not results:
-        click.echo("No results to visualize")
-        return
-
-    stats = calculate_algorithm_statistics(results)
-    if not stats:
-        click.echo("No statistics to display")
-        return
-
-    console = Console()
-
-    # Create table
-    table = Table(title="Algorithm Performance Comparison", expand=True)
-
-    # Add columns for each algorithm
-    algorithms = list(stats.keys())
-    table.add_column("Metric", justify="left", style="bold", no_wrap=True)
-    for algorithm in algorithms:
-        table.add_column(algorithm.NAME, justify="right", ratio=1)
-
-    # Add rows for each metric
-    table.add_row(
-        "Mean Top Score", *[f"{stats[algo]['top_mean']:.3f}" for algo in algorithms]
-    )
-    table.add_row(
-        "Mean Median Score",
-        *[f"{stats[algo]['median_mean']:.3f}" for algo in algorithms],
-    )
-    table.add_row(
-        "Mean Lowest Score",
-        *[f"{stats[algo]['lowest_mean']:.3f}" for algo in algorithms],
-    )
-    table.add_row(
-        "Empty Result Lists",
-        *[f"{stats[algo]['empty_result_count']}" for algo in algorithms],
-    )
-    table.add_row(
-        f"Persons with Matches (>= {settings.SCORE_THRESHOLD})",
-        *[
-            f"{stats[algo]['persons_with_matches']}/{len(results)}"
-            for algo in algorithms
-        ],
-    )
-
-    # Add row for top 5 person names with scores
-    # table.add_row(
-    #     "Top 5 Person Names (with scores)",
-    #     *[
-    #         "\n".join(
-    #             [
-    #                 f"{name} ({score:.3f})"
-    #                 for name, score in stats[algo]["top_5_names_with_scores"]
-    #             ]
-    #         )
-    #         for algo in algorithms
-    #     ],
-    # )
-
-    console.print(table)
-
-
 async def benchmark_async(
     person_file: Path, matchers: tuple[str, ...], dataset_name: str
 ) -> List[
@@ -305,7 +240,7 @@ async def benchmark_async(
 ]:
     """Benchmark candidate generation with specified algorithms."""
     # Read the person file into an iterable called person of PersonRecord
-    persons = read_person_csv(str(person_file))[:200]
+    persons = read_person_csv(str(person_file))[:100]
 
     # Get algorithm classes from names
     algorithms = [get_algorithm_by_name(matcher) for matcher in matchers]
@@ -340,7 +275,43 @@ async def benchmark_async(
     return results
 
 
-@click.command()
+@click.group()
+def cli() -> None:
+    """Benchmark candidate generation with specified algorithms."""
+    pass
+
+
+@cli.command()
+@click.option(
+    "--person-file",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="CSV file containing PersonRecord data",
+)
+@click.option(
+    "--matcher",
+    type=click.Choice([algo.NAME for algo in ENABLED_ALGORITHMS]),
+    required=True,
+    help="Algorithm name to use for matching",
+)
+@click.option(
+    "--dataset",
+    default="sanctions",
+    help="Dataset to use for matching (default: sanctions)",
+)
+def run(person_file: Path, matcher: str, dataset: str) -> None:
+    """Run benchmark and output JSON results."""
+    # Run the async benchmark function
+    results = asyncio.run(benchmark_async(person_file, (matcher,), dataset))
+
+    # Calculate statistics
+    stats = calculate_algorithm_statistics(results)
+
+    # Print JSON to stdout
+    print(orjson.dumps(stats, option=orjson.OPT_INDENT_2).decode())
+
+
+@cli.command()
 @click.option(
     "--person-file",
     type=click.Path(exists=True, path_type=Path),
@@ -349,11 +320,16 @@ async def benchmark_async(
     help="CSV file(s) containing PersonRecord data",
 )
 @click.option(
-    "--matchers",
-    multiple=True,
+    "--matcher",
     type=click.Choice([algo.NAME for algo in ENABLED_ALGORITHMS]),
     required=True,
-    help="List of algorithm names to use for matching",
+    help="Algorithm name to use for matching",
+)
+@click.option(
+    "--git-tree",
+    multiple=True,
+    required=True,
+    help="Git tree-ish to checkout before running benchmark",
 )
 @click.option(
     "--dataset",
@@ -361,26 +337,114 @@ async def benchmark_async(
     help="Dataset to use for matching (default: sanctions)",
 )
 def benchmark(
-    person_file: tuple[Path, ...], matchers: tuple[str, ...], dataset: str
+    person_file: tuple[Path, ...], matcher: str, git_tree: tuple[str, ...], dataset: str
 ) -> None:
     """Benchmark candidate generation with specified algorithms."""
     console = Console()
 
+    # Store results for each combination of person file and git tree
+    results_matrix: Dict[str, Dict[str, float]] = {}
+
     # Process each person file
     for file_path in person_file:
-        console.print(f"\n[bold blue]Processing {file_path.name}[/bold blue]")
+        results_matrix[file_path.name] = {}
 
-        # Run the async benchmark function
-        results = asyncio.run(benchmark_async(file_path, matchers, dataset))
+        # Process each git tree
+        for tree in git_tree:
+            console.print(
+                f"\n[bold blue]Processing {file_path.name} with git tree {tree}[/bold blue]"
+            )
 
-        # Show basic info
-        console.print(
-            f"Benchmarked {len(results)} persons from {file_path.name} with algorithms: {', '.join(matchers)}"
-        )
+            # Checkout the git tree
+            try:
+                subprocess.run(
+                    ["git", "checkout", tree],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                console.print(f"[green]Checked out git tree: {tree}[/green]")
+            except subprocess.CalledProcessError as e:
+                console.print(f"[red]Error checking out git tree {tree}: {e}[/red]")
+                console.print(f"[red]stderr: {e.stderr}[/red]")
+                continue
 
-        # Visualize the results
-        visualize_results(results)
+            # Run the run subcommand as a subprocess
+            cmd = [
+                sys.executable,
+                __file__,
+                "run",
+                "--person-file",
+                str(file_path),
+                "--matcher",
+                matcher,
+                "--dataset",
+                dataset,
+            ]
+
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+                # Parse the JSON output
+                stats = orjson.loads(result.stdout)
+
+                # Store the mean top score for this combination
+                results_matrix[file_path.name][tree] = stats[matcher]["top_mean"]
+
+                console.print(
+                    f"[green]Completed benchmark for {file_path.name} with {tree}[/green]"
+                )
+
+            except subprocess.CalledProcessError as e:
+                console.print(f"[red]Error running subprocess: {e}[/red]")
+                console.print(f"[red]stderr: {e.stderr}[/red]")
+                exit(1)
+            except Exception as e:
+                console.print(f"[red]Error parsing results: {e}[/red]")
+                exit(1)
+
+    # Visualize the results matrix
+    visualize_results_matrix(results_matrix, matcher, dataset, console)
+
+
+def visualize_results_matrix(
+    results_matrix: Dict[str, Dict[str, float]],
+    matcher: str,
+    dataset: str,
+    console: Console,
+) -> None:
+    """Visualize benchmark results as a matrix with git trees as columns and person files as rows."""
+    if not results_matrix:
+        console.print("No results to display")
+        return
+
+    # Get all git trees from the results
+    all_trees = list(results_matrix.values())[0].keys()
+
+    # Create table
+    table = Table(
+        title=f"Algorithm Performance Comparison - Dataset: {dataset}, Matcher: {matcher}",
+        expand=True,
+    )
+
+    # Add columns
+    table.add_column("Person File", justify="left", style="bold", no_wrap=True)
+    for tree in all_trees:
+        table.add_column(tree, justify="right", ratio=1)
+
+    # Add rows for each person file
+    for file_name, tree_results in results_matrix.items():
+        row_data = [file_name]
+        for tree in all_trees:
+            score = tree_results.get(tree)
+            if score is not None:
+                row_data.append(f"{score:.3f}")
+            else:
+                row_data.append("N/A")
+        table.add_row(*row_data)
+
+    console.print(table)
 
 
 if __name__ == "__main__":
-    benchmark()
+    cli()
