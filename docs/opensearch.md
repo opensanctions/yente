@@ -26,7 +26,7 @@ YENTE_OPENSEARCH_REGION=eu-central-1
 
 ## Compatibility
 
-While ElasticSearch and OpenSearch are based on the same initial code base, we expect the two products to deviate more and more as time progresses. Since our [hosted infrastructure](/api/) is running on Elastic Cloud, we cannot make the following guarantees into the future:
+While ElasticSearch and OpenSearch are based on the same initial code base, we expect the two products to deviate more and more as time progresses. Since our [hosted infrastructure]({{ config.extra.opensanctions_url }}/api/) is running on Elastic Cloud, we cannot make the following guarantees into the future:
 
 * Search results returned by the `/search` API may not be identical, or in the same ranking order.
 * The extended query syntax used by the `/search` API may deviate from the one exposed by ElasticSearch.
