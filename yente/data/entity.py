@@ -1,10 +1,8 @@
 from typing import Any, Dict, TYPE_CHECKING
-from followthemoney import model
-from followthemoney.model import Model
-from followthemoney.types import registry
+from followthemoney import Schema, registry, model, ValueEntity
+from followthemoney.exc import InvalidData
 from followthemoney.helpers import combine_names
 from rigour.names import pick_name
-from nomenklatura.stream import StreamEntity
 
 from yente import settings
 from yente.logs import get_logger
@@ -15,11 +13,38 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 
-class Entity(StreamEntity):
+# Topics that are considered "target" entities, duplicated from zavod
+TARGET_TOPICS = {
+    "corp.disqual",
+    "crime.boss",
+    "crime.fin",
+    "crime.fraud",
+    "crime.terror",
+    "crime.theft",
+    "crime.traffick",
+    "crime.war",
+    "crime",
+    "debarment",
+    "export.control",
+    "export.risk",
+    "poi",
+    "reg.action",
+    "reg.warn",
+    "role.oligarch",
+    "role.pep",
+    "role.rca",
+    "sanction.counter",
+    "sanction.linked",
+    "sanction",
+    "wanted",
+}
+
+
+class Entity(ValueEntity):
     """Entity for sanctions list entries and adjacent objects."""
 
-    def __init__(self, model: Model, data: Dict[str, Any], cleaned: bool = True):
-        super().__init__(model, data, cleaned=cleaned)
+    def __init__(self, schema: Schema, data: Dict[str, Any], cleaned: bool = True):
+        super().__init__(schema, data, cleaned=cleaned)
         if self._caption is None:
             self._caption = self._pick_caption()
 
@@ -38,7 +63,10 @@ class Entity(StreamEntity):
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
         data = {"id": example.id, "schema": example.schema_}
-        obj = cls(model, data)
+        schema = model.get(example.schema_)
+        if schema is None:
+            raise InvalidData(f"Unknown schema: {example.schema_!r}")
+        obj = cls(schema, data)
         if obj.schema.name != settings.BASE_SCHEMA and not obj.schema.matchable:
             raise TypeError("Non-matchable schema for query: %s" % obj.schema.name)
 
@@ -62,3 +90,14 @@ class Entity(StreamEntity):
             if hint is not None and hint not in countries:
                 obj.add("country", hint, cleaned=True)
         return obj
+
+    @property
+    def target(self) -> bool:
+        topics = self.get("topics", quiet=True)
+        return len(TARGET_TOPICS.intersection(topics)) > 0
+
+    def to_dict(self, matchable: bool = False) -> Dict[str, Any]:
+        data = super().to_dict()
+        # Will be written to the index as well as returned to the client
+        data["target"] = self.target
+        return data

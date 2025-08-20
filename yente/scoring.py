@@ -1,5 +1,5 @@
-from typing import Iterable, List, Optional, Type, Dict, Tuple
-from nomenklatura.matching.types import ScoringAlgorithm
+from typing import Iterable, List, Optional, Type, Tuple
+from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
 
 from yente import settings
 from yente.data.entity import Entity
@@ -13,18 +13,18 @@ def score_results(
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
     limit: Optional[int] = None,
-    weights: Dict[str, float] = {},
+    config: ScoringConfig = ScoringConfig.defaults(),
 ) -> Tuple[int, List[ScoredEntityResponse]]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
-    for proxy in results:
-        scoring = algorithm.compare(entity, proxy, override_weights=weights)
-        result = ScoredEntityResponse.from_entity_result(proxy, scoring, threshold)
-        if result.score <= cutoff:
+    for result in results:
+        scoring = algorithm.compare(query=entity, result=result, config=config)
+        response = ScoredEntityResponse.from_entity_result(result, scoring, threshold)
+        if response.score <= cutoff:
             continue
-        if result.match:
+        if response.match:
             matches += 1
-        scored.append(result)
+        scored.append(response)
 
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
     if limit is not None:

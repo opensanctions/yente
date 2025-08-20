@@ -18,10 +18,10 @@ async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> N
         if dataset is None:
             log.warn("Dataset has index but no metadata: %s" % dataset_name)
             continue
-        if version != dataset.version:
+        if version != dataset.model.version:
             log.info(
                 "Dataset %s is outdated" % dataset_name,
                 indexed=version,
-                available=dataset.version,
+                available=dataset.model.version,
             )
-        dataset.index_version = version
+        dataset.model.index_version = version

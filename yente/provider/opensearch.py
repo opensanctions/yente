@@ -1,8 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, cast
-from typing import AsyncIterator
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
 from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError
@@ -10,7 +9,6 @@ from opensearchpy.exceptions import NotFoundError, TransportError
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
@@ -129,13 +127,15 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index with the given name, mappings, and settings."""
         log.info("Create index", index=index)
         try:
             body = {
-                "settings": INDEX_SETTINGS,
-                "mappings": make_entity_mapping(),
+                "settings": settings,
+                "mappings": mappings,
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
@@ -230,12 +230,14 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
-    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> None:
-        """Index a list of entities into the search index."""
+    async def bulk_index(
+        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+    ) -> None:
+        """Perform an iterable of bulk actions to the search index."""
         try:
             await async_bulk(
                 self.client,
-                entities,
+                actions,
                 chunk_size=1000,
                 yield_ok=False,
                 stats_only=True,
