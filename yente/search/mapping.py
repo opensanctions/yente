@@ -75,6 +75,7 @@ def make_keyword() -> MappingProperty:
 def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str, Any]:
     if schemata is None:
         schemata = list(model.schemata.values())
+    # Collect field definitions:
     # Multiple schemata can have the same property name, but we flatten them
     # into a single field in the search index. That's why we collect a list of
     # fields for each property name first and resolve them later.
@@ -97,6 +98,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
                 make_type_field(prop.type, copy_to=copy_to)
             )
 
+    # Resolve list of field definitions to a single definition per field name
     prop_mapping: Dict[str, MappingProperty] = {}
     for prop_name, fields in prop_name_to_fields.items():
         merged_copy_to = list(
@@ -105,13 +107,13 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         text_fields = [f for f in fields if f["type"] == "text"]
         keyword_fields = [f for f in fields if f["type"] == "keyword"]
 
-        # All fields within a group (text/keyword) are usually the same. We choose the
-        # last one cause that's what we used to do, but it really doesn't matter.
-        # keyword has precedence over text
-        # Currently, only authority causes a collision (some are string, some are entity)
+        # All properties with the same name ought to map to the same field definition.
+        # If a conflict occurs, we choose field type "keyword" over "text".
+        # Currently, only the property "authority" has conflicts (some are string, some are entity)
         selected_field = keyword_fields[-1] if keyword_fields else text_fields[-1]
-        # We merge the copy_to fields, just so that search still behaves as expected.
-        # even in the case of multiple fields with the same name.
+        # We merge the copy_to fields rather than choosing one value, just so that
+        # queries work as expected in case one property maps to different copy_to than another
+        # with the same field name.
         selected_field["copy_to"] = merged_copy_to
 
         prop_mapping[prop_name] = selected_field
