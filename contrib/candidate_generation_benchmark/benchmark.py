@@ -1,10 +1,8 @@
-import random
 import click
 import csv
 import asyncio
 import subprocess
 import sys
-from datetime import date
 from typing import List, Dict, Type, Union, Any
 from pathlib import Path
 from rich.console import Console
@@ -46,7 +44,7 @@ class PersonRecord:
     middle_name: str | None
     last_name: str
     gender: str  # "female", "male", "other"
-    date_of_birth: date
+    date_of_birth: str
     place_of_birth: str
     nationality: str
 
@@ -58,7 +56,7 @@ class PersonRecord:
             "middle_name": self.middle_name or "",
             "last_name": self.last_name,
             "gender": self.gender,
-            "date_of_birth": self.date_of_birth.isoformat(),
+            "date_of_birth": self.date_of_birth,
             "place_of_birth": self.place_of_birth,
             "nationality": self.nationality,
         }
@@ -70,17 +68,13 @@ def read_person_csv(file_path: str) -> List[PersonRecord]:
     with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            # Parse date_of_birth
-            dob_str = row.get("date_of_birth", "")
-            dob = date.fromisoformat(dob_str) if dob_str else date.today()
-
             person = PersonRecord(
                 full_name=row.get("full_name", ""),
                 first_name=row.get("first_name", ""),
                 middle_name=row.get("middle_name") if row.get("middle_name") else None,
                 last_name=row.get("last_name", ""),
                 gender=row.get("gender", ""),
-                date_of_birth=dob,
+                date_of_birth=row.get("date_of_birth", ""),
                 place_of_birth=row.get("place_of_birth", ""),
                 nationality=row.get("nationality", ""),
             )
@@ -92,11 +86,13 @@ def person_to_entity_example(person: PersonRecord) -> EntityExample:
     """Convert a PersonRecord to an EntityExample for matching."""
     properties: Dict[str, Union[str, List[Any]]] = {
         "name": [person.full_name],
-        "firstName": [person.first_name],
-        "lastName": [person.last_name],
-        "birthDate": [person.date_of_birth.isoformat()],
+        "birthDate": [person.date_of_birth],
         "nationality": [person.nationality],
     }
+    if person.first_name:
+        properties["firstName"] = [person.first_name]
+    if person.last_name:
+        properties["lastName"] = [person.last_name]
 
     if person.middle_name:
         properties["middleName"] = [person.middle_name]
@@ -108,7 +104,7 @@ def person_to_entity_example(person: PersonRecord) -> EntityExample:
         properties["gender"] = [person.gender]
 
     return EntityExample(
-        id=f"benchmark_{person.full_name}-{random.randint(1, 1000000)}",
+        id=None,
         schema="Person",
         properties=properties,
     )
@@ -160,6 +156,8 @@ async def benchmark_person(
             limit=settings.MATCH_PAGE,  # Same as match.py
             config=config,
         )
+        # if not scored[0].match:
+        #     print(example)
 
         results[algorithm] = scored
 
@@ -227,6 +225,7 @@ def calculate_algorithm_statistics(
             "lowest_mean": statistics.mean(lowest_scores),
             "empty_result_count": empty_result_count,
             "persons_with_matches": persons_with_matches,
+            "total_persons": len(results),
             "top_5_names_with_scores": top_5_names_with_scores,
         }
 
@@ -343,7 +342,7 @@ def benchmark(
     console = Console()
 
     # Store results for each combination of person file and git tree
-    results_matrix: Dict[str, Dict[str, float]] = {}
+    results_matrix: Dict[str, Dict[str, Dict[str, float]]] = {}
 
     # Process each person file
     for file_path in person_file:
@@ -389,7 +388,7 @@ def benchmark(
                 stats = orjson.loads(result.stdout)
 
                 # Store the mean top score for this combination
-                results_matrix[file_path.name][tree] = stats[matcher]["top_mean"]
+                results_matrix[file_path.name][tree] = stats[matcher]
 
                 console.print(
                     f"[green]Completed benchmark for {file_path.name} with {tree}[/green]"
@@ -408,7 +407,7 @@ def benchmark(
 
 
 def visualize_results_matrix(
-    results_matrix: Dict[str, Dict[str, float]],
+    results_matrix: Dict[str, Dict[str, Dict[str, float]]],
     matcher: str,
     dataset: str,
     console: Console,
@@ -423,8 +422,7 @@ def visualize_results_matrix(
 
     # Create table
     table = Table(
-        title=f"Algorithm Performance Comparison - Dataset: {dataset}, Matcher: {matcher}",
-        expand=True,
+        title=f"Algorithm Performance Comparison\nDataset: {dataset}\nMatcher: {matcher}",
     )
 
     # Add columns
@@ -436,11 +434,10 @@ def visualize_results_matrix(
     for file_name, tree_results in results_matrix.items():
         row_data = [file_name]
         for tree in all_trees:
-            score = tree_results.get(tree)
-            if score is not None:
-                row_data.append(f"{score:.3f}")
-            else:
-                row_data.append("N/A")
+            results = tree_results.get(tree) or {}
+            row_data.append(
+                f"{results['top_mean']:.3f} ({results['persons_with_matches']}/{results['total_persons']})"
+            )
         table.add_row(*row_data)
 
     console.print(table)
