@@ -1,4 +1,6 @@
+import itertools
 import warnings
+from followthemoney import EntityProxy
 import httpx
 import unicodedata
 from pathlib import Path
@@ -14,11 +16,17 @@ from rigour.text.scripts import is_modern_alphabet
 from rigour.text import levenshtein, metaphone
 from rigour.names import tokenize_name, remove_person_prefixes
 from rigour.names import replace_org_types_compare
+from rigour.names.tokenize import normalize_name
+from rigour.names import tag_person_name, Name, tag_org_name, Symbol
 
 from yente import settings
 from yente.logs import get_logger
 
 log = get_logger(__name__)
+
+
+# A set of symbol categories that we don't want to match on and therefore don't want to index.
+NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
 
 def preprocess_name(name: Optional[str]) -> Optional[str]:
@@ -88,6 +96,39 @@ def index_name_keys(schema: Schema, names: List[str]) -> Set[str]:
         if len(ascii_name) > 5:
             keys.add(ascii_name)
     return keys
+
+
+def build_index_name_symbols(entity: EntityProxy) -> List[str]:
+    """Build a list of indexable name symbols for the given entity.
+
+    If we can't build symbols for this schema, return an empty list."""
+    names: List[str] = entity.get_type_values(registry.name, matchable=True)
+
+    symbols: Set[Symbol] = set()
+    # normalizer should be the same as that one used in logic-v2 to make the @lru_cache do most of the work
+    # For both Person and Organization, build all symbols for all names
+    if entity.schema.is_a("Person"):
+        symbols = set(
+            itertools.chain.from_iterable(
+                tag_person_name(Name(name), normalize_name).symbols for name in names
+            )
+        )
+    elif entity.schema.is_a("Organization"):
+        symbols = set(
+            itertools.chain.from_iterable(
+                tag_org_name(Name(name), normalize_name).symbols for name in names
+            )
+        )
+    else:
+        # We can't build name symbols for this schema
+        symbols = set()
+
+    # Exclude symbols that we don't want to match on
+    symbols = {s for s in symbols if s.category not in NON_MATCHABLE_SYMBOLS}
+
+    # Note that this value is used as a keyword in the search index, so changing the format requires
+    # upping the index version to trigger a re-index.
+    return [f"{s.category.value}:{s.id}" for s in symbols]
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:
