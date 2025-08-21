@@ -1,7 +1,6 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, Dict, List
-from typing import Any, AsyncGenerator, AsyncIterable, Dict, List
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
@@ -81,9 +80,6 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     entity_id = doc.pop("id")
     doc["entity_id"] = entity_id
 
-    # TODO(Leon Handreke): to_full_dict used to pass matchable=False (I think?)
-    # but that doesn't seem right? Does it matter, are there non-matchable names fields
-    # currently?
     names: List[str] = entity.get_type_values(registry.name, matchable=True)
     names.extend(entity.get("weakAlias", quiet=True))
 
