@@ -56,15 +56,16 @@ nav:
   - Overview: index.md
   - FAQ: https://www.opensanctions.org/faq/?section=yente
   - Deployment:
-    - Overview: deploy/index.md
-    - Restrictive firewalls: deploy/firewall.md
+      - Overview: deploy/index.md
+      - Restrictive firewalls: deploy/firewall.md
   - Configuration:
-    - Settings: settings.md
-    - Custom Datasets: datasets.md
-    - Search Providers: opensearch.md
+      - Settings: settings.md
+      - Custom Datasets: datasets.md
+      - Search Providers: opensearch.md
 
-  - Related projects:
-    - followthemoney: https://followthemoney.tech/
-    - nomenklatura: https://github.com/opensanctions/nomenklatura/
-    - rigour: https://rigour.followthemoney.tech/
-    - OpenSanctions: https://www.opensanctions.org/
+  - Toolchain:
+      - followthemoney: https://followthemoney.tech/
+      - rigour: https://rigour.followthemoney.tech/
+      # - yente: https://yente.followthemoney.tech/
+      - OpenAleph: https://openaleph.org/docs/
+      - OpenSanctions: https://www.opensanctions.org/docs/
