@@ -5,6 +5,7 @@ from nomenklatura.matching.types import (
     MatchingResult,
     FeatureDocs,
     AlgorithmDocs,
+    FtResult,
 )
 
 from yente import settings
@@ -40,8 +41,14 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    features: Dict[str, float]
-    match: bool = False
+    features: Dict[str, float] = Field(
+        description="A dictionary of subscores from features in the algorithm. Deprecated, use `explanations` instead.",
+        deprecated=True,
+    )
+    explanations: Dict[str, FtResult] = Field(
+        description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
+    )
+    match: bool = Field(description="Whether the score is above the match threshold.")
     token: Optional[str] = None
 
     @classmethod
@@ -51,6 +58,7 @@ class ScoredEntityResponse(EntityResponse):
         data = entity.to_dict()
         data["score"] = result.score
         data["features"] = result.features
+        data["explanations"] = result.explanations
         data["match"] = result.score >= threshold
         return cls.model_validate(data)
 
