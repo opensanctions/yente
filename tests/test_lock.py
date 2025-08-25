@@ -136,3 +136,42 @@ async def test_lock_not_expired(search_provider: SearchProvider):
         dataset_version=TEST_DATASET_VERSION,
         reindex_type=TEST_REINDEX_TYPE,
     )
+
+
+@pytest.mark.asyncio
+async def test_refresh_expired_lock(search_provider: SearchProvider):
+    """Test that refreshing an expired lock will fail"""
+    # Clean slate: delete any old lock index
+    await search_provider.delete_index(get_audit_log_index_name())
+
+    original_time = datetime.now()
+
+    # Acquire initial lock
+    acquired = await acquire_reindex_lock(
+        search_provider,
+        TEST_INDEX_NAME,
+        dataset=TEST_DATASET,
+        dataset_version=TEST_DATASET_VERSION,
+        reindex_type=TEST_REINDEX_TYPE,
+    )
+    assert acquired is True
+
+    # Mock time to simulate 1 minute has passed
+    with patch("yente.search.audit_log.datetime") as mock_datetime:
+        # Set up the mock to return a time 1 minute after the original time
+        mock_datetime.now.return_value = original_time + timedelta(minutes=20)
+        # Keep the fromtimestamp method working for parsing timestamps
+        mock_datetime.fromtimestamp = datetime.fromtimestamp
+
+        # Try to refresh the lock after 20 minutes (should fail)
+        refreshed = await refresh_reindex_lock(search_provider, TEST_INDEX_NAME)
+        assert refreshed is False
+
+    # Clean up
+    await release_reindex_lock(
+        search_provider,
+        TEST_INDEX_NAME,
+        dataset=TEST_DATASET,
+        dataset_version=TEST_DATASET_VERSION,
+        reindex_type=TEST_REINDEX_TYPE,
+    )

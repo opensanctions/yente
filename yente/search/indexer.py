@@ -196,8 +196,11 @@ async def index_entities(
                 if idx % 50000 == 0:
                     lock_refreshed = await refresh_reindex_lock(provider, next_index)
                     if not lock_refreshed:
-                        log.warning(
+                        log.error(
                             f"Failed to refresh reindex lock for index {next_index}, continuing anyway"
+                        )
+                        raise YenteIndexError(
+                            "Failed to refresh re-index lock, aborting re-index"
                         )
                 yield item
 

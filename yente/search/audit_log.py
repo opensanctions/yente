@@ -15,7 +15,7 @@ log = logs.get_logger(__name__)
 
 
 def get_audit_log_index_name() -> str:
-    return f"{settings.ENTITY_INDEX}-audit-log"
+    return f"{settings.INDEX_NAME}-audit-log"
 
 
 def millis_timestamp_to_datetime(timestamp: int) -> datetime:
@@ -83,7 +83,6 @@ async def log_audit_message(
     reindex_type: AuditLogReindexType,
 ) -> str:
     """Log an audit message to the audit log index and return the document ID."""
-    await ensure_audit_log_index(provider)
 
     timestamp = datetime_to_millis_timestamp(datetime.now())
     doc_id = f"{index}-{message_type}-{timestamp}"
@@ -135,7 +134,7 @@ async def _get_most_recent_audit_log_message(
     return cast(Dict[str, Any], hits[0])
 
 
-def _lock_is_valid(most_recent_doc: Optional[Dict[str, Any]]) -> bool:
+def _lock_is_active(most_recent_doc: Optional[Dict[str, Any]]) -> bool:
     """Check if the most recent lock is still valid (not expired).
 
     Args:
@@ -180,7 +179,7 @@ async def acquire_reindex_lock(
     # Check if there's already an active lock
     most_recent_doc = await _get_most_recent_audit_log_message(provider, index)
     if most_recent_doc:
-        if _lock_is_valid(most_recent_doc):
+        if _lock_is_active(most_recent_doc):
             log.debug(
                 f"Found an active lock for index {index}, someone else is already reindexing"
             )
@@ -208,40 +207,29 @@ async def acquire_reindex_lock(
             "bool": {
                 "must": [
                     {"term": {"index": index}},
-                    {
-                        "term": {
-                            "message_type": AuditLogMessageType.REINDEX_LOCK_TENTATIVE
-                        }
-                    },
                 ]
             }
         },
-        sort=[{"timestamp": {"order": "asc"}}],
-        size=1,
+        sort=[{"timestamp": {"order": "desc"}}],
+        size=50,
     )
-
-    # Clean up the tentative message, just to keep things tidy.
-    await provider.bulk_index(
-        [
-            {
-                "_index": get_audit_log_index_name(),
-                "_id": tentative_lock_doc_id,
-                "_op_type": "delete",
-            }
-        ]
-    )
-    # Refresh the index to make the delete operation visible
-    await provider.refresh(get_audit_log_index_name())
 
     hits = result.get("hits", {}).get("hits", [])
-    oldest_tentative_lock_doc_id = hits[0]["_id"] if hits else None
+    oldest_tentative_lock_doc_id = None
+    # We find the oldest tentative lock message in this series, i.e. before we find another message
+    for hit in hits:
+        if hit["_source"]["message_type"] != AuditLogMessageType.REINDEX_LOCK_TENTATIVE:
+            break
+        oldest_tentative_lock_doc_id = hit["_id"]
+
+    # oldest_tentative_lock_doc_id = hits[0]["_id"] if hits else None
     if (
         oldest_tentative_lock_doc_id
         and oldest_tentative_lock_doc_id != tentative_lock_doc_id
     ):
         # Someone else wrote a message before us, we lost the race
         log.debug(
-            f"Found a newer tentative lock for index {index}, someone else won the race"
+            f"Found an older tentative lock for index {index}, someone else won the race"
         )
         return False
 
@@ -267,11 +255,11 @@ async def refresh_reindex_lock(
 
     # Get the most recent message and check if it's a valid lock
     most_recent = await _get_most_recent_audit_log_message(provider, index)
-    if not _lock_is_valid(most_recent):
+    if not _lock_is_active(most_recent):
         log.warning(f"No valid reindex lock found for index {index}")
         return False
 
-    # At this point, most_recent is guaranteed to be not None since _lock_is_valid returned True
+    # At this point, most_recent is guaranteed to be not None since _lock_is_active returned True
     assert most_recent is not None
     await provider.bulk_index(
         [
@@ -303,7 +291,7 @@ async def release_reindex_lock(
     """Release the reindex lock by writing a completed/failed message."""
     # Check if the lock we're trying to release is still valid
     most_recent_doc = await _get_most_recent_audit_log_message(provider, index)
-    if not _lock_is_valid(most_recent_doc):
+    if not _lock_is_active(most_recent_doc):
         log.warning(
             f"Attempting to release reindex lock for index {index}, but no valid lock found"
         )
