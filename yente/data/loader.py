@@ -61,19 +61,15 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
 async def stream_http_lines(
     url: str, auth_token: Optional[str] = None
 ) -> AsyncGenerator[Any, None]:
-    for retry in count():
-        try:
-            async with httpx_session(auth_token=auth_token) as client:
-                async with client.stream("GET", url) as resp:
-                    resp.raise_for_status()
-                    async for line in resp.aiter_lines():
-                        yield orjson.loads(line)
-                    return
-        except httpx.TransportError as exc:
-            if retry > 3:
-                raise
-            await asyncio.sleep(1.0)
-            log.error("Streaming index HTTP error: %s, retrying..." % exc)
+    try:
+        async with httpx_session(auth_token=auth_token) as client:
+            async with client.stream("GET", url) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    yield orjson.loads(line)
+                return
+    except httpx.TransportError as exc:
+        log.error("Streaming index HTTP error: %s, failed after retries." % exc)
 
 
 async def load_json_lines(
