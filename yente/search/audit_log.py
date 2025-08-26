@@ -1,5 +1,7 @@
+import asyncio
 from enum import StrEnum
 from datetime import datetime, timedelta
+import random
 from typing import Any, Dict, Optional, cast
 from yente import logs, settings
 from yente.provider.base import SearchProvider
@@ -187,6 +189,10 @@ async def acquire_reindex_lock(
 
         log.debug(f"Found an expired lock for index {index}")
 
+    # Sleep for up to 0.5 seconds to reduce the chance of two instances
+    # writing the lock at the same time with the same timestamp
+    await asyncio.sleep(random.random() * 0.5)
+
     # Write a tentative message
     tentative_lock_doc_id = await log_audit_message(
         provider,
@@ -209,6 +215,7 @@ async def acquire_reindex_lock(
     # This fails (both can acquire) if one hasn't seen the write from the other yet.
     # This is possible due to eventually consistent reads in ElasticSearch.
     # We sleep for a moment to make this less likely
+    await asyncio.sleep(1.5 + random.random() * 0.5)
     result = await provider.search(
         get_audit_log_index_name(),
         {
