@@ -201,6 +201,14 @@ async def acquire_reindex_lock(
     # We choose the oldest tentative lock message as the winning one
     # as that's the most successful strategy when we assume write operations
     # to be processed in order.
+    #
+    # Clock skew isn't an issue because this only works on the principle that both
+    # agree on which is the older TENTATIVE write, and writing the exact same timestamp
+    # is quite unlikely.
+    #
+    # This fails (both can acquire) if one hasn't seen the write from the other yet.
+    # This is possible due to eventually consistent reads in ElasticSearch.
+    # We sleep for a moment to make this less likely
     result = await provider.search(
         get_audit_log_index_name(),
         {
