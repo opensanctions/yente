@@ -8,7 +8,7 @@ from yente.provider.base import SearchProvider
 
 
 # Query the audit log using the following query:
-# curl -X GET "localhost:9200/yente-entities-audit-log/_search" -H "Content-Type: application/json" -d '{"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": 10000, "_source": true}' | jq '.hits.hits | map(._source) | reverse'
+# curl -X GET "localhost:9200/yente-audit-log/_search" -H "Content-Type: application/json" -d '{"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": 10000, "_source": true}' | jq '.hits.hits | map(._source) | reverse'
 
 
 LOCK_EXPIRATION_TIME = timedelta(minutes=5)
