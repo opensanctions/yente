@@ -75,16 +75,10 @@ def result_facets(
     return facets
 
 
-async def search_entities(
-    provider: SearchProvider,
-    query: Dict[str, Any],
-    limit: int = 5,
-    offset: int = 0,
-    aggregations: Optional[Dict[str, Any]] = None,
-    sort: List[Any] = [],
-) -> Dict[str, Any]:
-    # Wrap query in function_score to up-score important entities.
-    function_score_query = {
+def upscore_large_entities(query: Dict[str, Any]) -> Dict[str, Any]:
+    """Wrap query to up-score important entities."""
+
+    return {
         "function_score": {
             "query": query,
             "functions": [
@@ -106,9 +100,18 @@ async def search_entities(
         }
     }
 
+
+async def search_entities(
+    provider: SearchProvider,
+    query: Dict[str, Any],
+    limit: int = 5,
+    offset: int = 0,
+    aggregations: Optional[Dict[str, Any]] = None,
+    sort: List[Any] = [],
+) -> Dict[str, Any]:
     return await provider.search(
         index=settings.ENTITY_INDEX,
-        query=function_score_query,
+        query=query,
         size=limit,
         sort=sort,
         from_=offset,
