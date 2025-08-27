@@ -62,8 +62,8 @@ class ElasticSearchProvider(SearchProvider):
             arg_headers = kwargs.get("headers", {})
             headers = arg_headers | (
                 dict(
-                    traceparent=str(trace_context.traceparent),
-                    tracestate=str(trace_context.tracestate),
+                    traceparent=trace_context.traceparent.as_header(),
+                    tracestate=trace_context.tracestate.as_header(),
                 )
             )
             kwargs.update(headers=headers)
