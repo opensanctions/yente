@@ -150,7 +150,10 @@ class EntityMatches(BaseModel):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
-    matcher: FeatureDocs
+    matcher: FeatureDocs = Field(
+        deprecated=True,
+        description="Information about the matcher that was used to score this request. Deprecated, use `/algorithms` endpoint instead.",
+    )
     limit: int = Field(..., examples=[5])
 
 
@@ -165,7 +168,7 @@ class Algorithm(BaseModel):
     name: str
     description: Optional[str] = None
     features: FeatureDocs = Field(
-        deprecated=True, description="Deprecated, use docs instead"
+        deprecated=True, description="Deprecated, use `docs` instead"
     )
     docs: AlgorithmDocs
 
