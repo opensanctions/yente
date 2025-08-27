@@ -2,7 +2,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from typing import Any, Tuple, List
 import secrets
-from structlog.contextvars import get_contextvars, bind_contextvars
+import structlog
+from structlog.contextvars import get_contextvars
 
 VENDOR_CODE = (
     "yente"  # It's available! https://w3c.github.io/tracestate-ids-registry/#registry
@@ -116,8 +117,19 @@ class TraceContextMiddleware(BaseHTTPMiddleware):
         except Exception:
             tracestate = TraceState.create(traceparent, "")
         context = TraceContext(traceparent, tracestate)
-        bind_contextvars(trace_context=context)
+
+        # Associate log messages with the trace in Google Cloud Logging
+        previous_contextvars = structlog.contextvars.bind_contextvars(
+            **{
+                "logging.googleapis.com/trace": context.traceparent.trace_id,
+                "logging.googleapis.com/spanId": context.traceparent.parent_id,
+            }
+        )
+
         resp = await call_next(request)
+
+        structlog.contextvars.reset_contextvars(**previous_contextvars)
+
         resp.headers["traceparent"] = str(traceparent)
         resp.headers["tracestate"] = str(tracestate)
         return resp
