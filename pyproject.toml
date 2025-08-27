@@ -18,7 +18,7 @@ dependencies = [
     "boto3 ~= 1.37",
     "fastapi == 0.116.1",
     "python-multipart == 0.0.20",
-    "email-validator == 2.2.0",
+    "email-validator == 2.3.0",
     "structlog == 25.4.0",
     "pyicu == 2.15.2",
     "pydantic",
