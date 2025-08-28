@@ -32,7 +32,7 @@ from yente.search.versions import (
     build_index_name_prefix,
     parse_index_name,
     build_index_name,
-    system_version,
+    get_system_version,
 )
 from yente.data.util import build_index_name_symbols, expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
@@ -121,7 +121,7 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
     for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             index_info = parse_index_name(index)
-            if index_info.system_version != system_version():
+            if index_info.system_version != get_system_version():
                 log.debug("Skipping index with mismatched system version", index=index)
                 continue
             if index_info.dataset_name == dataset.name:

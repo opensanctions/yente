@@ -14,7 +14,7 @@ class IndexInfo:
 
 
 @cache
-def system_version() -> str:
+def get_system_version() -> str:
     """Get the current version of the system."""
     parts = [v.rjust(2, "0") for v in followthemoney.__version__.split(".")]
     ftm_version = "".join(parts)[:6]
@@ -62,9 +62,9 @@ def build_index_name(dataset_name: str, dataset_version: str) -> str:
         raise ValueError("Dataset version must be at least one character long.")
 
     # TODO(Leon Handreke): Do we really need the slugify here?
-    sys_version = system_version()
+    sys_version = get_system_version()
     # Assert this, otherwise our index parsing will break
     assert "-" not in sys_version, "System version must not contain a dash."
-    version = slugify(f"{system_version()}-{dataset_version}", "-")
+    version = slugify(f"{get_system_version()}-{dataset_version}", "-")
 
     return f"{build_index_name_prefix(dataset_name)}-{version}"
