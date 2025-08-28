@@ -117,12 +117,36 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     for key in index_name_keys(entity.schema, names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
-    for token in index_name_parts(entity.schema, names):
-        term = {NAME_PART_FIELD: {"value": token, "boost": 1.0}}
-        shoulds.append({"term": term})
-    for phoneme in phonetic_names(entity.schema, names):
-        term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
-        shoulds.append({"term": term})
+    tokens = list(index_name_parts(entity.schema, names))
+    if tokens:
+        shoulds.append(
+            {
+                "dis_max": {
+                    "queries": [
+                        {"term": {NAME_PART_FIELD: {"value": token, "boost": 1.0}}}
+                        for token in tokens
+                    ],
+                    "tie_breaker": 0.0,
+                }
+            }
+        )
+    phonemes = list(phonetic_names(entity.schema, names))
+    if phonemes:
+        shoulds.append(
+            {
+                "dis_max": {
+                    "queries": [
+                        {
+                            "term": {
+                                NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}
+                            }
+                        }
+                        for phoneme in phonemes
+                    ],
+                    "tie_breaker": 0.0,
+                }
+            }
+        )
     for symbol in build_index_name_symbols(entity):
         shoulds.append({"term": {NAME_SYMBOLS_FIELD: symbol}})
 
