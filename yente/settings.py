@@ -200,8 +200,12 @@ INDEX_SHARDS = int(env_legacy("YENTE_INDEX_SHARDS", "YENTE_ELASTICSEARCH_SHARDS"
 INDEX_AUTO_REPLICAS = env_str("YENTE_INDEX_AUTO_REPLICAS", "0-all")
 INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{INDEX_NAME}-entities"
-INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "016")
-assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
+# Bump this when the index format changes and a full reindex is required.
+# Be careful to make the query code compatible with the old index format, otherwise
+# yente will be unable to serve requests after the upgrade until the first reindex completes.
+INDEX_VERSION = "016"
+# Bump this evn var when you want to trigger a full reindex.
+INDEX_REBUILD_ID = env_str("YENTE_INDEX_REBUILD_ID", "a")
 
 # ElasticSearch-only options:
 ES_CLOUD_ID = env_opt("YENTE_ELASTICSEARCH_CLOUD_ID")

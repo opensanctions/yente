@@ -110,10 +110,10 @@ def test_parse_index_name():
     assert index_info.dataset_name == dataset_name
     assert index_info.dataset_version == dataset_version
 
-    # Error case: test that build_index_name raises an error when YENTE_INDEX_SUBVERSION contains a dash
+    # Error case: test that build_index_name raises an error when YENTE_INDEX_REBUILD_ID contains a dash
     with pytest.MonkeyPatch().context() as m:
         # Patch the import of settings in the versions module
-        m.setattr("yente.search.versions.settings.INDEX_SUBVERSION", "-x")
+        m.setattr("yente.search.versions.settings.INDEX_REBUILD_ID", "-x")
         get_system_version.cache_clear()
 
         # This should raise an error because the system version contains a dash, messing with splitting

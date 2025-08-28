@@ -18,7 +18,7 @@ def get_system_version() -> str:
     """Get the current version of the system."""
     parts = [v.rjust(2, "0") for v in followthemoney.__version__.split(".")]
     ftm_version = "".join(parts)[:6]
-    return f"{settings.INDEX_VERSION}{ftm_version}"
+    return f"{settings.INDEX_VERSION}{settings.INDEX_REBUILD_ID}{ftm_version}"
 
 
 def parse_index_name(index: str) -> IndexInfo:
