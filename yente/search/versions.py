@@ -21,7 +21,7 @@ def system_version() -> str:
     return f"{settings.INDEX_VERSION}{ftm_version}"
 
 
-def parse_index_name(index: str, match_system_version: bool = False) -> IndexInfo:
+def parse_index_name(index: str) -> IndexInfo:
     """
     Parse a given index name.
 
@@ -39,11 +39,6 @@ def parse_index_name(index: str, match_system_version: bool = False) -> IndexInf
     dataset, index_version = index_end.split("-", 1)
 
     sys_version = system_version()
-    # FIXME: We don't want to verify this, since old indexes can still be around and need
-    # to be handled. The side effects of disabling this check seem positive, but we should
-    # verify this.
-    if match_system_version and not index_version.startswith(sys_version):
-        raise ValueError("Index version does not start with the correct prefix.")
     # TODO(Leon Handreke): if len(system_version()) ever changes, this will break!
     dataset_version = index_version[len(sys_version) :]
     if len(dataset_version) < 1:
