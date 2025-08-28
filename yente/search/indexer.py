@@ -116,9 +116,9 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
     versions: List[str] = []
     for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
-            ds, version = parse_index_name(index, match_system_version=True)
-            if ds == dataset.name:
-                versions.append(version)
+            index_info = parse_index_name(index, match_system_version=True)
+            if index_info.dataset_name == dataset.name:
+                versions.append(index_info.dataset_version)
         except ValueError:
             pass
     if len(versions) == 0:
@@ -277,17 +277,17 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             log.info("Deleting orphaned index", index=index)
             await provider.delete_index(index)
         try:
-            ds_name, _ = parse_index_name(index)
+            index_info = parse_index_name(index)
         except ValueError as exc:
             log.warn("Invalid index name: %s, deleting." % exc, index=index)
             await provider.delete_index(index)
             continue
-        dataset = catalog.get(ds_name)
+        dataset = catalog.get(index_info.dataset_name)
         if dataset is None or not dataset.model.load:
             log.info(
                 "Deleting index of non-scope dataset",
                 index=index,
-                dataset=ds_name,
+                dataset=index_info.dataset_name,
             )
             await provider.delete_index(index)
 

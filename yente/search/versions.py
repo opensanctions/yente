@@ -1,9 +1,16 @@
+from dataclasses import dataclass
 from functools import cache
-from typing import Tuple
 from normality import slugify
 import followthemoney
 
 from yente import settings
+
+
+@dataclass
+class IndexInfo:
+    dataset_name: str
+    dataset_version: str
+    system_version: str
 
 
 @cache
@@ -14,13 +21,14 @@ def system_version() -> str:
     return f"{settings.INDEX_VERSION}{ftm_version}-"
 
 
-def parse_index_name(index: str, match_system_version: bool = False) -> Tuple[str, str]:
+def parse_index_name(index: str, match_system_version: bool = False) -> IndexInfo:
     """
     Parse a given index name.
 
     Returns:
-        dataset_name: str   The name of the dataset the index is based on
-        version: str        The version of the index
+        IndexVersion: The parsed index version.
+    Raises:
+        ValueError: If the index name is not valid.
     """
     # TODO: If we assert that no dashes are allowed in index names we can remove this check.
     if not index.startswith(settings.ENTITY_INDEX):
@@ -29,16 +37,19 @@ def parse_index_name(index: str, match_system_version: bool = False) -> Tuple[st
     if "-" not in index_end:
         raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
+
     sys_version = system_version()
     # FIXME: We don't want to verify this, since old indexes can still be around and need
     # to be handled. The side effects of disabling this check seem positive, but we should
     # verify this.
     if match_system_version and not index_version.startswith(sys_version):
         raise ValueError("Index version does not start with the correct prefix.")
+
+    # TODO(Leon Handreke): if len(system_version()) ever changes, this will break!
     dataset_version = index_version[len(sys_version) :]
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")
-    return (dataset, dataset_version)
+    return IndexInfo(dataset, dataset_version, sys_version)
 
 
 def construct_index_name(dataset: str, version: str | None = None) -> str:
