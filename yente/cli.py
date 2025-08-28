@@ -33,14 +33,14 @@ def serve() -> None:
             server_header=False,
         ),
     )
-    configure_logging()
+    configure_logging(settings.LOG_LEVEL)
     server.run()
 
 
 @cli.command("reindex", help="Re-index the data if newer data is available")
 @click.option("-f", "--force", is_flag=True, default=False)
 def reindex(force: bool) -> None:
-    configure_logging()
+    configure_logging(settings.LOG_LEVEL)
     asyncio.run(update_index(force=force))
 
 
@@ -54,7 +54,7 @@ async def _clear_index() -> None:
 
 @cli.command("clear-index", help="Delete everything in ElasticSearch")
 def clear_index() -> None:
-    configure_logging()
+    configure_logging(settings.LOG_LEVEL)
     asyncio.run(_clear_index())
 
 

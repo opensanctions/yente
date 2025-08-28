@@ -206,6 +206,8 @@ class ElasticSearchProvider(SearchProvider):
                     sort=sort,
                     aggregations=aggregations,
                     search_type=search_type,
+                    explain=settings.DEBUG,
+                    track_total_hits=settings.DEBUG,
                 )
                 return cast(Dict[str, Any], response.body)
         except TransportError as te:

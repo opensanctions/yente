@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
 
 from yente import settings
@@ -19,6 +19,26 @@ from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_HELP
 
 log = get_logger(__name__)
 router = APIRouter()
+
+
+def debug_log_index_response(query_name: str, resp: Dict[str, Any]) -> None:
+    log.debug(
+        "Index Response",
+        query=query_name,
+        total=resp.get("hits", {}).get("total", {}),
+    )
+    for hit in resp.get("hits", {}).get("hits", []):
+        log.debug(
+            "Index Hit",
+            query=query_name,
+            _id=hit.get("_id"),  # e.g. 'NK-4H9nZ3HGeypRZh8tkWxAod'
+            # e.g. 'yente-entities-default-014030804-20250827065412-bca'
+            _index=hit.get("_index"),
+            _node=hit.get("_node"),  # e.g. 'LRLdD0FLQomBWR3m9eOR9Q'
+            _score=hit.get("_score"),  # e.g. 20.979053
+            # e.g. '[yente-entities-default-014030804-20250827065412-bca][0]'
+            _shard=hit.get("_shard"),
+        )
 
 
 @router.post(
@@ -179,6 +199,9 @@ async def match(
     results = await asyncio.gather(*queries)
 
     for (name, entity), resp in zip(entities, results):
+        if settings.DEBUG:
+            debug_log_index_response(name, resp)
+
         ents = result_entities(resp)
         total, scored = score_results(
             algorithm_type,
