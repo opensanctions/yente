@@ -6,6 +6,7 @@ from typing import List, Any
 
 from yente.data import get_catalog, refresh_catalog
 from yente.data.updater import DatasetUpdater
+from yente.search.versions import get_system_version, parse_index_name, build_index_name
 
 
 @pytest.fixture
@@ -91,3 +92,30 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     assert ops["ADD"] == 4
     assert ops["DEL"] == 1
     assert ops["MOD"] == 1
+
+
+def test_parse_index_name():
+    """Test parse_index_name function with both happy case and error case."""
+    # Happy case: build an index name and then parse it
+    dataset_name = "test_dataset"
+    dataset_version = "20240528134729-abc"
+
+    # Build the index name
+    index_name = build_index_name(dataset_name, dataset_version)
+
+    # Parse the index name
+    index_info = parse_index_name(index_name)
+
+    # Verify the parsed information
+    assert index_info.dataset_name == dataset_name
+    assert index_info.dataset_version == dataset_version
+
+    # Error case: test that build_index_name raises an error when YENTE_INDEX_SUBVERSION contains a dash
+    with pytest.MonkeyPatch().context() as m:
+        # Patch the import of settings in the versions module
+        m.setattr("yente.search.versions.settings.INDEX_SUBVERSION", "-x")
+        get_system_version.cache_clear()
+
+        # This should raise an error because the system version contains a dash, messing with splitting
+        with pytest.raises(AssertionError):
+            build_index_name(dataset_name, dataset_version)
