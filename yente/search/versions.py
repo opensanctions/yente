@@ -18,7 +18,7 @@ def system_version() -> str:
     """Get the current version of the system."""
     parts = [v.rjust(2, "0") for v in followthemoney.__version__.split(".")]
     ftm_version = "".join(parts)[:6]
-    return f"{settings.INDEX_VERSION}{ftm_version}-"
+    return f"{settings.INDEX_VERSION}{ftm_version}"
 
 
 def parse_index_name(index: str, match_system_version: bool = False) -> IndexInfo:
@@ -44,7 +44,6 @@ def parse_index_name(index: str, match_system_version: bool = False) -> IndexInf
     # verify this.
     if match_system_version and not index_version.startswith(sys_version):
         raise ValueError("Index version does not start with the correct prefix.")
-
     # TODO(Leon Handreke): if len(system_version()) ever changes, this will break!
     dataset_version = index_version[len(sys_version) :]
     if len(dataset_version) < 1:
@@ -52,24 +51,25 @@ def parse_index_name(index: str, match_system_version: bool = False) -> IndexInf
     return IndexInfo(dataset, dataset_version, sys_version)
 
 
-def construct_index_name(dataset: str, version: str | None = None) -> str:
-    """
-    Given a dataset and optionally a version construct a properly versioned index name.
-    """
-    if len(str(dataset)) < 1:
+def build_index_name_prefix(dataset_name: str) -> str:
+    if len(dataset_name) == 0:
         raise ValueError("Dataset name must be at least one character long.")
-    base = f"{settings.ENTITY_INDEX}-{dataset}"
-    if version is None:
-        return base
-    return f"{base}-{construct_index_version(version)}"
+    # Assert this, otherwise our index parsing will break
+    assert "-" not in dataset_name, "Dataset name must not contain a dash."
+    return f"{settings.ENTITY_INDEX}-{dataset_name}"
 
 
-def construct_index_version(version: str) -> str:
-    """Given a version ID, return a version string with the version prefix."""
-    if len(version) < 1:
-        raise ValueError("Version must be at least one character long.")
+def build_index_name(dataset_name: str, dataset_version: str) -> str:
+    """
+    Build an index name for a given dataset and dataset version.
+    """
+    if len(dataset_version) == 0:
+        raise ValueError("Dataset version must be at least one character long.")
+
+    # TODO(Leon Handreke): Do we really need the slugify here?
     sys_version = system_version()
-    combined = slugify(f"{sys_version}{version}", "-")
-    if combined is None or len(combined) < len(sys_version) + 1:
-        raise ValueError("Invalid version: %s%s." % (sys_version, version))
-    return combined
+    # Assert this, otherwise our index parsing will break
+    assert "-" not in sys_version, "System version must not contain a dash."
+    version = slugify(f"{system_version()}-{dataset_version}", "-")
+
+    return f"{build_index_name_prefix(dataset_name)}-{version}"

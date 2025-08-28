@@ -28,8 +28,11 @@ from yente.search.mapping import (
     INDEX_SETTINGS,
 )
 from yente.provider import SearchProvider, with_provider
-from yente.search.versions import parse_index_name
-from yente.search.versions import construct_index_name
+from yente.search.versions import (
+    build_index_name_prefix,
+    parse_index_name,
+    build_index_name,
+)
 from yente.data.util import build_index_name_symbols, expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
@@ -150,7 +153,7 @@ async def index_entities(
         # delta_urls=updater.delta_urls,
         force=force,
     )
-    next_index = construct_index_name(dataset.name, updater.target_version)
+    next_index = build_index_name(dataset.name, updater.target_version)
     if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
         return
@@ -178,7 +181,10 @@ async def index_entities(
         return
 
     if is_partial_reindex:
-        base_index = construct_index_name(dataset.name, updater.base_version)
+        assert (
+            updater.base_version is not None
+        ), "Expected base version to be set for partial reindex"
+        base_index = build_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
         await provider.create_index(
@@ -247,7 +253,7 @@ async def index_entities(
         raise exc
 
     await provider.refresh(index=next_index)
-    dataset_prefix = construct_index_name(dataset.name)
+    dataset_prefix = build_index_name_prefix(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
     await provider.rollover_index(
         alias,
