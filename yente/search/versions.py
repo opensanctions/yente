@@ -38,9 +38,9 @@ def parse_index_name(index: str) -> IndexInfo:
         raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
 
-    sys_version = system_version()
-    # TODO(Leon Handreke): if len(system_version()) ever changes, this will break!
-    dataset_version = index_version[len(sys_version) :]
+    # system_version must never contain a dash (asserted below when building),
+    # dataset_version can contain dashes
+    sys_version, dataset_version = index_version.split("-", 1)
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")
     return IndexInfo(dataset, dataset_version, sys_version)
