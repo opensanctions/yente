@@ -13,6 +13,8 @@ from yente.data.util import index_name_parts, index_name_keys
 from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD, NAME_PHONETIC_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_KEY_FIELD
 from yente import settings
+from rigour.names import Name, normalize_name, NamePartTag
+from rigour.names import tag_org_name
 
 log = get_logger(__name__)
 Clause = Dict[str, Any]
@@ -103,10 +105,27 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     names.extend(entity.get("weakAlias", quiet=True))
     shoulds: List[Clause] = []
+    cleaned_names = []
     for name in pick_names(names, limit=5):
+        cleaned_name = name
+
+        if entity.schema.is_a("Organization"):
+            tagged_name = tag_org_name(Name(name), normalize_name)
+            relevant_parts = []
+            for part in tagged_name.parts:
+                # Filter out the legal parts of the name. They appear in symbols anyway, and they're not
+                # worth a) matching and boosting heavily on the names field or b) stuffing into phonetics
+                # TODO(Leon Handreke): NamePartTag.STOP here? That would make searches for "A" no longer work
+                # TODO(Leon Handreke): Better to check if it's part of any Span with ORG_CLASS?
+                if part.tag in [NamePartTag.LEGAL]:
+                    continue
+                relevant_parts.append(part)
+            cleaned_name = " ".join(part.comparable for part in relevant_parts)
+
+        cleaned_names.append(cleaned_name)
         match = {
             NAMES_FIELD: {
-                "query": name,
+                "query": cleaned_name,
                 "operator": "AND",
                 "boost": 3.0,
             }
@@ -114,15 +133,18 @@ def names_query(entity: EntityProxy) -> List[Clause]:
         if settings.MATCH_FUZZY:
             match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
+    # name_keys is our "exact match" field, so use the full query for that
     for key in index_name_keys(entity.schema, names):
         term = {NAME_KEY_FIELD: {"value": key, "boost": 4.0}}
         shoulds.append({"term": term})
-    for token in index_name_parts(entity.schema, names):
+    # In name_parts and name_phonetic we use the query_name, which excludes initials and org classes
+    for token in index_name_parts(entity.schema, cleaned_names):
         term = {NAME_PART_FIELD: {"value": token, "boost": 1.0}}
         shoulds.append({"term": term})
-    for phoneme in phonetic_names(entity.schema, names):
+    for phoneme in phonetic_names(entity.schema, cleaned_names):
         term = {NAME_PHONETIC_FIELD: {"value": phoneme, "boost": 0.8}}
         shoulds.append({"term": term})
+
     for symbol in build_index_name_symbols(entity):
         shoulds.append({"term": {NAME_SYMBOLS_FIELD: symbol}})
 

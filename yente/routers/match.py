@@ -179,6 +179,9 @@ async def match(
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
         candidates = max(20, min(settings.MAX_RESULTS, candidates))
+        import pprint
+
+        pprint.pprint(query)
         qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
         queries.append(qry)
         entities.append((name, entity))
@@ -187,6 +190,10 @@ async def match(
     results = await asyncio.gather(*queries)
 
     for (name, entity), resp in zip(entities, results):
+        hits = resp["hits"]["hits"]
+        for i, hit in enumerate(hits):
+            print(f"{i}: {hit['_score']} {hit['_id']} {hit['_source']['caption']}")
+
         ents = result_entities(resp)
         total, scored = score_results(
             algorithm_type,
