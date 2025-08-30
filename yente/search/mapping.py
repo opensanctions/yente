@@ -58,9 +58,9 @@ INDEX_SETTINGS = {
 }
 NAMES_FIELD = NameType.group or "names"
 NAME_PART_FIELD = "name_parts"
-NAME_KEY_FIELD = "name_keys"
 NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_PHONETIC_FIELD = "name_phonetic"
+# NAME_KEY_FIELD = "name_keys"
 
 
 def make_field(
@@ -151,7 +151,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         "entity_values_count": make_field("integer"),
         NAME_PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_field("keyword", copy_to=["text"]),
-        NAME_KEY_FIELD: make_field("keyword"),
+        # NAME_KEY_FIELD: make_field("keyword"),
         NAME_SYMBOLS_FIELD: make_field("keyword"),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
@@ -177,7 +177,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
     drop_fields.append("text")
     drop_fields.append(NAME_PHONETIC_FIELD)
     drop_fields.append(NAME_PART_FIELD)
-    drop_fields.append(NAME_KEY_FIELD)
+    # drop_fields.append(NAME_KEY_FIELD)
     drop_fields.append(NAME_SYMBOLS_FIELD)
     drop_fields.remove(NAMES_FIELD)
     return {

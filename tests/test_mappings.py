@@ -122,15 +122,12 @@ async def test_name_symbols_indexed_person(search_provider):
     )
 
     doc = build_indexable_entity_doc(entity)
-    from pprint import pprint
-
-    pprint(doc)
 
     assert "NAME:30524893" in doc["name_symbols"]  # Putin
 
 
 @pytest.mark.asyncio
-async def test_name_symbols_indexed_org(search_provider):
+def test_name_symbols_indexed_org(search_provider):
     """Test that name symbols are indexed correctly for organizations."""
     entity = Entity.from_dict(
         {
@@ -149,9 +146,25 @@ async def test_name_symbols_indexed_org(search_provider):
     )
 
     doc = build_indexable_entity_doc(entity)
-    from pprint import pprint
-
-    pprint(doc)
 
     assert "ORGCLS:LLC" in doc["name_symbols"]
     assert "SYMBOL:BANK" in doc["name_symbols"]
+
+
+def test_name_phonetic_indexed(search_provider):
+    entity = Entity.from_dict(
+        {
+            "id": "Q7747",
+            "schema": "Person",
+            "properties": {
+                "name": ["Vladimir V. Putin"],
+                "citizenship": ["ru"],
+                "topics": ["sanction"],
+            },
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+
+    # Ensure that the "V." doesn't end up in the phonetics, it's too short.
+    assert set(doc["name_phonetic"]) == set(["FLTMR", "PTN"])

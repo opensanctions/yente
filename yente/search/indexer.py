@@ -1,9 +1,8 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, AsyncIterable, Dict, List
-from followthemoney import registry
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Set
 from followthemoney.exc import FollowTheMoneyException
-from followthemoney.types.date import DateType
+from followthemoney import registry
 
 from yente import settings
 from yente.data.manifest import Catalog
@@ -21,7 +20,6 @@ from yente.search import audit_log
 from yente.search.audit_log import get_audit_log_index_name, AuditLogMessageType
 from yente.search.mapping import (
     NAME_PART_FIELD,
-    NAME_KEY_FIELD,
     NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
     make_entity_mapping,
@@ -34,8 +32,9 @@ from yente.search.versions import (
     build_index_name,
     get_system_version,
 )
-from yente.data.util import build_index_name_symbols, expand_dates, phonetic_names
-from yente.data.util import index_name_parts, index_name_keys
+from yente.data.util import expand_dates
+from yente.data.util import index_symbol, is_matchable_symbol
+from yente.data.util import entity_names
 
 
 log = get_logger(__name__)
@@ -95,19 +94,26 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     # large (i.e. important) entities.
     doc["entity_values_count"] = sum([len(v) for v in doc["properties"].values()])
 
-    names: List[str] = entity.get_type_values(registry.name, matchable=True)
-    names.extend(entity.get("weakAlias", quiet=True))
+    name_parts: Set[str] = set()
+    name_phonemes: Set[str] = set()
+    name_symbols: Set[str] = set()
+    for name in entity_names(entity):
+        for symbol in name.symbols:
+            if is_matchable_symbol(symbol):
+                name_symbols.add(index_symbol(symbol))
+        for part in name.parts:
+            name_parts.add(part.form)
+            name_parts.add(part.comparable)
+            phoneme = part.metaphone
+            if phoneme is not None and len(phoneme) > 2:
+                name_phonemes.add(phoneme)
 
-    name_parts = index_name_parts(entity.schema, names)
     doc[NAME_PART_FIELD] = list(name_parts)
-    doc[NAME_KEY_FIELD] = list(index_name_keys(entity.schema, names))
-    doc[NAME_PHONETIC_FIELD] = list(phonetic_names(entity.schema, names))
-    if DateType.group is not None:
-        doc[DateType.group] = expand_dates(doc.pop(DateType.group, []))
-
-    name_symbols = build_index_name_symbols(entity)
-    if name_symbols:
-        doc[NAME_SYMBOLS_FIELD] = name_symbols
+    # doc[NAME_KEY_FIELD] = list(name_keys)
+    doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
+    doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
+    if registry.date.group is not None:
+        doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
 
     # TODO(Leon Handreke): Is name_parts needed here? All the fields get a copy_to text anyways in the mapper
     doc["text"] = entity.pop("indexText") + list(name_parts)
