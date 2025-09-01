@@ -61,10 +61,10 @@ def build_index_name(dataset_name: str, dataset_version: str) -> str:
     if len(dataset_version) == 0:
         raise ValueError("Dataset version must be at least one character long.")
 
-    # TODO(Leon Handreke): Do we really need the slugify here?
-    sys_version = get_system_version()
     # Assert this, otherwise our index parsing will break
-    assert "-" not in sys_version, "System version must not contain a dash."
-    version = slugify(f"{get_system_version()}-{dataset_version}", "-")
+    assert "-" not in get_system_version(), "System version must not contain a dash."
+    # OpenSanctions datasets are usually 202501011200-abc, but slugify to make no assumptions
+    dataset_version_slugified = slugify(dataset_version, "-")
+    version = f"{get_system_version()}-{dataset_version_slugified}"
 
     return f"{build_index_name_prefix(dataset_name)}-{version}"
