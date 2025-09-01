@@ -142,9 +142,9 @@ async def force_update(
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""
     if (
-        not len(token.strip())
-        or settings.UPDATE_TOKEN is None
-        or not len(settings.UPDATE_TOKEN)
+        settings.UPDATE_TOKEN is None
+        or len(settings.UPDATE_TOKEN) == 0
+        or len(token.strip()) == 0
         or token != settings.UPDATE_TOKEN
     ):
         raise HTTPException(403, detail="Invalid token.")

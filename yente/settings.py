@@ -137,7 +137,7 @@ RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 BASE_SCHEMA = "Thing"
 PORT = int(env_str("YENTE_PORT", env_str("PORT", "8000")))
 HOST = env_str("YENTE_HOST", env_str("HOST", "0.0.0.0"))
-UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
+UPDATE_TOKEN = env_opt("YENTE_UPDATE_TOKEN")
 
 # Matcher defaults:
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
