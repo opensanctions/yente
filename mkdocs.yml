@@ -57,6 +57,7 @@ nav:
   - FAQ: https://www.opensanctions.org/faq/?section=yente
   - Deployment:
       - Overview: deploy/index.md
+      - Upgrading: deploy/upgrading.md
       - Restrictive firewalls: deploy/firewall.md
   - Configuration:
       - Settings: settings.md
