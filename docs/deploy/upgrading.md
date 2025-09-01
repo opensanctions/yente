@@ -17,8 +17,3 @@ Ensure that your clients are compatible with the version of yente you're upgradi
 ## Upgrade yente
 
 To upgrade, simply update the version of the docker image used in your deployment. The version of yente is determined by the active tag of the Docker container in operation: `ghcr.io/opensanctions/yente:<version>`. Simply changing that version tag will trigger an update. If you're running in Docker compose (the default), open `docker-compose.yml` and edit the line `services.app.image`, then run `docker compose pull` to fetch the latest container. `docker compose restart app` will run the new container version.
-
-
-## Ensure that the scoring system you use is still ideal for your purposes.
-
-yente's `/match` API endpoint supports multiple [different algorithms]({{ config.extra.opensanctions_url }}/matcher/) used to score results. As new algorithms are released, keep an eye on those developments to make sure you're still using the best solution available in the tool. yente will not switch algorithms automatically and try to keep existing implementations stable, so making this change is up to you.
