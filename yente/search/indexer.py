@@ -134,11 +134,12 @@ async def index_entities(
         log.info("Index is up to date.", index=next_index)
         return
 
-    # await es.indices.delete(index=next_index)
     if updater.is_incremental and not force:
         base_index = construct_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
+        # Note: this will only create the index if it doesn't already exist.
+        # The implication of this is that the index is not re-created, even if --force is used.
         await provider.create_index(next_index)
 
     try:
