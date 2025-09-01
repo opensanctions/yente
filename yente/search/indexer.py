@@ -28,8 +28,12 @@ from yente.search.mapping import (
     INDEX_SETTINGS,
 )
 from yente.provider import SearchProvider, with_provider
-from yente.search.versions import parse_index_name
-from yente.search.versions import construct_index_name
+from yente.search.versions import (
+    build_index_name_prefix,
+    parse_index_name,
+    build_index_name,
+    get_system_version,
+)
 from yente.data.util import build_index_name_symbols, expand_dates, phonetic_names
 from yente.data.util import index_name_parts, index_name_keys
 
@@ -116,11 +120,14 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
     versions: List[str] = []
     for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
-            ds, version = parse_index_name(index, match_system_version=True)
-            if ds == dataset.name:
-                versions.append(version)
+            index_info = parse_index_name(index)
+            if index_info.system_version != get_system_version():
+                log.debug("Skipping index with mismatched system version", index=index)
+                continue
+            if index_info.dataset_name == dataset.name:
+                versions.append(index_info.dataset_version)
         except ValueError:
-            pass
+            log.warning("Skipping index with invalid name", index=index)
     if len(versions) == 0:
         return None
     # Return the oldest version of the index. If multiple versions are linked to the
@@ -150,7 +157,7 @@ async def index_entities(
         # delta_urls=updater.delta_urls,
         force=force,
     )
-    next_index = construct_index_name(dataset.name, updater.target_version)
+    next_index = build_index_name(dataset.name, updater.target_version)
     if not force and await provider.exists_index_alias(alias, next_index):
         log.info("Index is up to date.", index=next_index)
         return
@@ -178,7 +185,10 @@ async def index_entities(
         return
 
     if is_partial_reindex:
-        base_index = construct_index_name(dataset.name, updater.base_version)
+        assert (
+            updater.base_version is not None
+        ), "Expected base version to be set for partial reindex"
+        base_index = build_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
         await provider.create_index(
@@ -247,7 +257,7 @@ async def index_entities(
         raise exc
 
     await provider.refresh(index=next_index)
-    dataset_prefix = construct_index_name(dataset.name)
+    dataset_prefix = build_index_name_prefix(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
     await provider.rollover_index(
         alias,
@@ -277,17 +287,17 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             log.info("Deleting orphaned index", index=index)
             await provider.delete_index(index)
         try:
-            ds_name, _ = parse_index_name(index)
+            index_info = parse_index_name(index)
         except ValueError as exc:
             log.warn("Invalid index name: %s, deleting." % exc, index=index)
             await provider.delete_index(index)
             continue
-        dataset = catalog.get(ds_name)
+        dataset = catalog.get(index_info.dataset_name)
         if dataset is None or not dataset.model.load:
             log.info(
                 "Deleting index of non-scope dataset",
                 index=index,
-                dataset=ds_name,
+                dataset=index_info.dataset_name,
             )
             await provider.delete_index(index)
 

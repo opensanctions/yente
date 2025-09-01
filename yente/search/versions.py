@@ -1,26 +1,34 @@
+from dataclasses import dataclass
 from functools import cache
-from typing import Tuple
 from normality import slugify
 import followthemoney
 
 from yente import settings
 
 
+@dataclass
+class IndexInfo:
+    dataset_name: str
+    dataset_version: str
+    system_version: str
+
+
 @cache
-def system_version() -> str:
+def get_system_version() -> str:
     """Get the current version of the system."""
     parts = [v.rjust(2, "0") for v in followthemoney.__version__.split(".")]
     ftm_version = "".join(parts)[:6]
-    return f"{settings.INDEX_VERSION}{ftm_version}-"
+    return f"{settings.INDEX_VERSION}{settings.INDEX_REBUILD_ID}{ftm_version}"
 
 
-def parse_index_name(index: str, match_system_version: bool = False) -> Tuple[str, str]:
+def parse_index_name(index: str) -> IndexInfo:
     """
     Parse a given index name.
 
     Returns:
-        dataset_name: str   The name of the dataset the index is based on
-        version: str        The version of the index
+        IndexVersion: The parsed index version.
+    Raises:
+        ValueError: If the index name is not valid.
     """
     # TODO: If we assert that no dashes are allowed in index names we can remove this check.
     if not index.startswith(settings.ENTITY_INDEX):
@@ -29,36 +37,34 @@ def parse_index_name(index: str, match_system_version: bool = False) -> Tuple[st
     if "-" not in index_end:
         raise ValueError("Index name does not contain a version.")
     dataset, index_version = index_end.split("-", 1)
-    sys_version = system_version()
-    # FIXME: We don't want to verify this, since old indexes can still be around and need
-    # to be handled. The side effects of disabling this check seem positive, but we should
-    # verify this.
-    if match_system_version and not index_version.startswith(sys_version):
-        raise ValueError("Index version does not start with the correct prefix.")
-    dataset_version = index_version[len(sys_version) :]
+
+    # system_version must never contain a dash (asserted below when building),
+    # dataset_version can contain dashes
+    sys_version, dataset_version = index_version.split("-", 1)
     if len(dataset_version) < 1:
         raise ValueError("Index version must be at least one character long.")
-    return (dataset, dataset_version)
+    return IndexInfo(dataset, dataset_version, sys_version)
 
 
-def construct_index_name(dataset: str, version: str | None = None) -> str:
-    """
-    Given a dataset and optionally a version construct a properly versioned index name.
-    """
-    if len(str(dataset)) < 1:
+def build_index_name_prefix(dataset_name: str) -> str:
+    if len(dataset_name) == 0:
         raise ValueError("Dataset name must be at least one character long.")
-    base = f"{settings.ENTITY_INDEX}-{dataset}"
-    if version is None:
-        return base
-    return f"{base}-{construct_index_version(version)}"
+    # Assert this, otherwise our index parsing will break
+    assert "-" not in dataset_name, "Dataset name must not contain a dash."
+    return f"{settings.ENTITY_INDEX}-{dataset_name}"
 
 
-def construct_index_version(version: str) -> str:
-    """Given a version ID, return a version string with the version prefix."""
-    if len(version) < 1:
-        raise ValueError("Version must be at least one character long.")
-    sys_version = system_version()
-    combined = slugify(f"{sys_version}{version}", "-")
-    if combined is None or len(combined) < len(sys_version) + 1:
-        raise ValueError("Invalid version: %s%s." % (sys_version, version))
-    return combined
+def build_index_name(dataset_name: str, dataset_version: str) -> str:
+    """
+    Build an index name for a given dataset and dataset version.
+    """
+    if len(dataset_version) == 0:
+        raise ValueError("Dataset version must be at least one character long.")
+
+    # Assert this, otherwise our index parsing will break
+    assert "-" not in get_system_version(), "System version must not contain a dash."
+    # OpenSanctions datasets are usually 202501011200-abc, but slugify to make no assumptions
+    dataset_version_slugified = slugify(dataset_version, "-")
+    version = f"{get_system_version()}-{dataset_version_slugified}"
+
+    return f"{build_index_name_prefix(dataset_name)}-{version}"
