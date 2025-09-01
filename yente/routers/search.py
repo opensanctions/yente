@@ -17,7 +17,7 @@ from yente.provider import SearchProvider, get_provider
 from yente.search.queries import parse_sorts, text_query
 from yente.search.queries import facet_aggregations
 from yente.search.queries import Filters, Operator
-from yente.search.search import get_entity, search_entities
+from yente.search.search import get_entity, search_entities, upscore_large_entities
 from yente.search.search import result_entities, result_facets, result_total
 from yente.search.nested import get_nested_entity, get_adjacent_entities
 from yente.data import get_catalog
@@ -152,6 +152,7 @@ async def search(
         filter_op=filter_op,
     )
     aggregations = facet_aggregations([f.value for f in facets])
+    query = upscore_large_entities(query)
     resp = await search_entities(
         provider,
         query,
