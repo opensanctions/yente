@@ -62,6 +62,7 @@ nav:
       - Restrictive firewalls: deploy/firewall.md
   - Configuration:
       - Settings: settings.md
+      - Data updates: reindex.md
       - Custom Datasets: datasets.md
       - Search Providers: opensearch.md
 

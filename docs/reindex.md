@@ -1,6 +1,6 @@
 # Managing data updates
 
-By default, `yente` will check for an updated build of the OpenSanctions database published at `data.opensanctions.org` every hour. New data releases are [published several times a day]({{ extra.config.opensanctions_url }}/faq/4/update-frequency/). If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
+By default, `yente` will check for an updated build of the OpenSanctions database published at `data.opensanctions.org` every hour. New data releases are [published several times a day]({{ config.extra.opensanctions_url }}/faq/4/update-frequency/). If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
 
 You can change this behavior using the following configuration options:
 
