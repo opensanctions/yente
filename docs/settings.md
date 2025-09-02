@@ -22,17 +22,7 @@ The Yente service is built to require a minimum of configuration, but several en
 
 ## Managing data updates
 
-By default, `yente` will check for an updated build of the OpenSanctions database published at `data.opensanctions.org` every hour. If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
-
-You can change this behavior using the following configuration options:
-
-| Env. variable | Default | Description |
-| ------ | ------ | ------ |
-| `YENTE_MANIFEST`   | `manifests/default.yml`   | Specifies the path of the manifest that defines the datasets exposed by the service. This is used to [add extra datasets to the service](datasets.md) or to define custom scopes for entity screening.   |
-| `YENTE_CRONTAB`   | `0 * * * *`   | Gives the frequency at which new data will be indexed as a [crontab](https://crontab.guru/).   |
-| `YENTE_AUTO_REINDEX`   | `true`   | Can be set to ``false`` to disable automatic data updates. Data will only be refreshed and re-indexed when running ``yente reindex``.   |
-
-When running more than one Yente container, `YENTE_AUTO_REINDEX` must be set to `false` to avoid multiple workers clashing. In this scenario, `yente reindex` should be run using an external cron mechanism. For more information, see the documentation on [how to deploy yente](deploy/index.md).
+Yente features various configuration options related to data refresh and re-indexing. See [Managing data updates][reindex.md].
 
 ## Other settings
 
