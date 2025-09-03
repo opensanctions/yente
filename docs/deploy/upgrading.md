@@ -1,7 +1,5 @@
 We release [new versions of yente](https://github.com/opensanctions/yente/releases) on a regular basis in order to add new features, expand our data model and improve the scoring system. We recommend that all users of the on-premise version of the software schedule software upgrades at least **twice a year** in order to ensure proper functioning of the tool.
 
-Some versions of yente introduce changes to the index format that require rebuilding the full index. This will happen automatically on the next re-index. We try to make new versions of yente compatible with at least the previous minor version's index format. This means that upgrading will usually incur little downtime (or even none, if deploying multiple instances behind a load balancer), as the new version will keep serving requests from the previous version's index until the new index is available. Please note that this is on a best-effort basis - if you depend on a zero-downtime upgrade, please perform a dry-run test of the upgrade for your specific upgrade path.
-
 ## How to upgrade
 
 ### Read the changelog
@@ -16,4 +14,23 @@ Ensure that your clients are compatible with the version of yente you're upgradi
 
 ## Upgrade yente
 
-To upgrade, simply update the version of the docker image used in your deployment. The version of yente is determined by the active tag of the Docker container in operation: `ghcr.io/opensanctions/yente:<version>`. Simply changing that version tag will trigger an update. If you're running in Docker compose (the default), open `docker-compose.yml` and edit the line `services.app.image`, then run `docker compose pull` to fetch the latest container. `docker compose restart app` will run the new container version.
+The following instructions document the commands when running with Docker Compose. Please adapt them to your specific deployment scenario
+
+1. Stop the yente container (`docker compose stop app`). During the upgrade, the index will at some point be switched over to the new version, which may lead to unexpected results if still serving from.
+2. Update the version of the docker image used in your deployment. The version of yente is determined by the active tag of the Docker container in operation: `ghcr.io/opensanctions/yente:<version>`. Simply changing that version tag will trigger an update. If you're running in Docker compose (the default), open `docker-compose.yml` and edit the line `services.app.image`, then run `docker compose pull` to fetch the latest container.
+3. Rebuild the index using `yente reindex -f` (`docker compose run app yente reindex -f`)
+4. Restart the yente container: `docker compose restart app`
+
+
+## Can I deploy a new version of yente incurring little to no downtime?
+
+This is possible, however not very well supported - expect to build your own deployment pipeline around this. The basic idea is to run the new version of yente with a new `YENTE_INDEX_NAME`.
+
+1. Keep old yente running, for this example we'll assume it has `YENTE_INDEX_NAME=yente-green`.
+1. Run `yente reindex -f` with the verison of yente you're upgrading to with `YENTE_INDEX_NAME=yente-blue`.
+1. Restart your serving yente with the new version and `YENTE_INDEX_NAME=yente-blue`
+1. Ensure that your periodic reindexing jobs are also using the new version of yente and `YENTE_INDEX_NAME=yente-blue`
+
+If something isn't working right after the upgrade, you may roll back to the previous version of yente by starting the old version of yente and `YENTE_INDEX_NAME=yente-green`.
+
+At this point, your yente is running entirely from the `yente-blue` indices. Your Eliastic will still have a bunhc of of "old" `yente-green` indices around - you may delete them. Alternatively, the next time you upgrade, you can do the same procedure but switching from `yente-blue` to `yente-green`. Your old `yente-green` indices will be cleaned up during the first reindex.
