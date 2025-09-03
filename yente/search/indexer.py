@@ -5,7 +5,6 @@ from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.types.date import DateType
 
-from yente import settings
 from yente.data.manifest import Catalog
 from yente.exc import YenteIndexError
 from yente.logs import get_logger
@@ -29,6 +28,7 @@ from yente.search.mapping import (
 )
 from yente.provider import SearchProvider, with_provider
 from yente.search.versions import (
+    get_index_alias_name,
     build_index_name_prefix,
     parse_index_name,
     build_index_name,
@@ -118,7 +118,7 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
 async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str | None:
     """Return the currently indexed version of a given dataset."""
     versions: List[str] = []
-    for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
+    for index in await provider.get_alias_indices(get_index_alias_name()):
         try:
             index_info = parse_index_name(index)
             if index_info.system_version != get_system_version():
@@ -140,7 +140,7 @@ async def index_entities(
     provider: SearchProvider, dataset: Dataset, force: bool
 ) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
-    alias = settings.ENTITY_INDEX
+    alias = get_index_alias_name()
     base_version = await get_index_version(provider, dataset)
     updater = await DatasetUpdater.build(dataset, base_version, force_full=force)
     if not updater.needs_update():
@@ -276,9 +276,9 @@ async def index_entities(
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
-    aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
+    aliased = await provider.get_alias_indices(get_index_alias_name())
     for index in await provider.get_all_indices():
-        if not index.startswith(settings.ENTITY_INDEX):
+        if not index.startswith(get_index_alias_name()):
             continue
         # The lock and audit log indices live in the same namespace and shouldn't be garbage collected
         if index in [get_audit_log_index_name()]:

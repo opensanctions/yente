@@ -15,11 +15,11 @@ TEST_SETTINGS = INDEX_SETTINGS
 async def test_provider_core(search_provider: SearchProvider):
     # Not sure what to test....
     with pytest.raises(YenteNotFoundError):
-        fake_index = settings.ENTITY_INDEX + "-doesnt-exist"
+        fake_index = settings.INDEX_NAME + "-doesnt-exist"
         await search_provider.refresh(fake_index)
         await search_provider.check_health(fake_index)
 
-    temp_index = settings.ENTITY_INDEX + "-provider-admin"
+    temp_index = settings.INDEX_NAME + "-provider-admin"
     await search_provider.create_index(
         temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
@@ -32,7 +32,7 @@ async def test_provider_core(search_provider: SearchProvider):
 async def test_index_lifecycle(search_provider: SearchProvider):
     # Given a non-existent index
     # When creating it we should return nothing
-    temp_index = settings.ENTITY_INDEX + "-provider-test"
+    temp_index = settings.INDEX_NAME + "-provider-test"
     pre_indices = await search_provider.get_all_indices()
     assert temp_index not in pre_indices
     await search_provider.create_index(
@@ -61,7 +61,7 @@ async def test_index_lifecycle(search_provider: SearchProvider):
 
 @pytest.mark.asyncio
 async def test_alias_management(search_provider: SearchProvider):
-    alias = settings.ENTITY_INDEX + "-alias"
+    alias = settings.INDEX_NAME + "-alias"
     prefix = alias + "-prefix"
     index_v1 = prefix + "-v1"
     index_v2 = prefix + "-v2"

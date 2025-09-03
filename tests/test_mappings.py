@@ -15,7 +15,7 @@ async def test_mappings_copy_to(search_provider):
 
     We test that by executing queries on specific fields of the indexed documents."""
     # Create a test index using the same settings as test_search_provider
-    temp_index = settings.ENTITY_INDEX + "-mappings-test"
+    temp_index = settings.INDEX_NAME + "-mappings-test"
     try:
         await search_provider.create_index(
             temp_index, mappings=INDEX_MAPPINGS, settings=INDEX_SETTINGS

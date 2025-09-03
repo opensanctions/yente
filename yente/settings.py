@@ -199,7 +199,6 @@ INDEX_CA_CERT = None if _INDEX_CA_CERT == "" else _INDEX_CA_CERT
 INDEX_SHARDS = int(env_legacy("YENTE_INDEX_SHARDS", "YENTE_ELASTICSEARCH_SHARDS", "1"))
 INDEX_AUTO_REPLICAS = env_str("YENTE_INDEX_AUTO_REPLICAS", "0-all")
 INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente")
-ENTITY_INDEX = f"{INDEX_NAME}-entities"
 # Bump this when the index format changes and a full reindex is required.
 # Be careful to make the query code compatible with the old index format, otherwise
 # yente will be unable to serve requests after the upgrade until the first reindex completes.

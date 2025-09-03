@@ -3,12 +3,12 @@ from typing import Any, Dict, List, Optional
 from followthemoney import model, registry, Schema
 from followthemoney.dataset import DataCatalog
 
-from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.provider import SearchProvider
+from yente.search.versions import get_index_alias_name
 from yente.util import EntityRedirect
 
 log = get_logger(__name__)
@@ -110,7 +110,7 @@ async def search_entities(
     sort: List[Any] = [],
 ) -> Dict[str, Any]:
     return await provider.search(
-        index=settings.ENTITY_INDEX,
+        index=get_index_alias_name(),
         query=query,
         size=limit,
         sort=sort,
@@ -131,7 +131,7 @@ async def get_entity(provider: SearchProvider, entity_id: str) -> Optional[Entit
         }
     }
     response = await provider.search(
-        index=settings.ENTITY_INDEX,
+        index=get_index_alias_name(),
         query=query,
         size=2,
     )
@@ -153,7 +153,7 @@ async def get_matchable_schemata(
     filter_ = {"terms": {"datasets": dataset.dataset_names}}
     facet = "schemata"
     response = await provider.search(
-        index=settings.ENTITY_INDEX,
+        index=get_index_alias_name(),
         query={"bool": {"filter": [filter_]}},
         size=0,
         aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},

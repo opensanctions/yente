@@ -15,6 +15,7 @@ from yente.data.common import (
 )
 from yente.provider import SearchProvider
 from yente.search.search import result_entities, result_total
+from yente.search.versions import get_index_alias_name
 
 log = get_logger(__name__)
 
@@ -168,7 +169,7 @@ async def get_nested_entity(
             }
         }
         resp = await provider.search(
-            index=settings.ENTITY_INDEX,
+            index=get_index_alias_name(),
             query=query,
             size=limit,
             from_=offset,

@@ -5,6 +5,7 @@ import random
 from typing import Any, Dict, Optional, cast
 from yente import logs, settings
 from yente.provider.base import SearchProvider
+from yente.search.versions import get_index_alias_name, get_system_version
 
 
 # Query the audit log using the following query:
@@ -17,7 +18,7 @@ log = logs.get_logger(__name__)
 
 
 def get_audit_log_index_name() -> str:
-    return f"{settings.INDEX_NAME}-audit-log"
+    return f"{settings.INDEX_NAME}-{get_system_version()}-audit-log"
 
 
 def millis_timestamp_to_datetime(timestamp: int) -> datetime:
@@ -95,7 +96,7 @@ async def log_audit_message(
                 "_index": get_audit_log_index_name(),
                 "_id": doc_id,
                 "_source": {
-                    "alias_index": settings.ENTITY_INDEX,
+                    "alias_index": get_index_alias_name(),
                     "index": index,
                     "dataset": dataset,
                     "dataset_version": dataset_version,

@@ -25,25 +25,28 @@ def parse_index_name(index: str) -> IndexInfo:
     """
     Parse a given index name.
 
+    An index name is of the form <settings.INDEX_NAME>-<system_version>-entities-<dataset_name>-<dataset_version>
+
     Returns:
         IndexVersion: The parsed index version.
     Raises:
         ValueError: If the index name is not valid.
     """
+    alias = get_index_alias_name()
     # TODO: If we assert that no dashes are allowed in index names we can remove this check.
-    if not index.startswith(settings.ENTITY_INDEX):
+    if not index.startswith(alias):
         raise ValueError("Index created with a different prefix and cannot be parsed.")
-    index_end = index[len(settings.ENTITY_INDEX) + 1 :]
-    if "-" not in index_end:
-        raise ValueError("Index name does not contain a version.")
-    dataset, index_version = index_end.split("-", 1)
 
-    # system_version must never contain a dash (asserted below when building),
+    # len(settings.INDEX_NAME) + 1 because we also want to skip the dash
+    remainder = index[len(settings.INDEX_NAME) + 1 :]
+
+    # Note: this hinges on system_version and dataset_name not containing dashes
     # dataset_version can contain dashes
-    sys_version, dataset_version = index_version.split("-", 1)
-    if len(dataset_version) < 1:
-        raise ValueError("Index version must be at least one character long.")
-    return IndexInfo(dataset, dataset_version, sys_version)
+    system_version, index_type, dataset_name, dataset_version = remainder.split("-", 3)
+    if index_type != "entities":
+        raise ValueError("Index type must be entities.")
+
+    return IndexInfo(dataset_name, dataset_version, system_version)
 
 
 def build_index_name_prefix(dataset_name: str) -> str:
@@ -51,7 +54,7 @@ def build_index_name_prefix(dataset_name: str) -> str:
         raise ValueError("Dataset name must be at least one character long.")
     # Assert this, otherwise our index parsing will break
     assert "-" not in dataset_name, "Dataset name must not contain a dash."
-    return f"{settings.ENTITY_INDEX}-{dataset_name}"
+    return f"{get_index_alias_name()}-{dataset_name}"
 
 
 def build_index_name(dataset_name: str, dataset_version: str) -> str:
@@ -61,10 +64,14 @@ def build_index_name(dataset_name: str, dataset_version: str) -> str:
     if len(dataset_version) == 0:
         raise ValueError("Dataset version must be at least one character long.")
 
-    # Assert this, otherwise our index parsing will break
-    assert "-" not in get_system_version(), "System version must not contain a dash."
     # OpenSanctions datasets are usually 202501011200-abc, but slugify to make no assumptions
     dataset_version_slugified = slugify(dataset_version, "-")
-    version = f"{get_system_version()}-{dataset_version_slugified}"
 
-    return f"{build_index_name_prefix(dataset_name)}-{version}"
+    return f"{build_index_name_prefix(dataset_name)}-{dataset_version_slugified}"
+
+
+def get_index_alias_name() -> str:
+    # Assert this, otherwise our index parsing will break
+    assert "-" not in get_system_version(), "System version must not contain a dash."
+
+    return f"{settings.INDEX_NAME}-{get_system_version()}-entities"

@@ -1,14 +1,13 @@
-from yente import settings
 from yente.logs import get_logger
 from yente.provider import SearchProvider
-from yente.search.versions import parse_index_name
+from yente.search.versions import get_index_alias_name, parse_index_name
 from yente.data.manifest import Catalog
 
 log = get_logger(__name__)
 
 
 async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
-    for aliased_index in await provider.get_alias_indices(settings.ENTITY_INDEX):
+    for aliased_index in await provider.get_alias_indices(get_index_alias_name()):
         try:
             index_info = parse_index_name(aliased_index)
         except ValueError:

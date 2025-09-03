@@ -14,6 +14,7 @@ from yente.provider import SearchProvider, get_provider
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
+from yente.search.versions import get_index_alias_name
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -60,7 +61,7 @@ async def readyz(
 ) -> StatusResponse:
     """Search index health check. This is used to know if the service has completed
     its index building."""
-    ok = await provider.check_health(index=settings.ENTITY_INDEX)
+    ok = await provider.check_health(index=get_index_alias_name())
     if not ok:
         raise HTTPException(503, detail="Index not ready.")
     return StatusResponse(status="ok")
