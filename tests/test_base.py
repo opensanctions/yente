@@ -87,6 +87,7 @@ def test_updatez_no_token():
     assert res.status_code == 403, res.text
 
 
-def test_updatez_with_token():
+def test_updatez_with_token(monkeypatch):
+    monkeypatch.setattr(settings, "UPDATE_TOKEN", "test")
     res = client.post(f"/updatez?token={settings.UPDATE_TOKEN}&sync=true")
     assert res.status_code == 200, res.text
