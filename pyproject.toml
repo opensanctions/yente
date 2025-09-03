@@ -29,7 +29,7 @@ dependencies = [
     "click ~= 8.2.0",
     "normality == 3.0.1",
     "countrynames == 1.16.10",
-    "cryptography == 45.0.6",
+    "cryptography == 45.0.7",
     "followthemoney >= 4.0.3",
     "nomenklatura == 4.1.2",
     "rigour == 1.2.8",
