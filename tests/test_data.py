@@ -1,17 +1,13 @@
 import pytest
 from pathlib import Path
 from followthemoney import model
+from rigour.names import NamePartTag
 
 from yente.data import get_catalog
 from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
-from yente.data.util import (
-    phonetic_names,
-    expand_dates,
-    index_name_parts,
-    index_name_keys,
-)
+from yente.data.util import entity_names, expand_dates
 from .conftest import patch_catalog_response
 
 
@@ -149,23 +145,39 @@ def test_get_url_local_path():
         get_url_local_path("/no/such/path.csv")
 
 
-def test_phonetic_names():
-    person = model.get("Person")
-    assert person is not None
-    phonemes = phonetic_names(person, ["Vladimir Putin"])
-    assert len(phonemes) == 2
-    assert "PTN" in phonemes
-    phonemes = phonetic_names(person, ["Влади́мир Влади́мирович ПУ́ТИН"])
-    assert len(phonemes) == 3
-    assert "PTN" in phonemes
-    shortened = phonetic_names(person, ["Влади́мир В. ПУ́ТИН"])
-    assert len(shortened) == 2
-    phonemes = phonetic_names(person, ["Vladimir Peter Putin"])
-    assert len(phonemes) == 3
-    company = model.get("Company")
-    assert company is not None
-    phonemes = phonetic_names(company, ["OAO Gazprom"])
-    assert len(phonemes) == 1
+def test_entity_names():
+    person = model.make_entity("Person")
+    person.add("name", "Vladimir Putin")
+    person.add("name", "Влади́мир Влади́мирович ПУ́ТИН")
+    person.add("name", "Влади́мир В. ПУ́ТИН")
+    names = entity_names(person)
+    for name in names:
+        assert name.form in [
+            "vladimir putin",
+            "влади́мир влади́мирович пу́тин",
+            "влади́мир в. пу́тин",
+        ]
+        for part in name.parts:
+            assert part.form in [
+                "vladimir",
+                "putin",
+                "путин",
+                "влади́мир",
+                "владимирович",
+                "владимир",
+                "в",
+                "пу́тин",
+            ]
+            if part.form == "в":
+                assert not part.metaphone
+
+    company = model.make_entity("Company")
+    company.add("name", "OAO Gazprom")
+    for name in entity_names(company):
+        assert name.form == "ao gazprom"
+        for part in name.parts:
+            if part.form == "ao":
+                assert part.tag == NamePartTag.LEGAL
 
 
 def test_expand_dates():
@@ -179,28 +191,3 @@ def test_expand_dates():
     expanded = expand_dates(dates)
     assert len(expanded) == 4
     assert "2022" in expanded
-
-
-def test_index_name_parts():
-    person = model.get("Person")
-    assert person is not None
-    parts = index_name_parts(person, ["Vladimir Putin"])
-    assert len(parts) == 2
-    assert "vladimir" in parts
-    assert "putin" in parts
-    parts = index_name_parts(person, ["Влади́мир В. ПУ́ТИН"])
-    assert len(parts) == 4
-    assert "владимир" in parts
-    assert "путин" in parts
-    assert "vladimir" in parts
-
-
-def test_index_name_keys():
-    person = model.get("Person")
-    assert person is not None
-    keys = index_name_keys(person, ["Vladimir Putin"])
-    assert len(keys) == 1
-    assert "putinvladimir" in keys
-    keys = index_name_keys(person, ["Влади́мир ПУ́ТИН"])
-    assert len(keys) == 1
-    assert "putinvladimir" in keys
