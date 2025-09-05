@@ -9,7 +9,7 @@ from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.provider import SearchProvider
-from yente.util import EntityRedirect
+from yente.util import EntityRedirect, limit_window
 
 log = get_logger(__name__)
 AggType = Dict[str, Dict[str, List[Dict[str, Any]]]]
@@ -109,6 +109,8 @@ async def search_entities(
     aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
 ) -> Dict[str, Any]:
+    limit, offset = limit_window(limit, offset)
+
     return await provider.search(
         index=settings.ENTITY_INDEX,
         query=query,

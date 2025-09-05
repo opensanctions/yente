@@ -223,7 +223,17 @@ async def reconcile_query(
     changed_since: Optional[str],
 ) -> Tuple[str, FreebaseEntityResult]:
     """Reconcile operation for a single query."""
-    limit, offset = limit_window(query.get("limit"), 0, settings.MAX_MATCHES)
+    # default to the same candidate limit as in /match
+    limit = settings.MATCH_PAGE * settings.MATCH_CANDIDATES
+    try:
+        limit_str = query.get("limit")
+        if limit_str is not None:
+            limit = int(limit_str)
+    except (TypeError, ValueError):
+        pass
+    # limit to the ES max of 10000 (settings.MAX_RESULTS)
+    limit, offset = limit_window(limit, 0)
+
     schema = query.get("type", settings.BASE_SCHEMA)
     properties: Dict[str, List[str]] = {"alias": [query.get("query", "")]}
 
@@ -316,7 +326,7 @@ async def reconcile_suggest_entity(
     dataset: str = PATH_DATASET,
     prefix: str = QUERY_PREFIX,
     limit: int = Query(
-        settings.MATCH_PAGE,
+        settings.DEFAULT_PAGE,
         description="Number of suggestions to return",
         le=settings.MAX_PAGE,
     ),
@@ -331,7 +341,7 @@ async def reconcile_suggest_entity(
     ds = await get_dataset(dataset)
     results = []
     query = prefix_query(ds, prefix)
-    limit, offset = limit_window(limit, 0, settings.MATCH_PAGE)
+    limit, offset = limit_window(limit, 0)
     resp = await search_entities(provider, query, limit=limit, offset=offset)
     for result in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))

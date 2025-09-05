@@ -120,7 +120,7 @@ async def search(
     Search queries can include field-specific fitlers, wildcards and fuzzy searches.
     See also: [search API documentation](https://www.opensanctions.org/docs/api/search/).
     """
-    limit, offset = limit_window(limit, offset, 10)
+    limit, offset = limit_window(limit, offset)
     ds = await get_dataset(dataset)
     catalog = await get_catalog()
     schema_obj = model.get(schema)
