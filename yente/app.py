@@ -1,7 +1,6 @@
 import aiocron  # type: ignore
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
-import nomenklatura.matching
 from pydantic import ValidationError
 from fastapi import FastAPI
 from fastapi import Request, Response
@@ -16,6 +15,7 @@ from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
 from yente.data.entity import Entity
+from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
 from yente.middleware import RequestLogMiddleware, TraceContextMiddleware
@@ -45,7 +45,7 @@ async def warm_up() -> None:
         {
             "schema": "Person",
             "id": "warm-up-person",
-            "properties": {"name": "Mrs. Warm Up", "country": "United States"},
+            "properties": {"name": ["Mrs. Warm Up"], "country": ["United States"]},
         }
     )
     fake_company = Entity.from_dict(
@@ -53,14 +53,14 @@ async def warm_up() -> None:
             "schema": "Company",
             "id": "warm-up-company",
             "properties": {
-                "name": "Warm-Up Company",
+                "name": ["Warm-Up Company"],
                 # Using the country name instead of the ISO code to trigger loading the country names data
-                "country": "Russia",
+                "country": ["Russia"],
             },
         }
     )
     for entity in [fake_person, fake_company]:
-        for algo in nomenklatura.matching.ALGORITHMS:
+        for algo in ENABLED_ALGORITHMS:
             config = algo.default_config()
             algo.compare(entity, entity, config)
 
