@@ -99,7 +99,7 @@ async def reconcile(
         schemaSpace=typed_url("https://www.opensanctions.org/reference/#schema"),
         view=FreebaseManifestView(url="https://www.opensanctions.org/entities/{{id}}/"),
         documentation=typed_url("https://www.opensanctions.org/docs/"),
-        batchSize=settings.DEFAULT_PAGE,
+        batchSize=3,
         preview=FreebaseManifestPreview(
             url="https://www.opensanctions.org/entities/preview/{{id}}/",
             width=430,
