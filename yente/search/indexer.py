@@ -288,18 +288,20 @@ async def update_index(force: bool = False) -> None:
         if not lock_session:
             log.warning("Failed to acquire lock, skipping index update")
             return
-        for dataset in catalog.datasets:
-            with lock:
-                await index_entities(
-                    provider, dataset, force=force, lock_session=lock_session
-                )
+        try:
+            for dataset in catalog.datasets:
+                with lock:
+                    await index_entities(
+                        provider, dataset, force=force, lock_session=lock_session
+                    )
 
-        await delete_old_indices(provider, catalog)
-        # It's important to release the lock after the index cleanup operations,
-        # because the index cleanup can delete the index that another instance
-        # is currently indexing to if not done in the locked section!
-        await release_lock(provider, lock_session)
-        log.info("Index update complete.")
+            await delete_old_indices(provider, catalog)
+            log.info("Index update complete.")
+        finally:
+            # It's important to release the lock after the index cleanup operations,
+            # because the index cleanup can delete the index that another instance
+            # is currently indexing to if not done in the locked section!
+            await release_lock(provider, lock_session)
 
 
 def update_index_threaded(force: bool = False) -> None:
