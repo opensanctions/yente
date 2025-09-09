@@ -2,7 +2,7 @@ import json
 import asyncio
 import logging
 from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
-from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
+from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError
 
@@ -24,7 +24,7 @@ class OpenSearchProvider(SearchProvider):
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
-            # connection_class=AsyncHttpConnection,
+            connection_class=AsyncHttpConnection,
         )
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
