@@ -64,6 +64,13 @@ class SearchProvider(object):
         """Search for entities in the index."""
         raise NotImplementedError
 
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        raise NotImplementedError
+
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
     ) -> None:

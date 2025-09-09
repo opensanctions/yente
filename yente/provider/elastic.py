@@ -239,6 +239,20 @@ class ElasticSearchProvider(SearchProvider):
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        try:
+            async with self.query_semaphore:
+                response = await self.client().get(index=index, id=doc_id)
+                return cast(Dict[str, Any], response.body)
+        except NotFoundError:
+            return None
+        except Exception as exc:
+            raise YenteIndexError(f"Error getting document: {exc}") from exc
+
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
     ) -> None:

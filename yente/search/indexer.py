@@ -12,9 +12,11 @@ from yente.data.entity import Entity
 from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
-from yente.search.audit_log import (
-    acquire_reindex_lock,
-    refresh_reindex_lock,
+from yente.search.lock import (
+    acquire_lock,
+    get_lock_index_name,
+    refresh_lock,
+    release_lock,
 )
 from yente.search import audit_log
 from yente.search.audit_log import get_audit_log_index_name, AuditLogMessageType
@@ -174,21 +176,6 @@ async def index_entities(
         if is_partial_reindex
         else audit_log.AuditLogReindexType.FULL
     )
-    # Acquire lock
-    lock_acquired = await acquire_reindex_lock(
-        provider,
-        next_index,
-        dataset=dataset.name,
-        dataset_version=updater.target_version,
-        reindex_type=audit_log_reindex_type,
-    )
-    if not lock_acquired:
-        log.warning(
-            "Failed to acquire lock, skipping index",
-            dataset=dataset.name,
-            index=next_index,
-        )
-        return
 
     if is_partial_reindex:
         assert (
@@ -214,7 +201,7 @@ async def index_entities(
                 # Refresh the lock every 50,000 documents. Should be enough not to
                 # lose the lock, expiration time is lock.LOCK_EXPIRATION_TIME (currently 5 minutes)
                 if idx % 50000 == 0:
-                    lock_refreshed = await refresh_reindex_lock(provider, next_index)
+                    lock_refreshed = await refresh_lock(provider)
                     if not lock_refreshed:
                         log.error(
                             f"Failed to refresh reindex lock for index {next_index}, continuing anyway"
@@ -226,29 +213,12 @@ async def index_entities(
 
         await provider.bulk_index(refresh_lock_iterator(docs))
 
-        await audit_log.release_reindex_lock(
-            provider,
-            next_index,
-            dataset=dataset.name,
-            dataset_version=updater.target_version,
-            reindex_type=audit_log_reindex_type,
-            success=True,
-        )
-
     except (YenteIndexError, Exception) as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
             "Indexing error: %s" % detail,
             dataset=dataset.name,
             index=next_index,
-        )
-        await audit_log.release_reindex_lock(
-            provider,
-            next_index,
-            dataset=dataset.name,
-            dataset_version=updater.target_version,
-            reindex_type=audit_log_reindex_type,
-            success=False,
         )
 
         aliases = await provider.get_alias_indices(alias)
@@ -287,7 +257,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         if not index.startswith(settings.ENTITY_INDEX):
             continue
         # The lock and audit log indices live in the same namespace and shouldn't be garbage collected
-        if index in [get_audit_log_index_name()]:
+        if index in [get_audit_log_index_name(), get_lock_index_name()]:
             continue
         if index not in aliased:
             log.info("Deleting orphaned index", index=index)
@@ -314,11 +284,19 @@ async def update_index(force: bool = False) -> None:
     async with with_provider() as provider:
         catalog = await get_catalog()
         log.info("Index update check")
+        lock_acquired = await acquire_lock(provider)
+        if not lock_acquired:
+            log.warning("Failed to acquire lock, skipping index update")
+            return
         for dataset in catalog.datasets:
             with lock:
                 await index_entities(provider, dataset, force=force)
 
         await delete_old_indices(provider, catalog)
+        # It's important to release the lock after the index cleanup operations,
+        # because the index cleanup can delete the index that another instance
+        # is currently indexing to if not done in the locked section!
+        await release_lock(provider)
         log.info("Index update complete.")
 
 
