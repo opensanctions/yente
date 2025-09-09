@@ -143,9 +143,7 @@ UPDATE_TOKEN = env_opt("YENTE_UPDATE_TOKEN")
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
 BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
 HIDDEN_ALGORITHMS = [
-    algo
-    for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "UNSTABLE-logic-v2").split(",")
-    if algo != ""
+    algo for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "").split(",") if algo != ""
 ]
 
 

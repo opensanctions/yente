@@ -44,6 +44,9 @@ def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
     name_clean = name.lower().strip()
     if name_clean == "best":
         name_clean = settings.BEST_ALGORITHM
+    # TODO: Remove this once we rename UNSTABLE-logic-v2 to logic-v2 (and then still accept UNSTABLE-logic-v2)
+    if name_clean == "logic-v2":
+        name_clean = "unstable-logic-v2"
     algorithm = None
     for a in ENABLED_ALGORITHMS:
         if a.NAME.lower() == name_clean:
