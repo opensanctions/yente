@@ -21,36 +21,26 @@ async def test_lock(search_provider: SearchProvider):
     # Clean slate: delete any old lock index
     await search_provider.delete_index(get_lock_index_name())
 
-    acquired = await acquire_lock(
-        search_provider,
-    )
-    assert acquired is True
+    lock_session = await acquire_lock(search_provider)
+    assert lock_session is not None
 
     # Try to acquire the same lock again (should fail)
-    acquired_again = await acquire_lock(
-        search_provider,
-    )
-    assert acquired_again is False
+    lock_session_again = await acquire_lock(search_provider)
+    assert lock_session_again is None
 
     # Refresh the lock
-    refreshed = await refresh_lock(search_provider)
+    refreshed = await refresh_lock(search_provider, lock_session)
     assert refreshed is True
 
     # Release the lock
-    await release_lock(
-        search_provider,
-    )
+    await release_lock(search_provider, lock_session)
 
     # Should be able to acquire the lock again after release
-    acquired_after_release = await acquire_lock(
-        search_provider,
-    )
-    assert acquired_after_release is True
+    acquired_after_release = await acquire_lock(search_provider)
+    assert acquired_after_release is not None
 
     # Clean up
-    await release_lock(
-        search_provider,
-    )
+    await release_lock(search_provider, acquired_after_release)
 
 
 @pytest.mark.asyncio
@@ -60,10 +50,8 @@ async def test_lock_not_expired(search_provider: SearchProvider):
     await search_provider.delete_index(get_lock_index_name())
 
     # Acquire initial lock
-    acquired = await acquire_lock(
-        search_provider,
-    )
-    assert acquired is True
+    lock_session = await acquire_lock(search_provider)
+    assert lock_session is not None
 
     # Get the original lock time for reference
     original_time = datetime.now()
@@ -76,10 +64,8 @@ async def test_lock_not_expired(search_provider: SearchProvider):
         mock_datetime.fromtimestamp = datetime.fromtimestamp
 
         # Try to acquire the lock again after 1 minute (should fail)
-        acquired_after_1min = await acquire_lock(
-            search_provider,
-        )
-        assert acquired_after_1min is False
+        acquired_after_1min = await acquire_lock(search_provider)
+        assert acquired_after_1min is None
 
     # Mock time to simulate 10 minutes have passed (beyond the 5-minute expiration)
     with patch("yente.search.lock.datetime") as mock_datetime:
@@ -89,15 +75,11 @@ async def test_lock_not_expired(search_provider: SearchProvider):
         mock_datetime.fromtimestamp = datetime.fromtimestamp
 
         # Try to acquire the lock again after 10 minutes (should succeed)
-        acquired_after_10min = await acquire_lock(
-            search_provider,
-        )
-        assert acquired_after_10min is True
+        acquired_after_10min = await acquire_lock(search_provider)
+        assert acquired_after_10min is not None
 
     # Clean up
-    await release_lock(
-        search_provider,
-    )
+    await release_lock(search_provider, lock_session)
 
 
 @pytest.mark.asyncio
@@ -109,10 +91,8 @@ async def test_refresh_expired_lock(search_provider: SearchProvider):
     original_time = datetime.now()
 
     # Acquire initial lock
-    acquired = await acquire_lock(
-        search_provider,
-    )
-    assert acquired is True
+    lock_session = await acquire_lock(search_provider)
+    assert lock_session is not None
 
     # Mock time to simulate 1 minute has passed
     with patch("yente.search.lock.datetime") as mock_datetime:
@@ -122,10 +102,8 @@ async def test_refresh_expired_lock(search_provider: SearchProvider):
         mock_datetime.fromtimestamp = datetime.fromtimestamp
 
         # Try to refresh the lock after 20 minutes (should fail)
-        refreshed = await refresh_lock(search_provider)
+        refreshed = await refresh_lock(search_provider, lock_session)
         assert refreshed is False
 
     # Clean up
-    await release_lock(
-        search_provider,
-    )
+    await release_lock(search_provider, lock_session)

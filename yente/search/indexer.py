@@ -13,6 +13,7 @@ from yente.data.dataset import Dataset
 from yente.data import get_catalog
 from yente.data.updater import DatasetUpdater
 from yente.search.lock import (
+    LockSession,
     acquire_lock,
     get_lock_index_name,
     refresh_lock,
@@ -145,7 +146,7 @@ async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str |
 
 
 async def index_entities(
-    provider: SearchProvider, dataset: Dataset, force: bool
+    provider: SearchProvider, dataset: Dataset, force: bool, lock_session: LockSession
 ) -> None:
     """Index entities in a particular dataset, with versioning of the index."""
     alias = settings.ENTITY_INDEX
@@ -201,11 +202,8 @@ async def index_entities(
                 # Refresh the lock every 50,000 documents. Should be enough not to
                 # lose the lock, expiration time is lock.LOCK_EXPIRATION_TIME (currently 5 minutes)
                 if idx % 50000 == 0:
-                    lock_refreshed = await refresh_lock(provider)
+                    lock_refreshed = await refresh_lock(provider, lock_session)
                     if not lock_refreshed:
-                        log.error(
-                            f"Failed to refresh reindex lock for index {next_index}, continuing anyway"
-                        )
                         raise YenteIndexError(
                             "Failed to refresh re-index lock, aborting re-index"
                         )
@@ -229,7 +227,9 @@ async def index_entities(
             # This is tricky: try again with a full reindex if the incremental
             # indexing failed
             log.warn("Retrying with full reindex", dataset=dataset.name)
-            return await index_entities(provider, dataset, force=True)
+            return await index_entities(
+                provider, dataset, force=True, lock_session=lock_session
+            )
         raise exc
 
     await provider.refresh(index=next_index)
@@ -284,19 +284,21 @@ async def update_index(force: bool = False) -> None:
     async with with_provider() as provider:
         catalog = await get_catalog()
         log.info("Index update check")
-        lock_acquired = await acquire_lock(provider)
-        if not lock_acquired:
+        lock_session = await acquire_lock(provider)
+        if not lock_session:
             log.warning("Failed to acquire lock, skipping index update")
             return
         for dataset in catalog.datasets:
             with lock:
-                await index_entities(provider, dataset, force=force)
+                await index_entities(
+                    provider, dataset, force=force, lock_session=lock_session
+                )
 
         await delete_old_indices(provider, catalog)
         # It's important to release the lock after the index cleanup operations,
         # because the index cleanup can delete the index that another instance
         # is currently indexing to if not done in the locked section!
-        await release_lock(provider)
+        await release_lock(provider, lock_session)
         log.info("Index update complete.")
 
 

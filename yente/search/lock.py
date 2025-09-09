@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Optional
+import uuid
 from yente import logs, settings
 from yente.exc import YenteIndexError
 from yente.provider.base import SearchProvider
@@ -10,6 +13,15 @@ LOCK_EXPIRATION_TIME = timedelta(minutes=5)
 LOCK_DOC_ID = "lock"
 
 log = logs.get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class LockSession:
+    id: str
+
+    @classmethod
+    def create(cls) -> "LockSession":
+        return cls(id=str(uuid.uuid4()))
 
 
 def get_lock_index_name() -> str:
@@ -45,13 +57,25 @@ def from_millis_timestamp(millis: int) -> datetime:
     return datetime.fromtimestamp(millis / 1000)
 
 
-async def acquire_lock(provider: SearchProvider) -> bool:
+async def acquire_lock(provider: SearchProvider) -> Optional[LockSession]:
     """Acquire the global lock for the entire settings.INDEX_NAME prefix.
+
+    Returns a LockSession if the lock was acquired, None if it was not.
+    The LockSession must be passed the refresh and release the lock.
 
     Non-blocking, returns True if the lock was acquired, False if it was not.
     """
     # Create the lock index if it doesn't exist
     await ensure_lock_index(provider)
+
+    # The lock session we will be trying to acquire
+    lock_session = LockSession.create()
+
+    # The general idea here is:
+    # 1. Try to insert the lock, expecting it to fail if the lock is already present
+    # 2. If the document is already present, check if it's expired
+    # 3. If it's expired, overwrite it
+    # 4. If it's not expired, return None
 
     try:
         # Naively try to insert the lock, expecting it to fail if the document is already present
@@ -64,10 +88,14 @@ async def acquire_lock(provider: SearchProvider) -> bool:
                     "_op_type": "create",
                     "_source": {
                         "acquired_at": to_millis_timestamp(datetime.now()),
+                        "lock_session_id": lock_session.id,
                     },
                 }
             ]
         )
+        # We succeeded in acquiring the lock
+        log.info(f"Acquired lock {lock_session.id}")
+        return lock_session
     except YenteIndexError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
         # we don't get detailed error information, so the error we're catching isn't
@@ -75,63 +103,50 @@ async def acquire_lock(provider: SearchProvider) -> bool:
         log.debug(
             f"Lock already exists, will try to overwrite, but only if expired. Response: {e}"
         )
-        return await _overwrite_lock(provider, only_if_expired=True)
+        pass
 
-    return True
-
-
-async def _overwrite_lock(provider: SearchProvider, only_if_expired: bool) -> bool:
-    """Attempt to acquire a lock using optimistic concurrency control.
-
-    Note that this method is used for both acquiring an expired lock (if only_if_expired is True)
-    and refreshing a lock (if only_if_expired is False). Refreshing a lock is required because reindex
-    operations often take longer than the lock expiration time. When refreshing but the lock
-    is expired, we warn and proceed with overwriting the lock
-
-    Uses seq_no and primary_term to prevent race conditions.
-    seq_no tracks the document's version across all shards, while primary_term ensures
-    we're updating the document on the same primary shard that last modified it. See
-    https://www.elastic.co/docs/reference/elasticsearch/rest-apis/optimistic-concurrency-control
-    for more information.
-    """
     try:
         # Get the current lock document to check if it's expired
         # Needs get_document because the _seq_no and _primary_term
         # are not returned by search.
         hit = await provider.get_document(get_lock_index_name(), LOCK_DOC_ID)
         if not hit:
-            return False
+            log.warning(
+                "First we failed to create the lock document, but now we can't find the lock document - that's weird."
+            )
+            return None
 
-        acquired_at = from_millis_timestamp(hit["_source"]["acquired_at"])
-
-        if datetime.now() - acquired_at < LOCK_EXPIRATION_TIME:
-            # The lock is still valid
-            if only_if_expired:
-                # ...and only_if_expired is True, so we won't overwrite it
-                # This is the "other process holding lock" case
-                log.debug("Found a non-expired lock, not overwriting")
-                return False
+        if (
+            datetime.now() - from_millis_timestamp(hit["_source"]["acquired_at"])
+            < LOCK_EXPIRATION_TIME
+        ):
+            # The lock is still valid,
+            log.debug(
+                f"Found a non-expired lock held by {hit['_source']['lock_session_id']}, acquiring lock failed!"
+            )
+            return None
         else:
             # The lock is expired, probably another process failed to clean it up
-            if only_if_expired:
-                log.debug("Acquiring expired lock")
-            else:
-                # ...and only_if_expired is False, so we're refreshing a lock
-                # expecting to already hold it. But it's expired, so we called the lock refresh
-                # too late!
-                log.warning("Refreshing lock, but it's already expired!")
-                return False
+            log.debug(
+                f"Found expired lock session {hit['_source']['lock_session_id']}, probably another process failed to clean it up, acquiring lock"
+            )
+            pass
 
-        # Prepare the update operation - only update acquired_at field
         update_op = {
             "_op_type": "update",
             "_index": get_lock_index_name(),
             "_id": LOCK_DOC_ID,
             # doc (instead of _source)is used for the partial update
-            "doc": {"acquired_at": to_millis_timestamp(datetime.now())},
-            # optimistic concurrency control to prevent a race condition
-            # where two processes write the lock and both think they succeeded.
-            # This will cause one of them to fail with a conflict error.
+            "doc": {
+                "acquired_at": to_millis_timestamp(datetime.now()),
+                "lock_session_id": lock_session.id,
+            },
+            # Uses seq_no and primary_term to prevent race conditions.
+            # seq_no tracks the document's version across all shards, while primary_term ensures
+            # we're updating the document on the same primary shard that last modified it. See
+            # https://www.elastic.co/docs/reference/elasticsearch/rest-apis/optimistic-concurrency-control
+            # for more information.
+            # If two processes write the lock, this will cause one of them to fail with a conflict error.
             "if_seq_no": hit["_seq_no"],
             "if_primary_term": hit["_primary_term"],
         }
@@ -139,7 +154,8 @@ async def _overwrite_lock(provider: SearchProvider, only_if_expired: bool) -> bo
         await provider.bulk_index([update_op])
 
         # No conflict error, so we succeeded in acquiring the lock
-        return True
+        log.info(f"Acquired lock {lock_session.id}")
+        return lock_session
 
     except YenteIndexError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
@@ -150,15 +166,29 @@ async def _overwrite_lock(provider: SearchProvider, only_if_expired: bool) -> bo
         log.debug(
             f"Failed to update lock, probably someone else acquired it before us. Response: {e}"
         )
-        return False
+        return None
 
 
-async def release_lock(provider: SearchProvider) -> None:
+async def release_lock(provider: SearchProvider, lock_session: LockSession) -> None:
     """Release a lock for the given index by deleting the lock document.
 
     Uses bulk_index with delete operation to remove the lock document.
     """
     log.debug("Releasing lock")
+    try:
+        hit = await provider.get_document(get_lock_index_name(), LOCK_DOC_ID)
+        if not hit:
+            return
+        if hit["_source"]["lock_session_id"] != lock_session.id:
+            log.error(
+                f"Trying to release session {lock_session.id}, but found {hit['_source']['lock_session_id']}. Not releasing lock since someone else seems to be holding it."
+            )
+            return
+    except YenteIndexError as e:
+        log.warning(
+            f"Elasticsearch error when getting lock document, will still try to delete it. Response: {e}"
+        )
+
     try:
         await provider.bulk_index(
             [
@@ -169,18 +199,63 @@ async def release_lock(provider: SearchProvider) -> None:
                 }
             ]
         )
+        log.info(f"Released lock {lock_session.id}")
     except YenteIndexError as e:
         log.warning(
             f"Failed to release lock, maybe it was already released or never acquired? Response: {e}"
         )
 
 
-async def refresh_lock(provider: SearchProvider) -> bool:
+async def refresh_lock(provider: SearchProvider, lock_session: LockSession) -> bool:
     """Refresh a lock by updating the acquired_at time to now.
 
     Assumes the lock is already being held by the caller.
     Returns True if the lock was successfully refreshed, False otherwise.
     """
     log.debug("Refreshing lock")
-    # We don't want to check if it's expired, in fact we assume it's not.
-    return await _overwrite_lock(provider, only_if_expired=False)
+    try:
+        # Get the current lock document to check if everything is okay
+        hit = await provider.get_document(get_lock_index_name(), LOCK_DOC_ID)
+        if not hit:
+            return False
+
+        acquired_at = from_millis_timestamp(hit["_source"]["acquired_at"])
+
+        if hit["_source"]["lock_session_id"] != lock_session.id:
+            # We're trying to refresh a lock, but it's no longer ours!
+            # We probably let it expire and someone else got to it!
+            log.error(
+                f"Found a lock held by {hit['_source']['lock_session_id']}, refreshing lock failed!",
+                found_lock_session_id=hit["_source"]["lock_session_id"],
+                found_lock_acquired_at=acquired_at,
+            )
+            return False
+
+        if datetime.now() - acquired_at > LOCK_EXPIRATION_TIME:
+            # It's out lock, but we let it expire! Here be dragons, bail out.
+            return False
+
+        # Prepare the update operation - only update acquired_at field, we're already holding the lock
+        update_op = {
+            "_op_type": "update",
+            "_index": get_lock_index_name(),
+            "_id": LOCK_DOC_ID,
+            # doc (instead of _source)is used for the partial update
+            "doc": {"acquired_at": to_millis_timestamp(datetime.now())},
+            # We already verified that we're the ones holding this lock, so we don't expect to have to
+            # use the optimistic concurrency control here. But just in case, it doesn't hurt either.
+            "if_seq_no": hit["_seq_no"],
+            "if_primary_term": hit["_primary_term"],
+        }
+
+        await provider.bulk_index([update_op])
+        log.info(f"Refreshed lock {lock_session.id}")
+        return True
+
+    except YenteIndexError as e:
+        # We don't expect this to ever happen, since we expected to be the ones holding the lock and
+        # therefore not racing others to it. But just in case, bail out.
+        log.error(
+            f"Failed to refresh lock, even though we expected to be the only ones writing to it. Response: {e}"
+        )
+        return False
