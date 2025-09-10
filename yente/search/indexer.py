@@ -20,7 +20,7 @@ from yente.search.lock import (
     release_lock,
 )
 from yente.search import audit_log
-from yente.search.audit_log import get_audit_log_index_name, AuditLogMessageType
+from yente.search.audit_log import get_audit_log_index_name, AuditLogEventType
 from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_PHONETIC_FIELD,
@@ -172,10 +172,14 @@ async def index_entities(
         return
 
     is_partial_reindex = updater.is_incremental and not force
-    audit_log_reindex_type = (
-        audit_log.AuditLogReindexType.PARTIAL
-        if is_partial_reindex
-        else audit_log.AuditLogReindexType.FULL
+
+    await audit_log.log_audit_message(
+        provider,
+        AuditLogEventType.REINDEX_STARTED,
+        index=next_index,
+        dataset=dataset.name,
+        dataset_version=updater.target_version,
+        message=f"{"Incremental" if is_partial_reindex else "Full"} reindex of {dataset.name} to {next_index}",
     )
 
     if is_partial_reindex:
@@ -210,6 +214,14 @@ async def index_entities(
                 yield item
 
         await provider.bulk_index(refresh_lock_iterator(docs))
+        await audit_log.log_audit_message(
+            provider,
+            AuditLogEventType.REINDEX_COMPLETED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            message=f"{"Incremental" if is_partial_reindex else "Full"} reindex of {dataset.name} to {next_index} completed",
+        )
 
     except (YenteIndexError, Exception) as exc:
         detail = getattr(exc, "detail", str(exc))
@@ -217,6 +229,14 @@ async def index_entities(
             "Indexing error: %s" % detail,
             dataset=dataset.name,
             index=next_index,
+        )
+        await audit_log.log_audit_message(
+            provider,
+            AuditLogEventType.REINDEX_FAILED,
+            index=next_index,
+            dataset=dataset.name,
+            dataset_version=updater.target_version,
+            message=f"Failed to index entities to {next_index}: {detail}",
         )
 
         aliases = await provider.get_alias_indices(alias)
@@ -242,30 +262,48 @@ async def index_entities(
     )
     await audit_log.log_audit_message(
         provider,
-        AuditLogMessageType.INDEX_ALIAS_ROLLOVER_COMPLETE,
+        AuditLogEventType.INDEX_ALIAS_ROLLOVER_COMPLETE,
         index=next_index,
         dataset=dataset.name,
         dataset_version=updater.target_version,
-        reindex_type=audit_log_reindex_type,
+        message=f"Alias {alias} prefixed {dataset_prefix} now points to {next_index}",
     )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
+    await audit_log.log_audit_message(
+        provider,
+        AuditLogEventType.CLEANUP_STARTED,
+        message=f"Starting cleanup of old indices with prefix {settings.ENTITY_INDEX}",
+    )
     aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
     for index in await provider.get_all_indices():
         if not index.startswith(settings.ENTITY_INDEX):
             continue
         # The lock and audit log indices live in the same namespace and shouldn't be garbage collected
+        # TODO(Leon Handreke): They live in settings.INDEX_NAME, we should be safe actually. Remove this.
         if index in [get_audit_log_index_name(), get_lock_index_name()]:
             continue
         if index not in aliased:
             log.info("Deleting orphaned index", index=index)
+            await audit_log.log_audit_message(
+                provider,
+                AuditLogEventType.CLEANUP_INDEX_DELETED,
+                index=index,
+                message=f"Deleting orphaned index {index}",
+            )
             await provider.delete_index(index)
         try:
             index_info = parse_index_name(index)
         except ValueError as exc:
             log.warn("Invalid index name: %s, deleting." % exc, index=index)
+            await audit_log.log_audit_message(
+                provider,
+                AuditLogEventType.CLEANUP_INDEX_DELETED,
+                index=index,
+                message=f"Deleting index {index} due to invalid name",
+            )
             await provider.delete_index(index)
             continue
         dataset = catalog.get(index_info.dataset_name)
@@ -275,7 +313,18 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
                 index=index,
                 dataset=index_info.dataset_name,
             )
+            await audit_log.log_audit_message(
+                provider,
+                AuditLogEventType.CLEANUP_INDEX_DELETED,
+                index=index,
+                message=f"Deleting index {index} due to non-scope dataset",
+            )
             await provider.delete_index(index)
+    await audit_log.log_audit_message(
+        provider,
+        AuditLogEventType.CLEANUP_COMPLETED,
+        message=f"Cleanup of old indices with prefix {settings.ENTITY_INDEX} completed",
+    )
 
 
 async def update_index(force: bool = False) -> None:

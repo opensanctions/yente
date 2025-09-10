@@ -1,8 +1,7 @@
 import pytest
 from yente.search.audit_log import (
     get_audit_log_index_name,
-    AuditLogMessageType,
-    AuditLogReindexType,
+    AuditLogEventType,
     log_audit_message,
 )
 from yente.provider import SearchProvider
@@ -21,32 +20,15 @@ async def test_audit_log(search_provider: SearchProvider):
         index=TEST_INDEX_NAME,
         dataset=TEST_DATASET,
         dataset_version=TEST_DATASET_VERSION,
-        message_type=AuditLogMessageType.REINDEX_STARTED,
-        reindex_type=AuditLogReindexType.FULL,
+        event_type=AuditLogEventType.REINDEX_STARTED,
+        message=f"Full reindex of {TEST_DATASET} to {TEST_INDEX_NAME} started",
     )
+
+    # One with a lot of optional arguments
     await log_audit_message(
         search_provider,
-        index=TEST_INDEX_NAME,
-        dataset=TEST_DATASET,
-        dataset_version=TEST_DATASET_VERSION,
-        message_type=AuditLogMessageType.REINDEX_COMPLETED,
-        reindex_type=AuditLogReindexType.PARTIAL,
-    )
-    await log_audit_message(
-        search_provider,
-        index=TEST_INDEX_NAME,
-        dataset=TEST_DATASET,
-        dataset_version=TEST_DATASET_VERSION,
-        message_type=AuditLogMessageType.REINDEX_FAILED,
-        reindex_type=AuditLogReindexType.FULL,
-    )
-    await log_audit_message(
-        search_provider,
-        index=TEST_INDEX_NAME,
-        dataset=TEST_DATASET,
-        dataset_version=TEST_DATASET_VERSION,
-        message_type=AuditLogMessageType.INDEX_ALIAS_ROLLOVER_COMPLETE,
-        reindex_type=AuditLogReindexType.FULL,
+        event_type=AuditLogEventType.CLEANUP_STARTED,
+        message="Cleanup of old indices with prefix yente-entities started",
     )
 
     await search_provider.refresh(get_audit_log_index_name())
@@ -59,7 +41,7 @@ async def test_audit_log(search_provider: SearchProvider):
     )
     oldest_hit = oldest_result["hits"]["hits"][0]["_source"]
     assert oldest_hit["index"] == TEST_INDEX_NAME
-    assert oldest_hit["message_type"] == AuditLogMessageType.REINDEX_STARTED
+    assert oldest_hit["event_type"] == AuditLogEventType.REINDEX_STARTED
 
     newest_result = await search_provider.search(
         get_audit_log_index_name(),
@@ -68,7 +50,4 @@ async def test_audit_log(search_provider: SearchProvider):
         sort=[{"timestamp": {"order": "desc"}}],
     )
     newest_hit = newest_result["hits"]["hits"][0]["_source"]
-    assert newest_hit["index"] == TEST_INDEX_NAME
-    assert (
-        newest_hit["message_type"] == AuditLogMessageType.INDEX_ALIAS_ROLLOVER_COMPLETE
-    )
+    assert newest_hit["event_type"] == AuditLogEventType.CLEANUP_STARTED
