@@ -139,8 +139,16 @@ class OpenSearchProvider(SearchProvider):
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
-            if exc.error == "resource_already_exists_exception":
-                return
+            try:
+                # Parse the error details and activate some special handling for certain errors
+                error_details = json.loads(exc.error)
+                if (
+                    error_details["error"]["type"]
+                    == "resource_already_exists_exception"
+                ):
+                    return
+            except (json.JSONDecodeError, KeyError, IndexError):
+                pass
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
     async def delete_index(self, index: str) -> None:
@@ -206,14 +214,25 @@ class OpenSearchProvider(SearchProvider):
                 )
                 return cast(Dict[str, Any], response)
         except TransportError as ae:
-            if ae.error == "index_not_found_exception":
-                msg = (
-                    f"Index {index} does not exist. This may be caused by a misconfiguration,"
-                    " or the initial ingestion of data is still ongoing."
-                )
-                raise IndexNotReadyError(msg) from ae
-            if ae.error == "search_phase_execution_exception":
-                raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
+
+            try:
+                # Parse the error details and activate some special handling for certain errors
+                error_details = json.loads(ae.error)
+                error_type = error_details["error"]["type"]
+
+                if error_type == "index_not_found_exception":
+                    msg = (
+                        f"Index {index} does not exist. This may be caused by a misconfiguration,"
+                        " or the initial ingestion of data is still ongoing."
+                    )
+                    raise IndexNotReadyError(msg) from ae
+                if error_type == "search_phase_execution_exception":
+                    raise YenteIndexError(
+                        f"Search error: {str(ae)}", status=400
+                    ) from ae
+            except (json.JSONDecodeError, KeyError, IndexError):
+                pass
+
             log.warning(
                 f"API error {ae.status_code}: {ae.error}",
                 index=index,

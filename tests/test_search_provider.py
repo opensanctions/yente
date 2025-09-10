@@ -18,6 +18,7 @@ async def test_provider_core(search_provider: SearchProvider):
         fake_index = settings.ENTITY_INDEX + "-doesnt-exist"
         await search_provider.refresh(fake_index)
         await search_provider.check_health(fake_index)
+        await search_provider.search(fake_index, {})
 
     temp_index = settings.ENTITY_INDEX + "-provider-admin"
     await search_provider.create_index(
