@@ -22,13 +22,13 @@ The following instructions document the commands when running with Docker Compos
 4. Restart the yente container: `docker compose restart app`
 
 
-## Can I deploy a new version of yente incurring little to no downtime?
+## Advanced: Blue-green deployment strategy
 
-This is possible, however not very well supported - expect to build your own deployment pipeline around this. The basic idea is to run the new version of yente with a new `YENTE_INDEX_NAME`.
+If you'd like to upgrade yente with little to no downtime, we recommend running a [blue-green deployment strategy](https://en.wikipedia.org/wiki/Blue%E2%80%93green_deployment). The basic idea is to run two versions of yente with a different `YENTE_INDEX_NAME` and switch between them. What this looks like in your environment is up to you - it could be a manual process or a full-blown CD pipeline.
 
-1. Keep old yente running, for this example we'll assume it has `YENTE_INDEX_NAME=yente-green`.
-1. Run `yente reindex -f` with the verison of yente you're upgrading to with `YENTE_INDEX_NAME=yente-blue`.
-1. Restart your serving yente with the new version and `YENTE_INDEX_NAME=yente-blue`
+1. Keep the old yente running, for this example we'll assume it has `YENTE_INDEX_NAME=yente-green`.
+1. Run `yente reindex -f` with the version of yente you're upgrading to with `YENTE_INDEX_NAME=yente-blue`.
+1. Restart your serving yente with the new version and `YENTE_INDEX_NAME=yente-blue`. In a more advanced deployment scenario, one might switch over the load balancer to the new instance.
 1. Ensure that your periodic reindexing jobs are also using the new version of yente and `YENTE_INDEX_NAME=yente-blue`
 
 If something isn't working right after the upgrade, you may roll back to the previous version of yente by starting the old version of yente and `YENTE_INDEX_NAME=yente-green`.
