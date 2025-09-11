@@ -24,10 +24,10 @@ async def test_audit_log(search_provider: SearchProvider):
         message=f"Full reindex of {TEST_DATASET} to {TEST_INDEX_NAME} started",
     )
 
-    # One with a lot of optional arguments
     await log_audit_message(
         search_provider,
-        event_type=AuditLogEventType.CLEANUP_STARTED,
+        index=TEST_INDEX_NAME,
+        event_type=AuditLogEventType.CLEANUP_INDEX_DELETED,
         message="Cleanup of old indices with prefix yente-entities started",
     )
 
@@ -50,4 +50,5 @@ async def test_audit_log(search_provider: SearchProvider):
         sort=[{"timestamp": {"order": "desc"}}],
     )
     newest_hit = newest_result["hits"]["hits"][0]["_source"]
-    assert newest_hit["event_type"] == AuditLogEventType.CLEANUP_STARTED
+    assert newest_hit["event_type"] == AuditLogEventType.CLEANUP_INDEX_DELETED
+    assert newest_hit["index"] == TEST_INDEX_NAME

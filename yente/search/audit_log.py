@@ -32,10 +32,7 @@ class AuditLogEventType(StrEnum):
     # REINDEX_COMPLETED or REINDEX_FAILED release the lock.
     REINDEX_COMPLETED = "reindex_completed"
     REINDEX_FAILED = "reindex_failed"
-
-    CLEANUP_STARTED = "cleanup_started"
     CLEANUP_INDEX_DELETED = "cleanup_index_deleted"
-    CLEANUP_COMPLETED = "cleanup_completed"
 
     # INDEX_ALIAS_ROLLOVER_COMPLETE is written when the index alias is rolled over
     # and is only for information purposes, it's not used for the locking mechanism.
