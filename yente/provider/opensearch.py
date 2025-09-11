@@ -4,7 +4,7 @@ import logging
 from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
 from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
-from opensearchpy.exceptions import NotFoundError, TransportError
+from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
@@ -229,6 +229,20 @@ class OpenSearchProvider(SearchProvider):
         ) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
+
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        try:
+            async with self.query_semaphore:
+                response = await self.client.get(index=index, id=doc_id)
+                return cast(Dict[str, Any], response)
+        except NotFoundError:
+            return None
+        except Exception as exc:
+            raise YenteIndexError(f"Error getting document: {exc}") from exc
 
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
