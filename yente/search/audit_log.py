@@ -76,7 +76,13 @@ async def log_audit_message(
     dataset_version: Optional[str] = None,
     message: str,
 ) -> str:
-    """Log an audit message to the audit log index and return the document ID."""
+    """Log an audit message and return the document ID.
+
+    An audit log message always concerns an index, as it is meant to record
+    what data was made (un)available when. For this reason, `index` is a
+    required argument.
+
+    """
 
     timestamp = datetime_to_millis_timestamp(datetime.now())
     doc_id = f"{index}-{event_type}-{timestamp}"
