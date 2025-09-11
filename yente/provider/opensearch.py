@@ -2,7 +2,7 @@ import json
 import asyncio
 import logging
 from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
-from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
+from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
 from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 
@@ -24,7 +24,7 @@ class OpenSearchProvider(SearchProvider):
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
-            # connection_class=AsyncHttpConnection,
+            connection_class=AsyncHttpConnection,
         )
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
@@ -139,7 +139,7 @@ class OpenSearchProvider(SearchProvider):
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
-            if exc.error == "resource_already_exists_exception":
+            if "resource_already_exists_exception" in exc.error:
                 return
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
@@ -205,21 +205,22 @@ class OpenSearchProvider(SearchProvider):
                     search_type=search_type,
                 )
                 return cast(Dict[str, Any], response)
-        except TransportError as ae:
-            if ae.error == "index_not_found_exception":
+        except TransportError as exc:
+            if "index_not_found_exception" in exc.error:
                 msg = (
                     f"Index {index} does not exist. This may be caused by a misconfiguration,"
                     " or the initial ingestion of data is still ongoing."
                 )
-                raise IndexNotReadyError(msg) from ae
-            if ae.error == "search_phase_execution_exception":
-                raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
+                raise IndexNotReadyError(msg) from exc
+            if "search_phase_execution_exception" in exc.error:
+                raise YenteIndexError(f"Search error: {str(exc)}", status=400) from exc
+
             log.warning(
-                f"API error {ae.status_code}: {ae.error}",
+                f"API error {exc.status_code}: {exc.error}",
                 index=index,
                 query=json.dumps(query),
             )
-            raise YenteIndexError(f"Could not search index: {ae}") from ae
+            raise YenteIndexError(f"Could not search index: {exc}") from exc
         except (
             KeyboardInterrupt,
             OSError,
