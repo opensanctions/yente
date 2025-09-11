@@ -8,16 +8,11 @@ from yente.provider.base import SearchProvider
 # Query the audit log using the following query:
 # curl -X GET "localhost:9200/yente-audit-log/_search" -H "Content-Type: application/json" -d '{"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": 10000, "_source": true}' | jq '.hits.hits | map(._source) | reverse'
 
-# Version string that gets appended to the audit log index name.
-# Bump when you change the mapping and want to force a new audit log index to be created.
-# Currently, no cleanup logic is implemented for audit log indices, so these will accumulate
-AUDIT_LOG_INDEX_VERSION = "1"
-
 log = logs.get_logger(__name__)
 
 
 def get_audit_log_index_name() -> str:
-    return f"{settings.INDEX_NAME}-audit-log-{AUDIT_LOG_INDEX_VERSION}"
+    return f"{settings.INDEX_NAME}-audit-log-{settings.AUDIT_LOG_INDEX_VERSION}"
 
 
 def millis_timestamp_to_datetime(timestamp: int) -> datetime:

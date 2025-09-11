@@ -205,6 +205,11 @@ INDEX_VERSION = "016"
 # Bump this evn var when you want to trigger a full reindex.
 INDEX_REBUILD_ID = env_str("YENTE_INDEX_REBUILD_ID", "a")
 
+# Version string that gets appended to the audit log index name.
+# Bump when you change the mapping and want to force a new audit log index to be created.
+# Currently, no cleanup logic is implemented for audit log indices, so these will accumulate
+AUDIT_LOG_INDEX_VERSION = "1"
+
 # ElasticSearch-only options:
 ES_CLOUD_ID = env_opt("YENTE_ELASTICSEARCH_CLOUD_ID")
 
