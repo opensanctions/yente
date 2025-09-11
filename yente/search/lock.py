@@ -7,7 +7,7 @@ from yente.exc import YenteIndexError
 from yente.provider.base import SearchProvider
 
 
-LOCK_EXPIRATION_TIME = timedelta(minutes=5)
+LOCK_EXPIRATION_TIME = timedelta(minutes=10)
 # We use a single lock document for everything, this could be expanded to support more granular lockin in the future.
 # Currently, there is only one lock document for the entire settings.INDEX_NAME.
 LOCK_DOC_ID = "lock"
