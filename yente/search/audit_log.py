@@ -71,7 +71,7 @@ async def log_audit_message(
     provider: SearchProvider,
     event_type: AuditLogEventType,
     *,
-    index: Optional[str] = None,
+    index: str,
     dataset: Optional[str] = None,
     dataset_version: Optional[str] = None,
     message: str,

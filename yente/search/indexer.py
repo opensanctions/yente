@@ -272,11 +272,6 @@ async def index_entities(
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
-    await audit_log.log_audit_message(
-        provider,
-        AuditLogEventType.CLEANUP_STARTED,
-        message=f"Starting cleanup of old indices with prefix {settings.ENTITY_INDEX}",
-    )
     aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
     for index in await provider.get_all_indices():
         if not index.startswith(settings.ENTITY_INDEX):
@@ -285,15 +280,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         # TODO(Leon Handreke): They live in settings.INDEX_NAME, we should be safe actually. Remove this.
         if index in [get_audit_log_index_name(), get_lock_index_name()]:
             continue
-        if index not in aliased:
-            log.info("Deleting orphaned index", index=index)
-            await audit_log.log_audit_message(
-                provider,
-                AuditLogEventType.CLEANUP_INDEX_DELETED,
-                index=index,
-                message=f"Deleting orphaned index {index}",
-            )
-            await provider.delete_index(index)
+
         try:
             index_info = parse_index_name(index)
         except ValueError as exc:
@@ -306,6 +293,18 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
             )
             await provider.delete_index(index)
             continue
+
+        if index not in aliased:
+            log.info("Deleting orphaned index", index=index)
+            await audit_log.log_audit_message(
+                provider,
+                AuditLogEventType.CLEANUP_INDEX_DELETED,
+                index=index,
+                dataset=index_info.dataset_name,
+                dataset_version=index_info.dataset_version,
+                message=f"Deleting orphaned index {index}",
+            )
+            await provider.delete_index(index)
         dataset = catalog.get(index_info.dataset_name)
         if dataset is None or not dataset.model.load:
             log.info(
@@ -317,14 +316,11 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
                 provider,
                 AuditLogEventType.CLEANUP_INDEX_DELETED,
                 index=index,
+                dataset=index_info.dataset_name,
+                dataset_version=index_info.dataset_version,
                 message=f"Deleting index {index} due to non-scope dataset",
             )
             await provider.delete_index(index)
-    await audit_log.log_audit_message(
-        provider,
-        AuditLogEventType.CLEANUP_COMPLETED,
-        message=f"Cleanup of old indices with prefix {settings.ENTITY_INDEX} completed",
-    )
 
 
 async def update_index(force: bool = False) -> None:
