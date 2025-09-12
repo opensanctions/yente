@@ -1,12 +1,13 @@
+from dataclasses import dataclass
 from enum import StrEnum
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Optional, List
 from yente import logs, settings
 from yente.provider.base import SearchProvider
 
 
-# Query the audit log using the following query:
-# curl -X GET "localhost:9200/yente-audit-log/_search" -H "Content-Type: application/json" -d '{"query": {"match_all": {}}, "sort": [{"timestamp": {"order": "desc"}}], "size": 10000, "_source": true}' | jq '.hits.hits | map(._source) | reverse'
+# Query the audit log like this
+# yente audit-log --output-format csv | csvlens
 
 log = logs.get_logger(__name__)
 
@@ -16,7 +17,9 @@ def get_audit_log_index_name() -> str:
 
 
 def millis_timestamp_to_datetime(timestamp: int) -> datetime:
-    return datetime.fromtimestamp(timestamp / 1000)
+    # A timestamp doesn't have a timezone, but we want the returned datetime to
+    # display as UTC.
+    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
 
 
 def datetime_to_millis_timestamp(dt: datetime) -> int:
@@ -101,3 +104,30 @@ async def log_audit_message(
     )
 
     return doc_id
+
+
+@dataclass
+class AuditLogMessage:
+    timestamp: datetime
+    event_type: AuditLogEventType
+    index: str
+    message: str
+
+
+async def get_all_audit_log_messages(provider: SearchProvider) -> List[AuditLogMessage]:
+    """Query all audit logs from the search provider, ordered by timestamp descending."""
+    result = await provider.search(
+        get_audit_log_index_name(),
+        query={"match_all": {}},
+        sort=[{"timestamp": {"order": "desc"}}],
+        size=settings.MAX_RESULTS,
+    )
+    return [
+        AuditLogMessage(
+            timestamp=millis_timestamp_to_datetime(hit["_source"]["timestamp"]),
+            event_type=AuditLogEventType(hit["_source"]["event_type"]),
+            index=hit["_source"]["index"],
+            message=hit["_source"]["message"],
+        )
+        for hit in result["hits"]["hits"]
+    ]
