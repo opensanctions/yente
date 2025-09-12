@@ -126,7 +126,6 @@ async def test_name_symbols_indexed_person(search_provider):
     assert "NAME:30524893" in doc["name_symbols"]  # Putin
 
 
-@pytest.mark.asyncio
 def test_name_symbols_indexed_org(search_provider):
     """Test that name symbols are indexed correctly for organizations."""
     entity = Entity.from_dict(
