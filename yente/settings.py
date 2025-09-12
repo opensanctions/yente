@@ -149,8 +149,7 @@ HIDDEN_ALGORITHMS = [
 
 # How many results to return per page of search results max:
 MAX_PAGE = 500
-
-# How many entities to accept in a /search-type endpoint by default:
+# How many entities to return in a /search-type endpoint by default:
 DEFAULT_PAGE = 10
 
 # How many entities to accept in a /match batch at most:
