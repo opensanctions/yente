@@ -42,12 +42,13 @@ async def match(
         le=settings.MAX_MATCHES,
     ),
     threshold: float = Query(
-        settings.SCORE_THRESHOLD,
+        default=settings.SCORE_THRESHOLD,
         title="Score threshold for results to be considered matches",
     ),
     cutoff: float = Query(
-        settings.SCORE_CUTOFF,
-        title="Lower bound of score for results to be returned at all",
+        deprecated=True,
+        default=settings.SCORE_THRESHOLD,
+        title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
     ),
     algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
     include_dataset: List[str] = Query(
@@ -134,6 +135,9 @@ async def match(
     """
     ds = await get_dataset(dataset)
     limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+    # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
+    # is not greater than the threshold because that would be weird.
+    cutoff = min(cutoff, threshold)
     algorithm_type = get_algorithm_by_name(algorithm)
 
     for config_key in match.config.keys():

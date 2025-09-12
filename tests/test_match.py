@@ -192,7 +192,8 @@ def test_fuzzy_names():
         assert len(res["results"]) == 0, res
 
     with mock.patch("yente.settings.MATCH_FUZZY", True):
-        resp = client.post("/match/default", json=query)
+        # The result scores quite low, so we need to set a lower threshold to get a result
+        resp = client.post("/match/default", params={"threshold": 0.2}, json=query)
         data = resp.json()
         res = data["responses"]["a"]
         assert len(res["results"]) > 0, res
