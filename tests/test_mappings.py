@@ -123,7 +123,7 @@ async def test_name_symbols_indexed_person(search_provider):
 
     doc = build_indexable_entity_doc(entity)
 
-    assert "NAME:KHUYLO'" in doc["name_symbols"]  # Putin
+    assert "NAME:KHUYLO" in doc["name_symbols"]  # Putin
 
 
 def test_name_symbols_indexed_org(search_provider):
