@@ -61,9 +61,9 @@ async def test_mappings_copy_to(search_provider):
         search_result = await search_provider.search(
             temp_index, {"bool": {"must": [{"match": {"name_phonetic": "FLTMR"}}]}}
         )
-        assert (
-            len(search_result["hits"]["hits"]) == 1
-        ), "Failed to match on name_phonetic"
+        assert len(search_result["hits"]["hits"]) == 1, (
+            "Failed to match on name_phonetic"
+        )
 
         # Try to match on the countries field, which is a type field that is populated by copy_to from citizenship
         search_result = await search_provider.search(
@@ -75,9 +75,9 @@ async def test_mappings_copy_to(search_provider):
         search_result = await search_provider.search(
             temp_index, {"bool": {"must": [{"term": {"text": "ru"}}]}}
         )
-        assert (
-            len(search_result["hits"]["hits"]) == 1
-        ), "Failed to match country on text"
+        assert len(search_result["hits"]["hits"]) == 1, (
+            "Failed to match country on text"
+        )
         search_result = await search_provider.search(
             temp_index, {"bool": {"must": [{"term": {"text": "sanction"}}]}}
         )
@@ -123,7 +123,7 @@ async def test_name_symbols_indexed_person(search_provider):
 
     doc = build_indexable_entity_doc(entity)
 
-    assert "NAME:30524893" in doc["name_symbols"]  # Putin
+    assert "NAME:KHUYLO'" in doc["name_symbols"]  # Putin
 
 
 def test_name_symbols_indexed_org(search_provider):
