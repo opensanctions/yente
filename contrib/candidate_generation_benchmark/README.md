@@ -20,6 +20,6 @@ Benchmarks candidate generation performance across different matching algorithms
 python contrib/candidate_generation_benchmark/benchmark.py \
     --person-file contrib/candidate_generation_benchmark/fixtures/people_us.csv \
     --person-file contrib/candidate_generation_benchmark/fixtures/people_global.csv \
-    --matchers UNSTABLE-logic-v2 \
+    --matchers logic-v2 \
     --matchers logic-v1
 ```

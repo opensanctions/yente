@@ -34,9 +34,7 @@ def test_algorithms(monkeypatch):
 
     # Ensure that the logic-v2 algorithm is visible and that
     # the configuration options are exposed
-    logic_v2 = next(
-        (a for a in data["algorithms"] if a["name"] == "UNSTABLE-logic-v2"), None
-    )
+    logic_v2 = next((a for a in data["algorithms"] if a["name"] == "logic-v2"), None)
     assert logic_v2 is not None
     assert logic_v2["docs"] is not None
     assert logic_v2["docs"]["config"] is not None

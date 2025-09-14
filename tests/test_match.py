@@ -142,7 +142,7 @@ def test_match_logic_v2_with_algorithm_config():
         mock_compare.return_value.explanations = {}
 
         resp = client.post(
-            "/match/default", json=query, params={"algorithm": "UNSTABLE-logic-v2"}
+            "/match/default", json=query, params={"algorithm": "logic-v2"}
         )
 
         # Check that the config is passed properly to the compare method
@@ -153,9 +153,7 @@ def test_match_logic_v2_with_algorithm_config():
     assert resp.status_code == 200, resp.text
 
     query = {"queries": {"vv": EXAMPLE}, "config": {"invalid_option": 0.4}}
-    resp = client.post(
-        "/match/default", json=query, params={"algorithm": "UNSTABLE-logic-v2"}
-    )
+    resp = client.post("/match/default", json=query, params={"algorithm": "logic-v2"})
     assert resp.status_code == 400, resp.text
 
 
