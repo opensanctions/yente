@@ -5,6 +5,7 @@ from followthemoney.helpers import combine_names
 from rigour.names import pick_name
 
 from yente import settings
+from yente.data.util import safe_string
 from yente.logs import get_logger
 
 if TYPE_CHECKING:
@@ -71,14 +72,19 @@ class Entity(ValueEntity):
             raise TypeError("Non-matchable schema for query: %s" % obj.schema.name)
 
         for prop_name, values in example.properties.items():
-            if prop_name not in obj.schema.properties:
+            prop = schema.get(prop_name)
+            if prop is None:
                 log.warning(
                     "Invalid query property",
                     prop=prop_name,
                     value=repr(values),
                 )
                 continue
-            obj.add(prop_name, values, cleaned=False, fuzzy=True)
+            if isinstance(values, str):
+                values = [values]
+            for value in values:
+                value = safe_string(value)
+                obj.unsafe_add(prop, value, cleaned=False, fuzzy=True)
 
         # Generate names from name parts
         combine_names(obj)

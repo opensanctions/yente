@@ -8,6 +8,7 @@ from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from normality import squash_spaces
+from normality.cleaning import remove_unsafe_chars
 from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
 from rigour.text import levenshtein
 from rigour.names import remove_person_prefixes
@@ -30,9 +31,15 @@ def preprocess_name(name: Optional[str]) -> Optional[str]:
     """Preprocess a name for comparison."""
     if name is None:
         return None
-    name = unicodedata.normalize("NFC", name)
     name = name.lower()
     return squash_spaces(name)
+
+
+def safe_string(value: str) -> str:
+    """Make sure a value coming from the API is a safe string for data comparison."""
+    value = unicodedata.normalize("NFC", value)
+    value = remove_unsafe_chars(value)
+    return value.strip()
 
 
 def entity_names(entity: EntityProxy) -> Set[Name]:
