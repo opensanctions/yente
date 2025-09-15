@@ -134,7 +134,6 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
     # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
@@ -183,6 +182,8 @@ async def match(
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
         candidates = max(20, min(settings.MAX_RESULTS, candidates))
+        # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
+        candidates, _ = limit_window(candidates, 0)
         qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
         queries.append(qry)
         entities.append((name, entity))
