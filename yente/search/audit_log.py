@@ -6,8 +6,7 @@ from yente import logs, settings
 from yente.provider.base import SearchProvider
 
 
-# Query the audit log like this
-# yente audit-log --output-format csv | csvlens
+# Query the audit log using `yente audit-log` in the CLI
 
 log = logs.get_logger(__name__)
 
