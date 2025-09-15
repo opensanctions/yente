@@ -26,7 +26,7 @@ class DatasetUpdater(object):
         self, dataset: Dataset, base_version: Optional[str], force_full: bool = False
     ) -> None:
         self.dataset = dataset
-        self.target_version = dataset.version or "static"
+        self.target_version = dataset.model.version or "static"
         self.base_version = base_version
         self.force_full = force_full
         self.delta_urls: Optional[List[Tuple[str, str]]] = None
@@ -39,7 +39,7 @@ class DatasetUpdater(object):
         obj = DatasetUpdater(dataset, base_version, force_full=force_full)
         if force_full:
             return obj
-        if dataset.delta_url is None:
+        if dataset.model.delta_url is None:
             log.debug("No delta updates available for: %r" % dataset.name)
             return obj
         if not settings.DELTA_UPDATES:
@@ -48,7 +48,7 @@ class DatasetUpdater(object):
             return obj
 
         index: DeltaIndex = await load_json_url(
-            dataset.delta_url, auth_token=dataset.auth_token
+            dataset.model.delta_url, auth_token=dataset.model.auth_token
         )
         versions = index.get("versions", {})
         sorted_versions = sorted(versions.keys())
@@ -61,7 +61,7 @@ class DatasetUpdater(object):
             log.warning(
                 "Loaded version of dataset is older than delta window",
                 dataset=dataset.name,
-                delta_url=dataset.delta_url,
+                delta_url=dataset.model.delta_url,
                 base_version=obj.base_version,
                 target_version=obj.target_version,
                 delta_versions=sorted_versions,
@@ -88,9 +88,9 @@ class DatasetUpdater(object):
 
     def needs_update(self) -> bool:
         """Confirm that the dataset needs to be loaded."""
-        if not self.dataset.load:
+        if not self.dataset.model.load:
             return False
-        if self.dataset.entities_url is None:
+        if self.dataset.model.entities_url is None:
             log.warning(
                 "Cannot identify resource with FtM entities",
                 dataset=self.dataset.name,
@@ -109,11 +109,13 @@ class DatasetUpdater(object):
     async def load(self) -> AsyncGenerator[EntityOp, None]:
         """Generate entity change operations, including payload data."""
         if self.force_full or self.delta_urls is None:
-            if self.dataset.entities_url is None:
+            if self.dataset.model.entities_url is None:
                 raise RuntimeError("No entities for dataset: %s" % self.dataset.name)
             base_name = f"{self.dataset.name}-{self.target_version}"
             async for data in load_json_lines(
-                self.dataset.entities_url, base_name, auth_token=self.dataset.auth_token
+                self.dataset.model.entities_url,
+                base_name,
+                auth_token=self.dataset.model.auth_token,
             ):
                 yield {"op": "ADD", "entity": data}
             return
@@ -121,6 +123,6 @@ class DatasetUpdater(object):
         for version, url in self.delta_urls:
             base_name = f"{self.dataset.name}-delta-{version}"
             async for data in load_json_lines(
-                url, base_name, auth_token=self.dataset.auth_token
+                url, base_name, auth_token=self.dataset.model.auth_token
             ):
                 yield data

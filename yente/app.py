@@ -1,4 +1,3 @@
-import time
 import aiocron  # type: ignore
 from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
 from contextlib import asynccontextmanager
@@ -9,16 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
-from structlog.contextvars import clear_contextvars, bind_contextvars
 
 from yente import settings
 from yente.exc import YenteError
 from yente.logs import get_logger
 from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
+from yente.data.entity import Entity
+from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
-from yente.middleware import TraceContextMiddleware
+from yente.middleware import RequestLogMiddleware, TraceContextMiddleware
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
@@ -36,7 +36,33 @@ async def warm_up() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
-    # TODO: warm up the scoring algorithms
+
+    log.debug("Warming up matcher algorithms...")
+    # This is the pragmatic and easy way to warm up the matcher algorithms. If anyone feels the call to
+    # do it the elegant way, implement a warm up function in each of the algorithms that in turn calls
+    # some eager loading functions in rigour, don't let this stop you, hack away!
+    fake_person = Entity.from_dict(
+        {
+            "schema": "Person",
+            "id": "warm-up-person",
+            "properties": {"name": ["Mrs. Warm Up"], "country": ["United States"]},
+        }
+    )
+    fake_company = Entity.from_dict(
+        {
+            "schema": "Company",
+            "id": "warm-up-company",
+            "properties": {
+                "name": ["Warm-Up Company"],
+                # Using the country name instead of the ISO code to trigger loading the country names data
+                "country": ["Russia"],
+            },
+        }
+    )
+    for entity in [fake_person, fake_company]:
+        for algo in ENABLED_ALGORITHMS:
+            config = algo.default_config()
+            algo.compare(entity, entity, config)
 
 
 @asynccontextmanager
@@ -52,32 +78,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_provider()
 
 
-async def request_middleware(
+async def json_exception_middleware(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
-    start_time = time.time()
-    client_ip = request.client.host if request.client else "127.0.0.1"
-    bind_contextvars(
-        client_ip=client_ip,
-    )
     try:
         response = await call_next(request)
     except Exception as exc:
         log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
-    time_delta = time.time() - start_time
-    log.info(
-        str(request.url.path),
-        action="request",
-        method=request.method,
-        path=request.url.path,
-        query=request.url.query,
-        agent=request.headers.get("user-agent"),
-        referer=request.headers.get("referer"),
-        code=response.status_code,
-        took=time_delta,
-    )
-    clear_contextvars()
     return response
 
 
@@ -111,7 +119,8 @@ def create_app() -> FastAPI:
         redoc_url=None,
         lifespan=lifespan,
     )
-    app.middleware("http")(request_middleware)
+    app.middleware("http")(json_exception_middleware)
+    app.add_middleware(RequestLogMiddleware)
     app.add_middleware(TraceContextMiddleware)
     app.add_middleware(
         CORSMiddleware,

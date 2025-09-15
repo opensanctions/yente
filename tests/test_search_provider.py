@@ -1,9 +1,14 @@
 # mypy: ignore-errors
 import pytest
 from yente import settings
+from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 
 from yente.exc import YenteIndexError, YenteNotFoundError
 from yente.provider import SearchProvider
+
+# Constants for testing
+TEST_MAPPINGS = make_entity_mapping()
+TEST_SETTINGS = INDEX_SETTINGS
 
 
 @pytest.mark.asyncio
@@ -13,9 +18,12 @@ async def test_provider_core(search_provider: SearchProvider):
         fake_index = settings.ENTITY_INDEX + "-doesnt-exist"
         await search_provider.refresh(fake_index)
         await search_provider.check_health(fake_index)
+        await search_provider.search(fake_index, {})
 
     temp_index = settings.ENTITY_INDEX + "-provider-admin"
-    await search_provider.create_index(temp_index)
+    await search_provider.create_index(
+        temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
     await search_provider.refresh(temp_index)
     assert await search_provider.check_health(temp_index) is True
     await search_provider.delete_index(temp_index)
@@ -28,15 +36,21 @@ async def test_index_lifecycle(search_provider: SearchProvider):
     temp_index = settings.ENTITY_INDEX + "-provider-test"
     pre_indices = await search_provider.get_all_indices()
     assert temp_index not in pre_indices
-    await search_provider.create_index(temp_index)
+    await search_provider.create_index(
+        temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
     post_indices = await search_provider.get_all_indices()
     assert temp_index in post_indices
     assert len(post_indices) == len(pre_indices) + 1
     # If it already exists we expect no error
-    await search_provider.create_index(temp_index)
+    await search_provider.create_index(
+        temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
 
     with pytest.raises(YenteIndexError):
-        await search_provider.create_index(temp_index + "_FAIL")
+        await search_provider.create_index(
+            temp_index + "_FAIL", mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+        )
 
     await search_provider.refresh(temp_index)
 
@@ -53,7 +67,9 @@ async def test_alias_management(search_provider: SearchProvider):
     index_v1 = prefix + "-v1"
     index_v2 = prefix + "-v2"
     index_fail = prefix + "-fail"
-    await search_provider.create_index(index_v1)
+    await search_provider.create_index(
+        index_v1, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
     await search_provider.clone_index(index_v1, index_v2)
 
     with pytest.raises(YenteIndexError):

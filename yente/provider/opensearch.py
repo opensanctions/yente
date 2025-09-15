@@ -1,16 +1,14 @@
 import json
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, cast
-from typing import AsyncIterator
-from opensearchpy import AsyncOpenSearch, AWSV4SignerAsyncAuth
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
+from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_bulk, BulkIndexError
-from opensearchpy.exceptions import NotFoundError, TransportError
+from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
 from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
@@ -26,7 +24,7 @@ class OpenSearchProvider(SearchProvider):
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
-            # connection_class=AsyncHttpConnection,
+            connection_class=AsyncHttpConnection,
         )
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
@@ -129,17 +127,19 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index with the given name, mappings, and settings."""
         log.info("Create index", index=index)
         try:
             body = {
-                "settings": INDEX_SETTINGS,
-                "mappings": make_entity_mapping(),
+                "settings": settings,
+                "mappings": mappings,
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
-            if exc.error == "resource_already_exists_exception":
+            if "resource_already_exists_exception" in exc.error:
                 return
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
@@ -205,21 +205,22 @@ class OpenSearchProvider(SearchProvider):
                     search_type=search_type,
                 )
                 return cast(Dict[str, Any], response)
-        except TransportError as ae:
-            if ae.error == "index_not_found_exception":
+        except TransportError as exc:
+            if "index_not_found_exception" in exc.error:
                 msg = (
                     f"Index {index} does not exist. This may be caused by a misconfiguration,"
                     " or the initial ingestion of data is still ongoing."
                 )
-                raise IndexNotReadyError(msg) from ae
-            if ae.error == "search_phase_execution_exception":
-                raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
+                raise IndexNotReadyError(msg) from exc
+            if "search_phase_execution_exception" in exc.error:
+                raise YenteIndexError(f"Search error: {str(exc)}", status=400) from exc
+
             log.warning(
-                f"API error {ae.status_code}: {ae.error}",
+                f"API error {exc.status_code}: {exc.error}",
                 index=index,
                 query=json.dumps(query),
             )
-            raise YenteIndexError(f"Could not search index: {ae}") from ae
+            raise YenteIndexError(f"Could not search index: {exc}") from exc
         except (
             KeyboardInterrupt,
             OSError,
@@ -230,12 +231,28 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
-    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> None:
-        """Index a list of entities into the search index."""
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        try:
+            async with self.query_semaphore:
+                response = await self.client.get(index=index, id=doc_id)
+                return cast(Dict[str, Any], response)
+        except NotFoundError:
+            return None
+        except Exception as exc:
+            raise YenteIndexError(f"Error getting document: {exc}") from exc
+
+    async def bulk_index(
+        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+    ) -> None:
+        """Perform an iterable of bulk actions to the search index."""
         try:
             await async_bulk(
                 self.client,
-                entities,
+                actions,
                 chunk_size=1000,
                 yield_ok=False,
                 stats_only=True,

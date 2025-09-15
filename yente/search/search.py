@@ -1,9 +1,7 @@
 from typing import Generator, Set
 from typing import Any, Dict, List, Optional
-from followthemoney import model
-from followthemoney.schema import Schema
-from followthemoney.types import registry
-from nomenklatura.dataset import DataCatalog
+from followthemoney import model, registry, Schema
+from followthemoney.dataset import DataCatalog
 
 from yente import settings
 from yente.logs import get_logger
@@ -11,7 +9,7 @@ from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.provider import SearchProvider
-from yente.util import EntityRedirect
+from yente.util import EntityRedirect, limit_window
 
 log = get_logger(__name__)
 AggType = Dict[str, Dict[str, List[Dict[str, Any]]]]
@@ -22,7 +20,7 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
-    entity = Entity.from_dict(model, source)
+    entity = Entity.from_dict(source)
     entity.datasets = set(source["datasets"])
     return entity
 
@@ -61,7 +59,7 @@ def result_facets(
                 value.label = key
                 ds = catalog.get(key)
                 if ds is not None:
-                    value.label = ds.title or key
+                    value.label = ds.model.title or key
             if field == "schema":
                 facet.label = "Entity types"
                 value.label = key
@@ -77,6 +75,32 @@ def result_facets(
     return facets
 
 
+def upscore_large_entities(query: Dict[str, Any]) -> Dict[str, Any]:
+    """Wrap query to up-score important entities."""
+
+    return {
+        "function_score": {
+            "query": query,
+            "functions": [
+                {
+                    "field_value_factor": {
+                        "field": "entity_values_count",
+                        # This is a bit of a jiggle factor. Currently, very large documents (like Vladimir Putin)
+                        # have a entity_values_count of ~200, so get a +10 boost.
+                        # The order is modifier(factor * value)
+                        "factor": 0.5,
+                        "modifier": "sqrt",
+                        # Used only if this is an old index that doesn't have entity_values_count yet
+                        # (until the first reindex after the upgrade is completed).
+                        "missing": 0,
+                    }
+                }
+            ],
+            "boost_mode": "sum",
+        }
+    }
+
+
 async def search_entities(
     provider: SearchProvider,
     query: Dict[str, Any],
@@ -85,6 +109,8 @@ async def search_entities(
     aggregations: Optional[Dict[str, Any]] = None,
     sort: List[Any] = [],
 ) -> Dict[str, Any]:
+    limit, offset = limit_window(limit, offset)
+
     return await provider.search(
         index=settings.ENTITY_INDEX,
         query=query,

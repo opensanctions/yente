@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
 from yente.logs import get_logger
@@ -41,12 +42,13 @@ async def match(
         le=settings.MAX_MATCHES,
     ),
     threshold: float = Query(
-        settings.SCORE_THRESHOLD,
+        default=settings.SCORE_THRESHOLD,
         title="Score threshold for results to be considered matches",
     ),
     cutoff: float = Query(
-        settings.SCORE_CUTOFF,
-        title="Lower bound of score for results to be returned at all",
+        deprecated=True,
+        default=settings.SCORE_THRESHOLD,
+        title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
     ),
     algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
     include_dataset: List[str] = Query(
@@ -132,8 +134,17 @@ async def match(
       ``incorporationDate``
     """
     ds = await get_dataset(dataset)
-    limit, _ = limit_window(limit, 0, settings.MATCH_PAGE)
+    # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
+    # is not greater than the threshold because that would be weird.
+    cutoff = min(cutoff, threshold)
     algorithm_type = get_algorithm_by_name(algorithm)
+
+    for config_key in match.config.keys():
+        if config_key not in algorithm_type.CONFIG:
+            raise HTTPException(
+                400,
+                detail=f"Invalid configuration parameter: {config_key} for algorithm {algorithm_type.NAME}",
+            )
 
     if len(match.queries) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
@@ -171,6 +182,8 @@ async def match(
         # between speed and accuracy.
         candidates = limit * settings.MATCH_CANDIDATES
         candidates = max(20, min(settings.MAX_RESULTS, candidates))
+        # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
+        candidates, _ = limit_window(candidates, 0)
         qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
         queries.append(qry)
         entities.append((name, entity))
@@ -187,7 +200,7 @@ async def match(
             threshold=threshold,
             cutoff=cutoff,
             limit=limit,
-            weights=match.weights,
+            config=ScoringConfig(weights=match.weights, config=match.config),
         )
         log.info(
             f"/match/{ds.name}",
@@ -204,6 +217,6 @@ async def match(
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
         responses=responses,
-        matcher=algorithm_type.explain(),
+        matcher=algorithm_type.get_feature_docs(),
         limit=limit,
     )

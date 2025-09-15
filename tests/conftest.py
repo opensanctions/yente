@@ -20,7 +20,6 @@ FIXTURES_PATH = Path(__file__).parent / "fixtures"
 VERSIONS_PATH = FIXTURES_PATH / "versions.json"
 MANIFEST_PATH = FIXTURES_PATH / "manifest.yml"
 settings.MANIFEST = str(MANIFEST_PATH)
-settings.UPDATE_TOKEN = "test"
 settings.INDEX_NAME = f"yente-test-{run_id}"
 settings.ENTITY_INDEX = f"{settings.INDEX_NAME}-entities"
 settings.AUTO_REINDEX = False

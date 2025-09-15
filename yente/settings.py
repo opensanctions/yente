@@ -1,29 +1,18 @@
+import random
 import logging
 import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from banal import as_bool
-from os import environ as env
-from normality import stringify
-from datetime import datetime, timezone
 from aiocron import Cron  # type: ignore
-import random
-
-
-def env_get(name: str) -> Optional[str]:
-    """Ensure the env returns a string even on Windows (#100)."""
-    return stringify(env.get(name))
-
-
-def env_str(name: str, default: str) -> str:
-    """Ensure the env returns a string even on Windows (#100)."""
-    value = stringify(env.get(name))
-    return default if value is None else value
+from rigour.env import env_str, env_opt, env_int
+from rigour.time import utc_now
 
 
 def env_legacy(new_name: str, old_name: str, default: str) -> str:
     """Transition to a new environment variable name with a warning."""
-    if old_name in env:
+    old_value = env_opt(old_name)
+    if old_value is not None:
         msg = f"Environment variable {old_name} is deprecated, use {new_name} instead."
         warnings.warn(msg)
     return env_str(new_name, env_str(old_name, default))
@@ -119,7 +108,7 @@ MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
 MANIFEST = env_str("YENTE_MANIFEST", MANIFEST_DEFAULT_PATH.as_posix())
 
 # Authentication settings:
-DATA_TOKEN = env_get("YENTE_DATA_TOKEN")
+DATA_TOKEN = env_opt("YENTE_DATA_TOKEN")
 if DATA_TOKEN is not None:
     warnings.warn(
         "YENTE_DATA_TOKEN environment variable is deprecated, use auth_token in manifest instead.",
@@ -148,16 +137,19 @@ RESOURCES_PATH = Path(__file__).parent.joinpath("resources")
 BASE_SCHEMA = "Thing"
 PORT = int(env_str("YENTE_PORT", env_str("PORT", "8000")))
 HOST = env_str("YENTE_HOST", env_str("HOST", "0.0.0.0"))
-UPDATE_TOKEN = env_str("YENTE_UPDATE_TOKEN", "unsafe-default")
+UPDATE_TOKEN = env_opt("YENTE_UPDATE_TOKEN")
 
 # Matcher defaults:
 DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
 BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
+HIDDEN_ALGORITHMS = [
+    algo for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "").split(",") if algo != ""
+]
+
 
 # How many results to return per page of search results max:
 MAX_PAGE = 500
-
-# How many entities to accept in a /search-type endpoint by default:
+# How many entities to return in a /search-type endpoint by default:
 DEFAULT_PAGE = 10
 
 # How many entities to accept in a /match batch at most:
@@ -166,19 +158,19 @@ MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 
 # How many results to return per /match query by default:
-MATCH_PAGE = int(env_str("YENTE_MATCH_PAGE", "5"))
+MATCH_PAGE = env_int("YENTE_MATCH_PAGE", 5)
 
 # How many results to return per /match query at most:
-MAX_MATCHES = int(env_str("YENTE_MAX_MATCHES", "500"))
+MAX_MATCHES = env_int("YENTE_MAX_MATCHES", 500)
 
 # How many candidates to retrieve as a multiplier of the /match limit:
-MATCH_CANDIDATES = int(env_str("YENTE_MATCH_CANDIDATES", "10"))
+MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 
 # Whether to run expensive levenshtein queries inside ElasticSearch:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 
 # How many match and search queries to run against ES in parallel:
-QUERY_CONCURRENCY = int(env_str("YENTE_QUERY_CONCURRENCY", "50"))
+QUERY_CONCURRENCY = env_int("YENTE_QUERY_CONCURRENCY", 50)
 
 # Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
@@ -205,20 +197,28 @@ INDEX_SHARDS = int(env_legacy("YENTE_INDEX_SHARDS", "YENTE_ELASTICSEARCH_SHARDS"
 INDEX_AUTO_REPLICAS = env_str("YENTE_INDEX_AUTO_REPLICAS", "0-all")
 INDEX_NAME = env_legacy("YENTE_INDEX_NAME", "YENTE_ELASTICSEARCH_INDEX", "yente")
 ENTITY_INDEX = f"{INDEX_NAME}-entities"
-INDEX_VERSION = env_str("YENTE_INDEX_VERSION", "014")
-assert len(INDEX_VERSION) == 3, "Index version must be 3 characters long."
+# Bump this when the index format changes and a full reindex is required.
+# Be careful to make the query code compatible with the old index format, otherwise
+# yente will be unable to serve requests after the upgrade until the first reindex completes.
+INDEX_VERSION = "016"
+# Bump this evn var when you want to trigger a full reindex.
+INDEX_REBUILD_ID = env_str("YENTE_INDEX_REBUILD_ID", "a")
+
+# Version string that gets appended to the audit log index name.
+# Bump when you change the mapping and want to force a new audit log index to be created.
+# Currently, no cleanup logic is implemented for audit log indices, so these will accumulate
+AUDIT_LOG_INDEX_VERSION = "1"
 
 # ElasticSearch-only options:
-ES_CLOUD_ID = env_get("YENTE_ELASTICSEARCH_CLOUD_ID")
+ES_CLOUD_ID = env_opt("YENTE_ELASTICSEARCH_CLOUD_ID")
 
 # OpenSearch-only options:
-OPENSEARCH_REGION = env_get("YENTE_OPENSEARCH_REGION")
-OPENSEARCH_SERVICE = env_get("YENTE_OPENSEARCH_SERVICE")
+OPENSEARCH_REGION = env_opt("YENTE_OPENSEARCH_REGION")
+OPENSEARCH_SERVICE = env_opt("YENTE_OPENSEARCH_SERVICE")
 
 # Log output can be formatted as JSON:
 LOG_JSON = as_bool(env_str("YENTE_LOG_JSON", "false"))
 LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 # Used to pad out first_seen, last_seen on static collections
-RUN_DT = datetime.now(timezone.utc)
-RUN_TIME = RUN_DT.isoformat()[:19]
+RUN_DT = utc_now()

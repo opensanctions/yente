@@ -6,6 +6,7 @@ from typing import List, Any
 
 from yente.data import get_catalog, refresh_catalog
 from yente.data.updater import DatasetUpdater
+from yente.search.versions import get_system_version, parse_index_name, build_index_name
 
 
 @pytest.fixture
@@ -37,7 +38,8 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     await refresh_catalog()
     catalog = await get_catalog()
     dataset = catalog.get("sanctions")
-    updater = await DatasetUpdater.build(dataset, dataset.version)
+    assert dataset is not None
+    updater = await DatasetUpdater.build(dataset, dataset.model.version)
     assert not updater.needs_update()
 
     updater = await DatasetUpdater.build(dataset, None)
@@ -50,10 +52,10 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     for op in operations:
         assert op["op"] == "ADD"
 
-    base_version = dataset.version
-    dataset.version = "20240528134729-3iv"
-    url = f"https://data.opensanctions.org/artifacts/sanctions/{dataset.version}/delta.json"
-    dataset.delta_url = url
+    base_version = dataset.model.version
+    dataset.model.version = "20240528134729-3iv"
+    url = f"https://data.opensanctions.org/artifacts/sanctions/{dataset.model.version}/delta.json"
+    dataset.model.delta_url = url
     delta_index_path = FIXTURES_PATH / "dataset/t2/delta.json"
 
     with open(delta_index_path, "r") as f:
@@ -78,6 +80,7 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     updater = await DatasetUpdater.build(dataset, base_version)
     assert updater.needs_update()
     assert updater.is_incremental
+    assert updater.delta_urls is not None
     assert len(updater.delta_urls) == 4
 
     operations = [x async for x in updater.load()]
@@ -89,3 +92,30 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
     assert ops["ADD"] == 4
     assert ops["DEL"] == 1
     assert ops["MOD"] == 1
+
+
+def test_parse_index_name():
+    """Test parse_index_name function with both happy case and error case."""
+    # Happy case: build an index name and then parse it
+    dataset_name = "test_dataset"
+    dataset_version = "20240528134729-abc"
+
+    # Build the index name
+    index_name = build_index_name(dataset_name, dataset_version)
+
+    # Parse the index name
+    index_info = parse_index_name(index_name)
+
+    # Verify the parsed information
+    assert index_info.dataset_name == dataset_name
+    assert index_info.dataset_version == dataset_version
+
+    # Error case: test that build_index_name raises an error when YENTE_INDEX_REBUILD_ID contains a dash
+    with pytest.MonkeyPatch().context() as m:
+        # Patch the import of settings in the versions module
+        m.setattr("yente.search.versions.settings.INDEX_REBUILD_ID", "-x")
+        get_system_version.cache_clear()
+
+        # This should raise an error because the system version contains a dash, messing with splitting
+        with pytest.raises(AssertionError):
+            build_index_name(dataset_name, dataset_version)

@@ -3,8 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import FileResponse, HTMLResponse
-from normality import collapse_spaces
-from nomenklatura.matching import ALGORITHMS
+from normality import squash_spaces
 
 from yente import settings
 from yente.logs import get_logger
@@ -12,6 +11,7 @@ from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.provider import SearchProvider, get_provider
+from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
 
@@ -87,16 +87,16 @@ async def catalog(
     """
     catalog = await get_catalog()
     await sync_dataset_versions(provider, catalog)
-    response = catalog.to_dict()
-    response["current"] = []
-    response["outdated"] = []
+    model = DataCatalogModel(datasets=[], current=[], outdated=[])
     for dataset in catalog.datasets:
-        if dataset.load and dataset.index_version == dataset.version:
-            response["current"].append(dataset.name)
-        elif dataset.index_version is not None:
-            response["outdated"].append(dataset.name)
-    response["index_stale"] = len(response["outdated"]) > 0
-    return DataCatalogModel.model_validate(response)
+        if dataset.model.load and dataset.model.index_current:
+            model.current.append(dataset.name)
+        elif dataset.model.index_version is not None:
+            model.outdated.append(dataset.name)
+        dataset.model.children = set([c.name for c in dataset.children])
+        model.datasets.append(dataset.model)
+    model.index_stale = len(model.outdated) > 0
+    return model
 
 
 @router.get(
@@ -108,13 +108,17 @@ async def algorithms() -> AlgorithmResponse:
     """Return a list of the supported matching/scoring algorithms used by the matching
     endpoint.
 
-    See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/)."""
+    See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/).
+    """
     algorithms: List[Algorithm] = []
-    for algo in ALGORITHMS:
+    for algo in ENABLED_ALGORITHMS:
+        if algo.NAME in settings.HIDDEN_ALGORITHMS:
+            continue
         desc = Algorithm(
             name=algo.NAME,
-            description=collapse_spaces(algo.__doc__),
-            features=algo.explain(),
+            description=squash_spaces(algo.__doc__ or ""),
+            features=algo.get_feature_docs(),
+            docs=algo.get_docs(),
         )
         algorithms.append(desc)
     return AlgorithmResponse(
@@ -138,9 +142,9 @@ async def force_update(
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""
     if (
-        not len(token.strip())
-        or settings.UPDATE_TOKEN is None
-        or not len(settings.UPDATE_TOKEN)
+        settings.UPDATE_TOKEN is None
+        or len(settings.UPDATE_TOKEN) == 0
+        or len(token.strip()) == 0
         or token != settings.UPDATE_TOKEN
     ):
         raise HTTPException(403, detail="Invalid token.")

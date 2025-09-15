@@ -1,19 +1,21 @@
 import warnings
+from followthemoney import EntityProxy
 import httpx
 import unicodedata
 from pathlib import Path
-from functools import lru_cache
 from urllib.parse import urlparse
 from followthemoney.types import registry
-from followthemoney.schema import Schema
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from normality import collapse_spaces, ascii_text
+from normality import squash_spaces
+from normality.cleaning import remove_unsafe_chars
 from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
-from rigour.text.scripts import is_modern_alphabet
-from rigour.text import levenshtein, metaphone
-from rigour.names import tokenize_name, remove_person_prefixes
+from rigour.text import levenshtein
+from rigour.names import remove_person_prefixes
 from rigour.names import replace_org_types_compare
+from rigour.names.tokenize import normalize_name, prenormalize_name
+from rigour.names import tag_person_name, Name, tag_org_name, Symbol, NameTypeTag
+from followthemoney.names import schema_type_tag
 
 from yente import settings
 from yente.logs import get_logger
@@ -21,73 +23,61 @@ from yente.logs import get_logger
 log = get_logger(__name__)
 
 
+# A set of symbol categories that we don't want to match on and therefore don't want to index.
+NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
+
+
 def preprocess_name(name: Optional[str]) -> Optional[str]:
     """Preprocess a name for comparison."""
     if name is None:
         return None
-    name = unicodedata.normalize("NFC", name)
     name = name.lower()
-    return collapse_spaces(name)
+    return squash_spaces(name)
 
 
-@lru_cache(maxsize=2000)
-def clean_tokenize_name(schema: Schema, name: str) -> List[str]:
-    """Tokenize a name and clean it up."""
-    name = preprocess_name(name) or name
-    if schema.name in ("LegalEntity", "Organization", "Company", "PublicBody"):
-        name = replace_org_types_compare(name, normalizer=preprocess_name)
-    elif schema.name in ("LegalEntity", "Person"):
-        name = remove_person_prefixes(name)
-    return tokenize_name(name)
+def safe_string(value: str) -> str:
+    """Make sure a value coming from the API is a safe string for data comparison."""
+    value = unicodedata.normalize("NFC", value)
+    value = remove_unsafe_chars(value)
+    return value.strip()
 
 
-def phonetic_names(schema: Schema, names: List[str]) -> Set[str]:
-    """Generate phonetic forms of the given names."""
-    phonemes: Set[str] = set()
-    for name in names:
-        for token in clean_tokenize_name(schema, name):
-            if len(token) < 3 or not is_modern_alphabet(token):
-                continue
-            if token.isnumeric():
-                continue
-            phoneme = metaphone(ascii_text(token))
-            if len(phoneme) > 2:
-                phonemes.add(phoneme)
-    return phonemes
+def entity_names(entity: EntityProxy) -> Set[Name]:
+    """Build name objects from the names linked to an entity."""
+    # TODO: this does ca. the same thing as `logic_v2.names.analysis`. Should we extract that into
+    # followthemoney or has it not yet stabilised enough?
+    name_type = schema_type_tag(entity.schema)
+    names: Set[Name] = set()
+
+    is_org = name_type in (NameTypeTag.ORG, NameTypeTag.ENT)
+    is_person = name_type == NameTypeTag.PER
+
+    values = entity.get_type_values(registry.name, matchable=True)
+    values.extend(entity.get("weakAlias", quiet=True))
+    for value in values:
+        if name_type == NameTypeTag.PER:
+            value = remove_person_prefixes(value)
+        norm = prenormalize_name(value)
+        if is_org:
+            norm = replace_org_types_compare(norm, normalizer=prenormalize_name)
+        name = Name(value, form=norm, tag=name_type)
+
+        # Apply symbols:
+        if is_person:
+            tag_person_name(name, normalize_name)
+        if is_org:
+            tag_org_name(name, normalize_name)
+        names.add(name)
+    return names
 
 
-def index_name_parts(schema: Schema, names: List[str]) -> Set[str]:
-    """Generate a list of indexable name parts from the given names."""
-    parts: Set[str] = set()
-    for name in names:
-        for token in clean_tokenize_name(schema, name):
-            if len(token) < 2:
-                continue
-            parts.add(token)
-            # TODO: put name and company symbol lookups here
-            if is_modern_alphabet(token):
-                ascii_token = ascii_text(token)
-                if ascii_token is not None and len(ascii_token) > 1:
-                    parts.add(ascii_token)
-    return parts
+def is_matchable_symbol(symbol: Symbol) -> bool:
+    """Check if a symbol is matchable."""
+    return symbol.category not in NON_MATCHABLE_SYMBOLS
 
 
-def index_name_keys(schema: Schema, names: List[str]) -> Set[str]:
-    """Generate a indexable name keys from the given names."""
-    keys: Set[str] = set()
-    for name in names:
-        tokens = clean_tokenize_name(schema, name)
-        ascii_tokens: List[str] = []
-        for token in tokens:
-            if token.isnumeric() or not is_modern_alphabet(token):
-                ascii_tokens.append(token)
-                continue
-            ascii_token = ascii_text(token) or token
-            ascii_tokens.append(ascii_token)
-        ascii_name = "".join(sorted(ascii_tokens))
-        if len(ascii_name) > 5:
-            keys.add(ascii_name)
-    return keys
+def index_symbol(symbol: Symbol) -> str:
+    return f"{symbol.category.value}:{symbol.id}"
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:

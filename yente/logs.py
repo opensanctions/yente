@@ -19,7 +19,7 @@ def get_logger(name: str) -> BoundLogger:
     return get_raw_logger(name)
 
 
-def configure_logging(level: int = logging.INFO) -> None:
+def configure_logging() -> None:
     """Configure log levels and structured logging"""
     shared_processors: List[Any] = [
         add_log_level,
@@ -65,6 +65,9 @@ def configure_logging(level: int = logging.INFO) -> None:
     es_logger = logging.getLogger("elastic_transport")
     es_logger.setLevel(logging.WARNING)
 
+    httpcore_logger = logging.getLogger("httpcore")
+    httpcore_logger.setLevel(logging.WARNING)
+
     uv_logger = logging.getLogger("uvicorn")
     uv_logger.handlers = []
 
@@ -75,7 +78,7 @@ def configure_logging(level: int = logging.INFO) -> None:
 
     # handler for low level logs that should be sent to STDOUT
     out_handler = logging.StreamHandler(sys.stdout)
-    out_handler.setLevel(level)
+    out_handler.setLevel(settings.LOG_LEVEL)
     out_handler.addFilter(_MaxLevelFilter(logging.WARNING))
     out_handler.setFormatter(formatter)
     # handler for high level logs that should be sent to STDERR

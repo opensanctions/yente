@@ -1,6 +1,5 @@
 from asyncio import Semaphore
-from typing import Any, Dict, List, Optional
-from typing import AsyncIterator
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
 
 from yente import settings
 
@@ -35,8 +34,10 @@ class SearchProvider(object):
         """Create a copy of the index with the given name."""
         raise NotImplementedError
 
-    async def create_index(self, index: str) -> None:
-        """Create a new index with the given name."""
+    async def create_index(
+        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+    ) -> None:
+        """Create a new index if it doesn't exist yet."""
         raise NotImplementedError
 
     async def delete_index(self, index: str) -> None:
@@ -63,6 +64,15 @@ class SearchProvider(object):
         """Search for entities in the index."""
         raise NotImplementedError
 
-    async def bulk_index(self, entities: AsyncIterator[Dict[str, Any]]) -> None:
-        """Index a list of entities into the search index."""
+    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+        """Get a document by ID using the GET API.
+
+        Returns the document if found, None if not found.
+        """
+        raise NotImplementedError
+
+    async def bulk_index(
+        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+    ) -> None:
+        """Perform an iterable of bulk actions to the search index."""
         raise NotImplementedError

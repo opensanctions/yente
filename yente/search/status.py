@@ -10,18 +10,18 @@ log = get_logger(__name__)
 async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
     for aliased_index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
-            dataset_name, version = parse_index_name(aliased_index)
+            index_info = parse_index_name(aliased_index)
         except ValueError:
             log.warn("Invalid index name: %s" % aliased_index)
             continue
-        dataset = catalog.get(dataset_name)
+        dataset = catalog.get(index_info.dataset_name)
         if dataset is None:
-            log.warn("Dataset has index but no metadata: %s" % dataset_name)
+            log.warn("Dataset has index but no metadata: %s" % index_info.dataset_name)
             continue
-        if version != dataset.version:
+        if index_info.dataset_version != dataset.model.version:
             log.info(
-                "Dataset %s is outdated" % dataset_name,
-                indexed=version,
-                available=dataset.version,
+                "Dataset %s is outdated" % index_info.dataset_name,
+                indexed=index_info.dataset_version,
+                available=dataset.model.version,
             )
-        dataset.index_version = version
+        dataset.model.index_version = index_info.dataset_version

@@ -136,6 +136,8 @@ async def get_nested_entity(
 
     Also returns the number of directly-adjacent entities available.
     """
+    if root.id is None:
+        raise ValueError("Root entity must have an ID for adjacency queries.")
     inverted: Inverted = {}
     inbound_ids = [root.id]
     outbound_ids: Set[str] = initial_outbound_ids(root, prop)
