@@ -189,6 +189,8 @@ async def index_entities(
         base_index = build_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
+        # Note: this will only create the index if it doesn't already exist.
+        # The implication of this is that the index is not re-created, even if --force is used.
         await provider.create_index(
             next_index, mappings=make_entity_mapping(), settings=INDEX_SETTINGS
         )
