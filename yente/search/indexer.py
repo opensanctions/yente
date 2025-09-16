@@ -179,7 +179,7 @@ async def index_entities(
         index=next_index,
         dataset=dataset.name,
         dataset_version=updater.target_version,
-        message=f"{"Incremental" if is_partial_reindex else "Full"} reindex of {dataset.name} to {next_index} started",
+        message=f"{'Incremental' if is_partial_reindex else 'Full'} reindex of {dataset.name} to {next_index} started",
     )
 
     if is_partial_reindex:
@@ -222,7 +222,7 @@ async def index_entities(
             index=next_index,
             dataset=dataset.name,
             dataset_version=updater.target_version,
-            message=f"{"Incremental" if is_partial_reindex else "Full"} reindex of {dataset.name} to {next_index} completed",
+            message=f"{'Incremental' if is_partial_reindex else 'Full'} reindex of {dataset.name} to {next_index} completed",
         )
 
     except (YenteIndexError, Exception) as exc:
