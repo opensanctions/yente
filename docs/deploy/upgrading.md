@@ -10,7 +10,7 @@ Also read [the OpenSanctions technical changelog]({{ config.extra.opensanctions_
 
 ## Adapt your client applications
 
-Ensure that your clients are compatible with the version of yente you're upgrading to and all the changes outlined in the changelog. Changes in both the data and yente functionality are carry a notice period according to [our change policy]({{ extra.config.opensanctions_url }}/docs/data/changes/).
+Ensure that your clients are compatible with the version of yente you're upgrading to and all the changes outlined in the changelog. Changes in both the data and yente functionality are carry a notice period according to [our change policy]({{ config.extra.opensanctions_url }}/docs/data/changes/).
 
 ## Upgrade yente
 
