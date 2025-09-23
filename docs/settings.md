@@ -22,7 +22,7 @@ The Yente service is built to require a minimum of configuration, but several en
 
 ## Managing data updates
 
-Yente features various configuration options related to data refresh and re-indexing. See [Managing data updates][reindex.md].
+Yente features various configuration options related to data refresh and re-indexing. See [Managing data updates](reindex.md).
 
 ## Other settings
 

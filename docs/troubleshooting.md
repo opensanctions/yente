@@ -1,6 +1,6 @@
 ## All my HTTP requests return index_not_found_exception, what's wrong?
 
-This probably means that the [initial index-building](/faq/71/) never completed. Check the following:
+This probably means that the [initial index-building](reindex.md) never completed. Check the following:
 
 1. That the machine you are running the indexer/yente app on is able to fetch data via HTTPS from `data.opensanctions.org`.
 2. That a temporary, timestamped index (see above) was created in ElasticSearch (which means indexing has at least begun).
