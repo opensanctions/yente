@@ -9,6 +9,9 @@ The default configuration of `yente` will index and expose the datasets publishe
 
 Side note: A **dataset** in `yente` is a logical unit that contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets (rather than their own source data) are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
 
+Multiple catalog or dataset entries should not include the same datasets or entities with the same IDs.
+When overlapping collections or datasets are required, this could be done by running multiple yente instances with different `YENTE_INDEX_NAME` settings to distinguish their indexes.
+
 ## Generating FollowTheMoney data
 
 In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney entities]({{ config.extra.opensanctions_url }}/docs/entities/). Entities describe [semantic units like people, companies or airplanes]({{ config.extra.opensanctions_url }}/reference/) that underly the way that `yente` performs data matching.
@@ -32,19 +35,26 @@ catalogs:
     url: "https://data.opensanctions.org/datasets/latest/index.json"
     # Limit the dataset scope of the entities which will be indexed into yente. Useful
     # values include `default`, `sanctions` or `peps`.
-    scope: all
-    resource_name: entities.ftm.json
-  - url: "https://delivery.opensanctions.com/datasets/latest/index.json"
-    # auth_token will be sent in the Authorization header
-    auth_token: "secretsecret" # $ENVIRONMENT_VARIABLE expansion supported
     scope: default
     resource_name: entities.ftm.json
 
-  # Additional data catalogs can be specified. This has the advantage that a catalog
-  # file will specify the latest update date of each dataset, and thus changes to the
-  # datasets in the catalog will automatically trigger a re-index in yente:
+  ## Alternative of above. auth_token will be sent in the Authorization header
+  #- url: "https://delivery.opensanctions.com/datasets/latest/index.json"
+  #  auth_token: "secretsecret" # $ENVIRONMENT_VARIABLE expansion supported
+  #  scope: default
+  #  resource_name: entities.ftm.json
+
+  # Additional data catalogs can be specified. Using catalog entries for
+  # additional datasets (rather than dataset entries shown below) has the advantage
+  # that a catalog file will specify the latest update date of each dataset, and thus
+  # changes to the datasets in the catalog will automatically trigger a re-index in yente:
   - url: "https://data.opensanctions.org/graph/catalog.json"
+    # Make sure to limit the scope such that two catalog entries don't load datasets
+    # with the same name. In this case the `graph` dataset contains all the datasets
+    # in default so if this entry doesn't have a sufficiently specific scope constraint,
+    # the catalog loading `default` above should be commented out.
     resource_name: entities.ftm.json
+
 # The next section begins to specify non-OpenSanctions datasets that should be exposed
 # in the API:
 datasets:

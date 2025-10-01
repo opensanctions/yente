@@ -2,6 +2,11 @@ catalogs:
   - url: "https://data.opensanctions.org/datasets/latest/index.json"
     scope: default
     resource_name: entities.ftm.json
+
+  # Example of an alternative catalog source. Do not use the 'graph' catalog at
+  # the same time as https://data.opensanctions.org/datasets/latest/index.json
+  #
   # - url: "https://data.opensanctions.org/datasets/latest/graph/catalog.json"
+  #   scope: graph
   #   resource_name: entities.ftm.json
 datasets: []
