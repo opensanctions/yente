@@ -2,6 +2,7 @@ import warnings
 from followthemoney import EntityProxy
 import httpx
 import unicodedata
+from httpx_retries import Retry, RetryTransport
 from pathlib import Path
 from urllib.parse import urlparse
 from followthemoney.types import registry
@@ -165,7 +166,8 @@ class Authenticator(httpx.Auth):
 async def httpx_session(
     auth_token: Optional[str] = None,
 ) -> AsyncGenerator[httpx.AsyncClient, None]:
-    transport = httpx.AsyncHTTPTransport(retries=3)
+    retry = Retry(total=3, backoff_factor=2)
+    transport = RetryTransport(transport=httpx.AsyncHTTPTransport(), retry=retry)
     proxy = settings.HTTP_PROXY if settings.HTTP_PROXY != "" else None
     headers = {"User-Agent": f"Yente/{settings.VERSION}"}
     async with httpx.AsyncClient(
