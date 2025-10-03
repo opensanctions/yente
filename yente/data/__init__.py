@@ -1,4 +1,5 @@
 import asyncio
+import httpx
 import structlog
 from structlog.stdlib import BoundLogger
 
@@ -22,5 +23,7 @@ async def refresh_catalog() -> None:
     log.info("Refreshing manifest/catalog...", catalog=Catalog.instance)
     try:
         Catalog.instance = await Catalog.load()
+    except httpx.HTTPError as exc:
+        log.exception("Metadata fetch error (%s): %s" % (exc.request.url, exc))
     except (Exception, KeyboardInterrupt) as exc:
         log.exception("Metadata fetch error: %s" % exc)
