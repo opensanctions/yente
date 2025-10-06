@@ -44,15 +44,13 @@ catalogs:
   #  scope: default
   #  resource_name: entities.ftm.json
 
-  # Additional data catalogs can be specified. Using catalog entries for
-  # additional datasets (rather than dataset entries shown below) has the advantage
-  # that a catalog file will specify the latest update date of each dataset, and thus
-  # changes to the datasets in the catalog will automatically trigger a re-index in yente:
-  - url: "https://data.opensanctions.org/graph/catalog.json"
+  # Additional data catalogs can be specified. Using catalog entries for additional
+  # datasets (rather than dataset entries shown below) has the advantage that a catalog file
+  # will specify the latest `version` of each dataset, and thus changes to the datasets in
+  # the catalog will automatically trigger a re-index in yente:
+  - url: "https://data.opensanctions.org/kyb/catalog.json"
     # Make sure to limit the scope such that two catalog entries don't load datasets
-    # with the same name. In this case the `graph` dataset contains all the datasets
-    # in default so if this entry doesn't have a sufficiently specific scope constraint,
-    # the catalog loading `default` above should be commented out.
+    # with the same name.
     resource_name: entities.ftm.json
 
 # The next section begins to specify non-OpenSanctions datasets that should be exposed
