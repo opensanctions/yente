@@ -10,6 +10,6 @@ catalogs:
   #   scopes:
   #     - ru_egrul
   #     - icij_offshoreleaks
-  #    - gleif
+  #     - gleif
   #   resource_name: entities.ftm.json
 datasets: []
