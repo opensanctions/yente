@@ -3,10 +3,13 @@ catalogs:
     scope: default
     resource_name: entities.ftm.json
 
-  # Example of an alternative catalog source. Do not use the 'graph' catalog at
-  # the same time as https://data.opensanctions.org/datasets/latest/index.json
+  # Example of an alternative catalog source, loading only specific datasets
+  # from a catalog:
   #
-  # - url: "https://data.opensanctions.org/datasets/latest/graph/catalog.json"
-  #   scope: graph
+  # - url: "https://data.opensanctions.org/datasets/latest/kyb/catalog.json"
+  #   scopes:
+  #     - ru_egrul
+  #     - icij_offshoreleaks
+  #    - gleif
   #   resource_name: entities.ftm.json
 datasets: []
