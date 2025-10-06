@@ -9,6 +9,13 @@ class YenteError(Exception):
         self.status = status
 
 
+class YenteConfigError(YenteError):
+    """Errors resulting from misconfiguration of Yente."""
+
+    def __init__(self, detail: str):
+        super().__init__(detail, status=500)
+
+
 class YenteIndexError(YenteError):
     """Errors resulting from the search backend being unhappy."""
 

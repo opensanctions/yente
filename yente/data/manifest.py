@@ -7,6 +7,7 @@ from pydantic import BaseModel, field_validator
 from yente import settings
 from yente.data.dataset import Dataset
 from yente.data.loader import load_yaml_url
+from yente.exc import YenteConfigError
 
 
 class CatalogManifest(BaseModel):
@@ -91,6 +92,9 @@ class Catalog(DataCatalog[Dataset]):
 
         # Populate the internal catalog from all datasets/catalogs specified in the manifest.
         for dataset_spec in await manifest.fetch_datasets():
+            dataset_name = dataset_spec.get("name")
+            if dataset_name is not None and catalog.get(dataset_name) is not None:
+                raise YenteConfigError(f"Duplicate dataset name: {dataset_name!r}")
             catalog.make_dataset(dataset_spec)
 
         return catalog
