@@ -117,6 +117,10 @@ def filter_query(
 
 def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
+    name_objs = entity_names(entity)
+    # Single-word names are hard to match, so we use fuzzy matching more aggressively.
+    # FIXME: This could make sense for 2 part names as well?
+    is_short = max((len(n.parts) for n in name_objs), default=0) < 2
     shoulds: List[Clause] = []
     for picked_name in pick_names(names, limit=5):
         match = {
@@ -126,12 +130,12 @@ def names_query(entity: EntityProxy) -> List[Clause]:
                 "boost": 3.0,
             }
         }
-        if settings.MATCH_FUZZY:
+        if settings.MATCH_FUZZY or is_short:
             match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
 
     seen: Set[str] = set()
-    for name in entity_names(entity):
+    for name in name_objs:
         part_symbols: Dict[str, Set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
