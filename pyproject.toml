@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yente"
-version = "5.0.1"
+version = "5.0.2"
 description = "A simple and fast API service for querying FollowTheMoney data, including OpenSanctions."
 authors = [{ name = "OpenSanctions", email = "info@opensanctions.org" }]
 license = { file = "LICENSE" }
