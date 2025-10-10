@@ -37,7 +37,7 @@ dependencies = [
     "asyncstdlib == 3.13.1",
     "aiocron == 2.1",
     "aiocsv == 1.4.0",
-    "aiofiles == 24.1.0",
+    "aiofiles == 25.1.0",
     "rich",
 ]
 requires-python = ">=3.11,<=3.13"
