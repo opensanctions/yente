@@ -50,7 +50,7 @@ async def match(
         default=settings.SCORE_THRESHOLD,
         title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
     ),
-    algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
+    algorithm: str = Query(None, title=ALGO_HELP),
     include_dataset: List[str] = Query(
         [], title="Only include the given datasets in results"
     ),
@@ -137,7 +137,9 @@ async def match(
     # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
-    algorithm_type = get_algorithm_by_name(algorithm)
+    algorithm_type = get_algorithm_by_name(
+        algorithm if algorithm is not None else settings.DEFAULT_ALGORITHM
+    )
 
     for config_key in match.config.keys():
         if config_key not in algorithm_type.CONFIG:
@@ -207,6 +209,10 @@ async def match(
             action="match",
             schema=entity.schema.name,
             results=total,
+            threshold=threshold,
+            dataset=dataset,
+            # Log the algorithm passed in the request, which may be None or "best"
+            algorithm=algorithm,
         )
         responses[name] = EntityMatches(
             status=200,
