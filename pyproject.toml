@@ -22,7 +22,6 @@ dependencies = [
     "structlog == 25.4.0",
     "pyicu == 2.15.3",
     "pydantic",
-    "jellyfish == 1.2.0",
     "anyio == 4.11.0",
     "orjson == 3.11.3",
     "text-unidecode == 1.3",
