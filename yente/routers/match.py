@@ -1,6 +1,6 @@
 import asyncio
 from typing import Dict, List, Optional
-from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
@@ -33,6 +33,7 @@ router = APIRouter()
     },
 )
 async def match(
+    request: Request,
     response: Response,
     match: EntityMatchQuery,
     dataset: str = PATH_DATASET,
@@ -50,7 +51,7 @@ async def match(
         default=settings.SCORE_THRESHOLD,
         title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
     ),
-    algorithm: str = Query(None, title=ALGO_HELP),
+    algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
     include_dataset: List[str] = Query(
         [], title="Only include the given datasets in results"
     ),
@@ -137,9 +138,7 @@ async def match(
     # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
-    algorithm_type = get_algorithm_by_name(
-        algorithm if algorithm is not None else settings.DEFAULT_ALGORITHM
-    )
+    algorithm_type = get_algorithm_by_name(algorithm)
 
     for config_key in match.config.keys():
         if config_key not in algorithm_type.CONFIG:
@@ -212,7 +211,7 @@ async def match(
             threshold=threshold,
             dataset=dataset,
             # Log the algorithm passed in the request, which may be None or "best"
-            algorithm=algorithm,
+            algorithm_param=request.query_params.get("algorithm"),
         )
         responses[name] = EntityMatches(
             status=200,
