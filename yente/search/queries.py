@@ -237,7 +237,7 @@ def text_query(
         should = {
             "simple_query_string": {
                 "query": query,
-                "fields": ["names^3", "text"],
+                "fields": ["names^3"],
                 "default_operator": "AND",
                 "analyzer": "osa-analyzer",
                 "lenient": True,
@@ -247,7 +247,7 @@ def text_query(
         should = {
             "query_string": {
                 "query": query,
-                "fields": ["names^3", "text"],
+                "fields": ["names^3"],
                 "default_operator": "AND",
                 "fuzziness": "AUTO" if fuzzy else 0,
                 "analyzer": "osa-analyzer",
