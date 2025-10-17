@@ -15,10 +15,10 @@ from yente.data import get_catalog
 from yente.data.dataset import Dataset
 
 ENABLED_ALGORITHMS: List[Type[ScoringAlgorithm]] = [
-    LogicV1,
     LogicV2,
     NameMatcher,
     NameQualifiedMatcher,
+    LogicV1,
     RegressionV1,
 ]
 
