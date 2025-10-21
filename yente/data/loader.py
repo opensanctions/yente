@@ -14,6 +14,23 @@ from yente.data.util import get_url_local_path, httpx_session
 log = get_logger(__name__)
 
 
+def raise_for_status_with_custom_error(resp: httpx.Response) -> None:
+    # Putting this custom error message here is a bit hacky, but the alternative
+    # would have been to put it in the manifest and pass it through all the way here.
+    # This is the pragmatic solution for now.
+    if (
+        resp.status_code == 401
+        and resp.request.url.host == "delivery.opensanctions.com"
+    ):
+        raise httpx.HTTPStatusError(
+            "Failed to authenticate with OpenSanctions Delivery Token. See https://yente.followthemoney.org/docs/opensanctions-delivery/ for more information.",
+            request=resp.request,
+            response=resp,
+        )
+
+    resp.raise_for_status()
+
+
 async def load_yaml_url(url: str, auth_token: Optional[str] = None) -> Any:
     if url.lower().endswith(".json"):
         return await load_json_url(url, auth_token=auth_token)
@@ -36,7 +53,8 @@ async def load_json_url(url: str, auth_token: Optional[str] = None) -> Any:
     else:
         async with httpx_session(auth_token=auth_token) as client:
             resp = await client.get(url)
-            resp.raise_for_status()
+            # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+            raise_for_status_with_custom_error(resp)
             data = resp.content
     return orjson.loads(data)
 
@@ -46,7 +64,8 @@ async def fetch_url_to_path(
 ) -> None:
     async with httpx_session(auth_token=auth_token) as client:
         async with client.stream("GET", url) as resp:
-            resp.raise_for_status()
+            # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+            raise_for_status_with_custom_error(resp)
             async with aiofiles.open(path, "wb") as outfh:
                 async for chunk in resp.aiter_bytes():
                     await outfh.write(chunk)
@@ -65,7 +84,8 @@ async def stream_http_lines(
         try:
             async with httpx_session(auth_token=auth_token) as client:
                 async with client.stream("GET", url) as resp:
-                    resp.raise_for_status()
+                    # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+                    raise_for_status_with_custom_error(resp)
                     async for line in resp.aiter_lines():
                         yield orjson.loads(line)
                     return
