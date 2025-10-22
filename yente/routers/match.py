@@ -210,6 +210,7 @@ async def match(
             results=total,
             threshold=threshold,
             dataset=dataset,
+            limit=limit,
             # Log the algorithm passed in the request, which may be None or "best"
             algorithm_param=request.query_params.get("algorithm"),
         )
