@@ -23,7 +23,7 @@ def raise_for_status_with_custom_error(resp: httpx.Response) -> None:
         and resp.request.url.host == "delivery.opensanctions.com"
     ):
         raise httpx.HTTPStatusError(
-            "Failed to authenticate with OpenSanctions Delivery Token. See https://yente.followthemoney.org/docs/opensanctions-delivery/ for more information.",
+            "Failed to authenticate with Delivery Token. See https://yente.followthemoney.org/docs/opensanctions-delivery/ for more information.",
             request=resp.request,
             response=resp,
         )
