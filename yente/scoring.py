@@ -20,7 +20,10 @@ async def score_results(
     matches = 0
     for result in results:
         scoring = algorithm.compare(query=entity, result=result, config=config)
-        await asyncio.sleep(0)  # Yield control to the event loop
+        # Yield control to the event loop
+        # This might allow the event loop to process another request, resulting in
+        # more even response times when CPU-bound scoring requests pile up.
+        await asyncio.sleep(0)
         response = ScoredEntityResponse.from_entity_result(result, scoring, threshold)
         if response.score <= cutoff:
             continue
