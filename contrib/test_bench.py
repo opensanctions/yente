@@ -32,7 +32,7 @@ async def test_example():
         print(ent.id, ent.caption, ent.schema.name)
 
     algorithm = get_algorithm("name-based")
-    total, scored = score_results(
+    total, scored = await score_results(
         algorithm,
         entity,
         ents,

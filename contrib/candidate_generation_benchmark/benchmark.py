@@ -147,7 +147,7 @@ async def benchmark_person(
         config = ScoringConfig.defaults()
 
         # Score the candidates
-        total, scored = score_results(
+        total, scored = await score_results(
             algorithm,
             entity,
             candidates,
