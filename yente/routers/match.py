@@ -194,7 +194,7 @@ async def match(
 
     for (name, entity), resp in zip(entities, results):
         ents = result_entities(resp)
-        total, scored = score_results(
+        total, scored = await score_results(
             algorithm_type,
             entity,
             ents,
