@@ -19,7 +19,7 @@ dependencies = [
     "fastapi == 0.119.0",
     "python-multipart == 0.0.20",
     "email-validator == 2.3.0",
-    "structlog == 25.4.0",
+    "structlog == 25.5.0",
     "pyicu == 2.15.3",
     "pydantic",
     "jellyfish == 1.2.0",
