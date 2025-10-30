@@ -1,6 +1,6 @@
 catalogs:
   - url: "https://data.opensanctions.org/datasets/latest/index.json"
-    scope: default
+    scope: sanctions
     resource_name: entities.ftm.json
 
   # Example of an alternative catalog source, loading only specific datasets
