@@ -1,3 +1,4 @@
+from enum import StrEnum
 import json
 import asyncio
 import logging
@@ -13,6 +14,11 @@ from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
+
+
+class OpenSearchServiceType(StrEnum):
+    ES = "es"
+    AOSS = "aoss"  # Amazon OpenSearch Serverless
 
 
 class OpenSearchProvider(SearchProvider):
@@ -36,24 +42,26 @@ class OpenSearchProvider(SearchProvider):
         if settings.OPENSEARCH_REGION and settings.OPENSEARCH_SERVICE:
             from boto3 import Session
 
-            service = settings.OPENSEARCH_SERVICE.lower().strip()
-            if service not in ["es", "aoss"]:
-                raise RuntimeError(f"Invalid OpenSearch service: {service}")
+            service_type = OpenSearchServiceType(settings.OPENSEARCH_SERVICE)
             credentials = Session().get_credentials()
             kwargs["http_auth"] = AWSV4SignerAsyncAuth(
                 credentials,
                 settings.OPENSEARCH_REGION,
-                settings.OPENSEARCH_SERVICE,
+                service_type.value,
             )
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
             try:
                 es = AsyncOpenSearch(**kwargs)
-                await es.cluster.health(wait_for_status="yellow", timeout=5)
+                # Cluster health is not supported for Serverless
+                if service_type != OpenSearchServiceType.AOSS:
+                    await es.cluster.health(wait_for_status="yellow", timeout=5)
                 return OpenSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to OpenSearch: %r" % exc)
+                if es is not None:
+                    await es.close()
                 await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to OpenSearch.")
