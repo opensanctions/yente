@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
 from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
-from opensearchpy.helpers import async_bulk, BulkIndexError
+from opensearchpy.helpers import async_streaming_bulk
 from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 
 from yente import settings
@@ -249,15 +249,45 @@ class OpenSearchProvider(SearchProvider):
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
     ) -> None:
         """Perform an iterable of bulk actions to the search index."""
-        try:
-            await async_bulk(
-                self.client,
-                actions,
-                chunk_size=1000,
-                yield_ok=False,
-                stats_only=True,
-                max_retries=3,
-                initial_backoff=2,
-            )
-        except BulkIndexError as exc:
-            raise YenteIndexError(f"Could not index entities: {exc}") from exc
+        # The logic in async_streaming_bulk is quite confusing and not well-documented. I tried
+        # to make sense of it. The overall goal here is to deal well with 429, which indicate
+        # rate limiting (important for OpenSearchServiceType.AOSS).
+        #
+        # Data is processed in chunks. The retry logic (max_retries and backoff) work per-chunk.
+        # So each chunk is retried up to max_retries times.
+        #
+        # The request can fail in two ways: The whole request fails, or a single document fails.
+        #
+        # `raise_on_exception` controls what happens when the whole request fails. If True,
+        # whole-request 429s are retried (it'll just retry the whole chunk), but if max_retries
+        # is exceeded, a TransportError is raised. If False, the request will be retried
+        # (actually, it's the same logic as the individual document retry logic) and eventually
+        # the failed documents will be yielded as failed.
+        #
+        # `raise_on_error` controls what happens when a single document fails. If True, a BulkIndexError
+        # is raised and no 429 retry logic is applied. If False, the failed document will be collected,
+        # retried up to max_retries times, and those that still fail will be yielded as failed.
+        #
+        # So what we want to do here is: Set raise_on_exception=False and raise_on_error=False.
+        # This will enable the maximum retry logic for both request-level and document-level 429s,
+        # and when the max retries are exceeded, the documents that failed to index will be yielded as failed.
+        # We just then just raise a YenteIndexError with the first error. We could do a dance here to collect
+        # a few more, but for now this is good enough.
+        #
+        # I filed https://github.com/opensearch-project/opensearch-py/issues/964 about this mess.
+        async for ok, item in async_streaming_bulk(
+            self.client,
+            actions,
+            chunk_size=1000,
+            # We don't care about successfully indexed documents
+            yield_ok=False,
+            # Set both to False to enable the retry logic for both request-level and document-level 429s
+            # and just yield the failed documents as failed when the max retries are exceeded.
+            raise_on_exception=False,
+            raise_on_error=False,
+            # OpenSearchServiceType.AOSS uses 429s as a rate limit, so retrying with a backoff is good.
+            max_retries=5,
+            initial_backoff=2,
+        ):
+            if not ok:
+                raise YenteIndexError(f"Could not index entity: {item!r}")
