@@ -22,6 +22,9 @@ class OpenSearchServiceType(StrEnum):
 
 
 class OpenSearchProvider(SearchProvider):
+    service_type: OpenSearchServiceType
+    client: AsyncOpenSearch
+
     @classmethod
     async def create(cls) -> "OpenSearchProvider":
         """Get elasticsearch connection."""
@@ -59,7 +62,7 @@ class OpenSearchProvider(SearchProvider):
                 # Cluster health is not supported for Serverless
                 if service_type != OpenSearchServiceType.AOSS:
                     await es.cluster.health(wait_for_status="yellow", timeout=5)
-                return OpenSearchProvider(es)
+                return OpenSearchProvider(es, service_type)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to OpenSearch: %r" % exc)
                 if es is not None:
@@ -68,15 +71,23 @@ class OpenSearchProvider(SearchProvider):
 
         raise RuntimeError("Could not connect to OpenSearch.")
 
-    def __init__(self, client: AsyncOpenSearch) -> None:
+    def __init__(
+        self, client: AsyncOpenSearch, service_type: OpenSearchServiceType
+    ) -> None:
         super().__init__()
         self.client = client
+        self.service_type = service_type
 
     async def close(self) -> None:
         await self.client.close()
 
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
+        if self.service_type == OpenSearchServiceType.AOSS:
+            # AOSS doesn't support refresh
+            # See https://github.com/opensearch-project/opensearch-py/issues/646
+            return
+
         try:
             await self.client.indices.refresh(index=index)
         except NotFoundError as nfe:
