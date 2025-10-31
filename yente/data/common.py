@@ -133,7 +133,7 @@ class EntityExample(BaseModel):
 
 class EntityMatchQuery(BaseModel):
     weights: Dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
-    config: Dict[str, Union[str, int, float, bool]] = Field(
+    config: Dict[str, Union[str, int, float, bool, None]] = Field(
         default_factory=dict,
         description="Algorithm-specific configuration parameters.",
         examples=[{"nm_number_mismatch": 0.4}],

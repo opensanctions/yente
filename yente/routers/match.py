@@ -160,6 +160,11 @@ async def match(
         if example is None:
             continue
         try:
+            if example.id is None:
+                # FIXME: `name` is not required to be a valid ID, but we just need it
+                # for making the entity hashable, anyway. The prefix is meant to avoid
+                # collisions with the result candidates.
+                example.id = f"query.{name}"
             entity = Entity.from_example(example)
             query = entity_query(
                 ds,
