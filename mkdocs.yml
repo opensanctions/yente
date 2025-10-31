@@ -54,13 +54,13 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  - FAQ: https://www.opensanctions.org/faq/?section=yente
   - Troubleshooting: troubleshooting.md
   - Deployment:
       - Overview: deploy/index.md
       - Upgrading: deploy/upgrading.md
       - Restrictive firewalls: deploy/firewall.md
   - Configuration:
+      - OpenSanctions Data: opensanctions-delivery.md
       - Settings: settings.md
       - Data updates: reindex.md
       - Custom Datasets: datasets.md

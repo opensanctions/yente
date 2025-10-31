@@ -34,8 +34,8 @@ services:
     environment:
       YENTE_INDEX_TYPE: "elasticsearch"
       YENTE_INDEX_URL: http://index:9200
-      # Set this to a randomly generated string to enable the /updatez API:
-      YENTE_UPDATE_TOKEN: ""
+      # Get your Delivery Token from the customer portal: https://opensanctions.org/account/
+      OPENSANCTIONS_DELIVERY_TOKEN: "your-secret-token"
     # If you want to index data from the host machine as a custom dataset,
     # create a volume mount here to make that data accessible from the
     # container:

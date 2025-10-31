@@ -13,6 +13,7 @@ For the `docker-compose` container orchestration tool, we provide an example [`d
 ```bash
 mkdir -p yente && cd yente
 wget https://raw.githubusercontent.com/opensanctions/yente/main/docker-compose.yml
+# Edit docker-compose.yml and add a OPENSANCTIONS_DELIVERY_TOKEN
 docker-compose up
 ```
 
