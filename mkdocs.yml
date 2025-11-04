@@ -60,11 +60,11 @@ nav:
       - Upgrading: deploy/upgrading.md
       - Restrictive firewalls: deploy/firewall.md
   - Configuration:
-      - OpenSanctions Data: opensanctions-delivery.md
       - Settings: settings.md
+      - OpenSanctions data: delivery.md
       - Data updates: reindex.md
-      - Custom Datasets: datasets.md
-      - Search Providers: opensearch.md
+      - Custom datasets: datasets.md
+      - Search providers: opensearch.md
 
   - Toolchain:
       - followthemoney: https://followthemoney.tech/

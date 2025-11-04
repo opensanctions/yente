@@ -9,7 +9,7 @@ Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opens
 **Note:** this documentation is only relevant to users who plan to [self-host]({{ config.extra.opensanctions_url }}/docs/on-premise/) the API. [Click here]({{ config.extra.opensanctions_url }}/api/) if you'd prefer to use our hosted API service.
 
 * [Set up yente on your local maching and in your infrastructure](deploy/index.md)
-* [Configure OpenSanctions data](opensanctions-delivery.md)
+* [Configure OpenSanctions data access](delivery.md)
 * [Learn about advanced configuration options](settings.md)
 
 ## Using the API

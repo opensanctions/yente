@@ -101,7 +101,7 @@ TESTING = False
 # Turn on debug logging and other development features:
 DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
-MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/default.yml"
+MANIFEST_DEFAULT_PATH = Path(__file__).parent.parent / "manifests/commercial.yml"
 
 # Path name for the manifest YAML file:
 # see: https://www.opensanctions.org/docs/yente/datasets/
