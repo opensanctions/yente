@@ -62,11 +62,9 @@ def configure_logging() -> None:
         logger_factory=LoggerFactory(),
     )
 
-    es_logger = logging.getLogger("elastic_transport")
-    es_logger.setLevel(logging.WARNING)
-
-    httpcore_logger = logging.getLogger("httpcore")
-    httpcore_logger.setLevel(logging.WARNING)
+    logging.getLogger("elastic_transport").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     uv_logger = logging.getLogger("uvicorn")
     uv_logger.handlers = []
