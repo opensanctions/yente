@@ -1,18 +1,15 @@
 services:
-  test-index:
-    container_name: test-index
+  index:
     extends:
       file: docker-compose.yml
       service: index
-    volumes:
-      - index-os-data-test:/usr/share/elasticsearch/data
+
+  app:
+    extends:
+      file: docker-compose.yml
+      service: app
     environment:
-      - node.name=index
-      - cluster.name=test-opensanctions-index
-      - action.destructive_requires_name=false
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      YENTE_MANIFEST: "manifests/civic.yml"
+
 volumes:
-  index-os-data-test: null
+  index-os-data: null

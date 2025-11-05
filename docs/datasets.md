@@ -7,14 +7,15 @@ The default configuration of `yente` will index and expose the datasets publishe
 * Index additional datasets that should be checked by the matching API. This might include large public datasets, or in-house data (such as a customer blocklist, local PEPs list, etc.) that you wish to vet alongside the OpenSanctions data.
 * Index only a part of the OpenSanctions data, e.g. only the `sanctions` collection.
 
-Side note: A **dataset** in `yente` is a logical unit that contains a set of entities. However, some datasets instead reference a list of other datasets which should be included in their scope. Datasets that contain other datasets (rather than their own source data) are called collections. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
+Side note: A **dataset** in `yente` is a logical unit that contains a set of entities. However, some datasets are **dataset collections**, which group existing datasets into a combined scope, without containing original entities. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
 
-Multiple catalog or dataset entries should not include the same datasets or entities with the same IDs.
-When overlapping collections or datasets are required, this could be done by running multiple yente instances with different `YENTE_INDEX_NAME` settings to distinguish their indexes.
+Multiple catalog or dataset entries should not include the same datasets or entities with the same IDs. You can use the `namespace` flag in your manifest file to generate dataset-scoped entity IDs upon indexing. This ensures separation, but will negatively interfer with dataset deduplication. 
+
+When overlapping collections or datasets are required, you can also deploy multiple instances with different `YENTE_INDEX_NAME` settings to distinguish their indexes in the same ElasticSearch backend.
 
 ## Generating FollowTheMoney data
 
-In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney entities]({{ config.extra.opensanctions_url }}/docs/entities/). Entities describe [semantic units like people, companies or airplanes]({{ config.extra.opensanctions_url }}/reference/) that underly the way that `yente` performs data matching.
+In order for `yente` to import a custom dataset, it must be formatted as a line-based JSON feed of [FollowTheMoney entities]({{ config.extra.opensanctions_url }}/docs/entities/). Entities describe semantic units like people, companies or airplanes that underly the way in which `yente` performs data matching.
 
 There are multiple ways to produce FtM data, but the most convenient is to [import structured data via a mapping file](https://followthemoney.tech/docs/mappings/) using the `ftm` set of command-line tools. This allows reading data from a CSV file or SQL database and converting each row into entities.
 

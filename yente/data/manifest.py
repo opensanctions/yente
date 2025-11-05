@@ -13,9 +13,9 @@ from yente.exc import YenteConfigError
 class CatalogManifest(BaseModel):
     """A CatalogManifest specifies from where to load a catalog and which datasets to load from it.
 
-    A catalog is a collection of datasets. The OpenSanctions catalog for example is available
-    at https://data.opensanctions.org/datasets/latest/index.json and lists all datasets
-    available in the OpenSanctions dataset archive."""
+    A catalog is a collection of datasets. The OpenSanctions catalog, for example, is available
+    at https://data.opensanctions.org/datasets/latest/default/catalog.json and lists all datasets
+    included in the default collection archive."""
 
     # The URL to load the catalog from.
     url: str

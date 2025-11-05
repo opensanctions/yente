@@ -1,5 +1,5 @@
 catalogs:
-  - url: "https://data.opensanctions.org/datasets/latest/index.json"
+  - url: "https://data.opensanctions.org/datasets/latest/default/catalog.json"
     scope: default
     resource_name: entities.ftm.json
 
@@ -12,4 +12,5 @@ catalogs:
   #     - icij_offshoreleaks
   #     - gleif
   #   resource_name: entities.ftm.json
+  #   namespace: true
 datasets: []
