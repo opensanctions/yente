@@ -20,7 +20,8 @@ services:
     volumes:
       - index-os-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      # curl --fail exits with an exit code >0 if anything about the request fails
+      test: ["CMD-SHELL", "curl --fail http://localhost:9200/_cluster/health || exit 1"]
     deploy:
       placement:
         max_replicas_per_node: 1
