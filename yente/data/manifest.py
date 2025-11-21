@@ -41,6 +41,10 @@ class CatalogManifest(BaseModel):
         if self.scope is not None:
             self.scopes.append(self.scope)
 
+        invalid_scopes = set(self.scopes) - {ds["name"] for ds in data["datasets"]}
+        if len(invalid_scopes):
+            raise YenteConfigError(f"Scopes {invalid_scopes} not found in catalog")
+
         for ds in data["datasets"]:
             if len(self.scopes):
                 ds["load"] = ds["name"] in self.scopes
