@@ -11,7 +11,7 @@ license = { file = "LICENSE" }
 readme = "README.md"
 dependencies = [
     "elasticsearch[async] == 8.19.2",
-    "opensearch-py[async] == 3.0.0",
+    "opensearch-py[async] == 3.1.0",
     "uvicorn[standard] == 0.38.0",
     "httpx[http2] == 0.28.1",
     "aiohttp[speedups] == 3.13.2",
