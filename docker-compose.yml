@@ -29,7 +29,7 @@ services:
         condition: on-failure
 
   app:
-    image: ghcr.io/opensanctions/yente:5.0.2
+    image: ghcr.io/opensanctions/yente:5.1.0
     depends_on:
       index:
         condition: service_healthy
