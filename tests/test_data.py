@@ -8,6 +8,7 @@ from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
 from yente.data.util import entity_names, expand_dates
+from yente.exc import YenteConfigError
 from .conftest import patch_catalog_response
 
 
@@ -125,6 +126,25 @@ async def test_catalog_and_local_dataset():
     assert len(catalog.datasets) == 2
     assert catalog.has("eu_fsf")
     assert catalog.has("parteispenden")
+
+
+@pytest.mark.asyncio
+async def test_catalog_with_invalid_scope():
+    catalog_response_data = {"datasets": [{"name": "eu_fsf", "title": "EU FSF"}]}
+    with patch_catalog_response(catalog_response_data):
+        with pytest.raises(YenteConfigError):
+            await Catalog.load(
+                manifest=Manifest.model_validate(
+                    {
+                        "catalogs": [
+                            {
+                                "url": "https://data.opensanctions.org/datasets/latest/index.json",
+                                "scope": "invalid",
+                            }
+                        ],
+                    }
+                )
+            )
 
 
 def test_get_url_local_path():
