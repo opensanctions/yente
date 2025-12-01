@@ -246,6 +246,11 @@ async def reconcile_query(
         properties[prop.name].append(p.get("v"))
 
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
+    if example.id is None:
+        # FIXME: `name` is not required to be a valid ID, but we just need it
+        # for making the entity hashable, anyway. The prefix is meant to avoid
+        # collisions with the result candidates.
+        example.id = f"query.{name}"
     try:
         proxy = Entity.from_example(example)
         query = entity_query(dataset, proxy, changed_since=changed_since)

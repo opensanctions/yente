@@ -140,8 +140,8 @@ HOST = env_str("YENTE_HOST", env_str("HOST", "0.0.0.0"))
 UPDATE_TOKEN = env_opt("YENTE_UPDATE_TOKEN")
 
 # Matcher defaults:
-DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "logic-v1")
-BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v1")
+DEFAULT_ALGORITHM = env_str("YENTE_DEFAULT_ALGORITHM", "best")
+BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v2")
 HIDDEN_ALGORITHMS = [
     algo for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "").split(",") if algo != ""
 ]

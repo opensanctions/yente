@@ -71,12 +71,13 @@ def test_match_no_schema():
 
 def test_match_many_names():
     query = {"queries": {"q": MANY_NAMES}}
-    resp = client.post("/match/default", json=query)
+    params = {"algorithm": "logic-v1"}
+    resp = client.post("/match/default", json=query, params=params)
     assert resp.status_code == 200, resp.text
     results = resp.json()["responses"]["q"]["results"]
     assert len(results) > 0, results
 
-    params = {"fuzzy": "false"}
+    params = {"fuzzy": "false", "algorithm": "logic-v1"}
     resp = client.post("/match/default", json=query, params=params)
     assert resp.status_code == 200, resp.text
     results2 = resp.json()["responses"]["q"]["results"]
@@ -184,14 +185,20 @@ def test_fuzzy_names():
     }
 
     with mock.patch("yente.settings.MATCH_FUZZY", False):
-        resp = client.post("/match/default", json=query)
+        resp = client.post(
+            "/match/default", json=query, params={"algorithm": "logic-v1"}
+        )
         data = resp.json()
         res = data["responses"]["a"]
         assert len(res["results"]) == 0, res
 
     with mock.patch("yente.settings.MATCH_FUZZY", True):
         # The result scores quite low, so we need to set a lower threshold to get a result
-        resp = client.post("/match/default", params={"threshold": 0.2}, json=query)
+        resp = client.post(
+            "/match/default",
+            params={"threshold": 0.2, "algorithm": "logic-v1"},
+            json=query,
+        )
         data = resp.json()
         res = data["responses"]["a"]
         assert len(res["results"]) > 0, res
