@@ -29,9 +29,7 @@ PATH_DATASET = Path(
 QUERY_PREFIX = Query("", min_length=0, description="Search prefix")
 TS_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?$"
 ALGO_LIST = ", ".join([a.NAME for a in ENABLED_ALGORITHMS])
-ALGO_HELP = (
-    f"Scoring algorithm to use, options: {ALGO_LIST} (best: {settings.BEST_ALGORITHM})"
-)
+ALGO_HELP = f'Scoring algorithm to use, currently "best" is defined as {settings.BEST_ALGORITHM}, options: {ALGO_LIST}'
 
 # Ensure that all hidden algorithms are valid
 assert all(
