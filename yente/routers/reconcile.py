@@ -2,6 +2,7 @@ import json
 import asyncio
 from urllib.parse import urljoin
 from typing import Any, Coroutine, Dict, List, Tuple, Optional, Union
+import uuid
 from fastapi import APIRouter, Query, Form, Depends
 from fastapi import Request, Response
 from fastapi import HTTPException
@@ -250,7 +251,7 @@ async def reconcile_query(
         # FIXME: `name` is not required to be a valid ID, but we just need it
         # for making the entity hashable, anyway. The prefix is meant to avoid
         # collisions with the result candidates.
-        example.id = f"query.{name}"
+        example.id = f"query.{str(uuid.uuid4())}"
     try:
         proxy = Entity.from_example(example)
         query = entity_query(dataset, proxy, changed_since=changed_since)
