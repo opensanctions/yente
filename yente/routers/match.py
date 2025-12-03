@@ -1,5 +1,6 @@
 import asyncio
 from typing import Dict, List, Optional
+import uuid
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
@@ -164,7 +165,7 @@ async def match(
                 # FIXME: `name` is not required to be a valid ID, but we just need it
                 # for making the entity hashable, anyway. The prefix is meant to avoid
                 # collisions with the result candidates.
-                example.id = f"query.{name}"
+                example.id = f"query.{str(uuid.uuid4())}"
             entity = Entity.from_example(example)
             query = entity_query(
                 ds,
