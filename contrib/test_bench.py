@@ -32,7 +32,7 @@ async def test_example():
         print(ent.id, ent.caption, ent.schema.name)
 
     algorithm = get_algorithm("name-based")
-    total, scored = await score_results(
+    total, matches, scored = await score_results(
         algorithm,
         entity,
         ents,
@@ -41,7 +41,7 @@ async def test_example():
         limit=LIMIT,
     )
 
-    print("\n\nSCORED RESULTS [%d]:" % total)
+    print("\n\nSCORED RESULTS [%d/%d]:" % (matches, total))
     for res in scored:
         print(res.id, res.caption, res.schema_, res.score)
 

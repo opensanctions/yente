@@ -200,7 +200,7 @@ async def match(
 
     for (name, entity), resp in zip(entities, results):
         ents = result_entities(resp)
-        total, scored = await score_results(
+        total, matches, scored = await score_results(
             algorithm_type,
             entity,
             ents,
@@ -213,7 +213,8 @@ async def match(
             f"/match/{ds.name}",
             action="match",
             schema=entity.schema.name,
-            results=total,
+            results=matches,
+            candidates=total,
             threshold=threshold,
             dataset=dataset,
             limit=limit,
