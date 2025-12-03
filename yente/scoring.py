@@ -15,9 +15,10 @@ async def score_results(
     cutoff: float = 0.0,
     limit: Optional[int] = None,
     config: ScoringConfig = ScoringConfig.defaults(),
-) -> Tuple[int, List[ScoredEntityResponse]]:
+) -> Tuple[int, int, List[ScoredEntityResponse]]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
+    total = 0
     for result in results:
         scoring = algorithm.compare(query=entity, result=result, config=config)
         # Yield control to the event loop
@@ -27,6 +28,7 @@ async def score_results(
         response = ScoredEntityResponse.from_entity_result(result, scoring, threshold)
         if response.score <= cutoff:
             continue
+        total += 1
         if response.match:
             matches += 1
         scored.append(response)
@@ -34,4 +36,4 @@ async def score_results(
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
     if limit is not None:
         scored = scored[:limit]
-    return matches, scored
+    return total, matches, scored
