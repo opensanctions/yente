@@ -14,15 +14,13 @@ EXAMPLE = {
 MANY_NAMES = {
     "properties": {
         "name": [
-            "Boris Borisovich ROTENBERG",
+            "Boris Romanovich ROTENBERG",
             "Boris Borissowitsch Rotenberg",
-            "Борис Борисович Ротенберг",
-            "Борис Ротенберг",
-            "Ротенберг Борис Борисович",
-            "Boris Borisovich Rotenberg ",
-            "Rotenberh Borys Borysovych",
-            "Ротенберг Борис Борисович",
-            "Борис Борисович Ротенберг",
+            "Борис Романович Ротенберг",
+            "Борис РОТЕНБЕРГ",
+            "Борис Романович РОТЕНБЕРГ",
+            "Rotenberg Boris Romanovich",
+            "Rotenberg Boriss Romanovitsch",
         ]
     },
     "schema": "Person",
@@ -69,7 +67,7 @@ def test_match_no_schema():
     assert resp.status_code == 400, resp.text
 
 
-def test_match_many_names():
+def test_match_many_names_logic_v1():
     query = {"queries": {"q": MANY_NAMES}}
     params = {"algorithm": "logic-v1"}
     resp = client.post("/match/default", json=query, params=params)
@@ -78,6 +76,21 @@ def test_match_many_names():
     assert len(results) > 0, results
 
     params = {"fuzzy": "false", "algorithm": "logic-v1"}
+    resp = client.post("/match/default", json=query, params=params)
+    assert resp.status_code == 200, resp.text
+    results2 = resp.json()["responses"]["q"]["results"]
+    assert len(results) == len(results2), results2
+
+
+def test_match_many_names():
+    query = {"queries": {"q": MANY_NAMES}}
+    params = {"algorithm": "best"}
+    resp = client.post("/match/default", json=query, params=params)
+    assert resp.status_code == 200, resp.text
+    results = resp.json()["responses"]["q"]["results"]
+    assert len(results) > 0, results
+
+    params = {"fuzzy": "false", "algorithm": "best"}
     resp = client.post("/match/default", json=query, params=params)
     assert resp.status_code == 200, resp.text
     results2 = resp.json()["responses"]["q"]["results"]
