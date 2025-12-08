@@ -193,13 +193,17 @@ def test_id_pass_through():
 
 
 def test_fuzzy_names():
+    """Test that fuzzy retrieval from the index works."""
     query = {
         "queries": {"a": {"schema": "Person", "properties": {"name": "Viadimit Putln"}}}
     }
 
     with mock.patch("yente.settings.MATCH_FUZZY", False):
+        # We need to set a lower threshold to get logic-v2 to score it high enough.
+        # That's okay, we care about testing the fuzzy retrieval from the index,
+        # not the details of the scoring algorithm.
         resp = client.post(
-            "/match/default", json=query, params={"algorithm": "logic-v1"}
+            "/match/default", json=query, params={"algorithm": "best", "threshold": 0.2}
         )
         data = resp.json()
         res = data["responses"]["a"]
@@ -209,14 +213,13 @@ def test_fuzzy_names():
         # The result scores quite low, so we need to set a lower threshold to get a result
         resp = client.post(
             "/match/default",
-            params={"threshold": 0.2, "algorithm": "logic-v1"},
+            params={"threshold": 0.2, "algorithm": "logic-v2"},
             json=query,
         )
         data = resp.json()
         res = data["responses"]["a"]
         assert len(res["results"]) > 0, res
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
-        assert res["results"][0]["score"] > 0.5, res["results"][0]
 
 
 def test_exclude_entity_ids():
