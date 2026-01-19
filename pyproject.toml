@@ -10,7 +10,7 @@ authors = [{ name = "OpenSanctions", email = "info@opensanctions.org" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 dependencies = [
-    "elasticsearch[async] == 8.19.2",
+    "elasticsearch[async] == 8.19.3",
     "opensearch-py[async] == 3.1.0",
     "uvicorn[standard] == 0.40.0",
     "httpx[http2] == 0.28.1",
