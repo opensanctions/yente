@@ -148,6 +148,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         "datasets": make_keyword(),
         "referents": make_keyword(),
         "target": make_field("boolean"),
+        "origin": make_keyword(),
         "text": make_field("text"),
         "entity_values_count": make_field("integer"),
         NAME_PHONETIC_FIELD: make_keyword(),
