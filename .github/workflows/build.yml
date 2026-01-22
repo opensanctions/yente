@@ -34,7 +34,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq libicu-dev
           pip install -U pip pyicu
-          pip install -e ".[dev]"
+          pip install --group dev -e .
       - name: Run pytest tests
         env:
           YENTE_INDEX_TYPE: elasticsearch
@@ -68,7 +68,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq libicu-dev
           pip install -U pip pyicu
-          pip install -e ".[dev]"
+          pip install --group dev -e .
       - name: Run pytest tests with opensearch backend
         env:
           YENTE_INDEX_TYPE: opensearch
@@ -91,7 +91,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq libicu-dev
           pip install -U pip pyicu
-          pip install -e ".[dev]"
+          pip install --group dev -e .
       - name: Run mypy strict type check
         run: |
           make typecheck

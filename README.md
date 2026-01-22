@@ -10,14 +10,17 @@ While `yente` is the open source core code base for the [OpenSanctions API](http
 
 ## Development
 
-`yente` is implemented in asynchronous, typed Python using the FastAPI framework. We're happy to see any bug fixes, improvements or extensions from the community. For local development without Docker, install the package into a fresh virtual Python environment like this:
+`yente` is implemented in asynchronous, typed Python using the FastAPI framework. We're happy to see any bug fixes, improvements or extensions from the community. To set up a local development environment, use `uv`:
 
 ```bash
 git clone https://github.com/opensanctions/yente.git
 cd yente
-pip install -e '.[dev]'
+# Install runtime and development dependencies
+uv sync
 # Install pre-commit hooks with useful checks
-pre-commit install
+prek install
+# Activate the virtual environment
+source .venv/bin/activate
 ```
 
 This will install a broad range of dependencies, including `numpy`, `scikit-learn` and `pyicu`, which are binary packages that may require a local build environment. For `pyicu` in particular, refer to the [package documentation](https://pypi.org/project/PyICU/).

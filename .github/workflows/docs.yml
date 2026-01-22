@@ -28,10 +28,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           cache: 'pip'
+          python-version: "3.12"
       - name: Install requirements
         run: |
-          pip install --no-cache-dir -q -e ".[dev]"
-          pip install --no-cache-dir -q -e ".[docs]"
+          pip install --no-cache-dir -q --group dev --group docs -e .
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
