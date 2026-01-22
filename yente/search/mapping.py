@@ -95,6 +95,11 @@ def make_keyword() -> MappingProperty:
     return {"type": "keyword"}
 
 
+def make_disabled_field() -> MappingProperty:
+    """Make a field that is not indexed or validated, but will still be stored in _source."""
+    return {"enabled": "false"}
+
+
 def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str, Any]:
     if schemata is None:
         schemata = list(model.schemata.values())
@@ -148,7 +153,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         "datasets": make_keyword(),
         "referents": make_keyword(),
         "target": make_field("boolean"),
-        "origin": make_keyword(),
+        "origin": make_disabled_field(),
         "text": make_field("text"),
         "entity_values_count": make_field("integer"),
         NAME_PHONETIC_FIELD: make_keyword(),
