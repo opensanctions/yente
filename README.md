@@ -18,7 +18,7 @@ cd yente
 # Install runtime and development dependencies
 uv sync
 # Install pre-commit hooks with useful checks
-pre-commit install
+prek install
 # Activate the virtual environment
 source .venv/bin/activate
 ```
