@@ -20,9 +20,7 @@ def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
-    entity = Entity.from_dict(source)
-    entity.datasets = set(source["datasets"])
-    return entity
+    return Entity.from_dict(source)
 
 
 def result_total(result: Dict[str, Any]) -> TotalSpec:
