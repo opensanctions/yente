@@ -1,6 +1,6 @@
 # Managing data updates
 
-By default, `yente` will check for an updated build of the OpenSanctions database published at `data.opensanctions.org` every hour. New data releases are [published several times a day]({{ config.extra.opensanctions_url }}/faq/4/update-frequency/). If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
+By default, `yente` will check for an updated build of the OpenSanctions database published at `delivery.opensanctions.com` every hour. New data releases are [published several times a day]({{ config.extra.opensanctions_url }}/faq/4/update-frequency/). If a fresh version is found, an indexing process will be spawned and load the data into the ElasticSearch index.
 
 You can change this behavior using the following configuration options:
 
@@ -20,7 +20,7 @@ However, when running more than one yente container, for example deploying to Ku
 
 Here is a very quick tour of how `yente` works:
 
-* When the application starts, it will download a metadata file from `data.opensanctions.org` which states the latest version of the OpenSanctions data that was been released.
+* When the application starts, it will download a metadata file from `delivery.opensanctions.com` which states the latest version of the OpenSanctions data that was been released.
 * If there is fresh data, it will create an ElasticSearch index with a timestamp that match the latest release of the data (e.g. `yente-entities-default-00220221030xxxx`).
 * It will then fetch the latest data from `data.opensanctions.org` (a 2GB+ JSON file) and push it into ElasticSearch in small batches.
 * When all the data is indexed, `yente` will create an ES index alias from `yente-entities-default` to the latest snapshot of the index (e.g. `yente-entities-all-00220221030xxxx`) and delete all older snapshots of the index.
