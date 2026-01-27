@@ -24,3 +24,5 @@ This will make the service available on Port 8000 of the local machine. You may 
 When scaling out, we recommend using Kubernetes or another managed cloud service (e.g. Google Cloud Run) to run multiple container instances of Yente. You will need to run both of the services defined in the compose file (the API and ElasticSearch instance). In this configuration, the yente workers must run with `YENTE_AUTO_REINDEX` disabled. You should configure a separate job that is launched periodically (for example, a Kubernetes CronJob) to perform reindexing to avoid multiple yente workers stepping on eachother's toes.
 
 We provide an [example Kubernetes configuration](https://github.com/opensanctions/yente/blob/main/kubernetes.example.yml) in the repository. You may also need to assign the API container network policy permissions to fetch data from `data.opensanctions.org` once every hour so that it can update itself.
+
+For production deployments, we recommend setting up [monitoring](monitoring.md) to ensure the service is serving the latest data.
