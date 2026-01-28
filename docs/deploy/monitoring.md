@@ -1,5 +1,7 @@
 # Monitoring yente
 
+We recommend you monitor your production deployment of yente and set up alerting in order to make sure your deployment is operational and serving up-to-date data.
+
 ## Service health endpoints
 
 yente provides standard health check endpoints:
