@@ -197,17 +197,16 @@ class ElasticSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with self.query_semaphore:
-                response = await self.client().search(
-                    index=index,
-                    query=query,
-                    size=size,
-                    from_=from_,
-                    sort=sort,
-                    aggregations=aggregations,
-                    search_type=search_type,
-                )
-                return cast(Dict[str, Any], response.body)
+            response = await self.client().search(
+                index=index,
+                query=query,
+                size=size,
+                from_=from_,
+                sort=sort,
+                aggregations=aggregations,
+                search_type=search_type,
+            )
+            return cast(Dict[str, Any], response.body)
         except TransportError as te:
             log.warning(
                 f"Backend connection error: {te.message}",
@@ -245,9 +244,8 @@ class ElasticSearchProvider(SearchProvider):
         Returns the document if found, None if not found.
         """
         try:
-            async with self.query_semaphore:
-                response = await self.client().get(index=index, id=doc_id)
-                return cast(Dict[str, Any], response.body)
+            response = await self.client().get(index=index, id=doc_id)
+            return cast(Dict[str, Any], response.body)
         except NotFoundError:
             return None
         except Exception as exc:
