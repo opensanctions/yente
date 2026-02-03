@@ -212,20 +212,19 @@ class OpenSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            async with self.query_semaphore:
-                body: Dict[str, Any] = {"query": query}
-                if aggregations is not None:
-                    body["aggregations"] = aggregations
-                if sort is not None:
-                    body["sort"] = sort
-                response = await self.client.search(
-                    index=index,
-                    size=size,
-                    from_=from_,
-                    body=body,
-                    search_type=search_type,
-                )
-                return cast(Dict[str, Any], response)
+            body: Dict[str, Any] = {"query": query}
+            if aggregations is not None:
+                body["aggregations"] = aggregations
+            if sort is not None:
+                body["sort"] = sort
+            response = await self.client.search(
+                index=index,
+                size=size,
+                from_=from_,
+                body=body,
+                search_type=search_type,
+            )
+            return cast(Dict[str, Any], response)
         except TransportError as exc:
             if "index_not_found_exception" in exc.error:
                 msg = (
@@ -258,9 +257,8 @@ class OpenSearchProvider(SearchProvider):
         Returns the document if found, None if not found.
         """
         try:
-            async with self.query_semaphore:
-                response = await self.client.get(index=index, id=doc_id)
-                return cast(Dict[str, Any], response)
+            response = await self.client.get(index=index, id=doc_id)
+            return cast(Dict[str, Any], response)
         except NotFoundError:
             return None
         except Exception as exc:

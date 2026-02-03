@@ -169,9 +169,6 @@ MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 # Whether to run expensive levenshtein queries inside ElasticSearch:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 
-# How many match and search queries to run against ES in parallel:
-QUERY_CONCURRENCY = env_int("YENTE_QUERY_CONCURRENCY", 50)
-
 # Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
 
