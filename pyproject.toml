@@ -20,7 +20,7 @@ dependencies = [
     "python-multipart == 0.0.22",
     "email-validator == 2.3.0",
     "structlog == 25.5.0",
-    "pyicu == 2.16",
+    "pyicu == 2.16.1",
     "pydantic",
     "anyio == 4.12.1",
     "orjson == 3.11.7",
