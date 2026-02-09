@@ -55,6 +55,7 @@ markdown_extensions:
 nav:
   - Overview: index.md
   - Troubleshooting: troubleshooting.md
+  - Changelog: https://github.com/opensanctions/yente/releases
   - Deployment:
       - Overview: deploy/index.md
       - Upgrading: deploy/upgrading.md
