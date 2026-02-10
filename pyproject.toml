@@ -75,6 +75,7 @@ docs = [
     "mkdocs-macros-plugin",
     "mkdocstrings[python]",
     "mkdocs-material",
+    "mkdocs-redirects",
 ]
 
 [tool.uv]

@@ -41,6 +41,9 @@ plugins:
           inventories:
             - http://rigour.followthemoney.tech/objects.inv
             - http://followthemoney.tech/objects.inv
+  - redirects:
+      redirect_maps:
+        'docs/delivery.md': 'delivery.md'
 
 markdown_extensions:
   - admonition
