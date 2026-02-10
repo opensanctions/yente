@@ -1,6 +1,6 @@
 # Configuring OpenSanctions Data
 
-By default, `yente` is configured to fetch the full and up-to-date OpenSanctions database. To help us understand how commercial partners use the dataset, we ask customers to create a delivery token. The token itself is not linked to a contract, it just helps us to provide relevant support. Please sign up at the [customer portal]({{ config.extra.opensanctions_url }}/account/) - a delivery token will be created automatically and immediately. Set OPENSANCTIONS_DELIVERY_TOKEN in your environment and off you go!
+By default, `yente` is configured to fetch the full and up-to-date OpenSanctions database. To help us understand how commercial partners use the dataset, we ask customers to create a delivery token. The token itself is not linked to a contract, it just helps us to provide relevant support. Please sign up at the [customer portal]({{ config.extra.opensanctions_url }}/account/) - a delivery token will be created automatically and immediately. Set `OPENSANCTIONS_DELIVERY_TOKEN` in your environment and off you go!
 
 If you're [deploying yente using a Docker container](/deploy/), your `docker-compose.yml` could contain the token like this:
 
