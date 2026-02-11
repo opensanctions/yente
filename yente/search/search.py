@@ -1,4 +1,4 @@
-from typing import Generator, Set
+from typing import Generator, Set, Tuple
 from typing import Any, Dict, List, Optional
 from followthemoney import model, registry, Schema
 from followthemoney.dataset import DataCatalog
@@ -28,12 +28,15 @@ def result_total(result: Dict[str, Any]) -> TotalSpec:
     return TotalSpec(value=total["value"], relation=total["relation"])
 
 
-def result_entities(response: Dict[str, Any]) -> Generator[Entity, None, None]:
+def result_entities(
+    response: Dict[str, Any],
+) -> Generator[Tuple[Entity, float], None, None]:
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
         entity = result_entity(hit)
+        score = float(hit.get("_score", 0.0))
         if entity is not None:
-            yield entity
+            yield (entity, score)
 
 
 def result_facets(

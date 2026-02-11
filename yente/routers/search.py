@@ -162,7 +162,7 @@ async def search(
         sort=parse_sorts(sort),
     )
     results: List[EntityResponse] = []
-    for result in result_entities(resp):
+    for result, _ in result_entities(resp):
         results.append(EntityResponse.from_entity(result))
     output = SearchResponse(
         results=results,
