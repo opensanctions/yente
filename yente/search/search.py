@@ -34,7 +34,7 @@ def result_entities(
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
         entity = result_entity(hit)
-        score = float(hit.get("_score", 0.0))
+        score = float(hit.get("_score") or 0.0)
         if entity is not None:
             yield (entity, score)
 
