@@ -1,14 +1,38 @@
 # mypy: ignore-errors
-import pytest
-from yente import settings
-from yente.search.mapping import make_entity_mapping, INDEX_SETTINGS
+from unittest.mock import AsyncMock, patch
 
+import pytest
+
+from yente import settings
 from yente.exc import YenteIndexError, YenteNotFoundError
 from yente.provider import SearchProvider
+from yente.provider.elastic import ElasticSearchProvider
+from yente.provider.opensearch import OpenSearchProvider
+from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 
 # Constants for testing
 TEST_MAPPINGS = make_entity_mapping()
 TEST_SETTINGS = INDEX_SETTINGS
+
+
+def _get_indices_client(provider: SearchProvider):
+    """Return the raw indices client for the given provider."""
+    if isinstance(provider, OpenSearchProvider):
+        return provider.client.indices
+    elif isinstance(provider, ElasticSearchProvider):
+        return provider.client().indices
+    raise TypeError(f"Unsupported provider type: {type(provider)}")
+
+
+def _make_transport_error(provider: SearchProvider) -> Exception:
+    """Return a TransportError appropriate for the given provider."""
+    if isinstance(provider, OpenSearchProvider):
+        from opensearchpy.exceptions import TransportError
+
+        return TransportError(500, "simulated clone failure", {})
+    from elasticsearch import TransportError
+
+    return TransportError("simulated clone failure")
 
 
 @pytest.mark.asyncio
@@ -94,3 +118,52 @@ async def test_alias_management(search_provider: SearchProvider):
     await search_provider.delete_index(index_v2)
     assert not await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == []
+
+
+@pytest.mark.asyncio
+async def test_clone_index_failure_restores_read_only(search_provider: SearchProvider):
+    """Regression test: clone_index must restore read_only=False on the source
+    index even when the clone operation fails (#1033)."""
+    source = settings.ENTITY_INDEX + "-clone-ro-src"
+    target = settings.ENTITY_INDEX + "-clone-ro-tgt"
+
+    await search_provider.create_index(
+        source, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
+    try:
+        indices_client = _get_indices_client(search_provider)
+        error = _make_transport_error(search_provider)
+
+        # Patch clone at the class level so it affects all instances
+        # (important for ElasticSearchProvider where client() creates new objects)
+        with patch.object(
+            type(indices_client), "clone", new_callable=AsyncMock, side_effect=error
+        ):
+            with pytest.raises(YenteIndexError):
+                await search_provider.clone_index(source, target)
+
+        # Verify the source index is NOT read-only
+        resp = await indices_client.get_settings(index=source)
+        index_settings = resp[source]["settings"]["index"]
+        blocks = index_settings.get("blocks", {})
+        read_only = blocks.get("read_only", "false")
+        assert (
+            str(read_only).lower() != "true"
+        ), f"Source index is still read-only after failed clone: {read_only}"
+    finally:
+        # Ensure source is writable for cleanup (in case fix is not yet applied)
+        try:
+            if isinstance(search_provider, OpenSearchProvider):
+                await search_provider.client.indices.put_settings(
+                    index=source,
+                    body={"settings": {"index.blocks.read_only": False}},
+                )
+            elif isinstance(search_provider, ElasticSearchProvider):
+                await search_provider.client().indices.put_settings(
+                    index=source,
+                    settings={"index.blocks.read_only": False},
+                )
+        except Exception:
+            pass
+        await search_provider.delete_index(source)
+        await search_provider.delete_index(target)
