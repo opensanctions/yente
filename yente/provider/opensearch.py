@@ -41,6 +41,7 @@ class OpenSearchProvider(SearchProvider):
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
             request_timeout=60,
+            timeout=60,
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
@@ -162,13 +163,25 @@ class OpenSearchProvider(SearchProvider):
         try:
             async with self._with_read_only_index(base_version):
                 await self.delete_index(target_version)
-                await self.client.indices.clone(
-                    index=base_version,
-                    target=target_version,
-                    body={
-                        "settings": {"index": {"blocks": {"read_only": False}}},
-                    },
-                )
+                try:
+                    await self.client.indices.clone(
+                        index=base_version,
+                        target=target_version,
+                        body={
+                            "settings": {"index": {"blocks": {"read_only": False}}},
+                        },
+                    )
+                except TransportError as te:
+                    if "resource_already_exists_exception" not in str(te.error):
+                        raise
+                    if not await self.check_health(target_version):
+                        await self.delete_index(target_version)
+                        raise
+                    log.warning(
+                        "Clone timed out but target index exists and is healthy",
+                        base=base_version,
+                        target=target_version,
+                    )
             log.info("Cloned index", base=base_version, target=target_version)
         except TransportError as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"

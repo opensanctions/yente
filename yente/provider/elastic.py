@@ -145,13 +145,25 @@ class ElasticSearchProvider(SearchProvider):
         try:
             async with self._with_read_only_index(base_version):
                 await self.delete_index(target_version)
-                await self.client().indices.clone(
-                    index=base_version,
-                    target=target_version,
-                    body={
-                        "settings": {"index": {"blocks": {"read_only": False}}},
-                    },
-                )
+                try:
+                    await self.client().indices.clone(
+                        index=base_version,
+                        target=target_version,
+                        body={
+                            "settings": {"index": {"blocks": {"read_only": False}}},
+                        },
+                    )
+                except ApiError as exc:
+                    if exc.error != "resource_already_exists_exception":
+                        raise
+                    if not await self.check_health(target_version):
+                        await self.delete_index(target_version)
+                        raise
+                    log.warning(
+                        "Clone timed out but target index exists and is healthy",
+                        base=base_version,
+                        target=target_version,
+                    )
             log.info("Cloned index", base=base_version, target=target_version)
         except (ApiError, TransportError) as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
