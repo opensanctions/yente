@@ -189,9 +189,10 @@ async def index_entities(
         base_index = build_index_name(dataset.name, updater.base_version)
         try:
             await provider.clone_index(base_index, next_index)
-        except (YenteIndexError, Exception) as exc:
+        except Exception as exc:
             log.error(
-                "Clone failed: %s" % exc,
+                "Clone failed",
+                error=str(exc),
                 dataset=dataset.name,
                 base_index=base_index,
                 target_index=next_index,
@@ -235,7 +236,7 @@ async def index_entities(
             message=f"{'Incremental' if is_partial_reindex else 'Full'} reindex of {dataset.name} to {next_index} completed",
         )
 
-    except (YenteIndexError, Exception) as exc:
+    except Exception as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
             "Indexing error: %s" % detail,
