@@ -2,10 +2,26 @@ from enum import StrEnum
 import json
 import asyncio
 import logging
-from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union, cast
+from contextlib import asynccontextmanager
+from typing import (
+    AsyncIterator,
+    Any,
+    AsyncIterable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_streaming_bulk
-from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
+from opensearchpy.exceptions import (
+    ConnectionError,
+    NotFoundError,
+    RequestError,
+    TransportError,
+)
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
@@ -30,6 +46,8 @@ class OpenSearchProvider(SearchProvider):
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
             request_timeout=60,
+            # opensearchpy doesn't propagate request_timeout to the connection layer
+            timeout=60,
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
@@ -122,27 +140,44 @@ class OpenSearchProvider(SearchProvider):
         except TransportError as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
+    @asynccontextmanager
+    async def _with_read_only_index(self, index: str) -> AsyncIterator[None]:
+        await self.client.indices.put_settings(
+            index=index, body={"settings": {"index.blocks.read_only": True}}
+        )
+        try:
+            yield
+        finally:
+            await self.client.indices.put_settings(
+                index=index, body={"settings": {"index.blocks.read_only": False}}
+            )
+
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""
         if base_version == target_version:
             raise ValueError("Cannot clone an index to itself.")
         try:
-            await self.client.indices.put_settings(
-                index=base_version,
-                body={"settings": {"index.blocks.read_only": True}},
-            )
-            await self.delete_index(target_version)
-            await self.client.indices.clone(
-                index=base_version,
-                target=target_version,
-                body={
-                    "settings": {"index": {"blocks": {"read_only": False}}},
-                },
-            )
-            await self.client.indices.put_settings(
-                index=base_version,
-                body={"settings": {"index.blocks.read_only": False}},
-            )
+            async with self._with_read_only_index(base_version):
+                await self.delete_index(target_version)
+                try:
+                    await self.client.indices.clone(
+                        index=base_version,
+                        target=target_version,
+                        body={
+                            "settings": {"index": {"blocks": {"read_only": False}}},
+                        },
+                    )
+                except RequestError as te:
+                    if te.error != "resource_already_exists_exception":
+                        raise
+                    if not await self.check_health(target_version):
+                        await self.delete_index(target_version)
+                        raise
+                    log.warning(
+                        "Clone timed out but target index exists and is healthy",
+                        base=base_version,
+                        target=target_version,
+                    )
             log.info("Cloned index", base=base_version, target=target_version)
         except TransportError as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"

@@ -187,7 +187,18 @@ async def index_entities(
             updater.base_version is not None
         ), "Expected base version to be set for partial reindex"
         base_index = build_index_name(dataset.name, updater.base_version)
-        await provider.clone_index(base_index, next_index)
+        try:
+            await provider.clone_index(base_index, next_index)
+        except Exception as exc:
+            log.error(
+                "Clone failed",
+                error=str(exc),
+                dataset=dataset.name,
+                base_index=base_index,
+                target_index=next_index,
+            )
+            await provider.delete_index(next_index)
+            raise
     else:
         # Note: this will only create the index if it doesn't already exist.
         # The implication of this is that the index is not re-created, even if --force is used.
@@ -225,7 +236,7 @@ async def index_entities(
             message=f"{'Incremental' if is_partial_reindex else 'Full'} reindex of {dataset.name} to {next_index} completed",
         )
 
-    except (YenteIndexError, Exception) as exc:
+    except Exception as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
             "Indexing error: %s" % detail,
