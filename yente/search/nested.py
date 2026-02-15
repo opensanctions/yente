@@ -183,7 +183,7 @@ async def get_nested_entity(
         inbound_ids = []
         outbound_ids.clear()
 
-        for adj in result_entities(resp):
+        for adj, _ in result_entities(resp):
             if adj.id is None:
                 continue
             entities[adj.id] = adj

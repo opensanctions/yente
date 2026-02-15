@@ -349,7 +349,7 @@ async def reconcile_suggest_entity(
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0)
     resp = await search_entities(provider, query, limit=limit, offset=offset)
-    for result in result_entities(resp):
+    for result, _ in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
         f"/reconcile/{ds.name}/suggest/entity",
