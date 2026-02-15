@@ -1,4 +1,14 @@
-from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
+from contextlib import asynccontextmanager
+from typing import (
+    Any,
+    AsyncIterable,
+    AsyncIterator,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+)
 
 
 class SearchProvider(object):
@@ -22,6 +32,11 @@ class SearchProvider(object):
         """Remove all existing indices with a given prefix from the alias and
         add the new one."""
         raise NotImplementedError
+
+    @asynccontextmanager
+    async def _with_read_only_index(self, index: str) -> AsyncIterator[None]:
+        raise NotImplementedError
+        yield  # pragma: no cover
 
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""

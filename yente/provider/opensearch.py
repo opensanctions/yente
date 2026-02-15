@@ -4,9 +4,9 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import (
+    AsyncIterator,
     Any,
     AsyncIterable,
-    AsyncIterator,
     Dict,
     Iterable,
     List,
@@ -16,7 +16,12 @@ from typing import (
 )
 from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_streaming_bulk
-from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
+from opensearchpy.exceptions import (
+    ConnectionError,
+    NotFoundError,
+    RequestError,
+    TransportError,
+)
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
@@ -41,6 +46,7 @@ class OpenSearchProvider(SearchProvider):
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
             request_timeout=60,
+            # opensearchpy doesn't propagate request_timeout to the connection layer
             timeout=60,
             retry_on_timeout=True,
             max_retries=10,
@@ -136,25 +142,15 @@ class OpenSearchProvider(SearchProvider):
 
     @asynccontextmanager
     async def _with_read_only_index(self, index: str) -> AsyncIterator[None]:
-        """Temporarily set an index to read-only, restoring on exit."""
         await self.client.indices.put_settings(
-            index=index,
-            body={"settings": {"index.blocks.read_only": True}},
+            index=index, body={"settings": {"index.blocks.read_only": True}}
         )
         try:
             yield
         finally:
-            try:
-                await self.client.indices.put_settings(
-                    index=index,
-                    body={"settings": {"index.blocks.read_only": False}},
-                )
-            except Exception as exc:
-                log.error(
-                    "Failed to restore read_only=false on source index",
-                    index=index,
-                    exc=str(exc),
-                )
+            await self.client.indices.put_settings(
+                index=index, body={"settings": {"index.blocks.read_only": False}}
+            )
 
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""
@@ -171,8 +167,8 @@ class OpenSearchProvider(SearchProvider):
                             "settings": {"index": {"blocks": {"read_only": False}}},
                         },
                     )
-                except TransportError as te:
-                    if "resource_already_exists_exception" not in str(te.error):
+                except RequestError as te:
+                    if te.error != "resource_already_exists_exception":
                         raise
                     if not await self.check_health(target_version):
                         await self.delete_index(target_version)

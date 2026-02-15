@@ -3,9 +3,9 @@ import asyncio
 import warnings
 from contextlib import asynccontextmanager
 from typing import (
+    AsyncIterator,
     Any,
     AsyncIterable,
-    AsyncIterator,
     Dict,
     Iterable,
     List,
@@ -118,25 +118,15 @@ class ElasticSearchProvider(SearchProvider):
 
     @asynccontextmanager
     async def _with_read_only_index(self, index: str) -> AsyncIterator[None]:
-        """Temporarily set an index to read-only, restoring on exit."""
         await self.client().indices.put_settings(
-            index=index,
-            settings={"index.blocks.read_only": True},
+            index=index, settings={"index.blocks.read_only": True}
         )
         try:
             yield
         finally:
-            try:
-                await self.client().indices.put_settings(
-                    index=index,
-                    settings={"index.blocks.read_only": False},
-                )
-            except Exception as exc:
-                log.error(
-                    "Failed to restore read_only=false on source index",
-                    index=index,
-                    exc=str(exc),
-                )
+            await self.client().indices.put_settings(
+                index=index, settings={"index.blocks.read_only": False}
+            )
 
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""
@@ -206,6 +196,7 @@ class ElasticSearchProvider(SearchProvider):
 
     async def check_health(self, index: str) -> bool:
         try:
+            # timeout=0: don't wait for status, may misreport freshly-cloned indexes
             health = await self.client(request_timeout=5).cluster.health(
                 index=index, timeout=0
             )
