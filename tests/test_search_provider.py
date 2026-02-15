@@ -246,29 +246,30 @@ async def test_clone_index_already_exists_unhealthy(search_provider: SearchProvi
     await search_provider.create_index(
         source, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
-    # Pre-create the target so delete_index inside clone_index can find it
-    await search_provider.create_index(
-        target, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
-    )
     try:
         indices_client = _get_indices_client(search_provider)
         error = _make_resource_already_exists_error(search_provider)
+        delete_mock = AsyncMock()
 
         with patch.object(
             type(indices_client), "clone", new_callable=AsyncMock, side_effect=error
         ):
-            # Mock check_health to return False (unhealthy target)
             with patch.object(
                 search_provider,
                 "check_health",
                 new_callable=AsyncMock,
                 return_value=False,
             ):
-                with pytest.raises(YenteIndexError):
-                    await search_provider.clone_index(source, target)
+                with patch.object(
+                    search_provider,
+                    "delete_index",
+                    delete_mock,
+                ):
+                    with pytest.raises(YenteIndexError):
+                        await search_provider.clone_index(source, target)
 
-        # Target should have been cleaned up
-        assert target not in await search_provider.get_all_indices()
+        # delete_index should have been called with the target to clean up
+        delete_mock.assert_any_call(target)
     finally:
         await search_provider.delete_index(source)
         await search_provider.delete_index(target)
