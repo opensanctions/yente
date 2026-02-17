@@ -12,7 +12,7 @@ readme = "README.md"
 dependencies = [
     "elasticsearch[async] == 8.19.3",
     "opensearch-py[async] == 3.1.0",
-    "uvicorn[standard] == 0.40.0",
+    "uvicorn[standard] == 0.41.0",
     "httpx[http2] == 0.28.1",
     "aiohttp[speedups] == 3.13.3",
     "boto3 ~= 1.37",
