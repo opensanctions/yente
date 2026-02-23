@@ -94,27 +94,32 @@ async def test_alias_management(search_provider: SearchProvider):
     await search_provider.create_index(
         index_v1, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
+    # Cloning a non-existent index raises YenteIndexError
     await search_provider.clone_index(index_v1, index_v2)
-
     with pytest.raises(YenteIndexError):
         await search_provider.clone_index(index_fail, index_v2)
 
+    # Before any rollover, neither index is aliased.
     assert not await search_provider.exists_index_alias(alias, index_v1)
     assert not await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == []
 
+    # Rolling over to a non-existent index raises YenteIndexError.
     with pytest.raises(YenteIndexError):
         await search_provider.rollover_index(alias, index_fail, prefix=prefix)
+    # Rolling over to v1 points the alias at v1 only.
     await search_provider.rollover_index(alias, index_v1, prefix=prefix)
     assert await search_provider.exists_index_alias(alias, index_v1)
     assert not await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == [index_v1]
 
+    # Rolling over to v2 atomically swaps the alias: v1 is removed, v2 is added.
     await search_provider.rollover_index(alias, index_v2, prefix=prefix)
     assert not await search_provider.exists_index_alias(alias, index_v1)
     assert await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == [index_v2]
 
+    # Deleting the backing index removes it from the alias automatically.
     await search_provider.delete_index(index_v2)
     assert not await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == []
