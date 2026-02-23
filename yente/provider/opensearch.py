@@ -29,7 +29,7 @@ class OpenSearchProvider(SearchProvider):
     async def create(cls) -> "OpenSearchProvider":
         """Get elasticsearch connection."""
         kwargs: Dict[str, Any] = dict(
-            request_timeout=60,
+            timeout=60,
             retry_on_timeout=True,
             max_retries=10,
             hosts=[settings.INDEX_URL],
