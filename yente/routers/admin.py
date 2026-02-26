@@ -30,7 +30,7 @@ async def redoc_html() -> HTMLResponse:
         openapi_url="/openapi.json",
         title=settings.TITLE,
         redoc_js_url="https://assets.opensanctions.org/scripts/redoc.standalone.js",
-        redoc_favicon_url="https://assets.opensanctions.org/images/favicon-32x32.png",
+        redoc_favicon_url="https://assets.opensanctions.org/images/nura/favicon-32x32.png",
         with_google_fonts=False,
     )
 
