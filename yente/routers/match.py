@@ -229,6 +229,5 @@ async def match(
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
         responses=responses,
-        matcher=algorithm_type.get_feature_docs(),
         limit=limit,
     )

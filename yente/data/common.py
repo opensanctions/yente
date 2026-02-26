@@ -57,7 +57,6 @@ class ScoredEntityResponse(EntityResponse):
     ) -> "ScoredEntityResponse":
         data = entity.to_dict()
         data["score"] = result.score
-        data["features"] = result.features
         data["explanations"] = result.explanations
         data["match"] = result.score >= threshold
         return cls.model_validate(data)
@@ -150,10 +149,6 @@ class EntityMatches(BaseModel):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
-    matcher: FeatureDocs = Field(
-        deprecated=True,
-        description="Information about the matcher that was used to score this request. Deprecated, use `/algorithms` endpoint instead.",
-    )
     limit: int = Field(..., examples=[5])
 
 

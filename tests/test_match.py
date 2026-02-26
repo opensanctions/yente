@@ -152,7 +152,6 @@ def test_match_logic_v2_with_algorithm_config():
     ) as mock_compare:
         mock_compare.return_value = mock.MagicMock()
         mock_compare.return_value.score = 0.8
-        mock_compare.return_value.features = {}
         mock_compare.return_value.explanations = {}
 
         resp = client.post(
