@@ -41,10 +41,6 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    features: Dict[str, float] = Field(
-        description="A dictionary of subscores from features in the algorithm. Deprecated, use `explanations` instead.",
-        deprecated=True,
-    )
     explanations: Dict[str, FtResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
