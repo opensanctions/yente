@@ -19,6 +19,7 @@ The Yente service is built to require a minimum of configuration, but several en
 | `YENTE_ELASTICSEARCH_CLOUD_ID`   | - | If you are using [Elastic Cloud](https://www.elastic.co/cloud) and want to use the ID rather than endpoint URL. |
 | `YENTE_OPENSEARCH_REGION` | - | Specifies your region if [you are using AWS hosted OpenSearch](opensearch.md). |
 | `YENTE_OPENSEARCH_SERVICE` | - | Should be `aoss` if [you are using Amazon OpenSearch](opensearch.md) Serverless Service and `es` if you are using the default Amazon OpenSearch Service. |
+| `OPENSANCTIONS_DELIVERY_TOKEN` | - | Delivery token from [OpenSanctions]({{ config.extra.opensanctions_url }}/account/bulk/) for using the [data delivery service]({{ config.extra.opensanctions_url }}/docs/bulk/delivery-service/). **Required**. |
 
 ## Managing data updates
 
