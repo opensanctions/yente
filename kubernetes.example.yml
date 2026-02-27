@@ -20,11 +20,11 @@ metadata:
 data:
   manifest.yml: |
     catalogs:
-      - url: "https://data.opensanctions.org/datasets/latest/index.json"
+      - url: "https://delivery.opensanctions.com/datasets/latest/index.json"
+        # Get your delivery token from the customer portal: https://www.opensanctions.org/account/bulk/
+        auth_token: "$OPENSANCTIONS_DELIVERY_TOKEN"
         scope: default
         resource_name: entities.ftm.json
-      # - url: "https://data.opensanctions.org/graph/catalog.json"
-      #   resource_name: entities.ftm.json
     datasets: []
 ---
 apiVersion: apps/v1
@@ -90,6 +90,8 @@ spec:
               #   secretKeyRef:
               #   name: api-test-secrets
               #     key: update-token
+            - name: OPENSANCTIONS_DELIVERY_TOKEN
+              # pull this from a secret
             - name: YENTE_INDEX_URL
               value: http://yente-index-es-default:9200
             - name: YENTE_MANIFEST
@@ -190,6 +192,8 @@ spec:
                   value: /app/manifests/production.yml
                 - name: YENTE_INDEX_NAME
                   value: "yente"
+                - name: OPENSANCTIONS_DELIVERY_TOKEN
+                  # pull this from a secret
           restartPolicy: OnFailure
           volumes:
             - name: manifest-volume
