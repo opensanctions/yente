@@ -1,6 +1,6 @@
 ## Requirements
 
-Running `yente` requires a server that can run host the main screening application (a lightweight Python application) and the ElasticSearch backend used to store and query entity information. In total, we anticipate 500 MB memory per Python service, and 2-4GB of memory plus 8-10GB of disk volume size for the ElasticSearch index. Running ElasticSearch on SSD-backed hard drives will produce a significant performance gain.
+Running `yente` requires a server that can host the main screening application (a lightweight Python application) and the ElasticSearch backend used to store and query entity information. In total, we anticipate 500 MB memory per Python service, and 2-4GB of memory plus 8-10GB of disk volume size for the ElasticSearch index. Running ElasticSearch on SSD-backed hard drives will produce a significant performance gain.
 
 ## Deploy using Docker containers
 
