@@ -6,7 +6,7 @@ catalogs:
   # Example of an alternative catalog source, loading only specific datasets
   # from a catalog:
   #
-  # - url: "https://data.opensanctions.org/datasets/latest/kyb/catalog.json"
+  # - url: "https://data.opensanctions.org/datasets/latest/banks/catalog.json"
   #   scopes:
   #     - ru_egrul
   #     - icij_offshoreleaks

@@ -2,7 +2,7 @@
 
 yente is an open source screening API service that powers the [hosted OpenSanctions API]({{ config.extra.opensanctions_url }}/api/). It provides functions to search, retrieve or match FollowTheMoney entities, including people, companies or vessels that are subject to international sanctions.
 
-Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opensanctions_url}}/datasets/), but it can also be used to search and match other data, such as [company registries]({{ config.extra.opensanctions_url }}/kyb/) or [custom watchlists](datasets.md). It can also be run [on-premises as a KYC appliance]({{ config.extra.opensanctions_url }}/docs/on-premise/) so that no customer data leaves the deployment context.
+Out of the box, it provides access to [OpenSanctions data]({{ config.extra.opensanctions_url}}/datasets/), but it can also be used to search and match other data, such as [company registries]({{ config.extra.opensanctions_url }}/datasets/kyb/) or [custom watchlists](datasets.md). It can also be run [on-premises as a KYC appliance]({{ config.extra.opensanctions_url }}/docs/on-premise/) so that no customer data leaves the deployment context.
 
 ## Getting started
 
