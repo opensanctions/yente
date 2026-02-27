@@ -33,17 +33,14 @@ Defining these extra indexing options is handled via a YAML manifest file read b
 catalogs:
   - # nb. replace `latest` with a date stamp (e.g. 20220419) to fetch historical
     # OpenSanctions data for a particular day:
-    url: "https://data.opensanctions.org/datasets/latest/index.json"
+    url: "https://delivery.opensanctions.com/datasets/latest/index.json"
+    # auth_token will be sent in the Authorization header
+    # Get your delivery token from the customer portal: https://www.opensanctions.org/account/bulk/
+    auth_token: "$OPENSANCTIONS_DELIVERY_TOKEN"
     # Limit the dataset scope of the entities which will be indexed into yente. Useful
     # values include `default`, `sanctions` or `peps`.
     scope: default
     resource_name: entities.ftm.json
-
-  ## Alternative of above. auth_token will be sent in the Authorization header
-  #- url: "https://delivery.opensanctions.com/datasets/latest/index.json"
-  #  auth_token: "secretsecret" # $ENVIRONMENT_VARIABLE expansion supported
-  #  scope: default
-  #  resource_name: entities.ftm.json
 
   # Additional data catalogs can be specified. Using catalog entries for additional
   # datasets (rather than dataset entries shown below) has the advantage that a catalog file
