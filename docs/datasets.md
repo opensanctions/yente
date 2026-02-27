@@ -9,7 +9,7 @@ The default configuration of `yente` will index and expose the datasets publishe
 
 Side note: A **dataset** in `yente` is a logical unit that contains a set of entities. However, some datasets are **dataset collections**, which group existing datasets into a combined scope, without containing original entities. For example, the dataset `us_ofac_sdn` (the US sanctions list) is included in the collections `sanctions` and `default`.
 
-Multiple catalog or dataset entries should not include the same datasets or entities with the same IDs. You can use the `namespace` flag in your manifest file to generate dataset-scoped entity IDs upon indexing. This ensures separation, but will negatively interfer with dataset deduplication. 
+Multiple catalog or dataset entries should not include the same datasets or entities with the same IDs. You can use the `namespace` flag in your manifest file to generate dataset-scoped entity IDs upon indexing. This ensures separation, but will negatively interfere with dataset deduplication.
 
 When overlapping collections or datasets are required, you can also deploy multiple instances with different `YENTE_INDEX_NAME` settings to distinguish their indexes in the same ElasticSearch backend.
 
@@ -46,7 +46,7 @@ catalogs:
   # datasets (rather than dataset entries shown below) has the advantage that a catalog file
   # will specify the latest `version` of each dataset, and thus changes to the datasets in
   # the catalog will automatically trigger a re-index in yente:
-  - url: "https://data.opensanctions.org/kyb/catalog.json"
+  - url: "https://data.opensanctions.org/datasets/latest/banks/catalog.json"
     # Make sure to limit the scope such that two catalog entries don't load datasets
     # with the same name.
     resource_name: entities.ftm.json
