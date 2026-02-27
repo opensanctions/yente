@@ -9,7 +9,7 @@ services:
       file: docker-compose.yml
       service: app
     environment:
-      YENTE_MANIFEST: "manifests/civic.yml"
+      YENTE_MANIFEST: /app/manifests/civic.yml
 
 volumes:
   index-os-data: null

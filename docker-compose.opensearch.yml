@@ -36,7 +36,7 @@ services:
       YENTE_INDEX_TYPE: "opensearch"
       YENTE_INDEX_URL: http://index:9200
       YENTE_MANIFEST: /app/manifests/commercial.yml
-      # Get your delivery token from the customer portal: https://www.opensanctions.org/account/
+      # Get your delivery token from the customer portal: https://www.opensanctions.org/account/bulk/
       OPENSANCTIONS_DELIVERY_TOKEN: "your-secret-token"
     # If you want to index data from the host machine as a custom dataset,
     # create a volume mount here to make that data accessible from the
