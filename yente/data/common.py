@@ -41,10 +41,6 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    features: Dict[str, float] = Field(
-        description="A dictionary of subscores from features in the algorithm. Deprecated, use `explanations` instead.",
-        deprecated=True,
-    )
     explanations: Dict[str, FtResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
@@ -57,7 +53,6 @@ class ScoredEntityResponse(EntityResponse):
     ) -> "ScoredEntityResponse":
         data = entity.to_dict()
         data["score"] = result.score
-        data["features"] = result.features
         data["explanations"] = result.explanations
         data["match"] = result.score >= threshold
         return cls.model_validate(data)
@@ -150,10 +145,6 @@ class EntityMatches(BaseModel):
 
 class EntityMatchResponse(BaseModel):
     responses: Dict[str, EntityMatches]
-    matcher: FeatureDocs = Field(
-        deprecated=True,
-        description="Information about the matcher that was used to score this request. Deprecated, use `/algorithms` endpoint instead.",
-    )
     limit: int = Field(..., examples=[5])
 
 
