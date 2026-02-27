@@ -10,11 +10,20 @@ services:
   app:
     [...]
     environment:
-      OPENSANCTIONS_DELIVERY_TOKEN: "65ee4bdac5b3421fb41324198cb951b3"
+      YENTE_MANIFEST: "/app/manifests/commercial.yml"
+      OPENSANCTIONS_DELIVERY_TOKEN: "65ee4bdac5b3421fb41324198cb951b3"  # Replace with your own
+```
+
+Or if you're using [a custom manifest file](/datasets/), add a catalog like this:
+
+```yaml
+catalogs:
+  - url: "https://delivery.opensanctions.com/datasets/latest/index.json"
+    auth_token: "$OPENSANCTIONS_DELIVERY_TOKEN" # $ENVIRONMENT_VARIABLE expansion supported
+    scope: default
+    resource_name: entities.ftm.json
 ```
 
 Once you have decided to adopt the OpenSanctions database in a commercial setting, you need to [purchase a license subscription]({{ config.extra.opensanctions_url }}/licensing/).
 
-## ...for non-commercial users
-
-Non-commercial users and [users exempted from commercial licensing]({{ config.extra.opensanctions_url }}/faq/32/exemptions/) may set `YENTE_MANIFEST: "/app/manifests/civic.yml"` to access OpenSanctions directly. This setting can be applied inside the `docker-compose.yml` file when `docker compose` is used to run `yente`.
+Non-commercial users and [users exempted from commercial licensing]({{ config.extra.opensanctions_url }}/faq/32/exemptions/) may set `YENTE_MANIFEST: "/app/manifests/civic.yml"` instead of `"/app/manifests/commercial.yml"` to access OpenSanctions directly.
