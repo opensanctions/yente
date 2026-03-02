@@ -118,6 +118,9 @@ def create_app() -> FastAPI:
         docs_url=None,
         redoc_url=None,
         lifespan=lifespan,
+        # New behavior in FastAPI 0.132.0 that requires Content-Type to be set for JSON requests
+        # That's cool, but we might have customers depending on it, so we disable it for now.
+        strict_content_type=False,
     )
     app.middleware("http")(json_exception_middleware)
     app.add_middleware(RequestLogMiddleware)
