@@ -127,22 +127,26 @@ class OpenSearchProvider(SearchProvider):
         if base_version == target_version:
             raise ValueError("Cannot clone an index to itself.")
         try:
-            await self.client.indices.put_settings(
-                index=base_version,
-                body={"settings": {"index.blocks.read_only": True}},
-            )
-            await self.delete_index(target_version)
-            await self.client.indices.clone(
-                index=base_version,
-                target=target_version,
-                body={
-                    "settings": {"index": {"blocks": {"read_only": False}}},
-                },
-            )
-            await self.client.indices.put_settings(
-                index=base_version,
-                body={"settings": {"index.blocks.read_only": False}},
-            )
+            try:
+                await self.client.indices.put_settings(
+                    index=base_version,
+                    body={"settings": {"index.blocks.read_only": True}},
+                )
+                await self.delete_index(target_version)
+                await self.client.indices.clone(
+                    index=base_version,
+                    target=target_version,
+                    body={
+                        "settings": {"index": {"blocks": {"read_only": False}}},
+                    },
+                )
+            # Make the base index writeable again even if the clone failed, otherwise it
+            # would be stuck in read-only mode and require manual intervention to fix.
+            finally:
+                await self.client.indices.put_settings(
+                    index=base_version,
+                    body={"settings": {"index.blocks.read_only": False}},
+                )
             log.info("Cloned index", base=base_version, target=target_version)
         except TransportError as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
