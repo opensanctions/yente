@@ -15,7 +15,7 @@ By default, `yente` will regularly fetch metadata and data updates from the doma
 1. You need to fetch the metadata and data files used by `yente` and place them in a location that is accessible to the Python application during its runtime. This could, for example, be a [docker volume mount](https://docs.docker.com/storage/volumes/) or by building a docker image layered on top of the official images which contains the data.
 2. You'll need to define a custom manifest configuration file to make `yente` consume these local files instead of trying to access the internet.
 
-The basic commands for fetching the metdata and data files are as follows:
+The basic commands for fetching the metadata and data files are as follows:
 
 ```bash
 wget -O index.json https://data.opensanctions.org/datasets/latest/index.json

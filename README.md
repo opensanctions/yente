@@ -2,7 +2,7 @@
 
 `yente` is an open source data match-making API. The service provides several HTTP endpoints to search, retrieve or match [FollowTheMoney entities](https://www.opensanctions.org/docs/entities/), including people, companies or vessels that are subject to international sanctions.
 
-The yente API is built to provide access to [OpenSanctions data](https://www.opensanctions.org/datasets/), it can also be used to [search and match other data](https://www.opensanctions.org/docs/yente/datasets/), such as [company registries](https://www.opensanctions.org/kyb/) or [custom watchlists](https://www.opensanctions.org/docs/yente/datasets/).
+The yente API is built to provide access to [OpenSanctions data](https://www.opensanctions.org/datasets/), and can also be used to search and match other data, such as [company registries](https://www.opensanctions.org/datasets/kyb/) or [custom watchlists](https://www.opensanctions.org/docs/yente/datasets/).
 
 While `yente` is the open source core code base for the [OpenSanctions API](https://www.opensanctions.org/api/), it can also be run [on-premises as a KYC appliance](https://www.opensanctions.org/docs/self-hosted/) so that no customer data leaves your infrastructure.
 
