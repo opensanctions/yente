@@ -225,7 +225,7 @@ async def index_entities(
             message=f"{'Incremental' if is_partial_reindex else 'Full'} reindex of {dataset.name} to {next_index} completed",
         )
 
-    except (YenteIndexError, Exception) as exc:
+    except Exception as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
             "Indexing error: %s" % detail,
