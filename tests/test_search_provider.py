@@ -95,9 +95,11 @@ async def test_alias_management(search_provider: SearchProvider):
         index_v1, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
     # Cloning a non-existent index raises YenteIndexError
-    await search_provider.clone_index(index_v1, index_v2)
     with pytest.raises(YenteIndexError):
         await search_provider.clone_index(index_fail, index_v2)
+
+    # Clone index_v1 to index_v2 as setup for the test
+    await search_provider.clone_index(index_v1, index_v2)
 
     # Before any rollover, neither index is aliased.
     assert not await search_provider.exists_index_alias(alias, index_v1)

@@ -141,9 +141,10 @@ class OpenSearchProvider(SearchProvider):
                     },
                 )
             except Exception:
-                # Clean up our failed clone
+                # On failure, clean up our failed clone and re-raise
                 await self.delete_index(target_version)
                 raise
+
             # Make the base index writeable again even if the clone failed, otherwise it
             # would be stuck in read-only mode and require manual intervention to fix.
             finally:
