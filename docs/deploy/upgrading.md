@@ -36,7 +36,7 @@ At this point, your yente is running entirely from the `yente-blue` indices. You
 
 ## Upgrading from Elasticsearch 8 to 9
 
-Elasticsearch is the search index software underlying yente. Version 9 of Elasticsearch was released on April 2025, and version 8 will be end-of-life in January 2027. Versions of yente released in 2025 or later are already compatible with both version 8 and 9 of the Elastic server, but versions of yente released after May 2026 will only be compatible with Elastic server 9. See the [official documentation for more information](https://www.elastic.co/docs/reference/elasticsearch/clients/python#_compatibility).
+Elasticsearch is the search index software underlying yente. Version 9 of Elasticsearch was released in April 2025, and version 8 will be end-of-life in January 2027. Versions of yente released in 2025 or later are already compatible with both version 8 and 9 of the Elastic server, but versions of yente released after May 2026 will only be compatible with Elastic server 9. See the [official documentation for more information](https://www.elastic.co/docs/reference/elasticsearch/clients/python#_compatibility).
 
 When **upgrading from Elasticsearch 8 to 9** in the single-node setup that is used by default in the docker-compose based deployment outlined in [our documentation on deploying yente](index.md), we have observed no issues using the following path:
 
