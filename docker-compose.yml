@@ -1,7 +1,6 @@
 services:
   index:
-    # For new deployments, please use Elastic 9.x, see https://hub.docker.com/_/elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.13
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
     expose:
       - "9200"
     ports:
