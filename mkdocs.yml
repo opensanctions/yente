@@ -63,6 +63,7 @@ nav:
       - Overview: deploy/index.md
       - Upgrading: deploy/upgrading.md
       - Monitoring: deploy/monitoring.md
+      - Scaling: deploy/scaling.md
       - Restrictive firewalls: deploy/firewall.md
   - Configuration:
       - Settings: settings.md
