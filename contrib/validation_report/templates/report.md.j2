@@ -1,0 +1,31 @@
+# Validation Report for yente {{ yente_git_version }}
+
+**Date:** {{ date }}
+**Dataset:** `{{ dataset }}`
+
+## Fixtures
+
+| Fixture | Description | MD5 | Records |
+|---------|-------------|-----|---------|
+{% for f in fixtures -%}
+| `{{ f.name }}` | {{ f.description }} | `{{ f.md5 }}` | {{ f.records }} |
+{% endfor %}
+
+## Results
+
+{% for fixture_name, algorithms in results.items() -%}
+### {{ fixture_name }}
+
+| Algorithm | Mean Top Score | Matches | Total | % Matches |
+|-----------|---------------|---------|-------|-----------|
+{% for algo, stats in algorithms.items() -%}
+| {{ algo }} | {{ "%.3f"|format(stats.mean_top_score) }} | {{ stats.matches }} | {{ stats.total }} | {{ "%.1f"|format(stats.pct_matches) }}% |
+{% endfor %}
+{% endfor %}
+## Environment
+
+**yente:** `{{ yente_git_version }}`
+
+```
+{{ pip_freeze }}
+```
