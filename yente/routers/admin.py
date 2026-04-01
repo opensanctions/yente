@@ -13,6 +13,7 @@ from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
 from yente.provider import SearchProvider, get_provider
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index, update_index_threaded
+from yente.search.lock import check_is_locked
 from yente.search.status import sync_dataset_versions
 
 log = get_logger(__name__)
@@ -63,6 +64,24 @@ async def readyz(
     ok = await provider.check_health(index=settings.ENTITY_INDEX)
     if not ok:
         raise HTTPException(503, detail="Index not ready.")
+    return StatusResponse(status="ok")
+
+
+@router.get(
+    "/statusz",
+    summary="Index status check",
+    tags=["System information"],
+    response_model=StatusResponse,
+)
+async def statusz(
+    provider: SearchProvider = Depends(get_provider),
+) -> StatusResponse:
+    """Check if the service is currently re-indexing its search index. Returns
+    ``indexing`` while an index build is in progress, ``ok`` otherwise. This can
+    be used to trigger downstream workflows after an index rebuild completes."""
+    locked = await check_is_locked(provider)
+    if locked:
+        return StatusResponse(status="indexing")
     return StatusResponse(status="ok")
 
 

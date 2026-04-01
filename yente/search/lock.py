@@ -212,6 +212,22 @@ async def release_lock(provider: SearchProvider, lock_session: LockSession) -> N
         log.error(f"Failed to release lock {lock_session.id}. Response: {e}")
 
 
+async def check_is_locked(provider: SearchProvider) -> bool:
+    """Check if the global lock is currently held (i.e. indexing is in progress).
+
+    This is a read-only operation that does not attempt to acquire or modify the lock.
+    Returns True if an active (non-expired) lock exists, False otherwise.
+    """
+    try:
+        hit = await provider.get_document(get_lock_index_name(), LOCK_DOC_ID)
+        if not hit:
+            return False
+        return lock_is_active(hit)
+    except YenteIndexError:
+        # Lock index may not exist yet (e.g. first run before any indexing)
+        return False
+
+
 async def refresh_lock(provider: SearchProvider, lock_session: LockSession) -> bool:
     """Refresh a lock by updating the acquired_at time to now.
 
