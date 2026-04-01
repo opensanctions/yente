@@ -24,7 +24,7 @@ def random_cron() -> str:
     return f"{random_minute} * * * *"
 
 
-VERSION = "5.2.2"
+VERSION = "5.3.0"
 AUTHOR = "OpenSanctions"
 HOME_PAGE = "https://www.opensanctions.org/"
 EMAIL = "info@opensanctions.org"
