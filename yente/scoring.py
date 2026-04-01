@@ -23,7 +23,7 @@ async def score_results(
     matches = 0
     for rank, (result, index_score) in enumerate(results):
         scoring = algorithm.compare(query=entity, result=result, config=config)
-        log.info(
+        log.debug(
             "Scoring result %s" % result.id,
             query_schema=entity.schema.name,
             result_id=result.id,
