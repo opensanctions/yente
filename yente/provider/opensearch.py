@@ -10,7 +10,7 @@ from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionErr
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.provider.base import SearchProvider
+from yente.provider.base import SearchProvider, traced
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
@@ -81,6 +81,7 @@ class OpenSearchProvider(SearchProvider):
     async def close(self) -> None:
         await self.client.close()
 
+    @traced
     async def refresh(self, index: str) -> None:
         """Refresh the index to make changes visible."""
         if self.service_type == OpenSearchServiceType.AOSS:
@@ -93,11 +94,13 @@ class OpenSearchProvider(SearchProvider):
         except NotFoundError as nfe:
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
 
+    @traced
     async def get_all_indices(self) -> List[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
         indices: Any = await self.client.cat.indices(format="json")
         return [index.get("index") for index in indices]
 
+    @traced
     async def get_alias_indices(self, alias: str) -> List[str]:
         """Get a list of indices that are aliased to the entity query alias."""
         try:
@@ -108,6 +111,7 @@ class OpenSearchProvider(SearchProvider):
         except TransportError as te:
             raise YenteIndexError(f"Could not get alias indices: {te}") from te
 
+    @traced
     async def rollover_index(self, alias: str, next_index: str, prefix: str) -> None:
         """Remove all existing indices with a given prefix from the alias and
         add the new one."""
@@ -122,6 +126,7 @@ class OpenSearchProvider(SearchProvider):
         except TransportError as te:
             raise YenteIndexError(f"Could not rollover index: {te}") from te
 
+    @traced
     async def clone_index(self, base_version: str, target_version: str) -> None:
         """Create a copy of the index with the given name."""
         if base_version == target_version:
@@ -157,6 +162,7 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
             raise YenteIndexError(msg) from te
 
+    @traced
     async def create_index(
         self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
     ) -> None:
@@ -173,6 +179,7 @@ class OpenSearchProvider(SearchProvider):
                 return
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
+    @traced
     async def delete_index(self, index: str) -> None:
         """Delete a given index if it exists."""
         try:
@@ -182,6 +189,7 @@ class OpenSearchProvider(SearchProvider):
         except TransportError as te:
             raise YenteIndexError(f"Could not delete index: {te}") from te
 
+    @traced
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:
@@ -192,6 +200,7 @@ class OpenSearchProvider(SearchProvider):
         except TransportError as te:
             raise YenteIndexError(f"Could not check index alias: {te}") from te
 
+    @traced
     async def check_health(self, index: str) -> bool:
         try:
             health = await self.client.cluster.health(index=index, timeout=5)
@@ -202,6 +211,7 @@ class OpenSearchProvider(SearchProvider):
             log.error(f"Search status failure: {te}")
             return False
 
+    @traced
     async def search(
         self,
         index: str,
@@ -260,6 +270,7 @@ class OpenSearchProvider(SearchProvider):
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
+    @traced
     async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
         """Get a document by ID using the GET API.
 
@@ -273,6 +284,7 @@ class OpenSearchProvider(SearchProvider):
         except Exception as exc:
             raise YenteIndexError(f"Error getting document: {exc}") from exc
 
+    @traced
     async def bulk_index(
         self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
     ) -> None:
