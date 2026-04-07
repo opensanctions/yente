@@ -39,10 +39,12 @@ TYPE_BOOSTS = {
 
 # Boost factors for symbol categories to demote low-information name parts.
 SYMBOL_BOOSTS = {
-    Symbol.Category.NUMERIC: 1.4,
-    Symbol.Category.LOCATION: 1.1,
+    Symbol.Category.NUMERIC: 1.3,
+    Symbol.Category.LOCATION: 0.8,
     Symbol.Category.ORG_CLASS: 0.7,
-    Symbol.Category.SYMBOL: 0.8,
+    Symbol.Category.SYMBOL: 0.3,
+    Symbol.Category.NICK: 0.8,
+    Symbol.Category.DOMAIN: 0.7,
 }
 
 
