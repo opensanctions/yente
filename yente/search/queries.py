@@ -25,6 +25,18 @@ DEFAULT_SORTS: List[Sort] = [
     {"entity_id": {"order": "asc", "unmapped_type": "keyword"}},
 ]
 
+# Boost factors for non-name property types in entity queries, reflecting their
+# relative importance in the LogicV2 scoring algorithm. Identifiers are near-
+# deterministic match signals (0.85-0.98 weight in LogicV2), dates are highly
+# discriminating, countries are modestly informative.
+TYPE_BOOSTS = {
+    registry.identifier: 8.0,
+    registry.date: 3.0,
+    registry.phone: 3.0,
+    registry.email: 3.0,
+    registry.country: 1.5,
+}
+
 # Boost factors for symbol categories to demote low-information name parts.
 SYMBOL_BOOSTS = {
     Symbol.Category.NUMERIC: 1.4,
@@ -201,7 +213,8 @@ def entity_query(
             query = {"match": {prop.type.group: value}}
             shoulds.append(query)
         elif prop.type.group is not None:
-            shoulds.append(tq(prop.type.group, value))
+            boost = TYPE_BOOSTS.get(prop.type, 1.0)
+            shoulds.append(tq(prop.type.group, value, boost))
 
     return filter_query(
         dataset,
