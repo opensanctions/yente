@@ -175,9 +175,9 @@ SCORE_THRESHOLD = 0.70
 # Default cutoff for scores that should not be returned as /match results:
 SCORE_CUTOFF = 0.50
 
-# Early stopping patience: stop scoring candidates after this many consecutive
-# low-scoring results. Set to a high value (e.g. 9999) to disable.
-SCORE_EARLY_STOP_PATIENCE = env_int("YENTE_SCORE_EARLY_STOP_PATIENCE", 5)
+# Early stopping budget for candidate scoring. Each candidate costs 1 token; its
+# score earns back score/(threshold/2) tokens. Set high (e.g. 9999) to disable.
+SCORE_EARLY_STOP_BUDGET = env_int("YENTE_SCORE_EARLY_STOP_BUDGET", 10)
 
 # ElasticSearch and OpenSearch settings:
 INDEX_TYPE = env_str("YENTE_INDEX_TYPE", "elasticsearch").lower().strip()
