@@ -36,5 +36,6 @@ Yente features various configuration options related to data refresh and re-inde
 | `YENTE_MAX_MATCHES` | `500` | How many results to return per `/match` query at most. |
 | `YENTE_MATCH_CANDIDATES` | `10` | How many candidates to retrieve from the search as a multiplier of the `/match` limit. Note that increasing this parameter will also increase query cost, as each of these candidates scored after retrieval from the index.|
 | `YENTE_MATCH_FUZZY` | `true` | Whether to run expensive Levenshtein queries inside ElasticSearch. |
+| `YENTE_SCORE_EARLY_STOP_BUDGET` | `10` | Budget for early stopping during candidate scoring. Each candidate costs 1 token; its score earns back `score / (threshold/2)` tokens. When the budget is exhausted, scoring stops. Set to a high value (e.g. `9999`) to disable early stopping. |
 | `YENTE_DELTA_UPDATES` | `true` | When set to `false` Yente will download the entire dataset when refreshing the index. |
 | `YENTE_STREAM_LOAD`   | `true`   | If set to `false`, will download the full data before indexing it. This can improve the stability of the indexer, especially when the network connection is a bit sketchy, but requires some local disk cache space.   |
