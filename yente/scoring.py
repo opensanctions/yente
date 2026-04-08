@@ -65,7 +65,7 @@ async def score_results(
                 matches += 1
             scored.append(response)
 
-        if budget <= 0 and rank >= limit:
+        if budget <= 0 and rank + 1 >= limit:
             break
 
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
