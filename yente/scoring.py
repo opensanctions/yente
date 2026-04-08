@@ -60,11 +60,10 @@ async def score_results(
 
         budget = budget - 1.0 + response.score / tau
 
-        if response.score <= cutoff:
-            continue
-        if response.match:
-            matches += 1
-        scored.append(response)
+        if response.score > cutoff:
+            if response.match:
+                matches += 1
+            scored.append(response)
 
         if budget <= 0 and rank >= limit:
             break
