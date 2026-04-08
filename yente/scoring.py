@@ -69,6 +69,4 @@ async def score_results(
             break
 
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
-    if limit is not None:
-        scored = scored[:limit]
-    return matches, scored
+    return matches, scored[:limit]
