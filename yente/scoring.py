@@ -38,8 +38,8 @@ async def score_results(
 ) -> Tuple[int, List[ScoredEntityResponse]]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
-    budget = float(settings.SCORE_EARLY_STOP_BUDGET)
     tau = threshold * EARLY_STOP_BREAK_EVEN
+    budget = float(settings.SCORE_EARLY_STOP_BUDGET) if tau > 0 else float("inf")
     for rank, (result, index_score) in enumerate(results):
         scoring = algorithm.compare(query=entity, result=result, config=config)
         log.debug(
