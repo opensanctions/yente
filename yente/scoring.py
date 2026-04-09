@@ -23,7 +23,7 @@ log = get_logger(__name__)
 #
 # Caveat: this can miss results buried deep in the ES ranking. In production log analysis
 # (418 queries), budget=10 missed 3 results (0.7%), all sub-threshold (highest 0.592 vs
-# 0.7 threshold). Set YENTE_SCORE_EARLY_STOP_BUDGET high to disable.
+# 0.7 threshold). Set YENTE_SCORE_STOP_BUDGET high to disable.
 EARLY_STOP_BREAK_EVEN = 0.5  # fraction of threshold where budget breaks even
 
 
@@ -39,7 +39,7 @@ async def score_results(
     scored: List[ScoredEntityResponse] = []
     matches = 0
     tau = threshold * EARLY_STOP_BREAK_EVEN
-    budget = float(settings.SCORE_EARLY_STOP_BUDGET) if tau > 0 else float("inf")
+    budget = float(settings.SCORE_STOP_BUDGET) if tau > 0 else float("inf")
     for rank, (result, index_score) in enumerate(results):
         scoring = algorithm.compare(query=entity, result=result, config=config)
         log.debug(
