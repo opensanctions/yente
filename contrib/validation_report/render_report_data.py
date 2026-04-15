@@ -37,10 +37,13 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
 
     entries_with_id = [e for e in entries if "expected_id_found" in e]
     if entries_with_id:
+        n = len(entries_with_id)
         id_found_count = sum(1 for e in entries_with_id if e["expected_id_found"])
-        stats["id_recall"] = (
-            (id_found_count / len(entries_with_id) * 100) if entries_with_id else 0.0
+        id_matched_count = sum(
+            1 for e in entries_with_id if e.get("expected_id_matched")
         )
+        stats["id_recall"] = (id_found_count / n * 100) if n else 0.0
+        stats["id_match_rate"] = (id_matched_count / n * 100) if n else 0.0
         id_ranks = [
             e["expected_id_rank"]
             for e in entries_with_id

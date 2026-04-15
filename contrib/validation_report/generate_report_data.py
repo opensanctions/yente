@@ -20,12 +20,17 @@ FIXTURES_DIR = Path(__file__).parent / "build" / "fixtures"
 @dataclass
 class Fixture:
     name: str
+    is_positive: bool
     entities: list[dict[str, Any]]  # FTM entities: {id, schema, properties}
 
 
 def read_fixture(path: Path) -> Fixture:
     data = orjson.loads(path.read_bytes())
-    return Fixture(name=data["name"], entities=data["data"])
+    return Fixture(
+        name=data["name"],
+        is_positive=data.get("type") == "positive",
+        entities=data["data"],
+    )
 
 
 def entity_to_query(entity: dict[str, Any]) -> dict[str, Any]:
@@ -66,14 +71,18 @@ def run_fixture(
             else:
                 result = {"score": 0.0, "match": False}
 
-            # Check if expected entity ID appears in the top results
-            expected_id = entity["id"]
-            hit_ids = [h["id"] for h in hits]
-            result["expected_id_found"] = expected_id in hit_ids
-            if expected_id in hit_ids:
-                idx = hit_ids.index(expected_id)
-                result["expected_id_rank"] = idx + 1
-                result["expected_id_score"] = hits[idx]["score"]
+            if fixture.is_positive:
+                expected_id = entity["id"]
+                hit_ids = [h["id"] for h in hits]
+                if expected_id in hit_ids:
+                    idx = hit_ids.index(expected_id)
+                    result["expected_id_found"] = True
+                    result["expected_id_rank"] = idx + 1
+                    result["expected_id_score"] = hits[idx]["score"]
+                    result["expected_id_matched"] = hits[idx]["match"]
+                else:
+                    result["expected_id_found"] = False
+                    result["expected_id_matched"] = False
 
             results.append(result)
 

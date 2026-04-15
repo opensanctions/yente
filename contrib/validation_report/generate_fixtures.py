@@ -181,6 +181,7 @@ def main() -> None:
 
                 output: dict[str, Any] = {
                     "name": fixture_config["output_filename"],
+                    "type": "positive",
                     "description": fixture_config["description"],
                     "generated_from": f"{dataset} {version}",
                     "data": fixture_entities,
@@ -207,6 +208,7 @@ def main() -> None:
         source_md5 = file_md5(csv_path)
         output = {
             "name": fixture_config["output_filename"],
+            "type": "negative",
             "description": fixture_config["description"],
             "generated_from": f"{fixture_config['source_csv']} {source_md5}",
             "data": entities,
