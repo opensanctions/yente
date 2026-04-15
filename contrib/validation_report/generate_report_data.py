@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""Validation report: compare logic-v1 vs logic-v2 against fixture CSVs via the yente HTTP API."""
+"""Validation report: compare logic-v1 vs logic-v2 against fixture JSONs via the yente HTTP API."""
 
-import csv
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,83 +8,48 @@ from typing import Any
 
 import click
 import httpx
+import orjson
 
 log = logging.getLogger(__name__)
 
 ALGORITHMS = ["logic-v1", "logic-v2"]
 BATCH_SIZE = 100
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+FIXTURES_DIR = Path(__file__).parent / "build" / "fixtures"
 
 
 @dataclass
-class PersonRecord:
-    full_name: str
-    first_name: str
-    middle_name: str | None
-    last_name: str
-    gender: str
-    date_of_birth: str
-    place_of_birth: str
-    nationality: str
+class Fixture:
+    name: str
+    entities: list[dict[str, Any]]  # FTM entities: {id, schema, properties}
 
 
-def read_person_csv(path: Path) -> list[PersonRecord]:
-    persons: list[PersonRecord] = []
-    with open(path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            persons.append(
-                PersonRecord(
-                    full_name=row.get("full_name", ""),
-                    first_name=row.get("first_name", ""),
-                    middle_name=row.get("middle_name") or None,
-                    last_name=row.get("last_name", ""),
-                    gender=row.get("gender", ""),
-                    date_of_birth=row.get("date_of_birth", ""),
-                    place_of_birth=row.get("place_of_birth", ""),
-                    nationality=row.get("nationality", ""),
-                )
-            )
-    return persons
+def read_fixture(path: Path) -> Fixture:
+    data = orjson.loads(path.read_bytes())
+    return Fixture(name=data["name"], entities=data["data"])
 
 
-def person_to_query(person: PersonRecord) -> dict[str, Any]:
-    props: dict[str, list[str]] = {}
-    if person.full_name:
-        props["name"] = [person.full_name]
-    if person.first_name:
-        props["firstName"] = [person.first_name]
-    if person.middle_name:
-        props["middleName"] = [person.middle_name]
-    if person.last_name:
-        props["lastName"] = [person.last_name]
-    if person.date_of_birth:
-        props["birthDate"] = [person.date_of_birth]
-    if person.nationality:
-        props["nationality"] = [person.nationality]
-    if person.place_of_birth:
-        props["birthPlace"] = [person.place_of_birth]
-    if person.gender:
-        props["gender"] = [person.gender]
-    return {"schema": "Person", "properties": props}
+def entity_to_query(entity: dict[str, Any]) -> dict[str, Any]:
+    """Build a yente match query from an FTM entity, excluding the id."""
+    return {"schema": entity["schema"], "properties": entity["properties"]}
 
 
 def run_fixture(
     client: httpx.Client,
-    persons: list[PersonRecord],
+    fixture: Fixture,
     algorithm: str,
     base_url: str,
     dataset: str,
-    fixture_name: str,
 ) -> list[dict[str, Any]]:
-    """Returns a list of {score, match} dicts, one per person (top result only)."""
+    """Returns a list of result dicts, one per entity."""
     results: list[dict[str, Any]] = []
-    total_persons = len(persons)
+    entities = fixture.entities
+    total = len(entities)
 
-    for batch_start in range(0, total_persons, BATCH_SIZE):
-        batch = persons[batch_start : batch_start + BATCH_SIZE]
-        batch_end = min(batch_start + BATCH_SIZE, total_persons)
-        log.info("[%s] %s: %d/%d", algorithm, fixture_name, batch_end, total_persons)
-        queries = {f"q{i}": person_to_query(p) for i, p in enumerate(batch)}
+    for batch_start in range(0, total, BATCH_SIZE):
+        batch = entities[batch_start : batch_start + BATCH_SIZE]
+        batch_end = min(batch_start + BATCH_SIZE, total)
+        log.info("[%s] %s: %d/%d", algorithm, fixture.name, batch_end, total)
+        queries = {f"q{i}": entity_to_query(e) for i, e in enumerate(batch)}
         resp = client.post(
             f"{base_url}/match/{dataset}",
             json={"queries": queries},
@@ -94,13 +57,25 @@ def run_fixture(
         )
         resp.raise_for_status()
         data = resp.json()
-        for key in queries:
+        for i, key in enumerate(queries):
+            entity = batch[i]
             hits = data["responses"][key].get("results", [])
             if hits:
                 top = hits[0]
-                results.append({"score": top["score"], "match": top["match"]})
+                result: dict[str, Any] = {"score": top["score"], "match": top["match"]}
             else:
-                results.append({"score": 0.0, "match": False})
+                result = {"score": 0.0, "match": False}
+
+            # Check if expected entity ID appears in the top results
+            expected_id = entity["id"]
+            hit_ids = [h["id"] for h in hits]
+            result["expected_id_found"] = expected_id in hit_ids
+            if expected_id in hit_ids:
+                idx = hit_ids.index(expected_id)
+                result["expected_id_rank"] = idx + 1
+                result["expected_id_score"] = hits[idx]["score"]
+
+            results.append(result)
 
     return results
 
@@ -110,32 +85,34 @@ def run_fixture(
 @click.option("--base-url", default="http://localhost:8000", show_default=True)
 @click.option(
     "--output",
-    default="report.json",
+    default="build/report_data.json",
     show_default=True,
     type=click.Path(),
     help="Path to write the JSON report.",
 )
 def main(dataset: str, base_url: str, output: str) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    fixtures = sorted(FIXTURES_DIR.glob("*.csv"))
+    fixtures = [read_fixture(p) for p in sorted(FIXTURES_DIR.glob("*.json"))]
     if not fixtures:
-        log.error("No fixture CSVs found in %s", FIXTURES_DIR)
+        log.error(
+            "No fixture JSONs found in %s. Run generate_fixtures.py first.",
+            FIXTURES_DIR,
+        )
         raise SystemExit(1)
 
     report: dict[str, dict[str, list[dict[str, Any]]]] = {}
 
     with httpx.Client(timeout=60.0) as client:
-        for fixture_path in fixtures:
-            persons = read_person_csv(fixture_path)
-            log.info("fixture: %s (%d persons)", fixture_path.name, len(persons))
-            report[fixture_path.name] = {}
+        for fixture in fixtures:
+            log.info("fixture: %s (%d entities)", fixture.name, len(fixture.entities))
+            report[fixture.name] = {}
             for algo in ALGORITHMS:
-                report[fixture_path.name][algo] = run_fixture(
-                    client, persons, algo, base_url, dataset, fixture_path.name
+                report[fixture.name][algo] = run_fixture(
+                    client, fixture, algo, base_url, dataset
                 )
 
     output_path = Path(output)
-    output_path.write_text(json.dumps(report, indent=2))
+    output_path.write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2))
     log.info("report written to %s", output_path)
 
 

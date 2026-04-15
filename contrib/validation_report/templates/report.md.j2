@@ -5,10 +5,10 @@
 
 ## Fixtures
 
-| Fixture | Description | MD5 | Records |
-|---------|-------------|-----|---------|
+| Fixture | Description | Generated From | Records |
+|---------|-------------|----------------|---------|
 {% for f in fixtures -%}
-| `{{ f.name }}` | {{ f.description }} | `{{ f.md5 }}` | {{ f.records }} |
+| `{{ f.name }}` | {{ f.description }} | `{{ f.dataset }}` `{{ f.version }}` | {{ f.records }} |
 {% endfor %}
 
 ## Results
@@ -16,10 +16,10 @@
 {% for fixture_name, algorithms in results.items() -%}
 ### {{ fixture_name }}
 
-| Algorithm | Mean Top Score | Matches | Total | % Matches |
-|-----------|---------------|---------|-------|-----------|
+| Algorithm | Mean Top Score | Matches | Total | % Matches | ID Recall | Mean ID Rank |
+|-----------|---------------|---------|-------|-----------|-----------|--------------|
 {% for algo, stats in algorithms.items() -%}
-| {{ algo }} | {{ "%.3f"|format(stats.mean_top_score) }} | {{ stats.matches }} | {{ stats.total }} | {{ "%.1f"|format(stats.pct_matches) }}% |
+| {{ algo }} | {{ "%.3f"|format(stats.mean_top_score) }} | {{ stats.matches }} | {{ stats.total }} | {{ "%.1f"|format(stats.pct_matches) }}% | {% if stats.id_recall is defined %}{{ "%.1f"|format(stats.id_recall) }}%{% else %}—{% endif %} | {% if stats.mean_id_rank is defined %}{{ "%.2f"|format(stats.mean_id_rank) }}{% else %}—{% endif %} |
 {% endfor %}
 {% endfor %}
 ## Environment

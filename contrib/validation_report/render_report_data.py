@@ -2,7 +2,6 @@
 """Render a JSON report data file into an HTML report."""
 
 import hashlib
-import json
 import statistics
 import subprocess
 from datetime import date
@@ -10,34 +9,13 @@ from pathlib import Path
 from typing import Any
 
 import click
+import orjson
 from jinja2 import Environment, FileSystemLoader
 from markdown_it import MarkdownIt
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+FIXTURES_DIR = Path(__file__).parent / "build" / "fixtures"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 RESOURCES_DIR = Path(__file__).parent / "resources"
-
-FIXTURE_DESCRIPTIONS: dict[str, str] = {
-    "negatives_global.csv": (
-        "Global true-negatives from an internal OpenSanctions reference dataset of synthetic person records. "
-        "Generated with multi-cultural name diversity, geographic correlation, and realistic field variations "
-        "to test false-positive rates across diverse global naming conventions."
-    ),
-    "negatives_us.csv": (
-        "US true-negatives from an internal OpenSanctions reference dataset of synthetic person records. "
-        "Reflects US-based individuals including cultural mixing (e.g. US nationals with international name origins) "
-        "to test false-positive rates for US-centric screening."
-    ),
-    "positives_un_treated.csv": (
-        "Generated from the `un_sc_sanctions` dataset, treated version: minor typos and name reshuffles applied. These are true-positives."
-    ),
-    "positives_un_untreated.csv": (
-        "Generated from the `un_sc_sanctions`. These are true-positives."
-    ),
-    "positives_us_congress_untreated.csv": (
-        "Generated from the `us_congress` dataset. These are true-positives."
-    ),
-}
 
 
 def md5(path: Path) -> str:
@@ -50,12 +28,27 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
     scores = [e["score"] for e in entries]
     matches = sum(1 for e in entries if e["match"])
     total = len(entries)
-    return {
+    stats: dict[str, Any] = {
         "mean_top_score": statistics.mean(scores) if scores else 0.0,
         "matches": matches,
         "total": total,
         "pct_matches": (matches / total * 100) if total else 0.0,
     }
+
+    entries_with_id = [e for e in entries if "expected_id_found" in e]
+    if entries_with_id:
+        id_found_count = sum(1 for e in entries_with_id if e["expected_id_found"])
+        stats["id_recall"] = (
+            (id_found_count / len(entries_with_id) * 100) if entries_with_id else 0.0
+        )
+        id_ranks = [
+            e["expected_id_rank"]
+            for e in entries_with_id
+            if e.get("expected_id_rank") is not None
+        ]
+        stats["mean_id_rank"] = statistics.mean(id_ranks) if id_ranks else 0.0
+
+    return stats
 
 
 @click.command()
@@ -69,20 +62,21 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
     help="Path to write the HTML report.",
 )
 def main(input_json: str, dataset: str, output: str) -> None:
-    data: dict[str, dict[str, list[dict[str, Any]]]] = json.loads(
-        Path(input_json).read_text()
+    data: dict[str, dict[str, list[dict[str, Any]]]] = orjson.loads(
+        Path(input_json).read_bytes()
     )
 
     fixtures = []
-    for fixture_path in sorted(FIXTURES_DIR.glob("*.csv")):
-        lines = fixture_path.read_text(encoding="utf-8").splitlines()
-        records = max(0, len(lines) - 1)  # subtract header
+    for fixture_path in sorted(FIXTURES_DIR.glob("*.json")):
+        meta = orjson.loads(fixture_path.read_bytes())
         fixtures.append(
             {
-                "name": fixture_path.name,
-                "description": FIXTURE_DESCRIPTIONS.get(fixture_path.name, ""),
+                "name": meta["name"],
+                "description": meta["description"],
+                "version": meta["generated_from_version"],
+                "dataset": meta["generated_from_dataset"],
+                "records": len(meta["data"]),
                 "md5": md5(fixture_path),
-                "records": records,
             }
         )
 
