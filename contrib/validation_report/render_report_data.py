@@ -73,8 +73,7 @@ def main(input_json: str, dataset: str, output: str) -> None:
             {
                 "name": meta["name"],
                 "description": meta["description"],
-                "version": meta["generated_from_version"],
-                "dataset": meta["generated_from_dataset"],
+                "generated_from": meta["generated_from"],
                 "records": len(meta["data"]),
                 "md5": md5(fixture_path),
             }

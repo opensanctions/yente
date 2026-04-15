@@ -8,7 +8,7 @@
 | Fixture | Description | Generated From | Records |
 |---------|-------------|----------------|---------|
 {% for f in fixtures -%}
-| `{{ f.name }}` | {{ f.description }} | `{{ f.dataset }}` `{{ f.version }}` | {{ f.records }} |
+| `{{ f.name }}` | {{ f.description }} | `{{ f.generated_from }}` | {{ f.records }} |
 {% endfor %}
 
 ## Results
