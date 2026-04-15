@@ -126,7 +126,7 @@ def csv_row_to_ftm_entity(row: dict[str, str]) -> dict[str, Any]:
 
 
 def fetch_dataset_version(client: httpx.Client, dataset: str) -> str:
-    url = f"https://data.opensanctions.org/datasets/{dataset}/latest/index.json"
+    url = f"https://data.opensanctions.org/datasets/latest/{dataset}/index.json"
     resp = client.get(url)
     resp.raise_for_status()
     return str(resp.json()["version"])
