@@ -55,7 +55,7 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 @click.command()
-@click.argument("input_json", type=click.Path(exists=True))
+@click.argument("input_json", type=click.Path(), required=False, default=None)
 @click.option("--dataset", default="default", show_default=True)
 @click.option(
     "--output",
@@ -63,9 +63,14 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
     type=click.Path(),
     help="Path to write the HTML report (default: build/report.html next to this script).",
 )
-def main(input_json: str, dataset: str, output: str | None) -> None:
+def main(input_json: str | None, dataset: str, output: str | None) -> None:
+    input_path = (
+        Path(input_json)
+        if input_json
+        else Path(__file__).parent / "build" / "report_data.json"
+    )
     data: dict[str, dict[str, list[dict[str, Any]]]] = orjson.loads(
-        Path(input_json).read_bytes()
+        input_path.read_bytes()
     )
 
     fixtures = []
