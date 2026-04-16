@@ -25,14 +25,24 @@ router = APIRouter()
     include_in_schema=False,
 )
 async def redoc_html() -> HTMLResponse:
-    """Render the ReDoc API documentation renderer script."""
-    return get_redoc_html(
+    """Render the ReDoc API documentation page."""
+    response = get_redoc_html(
         openapi_url="/openapi.json",
         title=settings.TITLE,
-        redoc_js_url="https://assets.opensanctions.org/scripts/redoc.standalone.js",
+        redoc_js_url=settings.REDOC_JS_URL,
         redoc_favicon_url="https://assets.opensanctions.org/images/nura/favicon-32.png",
         with_google_fonts=False,
     )
+    # get_redoc_html produces a plain <script src="..."> tag with no integrity check.
+    # We inject Subresource Integrity (SRI) attributes so the browser verifies the
+    # script's SHA-384 hash before executing it. If the server ever delivers a different
+    # file the hash won't match and the browser refuses to run it.
+    # Update YENTE_REDOC_JS_URL and YENTE_REDOC_JS_SRI together when upgrading ReDoc.
+    html = bytes(response.body).decode("utf-8").replace(
+        f'src="{settings.REDOC_JS_URL}"',
+        f'src="{settings.REDOC_JS_URL}" integrity="{settings.REDOC_JS_SRI}" crossorigin="anonymous"',
+    )
+    return HTMLResponse(html)
 
 
 @router.get(
