@@ -48,7 +48,7 @@ def run_fixture(
 ) -> list[dict[str, Any]]:
     """Returns a list of result dicts, one per entity."""
     results: list[dict[str, Any]] = []
-    entities = fixture.entities[:100]  # TODO: remove limit
+    entities = fixture.entities
     total = len(entities)
 
     for batch_start in range(0, total, BATCH_SIZE):
