@@ -24,6 +24,15 @@
 | {{ algo }} | {{ "%.3f"|format(stats.mean_top_score) }} | {{ stats.matches }} | {{ stats.total }} | {{ "%.1f"|format(stats.pct_matches) }}% | {% if stats.id_recall is defined %}{{ "%.1f"|format(stats.id_recall) }}%{% else %}—{% endif %} | {% if stats.id_match_rate is defined %}{{ "%.1f"|format(stats.id_match_rate) }}%{% else %}—{% endif %} | {% if stats.mean_id_rank is defined %}{{ "%.2f"|format(stats.mean_id_rank) }}{% else %}—{% endif %} |
 {% endfor %}
 {% endfor %}
+## Column glossary
+
+- **Mean Top Score** — average score of the top-ranked result across all queries in the fixture.
+- **Matches** — number of queries where the top result was flagged as a match (score ≥ threshold).
+- **% Matches** — matches as a percentage of total queries. For true-positives this is recall; for true-negatives this is the false-positive rate.
+- **ID Recall** — *(positives only)* percentage of queries where the expected entity appeared anywhere in the top-5 results, regardless of match flag.
+- **ID Matched** — *(positives only)* percentage of queries where the expected entity appeared in the top-5 results **and** was flagged as a match.
+- **Mean ID Rank** — *(positives only)* average rank of the expected entity across queries where it was found.
+
 ## Environment
 
 **yente:** `{{ yente_git_version }}`
