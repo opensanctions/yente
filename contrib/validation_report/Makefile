@@ -1,6 +1,10 @@
-.PHONY: all fixtures report_data report
+.PHONY: all clean fixtures report_data report
 
-all: fixtures report_data report
+all: clean fixtures report_data report
+
+clean:
+	rm -rf build
+
 
 fixtures:
 	python generate_fixtures.py
