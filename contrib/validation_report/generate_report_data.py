@@ -44,6 +44,7 @@ def run_fixture(
     algorithm: str,
     base_url: str,
     dataset: str,
+    threshold: float,
 ) -> list[dict[str, Any]]:
     """Returns a list of result dicts, one per entity."""
     results: list[dict[str, Any]] = []
@@ -58,7 +59,7 @@ def run_fixture(
         resp = client.post(
             f"{base_url}/match/{dataset}",
             json={"queries": queries},
-            params={"algorithm": algorithm, "limit": 5},
+            params={"algorithm": algorithm, "limit": 5, "threshold": threshold},
         )
         resp.raise_for_status()
         data = resp.json()
@@ -105,13 +106,14 @@ def get_indexed_dataset_version(
 @click.command()
 @click.option("--dataset", default="default", show_default=True)
 @click.option("--base-url", default="http://localhost:8000", show_default=True)
+@click.option("--threshold", default=0.70, show_default=True, type=float)
 @click.option(
     "--output",
     default=None,
     type=click.Path(),
     help="Path to write the JSON report (default: build/report_data.json next to this script).",
 )
-def main(dataset: str, base_url: str, output: str | None) -> None:
+def main(dataset: str, base_url: str, threshold: float, output: str | None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     fixtures = [read_fixture(p) for p in sorted(FIXTURES_DIR.glob("*.json"))]
     if not fixtures:
@@ -132,11 +134,12 @@ def main(dataset: str, base_url: str, output: str | None) -> None:
             results[fixture.name] = {}
             for algo in ALGORITHMS:
                 results[fixture.name][algo] = run_fixture(
-                    client, fixture, algo, base_url, dataset
+                    client, fixture, algo, base_url, dataset, threshold
                 )
 
     report: dict[str, Any] = {
         "query_scope": dataset,
+        "threshold": threshold,
         "indexed_dataset": indexed_dataset,
         "results": results,
     }
