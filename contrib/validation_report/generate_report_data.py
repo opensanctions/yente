@@ -136,6 +136,7 @@ def main(dataset: str, base_url: str, output: str | None) -> None:
                 )
 
     report: dict[str, Any] = {
+        "query_scope": dataset,
         "indexed_dataset": indexed_dataset,
         "results": results,
     }

@@ -70,6 +70,7 @@ def main(input_json: str | None, dataset: str, output: str | None) -> None:
         else Path(__file__).parent / "build" / "report_data.json"
     )
     report: dict[str, Any] = orjson.loads(input_path.read_bytes())
+    query_scope: str = report.get("query_scope", dataset)
     indexed_dataset: str = report.get("indexed_dataset", dataset)
     data: dict[str, dict[str, list[dict[str, Any]]]] = report["results"]
 
@@ -103,7 +104,7 @@ def main(input_json: str | None, dataset: str, output: str | None) -> None:
     )
     md_rendered = env.get_template("report.md.j2").render(
         date=date.today().isoformat(),
-        dataset=dataset,
+        query_scope=query_scope,
         indexed_dataset=indexed_dataset,
         fixtures=fixtures,
         results=results,
