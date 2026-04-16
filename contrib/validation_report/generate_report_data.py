@@ -89,6 +89,19 @@ def run_fixture(
     return results
 
 
+def get_indexed_dataset_version(
+    client: httpx.Client, base_url: str, dataset: str
+) -> str:
+    """Query /catalog and return 'dataset version' for the given dataset."""
+    resp = client.get(f"{base_url}/catalog")
+    resp.raise_for_status()
+    datasets = {d["name"]: d for d in resp.json().get("datasets", [])}
+    if dataset in datasets:
+        version = datasets[dataset].get("index_version") or "unknown"
+        return f"{dataset} {version}"
+    return dataset
+
+
 @click.command()
 @click.option("--dataset", default="default", show_default=True)
 @click.option("--base-url", default="http://localhost:8000", show_default=True)
@@ -108,17 +121,24 @@ def main(dataset: str, base_url: str, output: str | None) -> None:
         )
         raise SystemExit(1)
 
-    report: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    results: dict[str, dict[str, list[dict[str, Any]]]] = {}
 
     with httpx.Client(timeout=60.0) as client:
+        indexed_dataset = get_indexed_dataset_version(client, base_url, dataset)
+        log.info("indexed dataset: %s", indexed_dataset)
+
         for fixture in fixtures:
             log.info("fixture: %s (%d entities)", fixture.name, len(fixture.entities))
-            report[fixture.name] = {}
+            results[fixture.name] = {}
             for algo in ALGORITHMS:
-                report[fixture.name][algo] = run_fixture(
+                results[fixture.name][algo] = run_fixture(
                     client, fixture, algo, base_url, dataset
                 )
 
+    report: dict[str, Any] = {
+        "indexed_dataset": indexed_dataset,
+        "results": results,
+    }
     output_path = (
         Path(output) if output else Path(__file__).parent / "build" / "report_data.json"
     )

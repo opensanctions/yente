@@ -210,7 +210,7 @@ def main() -> None:
             "name": fixture_config["output_filename"],
             "type": "negative",
             "description": fixture_config["description"],
-            "generated_from": f"{fixture_config['source_csv']} {source_md5}",
+            "generated_from": f"{fixture_config['source_csv']} md5:{source_md5}",
             "data": entities,
         }
 
