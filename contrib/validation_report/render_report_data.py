@@ -59,12 +59,11 @@ def compute_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
 @click.option("--dataset", default="default", show_default=True)
 @click.option(
     "--output",
-    default="report.html",
-    show_default=True,
+    default=None,
     type=click.Path(),
-    help="Path to write the HTML report.",
+    help="Path to write the HTML report (default: build/report.html next to this script).",
 )
-def main(input_json: str, dataset: str, output: str) -> None:
+def main(input_json: str, dataset: str, output: str | None) -> None:
     data: dict[str, dict[str, list[dict[str, Any]]]] = orjson.loads(
         Path(input_json).read_bytes()
     )
@@ -114,7 +113,9 @@ def main(input_json: str, dataset: str, output: str) -> None:
         f"</head>\n<body class='markdown-body'>\n{html_body}</body>\n</html>\n"
     )
 
-    output_path = Path(output)
+    output_path = (
+        Path(output) if output else Path(__file__).parent / "build" / "report.html"
+    )
     output_path.write_text(html, encoding="utf-8")
     print(f"report written to {output_path}")
 

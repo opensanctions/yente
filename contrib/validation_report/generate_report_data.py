@@ -47,7 +47,7 @@ def run_fixture(
 ) -> list[dict[str, Any]]:
     """Returns a list of result dicts, one per entity."""
     results: list[dict[str, Any]] = []
-    entities = fixture.entities
+    entities = fixture.entities[:100]  # TODO: remove limit
     total = len(entities)
 
     for batch_start in range(0, total, BATCH_SIZE):
@@ -94,12 +94,11 @@ def run_fixture(
 @click.option("--base-url", default="http://localhost:8000", show_default=True)
 @click.option(
     "--output",
-    default="build/report_data.json",
-    show_default=True,
+    default=None,
     type=click.Path(),
-    help="Path to write the JSON report.",
+    help="Path to write the JSON report (default: build/report_data.json next to this script).",
 )
-def main(dataset: str, base_url: str, output: str) -> None:
+def main(dataset: str, base_url: str, output: str | None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     fixtures = [read_fixture(p) for p in sorted(FIXTURES_DIR.glob("*.json"))]
     if not fixtures:
@@ -120,7 +119,9 @@ def main(dataset: str, base_url: str, output: str) -> None:
                     client, fixture, algo, base_url, dataset
                 )
 
-    output_path = Path(output)
+    output_path = (
+        Path(output) if output else Path(__file__).parent / "build" / "report_data.json"
+    )
     output_path.write_bytes(orjson.dumps(report, option=orjson.OPT_INDENT_2))
     log.info("report written to %s", output_path)
 
