@@ -19,7 +19,6 @@ from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
 from yente.middleware import RequestLogMiddleware, TraceContextMiddleware
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
@@ -138,7 +137,4 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(reconcile.router)
     app.include_router(admin.router)
-
-    FastAPIInstrumentor.instrument_app(app)
-
     return app
