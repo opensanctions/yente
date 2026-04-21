@@ -1,29 +1,4 @@
-import functools
-from typing import Any, AsyncIterable, Callable, Dict, Iterable, List, Optional, Union
-
-from opentelemetry import trace
-
-from yente import settings
-
-_tracer = trace.get_tracer("yente.provider")
-
-
-def traced(method: Callable[..., Any]) -> Callable[..., Any]:
-    """Decorator that wraps a SearchProvider method with an OTEL span."""
-    name = method.__name__
-
-    @_tracer.start_as_current_span(f"SearchProvider.{name}")
-    @functools.wraps(method)
-    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        span = trace.get_current_span()
-        span.set_attribute(
-            "db.system.name",
-            "opensearch" if settings.INDEX_TYPE == "opensearch" else "elasticsearch",
-        )
-        span.set_attribute("db.operation.name", name)
-        return await method(self, *args, **kwargs)
-
-    return wrapper
+from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
 
 
 class SearchProvider(object):
