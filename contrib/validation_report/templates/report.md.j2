@@ -1,0 +1,44 @@
+# Validation Report for yente {{ yente_git_version }}
+
+| | |
+|---|---|
+| **Date** | {{ date }} |
+| **Query scope** | `{{ query_scope }}` |
+| **Threshold** | `{{ threshold }}` |
+| **Indexed dataset** | `{{ indexed_dataset }}` |
+
+## Fixtures
+
+| Fixture | Description | Generated From | Records |
+|---------|-------------|----------------|---------|
+{% for f in fixtures -%}
+| `{{ f.name }}` | {{ f.description }} | `{{ f.generated_from }}` | {{ f.records }} |
+{% endfor %}
+
+## Results
+
+{% for fixture_name, algorithms in results.items() -%}
+### {{ fixture_name }}
+
+| Algorithm | Mean Top Score | Matches | Total | % Matches | ID Recall | ID Matched | Mean ID Rank |
+|-----------|---------------|---------|-------|-----------|-----------|------------|--------------|
+{% for algo, stats in algorithms.items() -%}
+| {{ algo }} | {{ "%.3f"|format(stats.mean_top_score) }} | {{ stats.matches }} | {{ stats.total }} | {{ "%.1f"|format(stats.pct_matches) }}% | {% if stats.id_recall is defined %}{{ "%.1f"|format(stats.id_recall) }}%{% else %}—{% endif %} | {% if stats.id_match_rate is defined %}{{ "%.1f"|format(stats.id_match_rate) }}%{% else %}—{% endif %} | {% if stats.mean_id_rank is defined %}{{ "%.2f"|format(stats.mean_id_rank) }}{% else %}—{% endif %} |
+{% endfor %}
+{% endfor %}
+## Column glossary
+
+- **Mean Top Score** — average score of the top-ranked result across all queries in the fixture.
+- **Matches** — number of queries where the top result was flagged as a match (score ≥ threshold).
+- **% Matches** — matches as a percentage of total queries. For true-positives this is recall; for true-negatives this is the false-positive rate.
+- **ID Recall** — *(true positive fixtures only)* percentage of queries where the expected entity appeared anywhere in the top-5 results, regardless of match flag.
+- **ID Matched** — *(true positive fixtures only)* percentage of queries where the expected entity appeared in the top-5 results **and** was flagged as a match.
+- **Mean ID Rank** — *(true positive fixtures only)* average rank of the expected entity across queries where it was found.
+
+## Environment
+
+**yente:** `{{ yente_git_version }}`
+
+```
+{{ pip_freeze }}
+```

@@ -67,6 +67,7 @@ dev = [
     "pip >10.0.0",
     "prek",
     "types-PyYAML",
+    "markdown-it-py",
 ]
 docs = [
     "pillow",
