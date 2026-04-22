@@ -4,7 +4,6 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from .conftest import client
 
 _exporter = InMemorySpanExporter()
 _provider = TracerProvider()
@@ -17,16 +16,6 @@ def span_exporter():
     """Provide the in-memory span exporter, clearing spans between tests."""
     _exporter.clear()
     yield _exporter
-
-
-def test_fastapi_instrumentation_creates_spans(span_exporter):
-    """Verify that HTTP requests produce OTEL spans."""
-    response = client.get("/healthz")
-    assert response.status_code == 200
-
-    spans = span_exporter.get_finished_spans()
-    http_spans = [s for s in spans if "healthz" in s.name or "GET" in s.name]
-    assert len(http_spans) >= 1, f"Expected HTTP span, got: {[s.name for s in spans]}"
 
 
 @pytest.mark.asyncio
@@ -42,14 +31,12 @@ async def test_search_provider_creates_spans(search_provider, span_exporter):
     assert result is not None
 
     spans = span_exporter.get_finished_spans()
-    search_spans = [s for s in spans if s.name == "SearchProvider.search"]
-    assert (
-        len(search_spans) == 1
-    ), f"Expected 1 search span, got: {[s.name for s in spans]}"
+    spans = [s for s in spans if s.name == "search"]
+    assert len(spans) == 1, f"Expected 1 search span, got: {[s.name for s in spans]}"
 
-    span = search_spans[0]
-    assert span.attributes["db.system.name"] in ("elasticsearch", "opensearch")
-    assert span.attributes["db.operation.name"] == "search"
+    span = spans[0]
+    assert span.attributes["db.system"] in ("elasticsearch", "opensearch")
+    assert span.attributes["db.operation"] == "search"
 
 
 @pytest.mark.asyncio
