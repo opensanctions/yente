@@ -4,18 +4,15 @@ import httpx
 import unicodedata
 from pathlib import Path
 from urllib.parse import urlparse
-from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from normality import squash_spaces
 from normality.cleaning import remove_unsafe_chars
 from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
 from rigour.text import levenshtein
-from rigour.names import remove_person_prefixes
-from rigour.names import replace_org_types_compare
-from rigour.names.tokenize import normalize_name, prenormalize_name
-from rigour.names import tag_person_name, Name, tag_org_name, Symbol, NameTypeTag
-from followthemoney.names import schema_type_tag
+from rigour.names import reduce_names, pick_name
+from rigour.names import Name, Symbol
+from followthemoney.names import entity_names as ftm_entity_names
 
 from yente import settings
 from yente.logs import get_logger
@@ -27,14 +24,6 @@ log = get_logger(__name__)
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
 
-def preprocess_name(name: Optional[str]) -> Optional[str]:
-    """Preprocess a name for comparison."""
-    if name is None:
-        return None
-    name = name.lower()
-    return squash_spaces(name)
-
-
 def safe_string(value: str) -> str:
     """Make sure a value coming from the API is a safe string for data comparison."""
     value = unicodedata.normalize("NFC", value)
@@ -44,31 +33,7 @@ def safe_string(value: str) -> str:
 
 def entity_names(entity: EntityProxy) -> Set[Name]:
     """Build name objects from the names linked to an entity."""
-    # TODO: this does ca. the same thing as `logic_v2.names.analysis`. Should we extract that into
-    # followthemoney or has it not yet stabilised enough?
-    name_type = schema_type_tag(entity.schema)
-    names: Set[Name] = set()
-
-    is_org = name_type in (NameTypeTag.ORG, NameTypeTag.ENT)
-    is_person = name_type == NameTypeTag.PER
-
-    values = entity.get_type_values(registry.name, matchable=True)
-    values.extend(entity.get("weakAlias", quiet=True))
-    for value in values:
-        if name_type == NameTypeTag.PER:
-            value = remove_person_prefixes(value)
-        norm = prenormalize_name(value)
-        if is_org:
-            norm = replace_org_types_compare(norm, normalizer=prenormalize_name)
-        name = Name(value, form=norm, tag=name_type)
-
-        # Apply symbols:
-        if is_person:
-            tag_person_name(name, normalize_name)
-        if is_org:
-            tag_org_name(name, normalize_name)
-        names.add(name)
-    return names
+    return ftm_entity_names(entity, infer_initials=False)
 
 
 def is_matchable_symbol(symbol: Symbol) -> bool:
@@ -91,12 +56,15 @@ def pick_names(names: List[str], limit: int = 3) -> List[str]:
     This is a bit over the top and will come back to haunt us."""
     if len(names) <= limit:
         return names
+    names = reduce_names(names)
+    if len(names) <= limit:
+        return names
     picked: List[str] = []
-    processed_ = [preprocess_name(n) for n in names]
+    processed_ = [squash_spaces(n.casefold()) for n in names]
     names = [n for n in processed_ if n is not None]
 
     # Centroid:
-    picked_name = registry.name.pick(names)
+    picked_name = pick_name(names)
     if picked_name is not None:
         picked.append(picked_name)
 
