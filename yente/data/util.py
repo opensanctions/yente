@@ -33,7 +33,7 @@ def safe_string(value: str) -> str:
 
 def entity_names(entity: EntityProxy) -> Set[Name]:
     """Build name objects from the names linked to an entity."""
-    return ftm_entity_names(entity, infer_initials=False)
+    return ftm_entity_names(entity, infer_initials=False, matchable=False)
 
 
 def is_matchable_symbol(symbol: Symbol) -> bool:
