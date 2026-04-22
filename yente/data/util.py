@@ -1,5 +1,6 @@
+from functools import cache
 import warnings
-from followthemoney import EntityProxy
+from followthemoney import EntityProxy, Property, Schema, registry
 import httpx
 import unicodedata
 from pathlib import Path
@@ -11,8 +12,7 @@ from normality.cleaning import remove_unsafe_chars
 from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
 from rigour.text import levenshtein
 from rigour.names import reduce_names, pick_name
-from rigour.names import Name, Symbol
-from followthemoney.names import entity_names as ftm_entity_names
+from rigour.names import Symbol
 
 from yente import settings
 from yente.logs import get_logger
@@ -31,18 +31,30 @@ def safe_string(value: str) -> str:
     return value.strip()
 
 
-def entity_names(entity: EntityProxy) -> Set[Name]:
-    """Build name objects from the names linked to an entity."""
-    return ftm_entity_names(entity, infer_initials=False, matchable=False)
+def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:
+    """Get the set of symbols to be indexed for a given name."""
+    for symbol in symbols:
+        if symbol.category not in NON_MATCHABLE_SYMBOLS:
+            yield f"{symbol.category.value}:{symbol.id}"
 
 
-def is_matchable_symbol(symbol: Symbol) -> bool:
-    """Check if a symbol is matchable."""
-    return symbol.category not in NON_MATCHABLE_SYMBOLS
+@cache
+def _entity_weak_props(schema: Schema) -> Set[Property]:
+    """Get the set of properties that are not used for matching but can be used for
+    display."""
+    weak_props: Set[Property] = set()
+    for prop in schema.properties.values():
+        if prop.type == registry.name and not prop.matchable:
+            weak_props.add(prop)
+    return weak_props
 
 
-def index_symbol(symbol: Symbol) -> str:
-    return f"{symbol.category.value}:{symbol.id}"
+def entity_weak_names(entity: EntityProxy) -> Generator[str, None, None]:
+    """Get a set of weak names for an entity, which are the names that are not used for
+    matching but can be used for display."""
+    for prop in _entity_weak_props(entity.schema):
+        for value in entity.get_prop(prop):
+            yield value.casefold()
 
 
 def pick_names(names: List[str], limit: int = 3) -> List[str]:

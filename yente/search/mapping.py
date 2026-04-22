@@ -61,7 +61,6 @@ NAMES_FIELD = NameType.group or "names"
 NAME_PART_FIELD = "name_parts"
 NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_PHONETIC_FIELD = "name_phonetic"
-# NAME_KEY_FIELD = "name_keys"
 
 
 def make_field(
