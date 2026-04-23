@@ -139,7 +139,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     # FIXME: This could make sense for 2 part names as well?
     is_short = max((len(n.parts) for n in name_objs), default=0) < 2
     shoulds: List[Clause] = []
-    for picked_name in pick_names(names, limit=5):
+    for picked_name in pick_names(names, 5):
         match = {
             NAMES_FIELD: {
                 "query": picked_name,

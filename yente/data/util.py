@@ -49,15 +49,17 @@ def _entity_weak_props(schema: Schema) -> Set[Property]:
     return weak_props
 
 
-def entity_weak_names(entity: EntityProxy) -> Generator[str, None, None]:
+def entity_weak_names(entity: EntityProxy) -> Set[str]:
     """Get a set of weak names for an entity, which are the names that are not used for
     matching but can be used for display."""
+    weak_names: Set[str] = set()
     for prop in _entity_weak_props(entity.schema):
         for value in entity.get_prop(prop):
-            yield value.casefold()
+            weak_names.add(value.casefold())
+    return weak_names
 
 
-def pick_names(names: List[str], limit: int = 3) -> List[str]:
+def pick_names(names: List[str], limit) -> List[str]:
     """Try to pick a few non-overlapping names to search for when matching
     an entity. The problem here is that if we receive an API query for an
     entity with hundreds of aliases, it becomes prohibitively expensive to
