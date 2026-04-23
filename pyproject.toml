@@ -38,6 +38,8 @@ dependencies = [
     "aiocsv == 1.4.0",
     "aiofiles == 25.1.0",
     "rich",
+    "opentelemetry-distro[otlp]",
+    "opentelemetry-instrumentation-fastapi",
 ]
 requires-python = ">=3.11,<=3.14"
 
