@@ -155,42 +155,52 @@ async def match(
     entities = []
     responses: Dict[str, EntityMatches] = {}
 
+    # Validate and build queries before dispatching — a TaskGroup wraps any
+    # exception raised in its body into a BaseExceptionGroup, which Starlette's
+    # handlers don't unwrap, so an HTTPException(400) from here would otherwise
+    # surface as a 500.
+    prepared: List[tuple[str, Entity, Dict]] = []
+    for name, example in match.queries.items():
+        if example is None:
+            continue
+        try:
+            entity = Entity.from_example(example)
+            query = entity_query(
+                ds,
+                entity,
+                filters=filters,
+                filter_op=Operator.OR,
+                include_dataset=include_dataset,
+                exclude_schema=exclude_schema,
+                exclude_dataset=exclude_dataset,
+                changed_since=changed_since,
+                exclude_entity_ids=exclude_entity_ids,
+            )
+        except Exception as exc:
+            log.info("Cannot parse example entity: %s" % str(exc))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot parse example entity: {exc}",
+            )
+        prepared.append((name, entity, query))
+
+    if not len(prepared):
+        raise HTTPException(400, detail="No queries provided.")
+
+    # We're using a higher limit for candidate generation, because we want to
+    # get a broad range of candidates to score against. This is a trade-off
+    # between speed and accuracy.
+    candidates = limit * settings.MATCH_CANDIDATES
+    candidates = max(20, min(settings.MAX_RESULTS, candidates))
+    # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
+    candidates, _ = limit_window(candidates, 0)
+
     tasks: List[asyncio.Task] = []
     async with asyncio.TaskGroup() as tg:
-        for name, example in match.queries.items():
-            if example is None:
-                continue
-            try:
-                entity = Entity.from_example(example)
-                query = entity_query(
-                    ds,
-                    entity,
-                    filters=filters,
-                    filter_op=Operator.OR,
-                    include_dataset=include_dataset,
-                    exclude_schema=exclude_schema,
-                    exclude_dataset=exclude_dataset,
-                    changed_since=changed_since,
-                    exclude_entity_ids=exclude_entity_ids,
-                )
-            except Exception as exc:
-                log.info("Cannot parse example entity: %s" % str(exc))
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Cannot parse example entity: {exc}",
-                )
-            # We're using a higher limit for candidate generation, because we want to
-            # get a broad range of candidates to score against. This is a trade-off
-            # between speed and accuracy.
-            candidates = limit * settings.MATCH_CANDIDATES
-            candidates = max(20, min(settings.MAX_RESULTS, candidates))
-            # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
-            candidates, _ = limit_window(candidates, 0)
+        for name, entity, query in prepared:
             qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
             tasks.append(tg.create_task(qry))
             entities.append((name, entity))
-    if not len(tasks):
-        raise HTTPException(400, detail="No queries provided.")
 
     for (name, entity), task in zip(entities, tasks):
         ents = result_entities(task.result())
@@ -214,11 +224,20 @@ async def match(
             # Log the algorithm passed in the request, which may be None or "best"
             algorithm_param=request.query_params.get("algorithm"),
         )
+        # Restore the caller-supplied id on the echoed query only. The internal
+        # entity keeps its checksum-derived id so scoring/candidate-dedup can't
+        # be influenced by a caller picking an id that collides with a real
+        # dataset entity.
+        query_parsed = EntityExample(
+            id=match.queries[name].id,
+            schema=entity.schema.name,
+            properties=dict(entity.properties),
+        )
         responses[name] = EntityMatches(
             status=200,
             results=scored,
             total=TotalSpec(value=total, relation="eq"),
-            query=EntityExample.model_validate(entity.to_dict()),
+            query=query_parsed,
         )
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
