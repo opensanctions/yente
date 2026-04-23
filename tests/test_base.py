@@ -15,6 +15,12 @@ def test_readyz():
     assert res.json().get("status") == "ok", res
 
 
+def test_statusz():
+    res = client.get("/statusz")
+    assert res.status_code == 200, res
+    assert res.json().get("status") in ("ok", "indexing"), res
+
+
 def test_manifest():
     res = client.get("/manifest")
     assert res.status_code == 200, res
