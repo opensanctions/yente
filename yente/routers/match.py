@@ -1,6 +1,5 @@
 import asyncio
 from typing import Dict, List, Optional
-import uuid
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
@@ -153,53 +152,48 @@ async def match(
         raise HTTPException(400, detail=msg)
 
     filters: Filters = [("topics", t) for t in topics]
-    queries = []
     entities = []
     responses: Dict[str, EntityMatches] = {}
 
-    for name, example in match.queries.items():
-        if example is None:
-            continue
-        try:
-            if example.id is None:
-                # FIXME: `name` is not required to be a valid ID, but we just need it
-                # for making the entity hashable, anyway. The prefix is meant to avoid
-                # collisions with the result candidates.
-                example.id = f"query.{str(uuid.uuid4())}"
-            entity = Entity.from_example(example)
-            query = entity_query(
-                ds,
-                entity,
-                filters=filters,
-                filter_op=Operator.OR,
-                include_dataset=include_dataset,
-                exclude_schema=exclude_schema,
-                exclude_dataset=exclude_dataset,
-                changed_since=changed_since,
-                exclude_entity_ids=exclude_entity_ids,
-            )
-        except Exception as exc:
-            log.info("Cannot parse example entity: %s" % str(exc))
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot parse example entity: {exc}",
-            )
-        # We're using a higher limit for candidate generation, because we want to
-        # get a broad range of candidates to score against. This is a trade-off
-        # between speed and accuracy.
-        candidates = limit * settings.MATCH_CANDIDATES
-        candidates = max(20, min(settings.MAX_RESULTS, candidates))
-        # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
-        candidates, _ = limit_window(candidates, 0)
-        qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
-        queries.append(qry)
-        entities.append((name, entity))
-    if not len(queries) and not len(responses):
+    tasks: List[asyncio.Task] = []
+    async with asyncio.TaskGroup() as tg:
+        for name, example in match.queries.items():
+            if example is None:
+                continue
+            try:
+                entity = Entity.from_example(example)
+                query = entity_query(
+                    ds,
+                    entity,
+                    filters=filters,
+                    filter_op=Operator.OR,
+                    include_dataset=include_dataset,
+                    exclude_schema=exclude_schema,
+                    exclude_dataset=exclude_dataset,
+                    changed_since=changed_since,
+                    exclude_entity_ids=exclude_entity_ids,
+                )
+            except Exception as exc:
+                log.info("Cannot parse example entity: %s" % str(exc))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot parse example entity: {exc}",
+                )
+            # We're using a higher limit for candidate generation, because we want to
+            # get a broad range of candidates to score against. This is a trade-off
+            # between speed and accuracy.
+            candidates = limit * settings.MATCH_CANDIDATES
+            candidates = max(20, min(settings.MAX_RESULTS, candidates))
+            # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
+            candidates, _ = limit_window(candidates, 0)
+            qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
+            tasks.append(tg.create_task(qry))
+            entities.append((name, entity))
+    if not len(tasks):
         raise HTTPException(400, detail="No queries provided.")
-    results = await asyncio.gather(*queries)
 
-    for (name, entity), resp in zip(entities, results):
-        ents = result_entities(resp)
+    for (name, entity), task in zip(entities, tasks):
+        ents = result_entities(task.result())
         total, scored = await score_results(
             algorithm_type,
             entity,
