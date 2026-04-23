@@ -33,7 +33,7 @@ class EntityResponse(BaseModel):
 
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
-        return cls.model_validate(entity.to_dict())
+        return cls.model_construct(**entity.to_dict())
 
 
 EntityResponse.model_rebuild()
@@ -52,10 +52,11 @@ class ScoredEntityResponse(EntityResponse):
         cls, entity: Entity, result: MatchingResult, threshold: float
     ) -> "ScoredEntityResponse":
         data = entity.to_dict()
+        data["schema_"] = data.pop("schema")
         data["score"] = result.score
         data["explanations"] = result.explanations
         data["match"] = result.score >= threshold
-        return cls.model_validate(data)
+        return cls.model_construct(**data)
 
 
 class StatusResponse(BaseModel):
