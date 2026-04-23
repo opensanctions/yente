@@ -1,3 +1,4 @@
+import time
 import asyncio
 from typing import Iterable, List, Optional, Type, Tuple
 from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
@@ -22,7 +23,9 @@ async def score_results(
     scored: List[ScoredEntityResponse] = []
     matches = 0
     for rank, (result, index_score) in enumerate(results):
+        start_score = time.perf_counter()
         scoring = algorithm.compare(query=entity, result=result, config=config)
+        end_score = time.perf_counter()
         log.debug(
             "Scoring result %s" % result.id,
             query_schema=entity.schema.name,
@@ -32,6 +35,7 @@ async def score_results(
             rank=rank,
             algo_score=scoring.score,
             index_score=index_score,
+            time=end_score - start_score,
         )
         # Yield control to the event loop
         # This might allow the event loop to process another request, resulting in
