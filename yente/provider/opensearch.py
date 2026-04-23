@@ -57,6 +57,7 @@ class OpenSearchProvider(SearchProvider):
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
+            es: Optional[AsyncOpenSearch] = None
             try:
                 es = AsyncOpenSearch(**kwargs)
                 # Cluster health is not supported for Serverless

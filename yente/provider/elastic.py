@@ -41,6 +41,7 @@ class ElasticSearchProvider(SearchProvider):
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
+            es: Optional[AsyncElasticsearch] = None
             try:
                 es = AsyncElasticsearch(**kwargs)
                 es_ = es.options(request_timeout=15)
@@ -48,6 +49,8 @@ class ElasticSearchProvider(SearchProvider):
                 return ElasticSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to ElasticSearch: %r" % exc)
+                if es is not None:
+                    await es.close()
                 await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to ElasticSearch.")

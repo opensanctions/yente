@@ -16,7 +16,7 @@ PROVIDERS: dict[int, SearchProvider] = {}
 
 
 def get_id() -> int:
-    return id(asyncio.get_event_loop())
+    return id(asyncio.get_running_loop())
 
 
 async def _create_provider() -> SearchProvider:
@@ -36,10 +36,16 @@ async def get_provider() -> SearchProvider:
 
 
 async def close_provider() -> None:
-    loop_id = get_id()
-    provider = PROVIDERS.pop(loop_id, None)
-    if provider:
-        await provider.close()
+    """Close all cached providers. Short-lived event loops (e.g. Starlette's
+    TestClient portal) leave stranded entries keyed to dead loops; iterate
+    so they don't pile up and leak the aiohttp connectors they hold."""
+    providers = list(PROVIDERS.values())
+    PROVIDERS.clear()
+    for provider in providers:
+        try:
+            await provider.close()
+        except Exception as exc:
+            log.warning("Failed to close search provider: %r", exc)
 
 
 @asynccontextmanager
