@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from .conftest import client
+from .conftest import client, assert_entity_shape
 
 
 def test_search_putin():
@@ -11,11 +11,10 @@ def test_search_putin():
     results = data.get("results")
     assert len(results), results
     putin = results[0]
+    assert_entity_shape(putin)
     assert putin["id"] == "Q7747", results
     assert putin["first_seen"] is not None, putin
-    assert putin["first_seen"].startswith("20")
     assert putin["last_seen"] is not None, putin
-    assert putin["last_seen"].startswith("20")
     assert "sanctions" not in putin["datasets"]
     assert "default" not in putin["datasets"]
 
