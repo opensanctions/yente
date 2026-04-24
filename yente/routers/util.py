@@ -1,3 +1,4 @@
+from functools import cache
 from typing import List, Type
 from fastapi import Path, Query
 from fastapi import HTTPException
@@ -37,6 +38,7 @@ assert all(
 ), "Invalid algorithm name in YENTE_HIDDEN_ALGORITHMS"
 
 
+@cache
 def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
     """Return the scoring algorithm class with the given name."""
     name_clean = name.lower().strip()

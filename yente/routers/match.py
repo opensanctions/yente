@@ -1,15 +1,16 @@
 import asyncio
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
+from yente.data.dataset import Dataset
 from yente.logs import get_logger
 from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityMatches, TotalSpec
 from yente.provider import SearchProvider, get_provider
-from yente.search.queries import entity_query, Filters, Operator, Clause
+from yente.search.queries import entity_query, Filters, Operator
 from yente.search.queries import DEFAULT_SORTS
 from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
@@ -20,6 +21,90 @@ from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_HELP
 
 log = get_logger(__name__)
 router = APIRouter()
+
+
+async def _match_one_query(
+    ds: Dataset,
+    algorithm: str,
+    match: EntityMatchQuery,
+    name: str,
+    example: EntityExample,
+    filters: Filters,
+    include_dataset: List[str],
+    exclude_schema: List[str],
+    exclude_dataset: List[str],
+    changed_since: Optional[str],
+    exclude_entity_ids: List[str],
+    provider: SearchProvider,
+    candidates: int,
+    limit: int,
+    cutoff: float,
+    threshold: float,
+) -> Tuple[str, EntityMatches]:
+    """Run a single match query and return the results. This run as one big async process per query in the batch,
+    and all queries are triggered simultaneously. Previous yente versions used to do all searches concurrently
+    but score sequentially - but this meant that scoring would not start before the slowest ES query returned.
+    """
+    try:
+        entity = Entity.from_example(example)
+        query = entity_query(
+            ds,
+            entity,
+            filters=filters,
+            filter_op=Operator.OR,
+            include_dataset=include_dataset,
+            exclude_schema=exclude_schema,
+            exclude_dataset=exclude_dataset,
+            changed_since=changed_since,
+            exclude_entity_ids=exclude_entity_ids,
+        )
+    except Exception as exc:
+        log.info("Cannot parse example entity: %s" % str(exc))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot parse example entity: {exc}",
+        )
+    search_result = await search_entities(
+        provider, query, limit=candidates, sort=DEFAULT_SORTS
+    )
+    ents = result_entities(search_result)
+    algorithm_type = get_algorithm_by_name(algorithm)
+    total, scored = await score_results(
+        algorithm_type,
+        entity,
+        ents,
+        threshold=threshold,
+        cutoff=cutoff,
+        limit=limit,
+        config=ScoringConfig(weights=match.weights, config=match.config),
+    )
+    # log.info(
+    #     f"/match/{ds.name}",
+    #     action="match",
+    #     schema=entity.schema.name,
+    #     results=total,
+    #     threshold=threshold,
+    #     dataset=ds.name,
+    #     limit=limit,
+    #     # Log the algorithm passed in the request, which may be None or "best"
+    #     algorithm_param=algorithm,
+    # )
+    # Restore the caller-supplied id on the echoed query only. The internal
+    # entity keeps its checksum-derived id so scoring/candidate-dedup can't
+    # be influenced by a caller picking an id that collides with a real
+    # dataset entity.
+    parsed = EntityExample(
+        id=example.id,
+        schema=entity.schema.name,
+        properties=dict(entity.properties),
+    )
+    matches = EntityMatches(
+        status=200,
+        results=scored,
+        total=TotalSpec(value=total, relation="eq"),
+        query=parsed,
+    )
+    return (name, matches)
 
 
 @router.post(
@@ -138,6 +223,7 @@ async def match(
     # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
+    filters: Filters = [("topics", t) for t in topics]
     algorithm_type = get_algorithm_by_name(algorithm)
 
     for config_key in match.config.keys():
@@ -151,42 +237,6 @@ async def match(
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
 
-    filters: Filters = [("topics", t) for t in topics]
-    entities = []
-    responses: Dict[str, EntityMatches] = {}
-
-    # Validate and build queries before dispatching — a TaskGroup wraps any
-    # exception raised in its body into a BaseExceptionGroup, which Starlette's
-    # handlers don't unwrap, so an HTTPException(400) from here would otherwise
-    # surface as a 500.
-    prepared: List[Tuple[str, Entity, Clause]] = []
-    for name, example in match.queries.items():
-        if example is None:
-            continue
-        try:
-            entity = Entity.from_example(example)
-            query = entity_query(
-                ds,
-                entity,
-                filters=filters,
-                filter_op=Operator.OR,
-                include_dataset=include_dataset,
-                exclude_schema=exclude_schema,
-                exclude_dataset=exclude_dataset,
-                changed_since=changed_since,
-                exclude_entity_ids=exclude_entity_ids,
-            )
-        except Exception as exc:
-            log.info("Cannot parse example entity: %s" % str(exc))
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot parse example entity: {exc}",
-            )
-        prepared.append((name, entity, query))
-
-    if not len(prepared):
-        raise HTTPException(400, detail="No queries provided.")
-
     # We're using a higher limit for candidate generation, because we want to
     # get a broad range of candidates to score against. This is a trade-off
     # between speed and accuracy.
@@ -195,50 +245,45 @@ async def match(
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
-    tasks: List[asyncio.Task[Dict[str, Any]]] = []
-    async with asyncio.TaskGroup() as tg:
-        for name, entity, query in prepared:
-            qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
-            tasks.append(tg.create_task(qry))
-            entities.append((name, entity))
+    tasks: List[asyncio.Task[Tuple[str, EntityMatches]]] = []
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for name, example in match.queries.items():
+                if example is None:
+                    continue
+                # TODO: add more arguments here for readability:
+                coroutine = _match_one_query(
+                    ds,
+                    algorithm,
+                    match,
+                    name,
+                    example,
+                    filters,
+                    include_dataset,
+                    exclude_schema,
+                    exclude_dataset,
+                    changed_since,
+                    exclude_entity_ids,
+                    provider,
+                    candidates,
+                    limit,
+                    cutoff,
+                    threshold,
+                )
+                tasks.append(tg.create_task(coroutine))
+    except* HTTPException as exc:
+        # If any of the tasks raised an HTTPException, we want to return that error.
+        # We assume that all tasks will raise the same error, so we just take the first one.
+        raise exc.exceptions[0]
 
-    for (name, entity), task in zip(entities, tasks):
-        ents = result_entities(task.result())
-        total, scored = await score_results(
-            algorithm_type,
-            entity,
-            ents,
-            threshold=threshold,
-            cutoff=cutoff,
-            limit=limit,
-            config=ScoringConfig(weights=match.weights, config=match.config),
-        )
-        log.info(
-            f"/match/{ds.name}",
-            action="match",
-            schema=entity.schema.name,
-            results=total,
-            threshold=threshold,
-            dataset=dataset,
-            limit=limit,
-            # Log the algorithm passed in the request, which may be None or "best"
-            algorithm_param=request.query_params.get("algorithm"),
-        )
-        # Restore the caller-supplied id on the echoed query only. The internal
-        # entity keeps its checksum-derived id so scoring/candidate-dedup can't
-        # be influenced by a caller picking an id that collides with a real
-        # dataset entity.
-        query_parsed = EntityExample(
-            id=match.queries[name].id,
-            schema=entity.schema.name,
-            properties=dict(entity.properties),
-        )
-        responses[name] = EntityMatches(
-            status=200,
-            results=scored,
-            total=TotalSpec(value=total, relation="eq"),
-            query=query_parsed,
-        )
+    responses: Dict[str, EntityMatches] = {}
+    for task in tasks:
+        name, matches = task.result()
+        responses[name] = matches
+
+    if not len(responses):
+        raise HTTPException(400, detail="No queries provided.")
+
     response.headers["x-batch-size"] = str(len(responses))
     return EntityMatchResponse(
         responses=responses,
