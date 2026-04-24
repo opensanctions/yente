@@ -45,7 +45,6 @@ class ScoredEntityResponse(EntityResponse):
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
     match: bool = Field(description="Whether the score is above the match threshold.")
-    token: Optional[str] = None
 
     @classmethod
     def from_entity_result(
