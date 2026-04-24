@@ -59,7 +59,7 @@ def entity_weak_names(entity: EntityProxy) -> Set[str]:
     return weak_names
 
 
-def pick_names(names: List[str], limit) -> List[str]:
+def pick_names(names: List[str], limit: int) -> List[str]:
     """Try to pick a few non-overlapping names to search for when matching
     an entity. The problem here is that if we receive an API query for an
     entity with hundreds of aliases, it becomes prohibitively expensive to

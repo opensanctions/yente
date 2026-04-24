@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
@@ -9,7 +9,7 @@ from yente.data.common import ErrorResponse
 from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
 from yente.data.common import EntityMatches, TotalSpec
 from yente.provider import SearchProvider, get_provider
-from yente.search.queries import entity_query, Filters, Operator
+from yente.search.queries import entity_query, Filters, Operator, Clause
 from yente.search.queries import DEFAULT_SORTS
 from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
@@ -159,7 +159,7 @@ async def match(
     # exception raised in its body into a BaseExceptionGroup, which Starlette's
     # handlers don't unwrap, so an HTTPException(400) from here would otherwise
     # surface as a 500.
-    prepared: List[tuple[str, Entity, Dict]] = []
+    prepared: List[Tuple[str, Entity, Clause]] = []
     for name, example in match.queries.items():
         if example is None:
             continue
@@ -195,7 +195,7 @@ async def match(
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
-    tasks: List[asyncio.Task] = []
+    tasks: List[asyncio.Task[Dict[str, Any]]] = []
     async with asyncio.TaskGroup() as tg:
         for name, entity, query in prepared:
             qry = search_entities(provider, query, limit=candidates, sort=DEFAULT_SORTS)
