@@ -276,4 +276,11 @@ class ElasticSearchProvider(SearchProvider):
                 stats_only=True,
             )
         except BulkIndexError as exc:
-            raise YenteIndexError(f"Could not index entities: {exc}") from exc
+            sample = exc.errors[:3] if exc.errors else []
+            log.warning(
+                f"Bulk index failed: {len(exc.errors)} document(s) rejected",
+                errors=sample,
+            )
+            raise YenteIndexError(
+                f"Could not index entities: {exc} (see log for sample errors)"
+            ) from exc
