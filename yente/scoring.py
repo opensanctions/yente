@@ -1,5 +1,5 @@
 import asyncio
-from typing import Iterable, List, Optional, Type, Tuple
+from typing import Iterable, List, Type, Tuple
 from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
 
 from yente import settings
@@ -9,6 +9,23 @@ from yente.data.common import ScoredEntityResponse
 
 log = get_logger(__name__)
 
+# Early stopping via score budget: candidates from ES are scored one by one by the
+# matching algorithm (e.g. LogicV2). In production, ~82% of scoring calls produce scores
+# below cutoff, and ~49% of queries have zero candidates above 0.5. To avoid wasting CPU,
+# we maintain a budget that drains with each low-scoring candidate and refills with each
+# good one:
+#
+#   budget = budget - 1 + score / (threshold / 2)
+#
+# A score of threshold/2 breaks even. Higher scores extend the search; lower scores drain
+# the budget. When the budget is exhausted, we stop. This naturally adapts to query
+# quality: queries with real matches keep searching proportionally longer.
+#
+# Caveat: this can miss results buried deep in the ES ranking. In production log analysis
+# (418 queries), budget=10 missed 3 results (0.7%), all sub-threshold (highest 0.592 vs
+# 0.7 threshold). Set YENTE_SCORE_STOP_BUDGET high to disable.
+EARLY_STOP_BREAK_EVEN = 0.5  # fraction of threshold where budget breaks even
+
 
 async def score_results(
     algorithm: Type[ScoringAlgorithm],
@@ -16,11 +33,13 @@ async def score_results(
     results: Iterable[Tuple[Entity, float]],
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
-    limit: Optional[int] = None,
+    limit: int = settings.MATCH_PAGE,
     config: ScoringConfig = ScoringConfig.defaults(),
 ) -> Tuple[int, List[ScoredEntityResponse]]:
     scored: List[ScoredEntityResponse] = []
     matches = 0
+    tau = threshold * EARLY_STOP_BREAK_EVEN
+    budget = float(settings.SCORE_STOP_BUDGET) if tau > 0 else float("inf")
     for rank, (result, index_score) in enumerate(results):
         scoring = algorithm.compare(query=entity, result=result, config=config)
         log.debug(
@@ -38,13 +57,16 @@ async def score_results(
         # more even response times when CPU-bound scoring requests pile up.
         await asyncio.sleep(0)
         response = ScoredEntityResponse.from_entity_result(result, scoring, threshold)
-        if response.score <= cutoff:
-            continue
-        if response.match:
-            matches += 1
-        scored.append(response)
+
+        budget = budget - 1.0 + response.score / tau
+
+        if response.score > cutoff:
+            if response.match:
+                matches += 1
+            scored.append(response)
+
+        if budget <= 0 and rank + 1 >= limit:
+            break
 
     scored = sorted(scored, key=lambda r: r.score, reverse=True)
-    if limit is not None:
-        scored = scored[:limit]
-    return matches, scored
+    return matches, scored[:limit]
