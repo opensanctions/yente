@@ -1,13 +1,14 @@
 import pytest
 from pathlib import Path
 from followthemoney import model
+from followthemoney.names import entity_names
 from rigour.names import NamePartTag
 
 from yente.data import get_catalog
 from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
-from yente.data.util import entity_names, expand_dates
+from yente.data.util import expand_dates
 from yente.exc import YenteConfigError
 from .conftest import patch_catalog_response
 

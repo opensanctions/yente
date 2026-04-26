@@ -1,16 +1,19 @@
 import enum
 from pprint import pprint  # noqa
+from rigour.names import Name, Symbol, representative_names
 from collections import defaultdict
 from typing import Any, Dict, Generator, Iterable, List, Set, Tuple, Union, Optional
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
-from rigour.names import Symbol
+
+# We're re-using the same entity analyzer so the LRU cache is shared:
+from nomenklatura.matching.logic_v2.names.analysis import entity_names
 
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import entity_names, index_symbol, is_matchable_symbol, pick_names
+from yente.data.util import entity_weak_names, index_symbols
 from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD
 
@@ -25,12 +28,26 @@ DEFAULT_SORTS: List[Sort] = [
     {"entity_id": {"order": "asc", "unmapped_type": "keyword"}},
 ]
 
+# Boost factors for non-name property types in entity queries, reflecting their
+# relative importance in the LogicV2 scoring algorithm. Identifiers are near-
+# deterministic match signals (0.85-0.98 weight in LogicV2), dates are highly
+# discriminating, countries are modestly informative.
+TYPE_BOOSTS = {
+    registry.identifier: 8.0,
+    registry.date: 3.0,
+    registry.phone: 3.0,
+    registry.email: 3.0,
+    registry.country: 1.5,
+}
+
 # Boost factors for symbol categories to demote low-information name parts.
 SYMBOL_BOOSTS = {
-    Symbol.Category.NUMERIC: 1.4,
-    Symbol.Category.LOCATION: 1.1,
+    Symbol.Category.NUMERIC: 1.3,
+    Symbol.Category.LOCATION: 0.8,
     Symbol.Category.ORG_CLASS: 0.7,
-    Symbol.Category.SYMBOL: 0.8,
+    Symbol.Category.SYMBOL: 0.3,
+    Symbol.Category.NICK: 0.8,
+    Symbol.Category.DOMAIN: 0.7,
 }
 
 
@@ -117,12 +134,12 @@ def filter_query(
 
 def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
-    name_objs = entity_names(entity)
+    name_objs = entity_names(entity, is_query=True)
     # Single-word names are hard to match, so we use fuzzy matching more aggressively.
     # FIXME: This could make sense for 2 part names as well?
     is_short = max((len(n.parts) for n in name_objs), default=0) < 2
     shoulds: List[Clause] = []
-    for picked_name in pick_names(names, limit=5):
+    for picked_name in representative_names(names, 5):
         match = {
             NAMES_FIELD: {
                 "query": picked_name,
@@ -135,7 +152,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
         shoulds.append({"match": match})
 
     seen: Set[str] = set()
-    for name in name_objs:
+    for name in Name.consolidate_names(name_objs):
         part_symbols: Dict[str, Set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
@@ -169,16 +186,16 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             if metaphone is not None and len(metaphone) > 2:
                 query_variants.append(tq(NAME_PHONETIC_FIELD, metaphone, boost * 0.5))
 
-            for symbol in symbols:
-                if is_matchable_symbol(symbol):
-                    query_variants.append(
-                        tq(NAME_SYMBOLS_FIELD, index_symbol(symbol), boost * 0.7)
-                    )
+            for sym_id in index_symbols(symbols):
+                query_variants.append(tq(NAME_SYMBOLS_FIELD, sym_id, boost * 0.7))
 
             query = {"dis_max": {"queries": query_variants, "tie_breaker": 0.2}}
             shoulds.append(query)
 
-        # TODO: query by key?
+    # Always query for weak aliases too
+    for weak in entity_weak_names(entity):
+        shoulds.append(tq(NAME_PART_FIELD, weak, 0.9))
+
     return shoulds
 
 
@@ -201,7 +218,8 @@ def entity_query(
             query = {"match": {prop.type.group: value}}
             shoulds.append(query)
         elif prop.type.group is not None:
-            shoulds.append(tq(prop.type.group, value))
+            boost = TYPE_BOOSTS.get(prop.type, 1.0)
+            shoulds.append(tq(prop.type.group, value, boost))
 
     return filter_query(
         dataset,

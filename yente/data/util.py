@@ -1,21 +1,15 @@
+from functools import cache
 import warnings
-from followthemoney import EntityProxy
+from followthemoney import EntityProxy, Property, Schema, registry
 import httpx
 import unicodedata
 from pathlib import Path
 from urllib.parse import urlparse
-from followthemoney.types import registry
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from normality import squash_spaces
 from normality.cleaning import remove_unsafe_chars
-from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
-from rigour.text import levenshtein
-from rigour.names import remove_person_prefixes
-from rigour.names import replace_org_types_compare
-from rigour.names.tokenize import normalize_name, prenormalize_name
-from rigour.names import tag_person_name, Name, tag_org_name, Symbol, NameTypeTag
-from followthemoney.names import schema_type_tag
+from typing import AsyncGenerator, List, Optional, Set, Generator
+from rigour.names import Symbol
 
 from yente import settings
 from yente.logs import get_logger
@@ -27,14 +21,6 @@ log = get_logger(__name__)
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
 
-def preprocess_name(name: Optional[str]) -> Optional[str]:
-    """Preprocess a name for comparison."""
-    if name is None:
-        return None
-    name = name.lower()
-    return squash_spaces(name)
-
-
 def safe_string(value: str) -> str:
     """Make sure a value coming from the API is a safe string for data comparison."""
     value = unicodedata.normalize("NFC", value)
@@ -42,80 +28,32 @@ def safe_string(value: str) -> str:
     return value.strip()
 
 
-def entity_names(entity: EntityProxy) -> Set[Name]:
-    """Build name objects from the names linked to an entity."""
-    # TODO: this does ca. the same thing as `logic_v2.names.analysis`. Should we extract that into
-    # followthemoney or has it not yet stabilised enough?
-    name_type = schema_type_tag(entity.schema)
-    names: Set[Name] = set()
-
-    is_org = name_type in (NameTypeTag.ORG, NameTypeTag.ENT)
-    is_person = name_type == NameTypeTag.PER
-
-    values = entity.get_type_values(registry.name, matchable=True)
-    values.extend(entity.get("weakAlias", quiet=True))
-    for value in values:
-        if name_type == NameTypeTag.PER:
-            value = remove_person_prefixes(value)
-        norm = prenormalize_name(value)
-        if is_org:
-            norm = replace_org_types_compare(norm, normalizer=prenormalize_name)
-        name = Name(value, form=norm, tag=name_type)
-
-        # Apply symbols:
-        if is_person:
-            tag_person_name(name, normalize_name)
-        if is_org:
-            tag_org_name(name, normalize_name)
-        names.add(name)
-    return names
+def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:
+    """Get the set of symbols to be indexed for a given name."""
+    for symbol in symbols:
+        if symbol.category not in NON_MATCHABLE_SYMBOLS:
+            yield f"{symbol.category.value}:{symbol.id}"
 
 
-def is_matchable_symbol(symbol: Symbol) -> bool:
-    """Check if a symbol is matchable."""
-    return symbol.category not in NON_MATCHABLE_SYMBOLS
+@cache
+def _entity_weak_props(schema: Schema) -> Set[Property]:
+    """Get the set of properties that are not used for matching but can be used for
+    display."""
+    weak_props: Set[Property] = set()
+    for prop in schema.properties.values():
+        if prop.type == registry.name and not prop.matchable:
+            weak_props.add(prop)
+    return weak_props
 
 
-def index_symbol(symbol: Symbol) -> str:
-    return f"{symbol.category.value}:{symbol.id}"
-
-
-def pick_names(names: List[str], limit: int = 3) -> List[str]:
-    """Try to pick a few non-overlapping names to search for when matching
-    an entity. The problem here is that if we receive an API query for an
-    entity with hundreds of aliases, it becomes prohibitively expensive to
-    search. This function decides which ones should be queried as pars pro
-    toto in the index before the Python comparison algo later checks all of
-    them.
-
-    This is a bit over the top and will come back to haunt us."""
-    if len(names) <= limit:
-        return names
-    picked: List[str] = []
-    processed_ = [preprocess_name(n) for n in names]
-    names = [n for n in processed_ if n is not None]
-
-    # Centroid:
-    picked_name = registry.name.pick(names)
-    if picked_name is not None:
-        picked.append(picked_name)
-
-    # Pick the least similar:
-    for _ in range(1, limit):
-        candidates: Dict[str, int] = {}
-        for cand in names:
-            if cand in picked:
-                continue
-            candidates[cand] = 0
-            for pick in picked:
-                candidates[cand] += levenshtein(pick, cand)
-
-        if not len(candidates):
-            break
-        pick, _ = sorted(candidates.items(), key=lambda c: c[1], reverse=True)[0]
-        picked.append(pick)
-
-    return picked
+def entity_weak_names(entity: EntityProxy) -> Set[str]:
+    """Get a set of weak names for an entity, which are the names that are not used for
+    matching but can be used for display."""
+    weak_names: Set[str] = set()
+    for prop in _entity_weak_props(entity.schema):
+        for value in entity.get_prop(prop):
+            weak_names.add(value.casefold())
+    return weak_names
 
 
 def expand_dates(dates: List[str]) -> List[str]:

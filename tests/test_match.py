@@ -1,6 +1,6 @@
 from unittest import mock
 
-from .conftest import client
+from .conftest import client, assert_entity_shape
 
 EXAMPLE = {
     "schema": "Person",
@@ -38,6 +38,7 @@ def test_match_putin():
     assert res["total"]["value"] > 0, res["total"]
     res0 = res["results"][0]
     assert res0["id"] == "Q7747", res0
+    assert_entity_shape(res0)
 
 
 def test_match_putin_name_based_mode():
@@ -55,6 +56,7 @@ def test_match_putin_name_based_mode():
     res0 = res["results"][0]
     assert res0["id"] == "Q7747", res0
     assert res0["score"] > 0.70, res0
+    assert_entity_shape(res0)
 
 
 def test_match_no_schema():

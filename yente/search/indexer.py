@@ -1,8 +1,9 @@
 import asyncio
 import threading
 from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Set
-from followthemoney.exc import FollowTheMoneyException
 from followthemoney import registry
+from followthemoney.exc import FollowTheMoneyException
+from followthemoney.names import entity_names
 
 from yente import settings
 from yente.data.manifest import Catalog
@@ -35,9 +36,7 @@ from yente.search.versions import (
     build_index_name,
     get_system_version,
 )
-from yente.data.util import expand_dates
-from yente.data.util import index_symbol, is_matchable_symbol
-from yente.data.util import entity_names
+from yente.data.util import entity_weak_names, expand_dates, index_symbols
 
 
 log = get_logger(__name__)
@@ -100,10 +99,8 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     name_parts: Set[str] = set()
     name_phonemes: Set[str] = set()
     name_symbols: Set[str] = set()
-    for name in entity_names(entity):
-        for symbol in name.symbols:
-            if is_matchable_symbol(symbol):
-                name_symbols.add(index_symbol(symbol))
+    for name in entity_names(entity, infer_initials=False):
+        name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
             name_parts.add(part.form)
             name_parts.add(part.comparable)
@@ -111,16 +108,15 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
             if phoneme is not None and len(phoneme) > 2:
                 name_phonemes.add(phoneme)
 
+    for weak in entity_weak_names(entity):
+        name_parts.add(weak)
+
     doc[NAME_PART_FIELD] = list(name_parts)
-    # doc[NAME_KEY_FIELD] = list(name_keys)
     doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
-
-    # TODO(Leon Handreke): Is name_parts needed here? All the fields get a copy_to text anyways in the mapper
-    doc["text"] = entity.pop("indexText") + list(name_parts)
-
+    doc["text"] = entity.pop("indexText")
     return doc
 
 
@@ -183,9 +179,9 @@ async def index_entities(
     )
 
     if is_partial_reindex:
-        assert (
-            updater.base_version is not None
-        ), "Expected base version to be set for partial reindex"
+        assert updater.base_version is not None, (
+            "Expected base version to be set for partial reindex"
+        )
         base_index = build_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:

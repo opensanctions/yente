@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from .conftest import client
+from .conftest import client, assert_entity_shape
 
 
 def by_id(dicts: List[Dict[str, Any]], id_: str):
@@ -18,13 +18,11 @@ def test_entity_fetch():
     res = client.get("/entities/Q7747")
     assert res.status_code == 200, res
     data = res.json()
+    assert_entity_shape(data)
     assert data["id"] == "Q7747"
     assert data["schema"] == "Person"
     assert "eu_fsf" in data["datasets"]
     assert len(data["referents"]) > 5, data["referents"]
-    assert data["last_change"].startswith("20")
-    assert data["first_seen"].startswith("20")
-    assert data["last_seen"].startswith("20")
 
     props = data["properties"]
     assert isinstance(props["birthDate"][0], str), props["birthDate"]
@@ -32,6 +30,7 @@ def test_entity_fetch():
     assert "sanctions" in props
     sanc = props["sanctions"][0]
     assert isinstance(sanc, dict), sanc
+    assert_entity_shape(sanc)
     assert sanc["schema"] == "Sanction"
 
 
