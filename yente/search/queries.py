@@ -1,6 +1,6 @@
 import enum
 from pprint import pprint  # noqa
-from rigour.names import Name, Symbol
+from rigour.names import Name, Symbol, representative_names
 from collections import defaultdict
 from typing import Any, Dict, Generator, Iterable, List, Set, Tuple, Union, Optional
 from followthemoney.schema import Schema
@@ -13,7 +13,7 @@ from nomenklatura.matching.logic_v2.names.analysis import entity_names
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import entity_weak_names, index_symbols, pick_names
+from yente.data.util import entity_weak_names, index_symbols
 from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD
 
@@ -139,7 +139,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
     # FIXME: This could make sense for 2 part names as well?
     is_short = max((len(n.parts) for n in name_objs), default=0) < 2
     shoulds: List[Clause] = []
-    for picked_name in pick_names(names, 5):
+    for picked_name in representative_names(names, 5):
         match = {
             NAMES_FIELD: {
                 "query": picked_name,

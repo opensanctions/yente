@@ -7,11 +7,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from normality import squash_spaces
 from normality.cleaning import remove_unsafe_chars
-from typing import AsyncGenerator, Dict, List, Optional, Set, Generator
-from rigour.text import levenshtein
-from rigour.names import reduce_names, pick_name
+from typing import AsyncGenerator, List, Optional, Set, Generator
 from rigour.names import Symbol
 
 from yente import settings
@@ -57,47 +54,6 @@ def entity_weak_names(entity: EntityProxy) -> Set[str]:
         for value in entity.get_prop(prop):
             weak_names.add(value.casefold())
     return weak_names
-
-
-def pick_names(names: List[str], limit: int) -> List[str]:
-    """Try to pick a few non-overlapping names to search for when matching
-    an entity. The problem here is that if we receive an API query for an
-    entity with hundreds of aliases, it becomes prohibitively expensive to
-    search. This function decides which ones should be queried as pars pro
-    toto in the index before the Python comparison algo later checks all of
-    them.
-
-    This is a bit over the top and will come back to haunt us."""
-    if len(names) <= limit:
-        return names
-    names = reduce_names(names)
-    if len(names) <= limit:
-        return names
-    picked: List[str] = []
-    processed_ = [squash_spaces(n.casefold()) for n in names]
-    names = [n for n in processed_ if n is not None]
-
-    # Centroid:
-    picked_name = pick_name(names)
-    if picked_name is not None:
-        picked.append(picked_name)
-
-    # Pick the least similar:
-    for _ in range(1, limit):
-        candidates: Dict[str, int] = {}
-        for cand in names:
-            if cand in picked:
-                continue
-            candidates[cand] = 0
-            for pick in picked:
-                candidates[cand] += levenshtein(pick, cand)
-
-        if not len(candidates):
-            break
-        pick, _ = sorted(candidates.items(), key=lambda c: c[1], reverse=True)[0]
-        picked.append(pick)
-
-    return picked
 
 
 def expand_dates(dates: List[str]) -> List[str]:
