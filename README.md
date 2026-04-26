@@ -39,6 +39,16 @@ yente serve
     bump2version --verbose minor # or patch
     git push && git push --tags
 
+### Debugging using OpenTelemetry Tracing
+
+You'll need a local piece of software to receive and display traces. [Jaeger]() is widely used and has an easy-to-use Docker image. Paste the command to start the all-in-one container from [the Jaeger documentation](https://www.jaegertracing.io/docs/latest/getting-started/) and find the web interface at http://localhost:16686.
+
+Then, just run yente like this:
+
+```sh
+opentelemetry-instrument --exporter_otlp_traces_endpoint="http://localhost:4317" yente serve
+```
+
 ## License and Support
 
 ``yente`` is licensed according to the MIT license terms documented in ``LICENSE``. Using the service in a commercial context may require a [data license for OpenSanctions data](https://www.opensanctions.org/licensing/).
