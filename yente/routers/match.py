@@ -272,12 +272,13 @@ async def match(
                 )
                 tasks.append(tg.create_task(coroutine))
     except BaseExceptionGroup as eg:
-        # When one task fails, the TaskGroup cancels its siblings; surface the
-        # original failure rather than the cancellation noise.
-        real, _ = eg.split(lambda e: not isinstance(e, asyncio.CancelledError))
-        if real is None:
-            raise
-        leaf: BaseException = real
+        # The TaskGroup cancels siblings on any failure, and those
+        # cancellations surface as YenteIndexError from the provider. Unwrap
+        # to a single leaf so the registered exception handlers (YenteError,
+        # HTTPException) render a proper response instead of a generic 500.
+        # Prefer HTTPException when present — it's the user-actionable error.
+        matched, _ = eg.split(HTTPException)
+        leaf: BaseException = matched if matched is not None else eg
         while isinstance(leaf, BaseExceptionGroup):
             leaf = leaf.exceptions[0]
         raise leaf

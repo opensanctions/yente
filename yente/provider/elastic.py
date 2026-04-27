@@ -240,7 +240,13 @@ class ElasticSearchProvider(SearchProvider):
                 query=json.dumps(query),
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
-        except (OSError, asyncio.TimeoutError, Exception) as exc:
+        except (
+            KeyboardInterrupt,
+            OSError,
+            Exception,
+            asyncio.TimeoutError,
+            asyncio.CancelledError,
+        ) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
