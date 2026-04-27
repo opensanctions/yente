@@ -38,9 +38,23 @@ async def redoc_html() -> HTMLResponse:
     # script's SHA-384 hash before executing it. If the server ever delivers a different
     # file the hash won't match and the browser refuses to run it.
     # Update YENTE_REDOC_JS_URL and YENTE_REDOC_JS_SRI together when upgrading ReDoc.
-    html = bytes(response.body).decode("utf-8").replace(
-        f'src="{settings.REDOC_JS_URL}"',
-        f'src="{settings.REDOC_JS_URL}" integrity="{settings.REDOC_JS_SRI}" crossorigin="anonymous"',
+    # onerror fires on SRI mismatch or network failure (unlike <noscript>, which only
+    # fires when JavaScript is disabled entirely).
+    fallback = (
+        '<p id="redoc-error" style="display:none;padding:2em">'
+        "If you see this, you may need to update <code>YENTE_REDOC_JS_SRI</code> "
+        "to match the script at <code>YENTE_REDOC_JS_URL</code>.</p>"
+    )
+    html = (
+        bytes(response.body)
+        .decode("utf-8")
+        .replace(
+            f'src="{settings.REDOC_JS_URL}"',
+            f'src="{settings.REDOC_JS_URL}" integrity="{settings.REDOC_JS_SRI}"'
+            ' crossorigin="anonymous"'
+            ' onerror="document.getElementById(\'redoc-error\').style.display=\'block\'"',
+        )
+        .replace("<redoc ", f"{fallback}\n    <redoc ")
     )
     return HTMLResponse(html)
 
