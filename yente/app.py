@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
+from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.exc import YenteError
@@ -87,6 +88,11 @@ async def json_exception_middleware(
         log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
     return response
+
+
+async def ftm_error_handler(req: Request, exc: InvalidData) -> Response:
+    body = {"detail": str(exc), "errors": exc.errors}
+    return JSONResponse(status_code=400, content=body)
 
 
 async def yente_error_handler(req: Request, exc: YenteError) -> Response:

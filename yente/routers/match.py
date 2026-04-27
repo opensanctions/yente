@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
+from followthemoney.exc import InvalidData
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
@@ -78,17 +79,17 @@ async def _match_one_query(
         limit=limit,
         config=ScoringConfig(weights=match.weights, config=match.config),
     )
-    # log.info(
-    #     f"/match/{ds.name}",
-    #     action="match",
-    #     schema=entity.schema.name,
-    #     results=total,
-    #     threshold=threshold,
-    #     dataset=ds.name,
-    #     limit=limit,
-    #     # Log the algorithm passed in the request, which may be None or "best"
-    #     algorithm_param=algorithm,
-    # )
+    log.info(
+        f"/match/{ds.name}",
+        action="match",
+        schema=entity.schema.name,
+        results=total,
+        threshold=threshold,
+        dataset=ds.name,
+        limit=limit,
+        # Log the algorithm passed in the request, which may be None or "best"
+        algorithm_param=algorithm,
+    )
     # Restore the caller-supplied id on the echoed query only. The internal
     # entity keeps its checksum-derived id so scoring/candidate-dedup can't
     # be influenced by a caller picking an id that collides with a real
@@ -277,7 +278,7 @@ async def match(
         # to a single leaf so the registered exception handlers (YenteError,
         # HTTPException) render a proper response instead of a generic 500.
         # Prefer HTTPException when present — it's the user-actionable error.
-        matched, _ = eg.split(HTTPException)
+        matched, _ = eg.split((HTTPException, InvalidData))
         leaf: BaseException = matched if matched is not None else eg
         while isinstance(leaf, BaseExceptionGroup):
             leaf = leaf.exceptions[0]
