@@ -102,7 +102,6 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     for name in entity_names(entity, infer_initials=False):
         name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
-            name_parts.add(part.form)
             name_parts.add(part.comparable)
             phoneme = part.metaphone
             if phoneme is not None and len(phoneme) > 2:

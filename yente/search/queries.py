@@ -1,6 +1,6 @@
 import enum
 from pprint import pprint  # noqa
-from rigour.names import Name, Symbol, representative_names
+from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
 from typing import Any, Dict, Generator, Iterable, List, Set, Tuple, Union, Optional
 from followthemoney.schema import Schema
@@ -153,10 +153,10 @@ def names_query(entity: EntityProxy) -> List[Clause]:
 
     seen: Set[str] = set()
     for name in Name.consolidate_names(name_objs):
-        part_symbols: Dict[str, Set[Symbol]] = defaultdict(set)
+        part_symbols: Dict[NamePart, Set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
-                part_symbols[part.form].add(span.symbol)
+                part_symbols[part].add(span.symbol)
         for part in name.parts:
             if part.comparable in seen:
                 continue
@@ -166,7 +166,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             # To some degree, this is already done by the IDF component of the ES scoring algorithm
             # (which reduces the influence of frequent terms), but that doesn't work too well for e.g.
             # less common languages.
-            symbols: Set[Symbol] = part_symbols.get(part.form, set())
+            symbols: Set[Symbol] = part_symbols.get(part, set())
             boosts = [
                 SYMBOL_BOOSTS[symbol.category]
                 for symbol in symbols
@@ -178,9 +178,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             # In the end, we dis-max them to get the one that works best, but not give an outsized important
             # to this name part just because multiple variants match.
             query_variants: List[Clause] = []
-            query_variants.append(tq(NAME_PART_FIELD, part.form, boost))
-            if part.comparable != part.form:
-                query_variants.append(tq(NAME_PART_FIELD, part.comparable, boost * 0.9))
+            query_variants.append(tq(NAME_PART_FIELD, part.comparable))
 
             metaphone = part.metaphone
             if metaphone is not None and len(metaphone) > 2:
