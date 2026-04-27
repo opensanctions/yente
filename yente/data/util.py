@@ -1,15 +1,14 @@
-from functools import cache
-import warnings
-from followthemoney import EntityProxy, Property, Schema, registry
 import httpx
-import unicodedata
+import warnings
 from pathlib import Path
+from functools import cache
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from normality.cleaning import remove_unsafe_chars
-from typing import AsyncGenerator, List, Optional, Set, Generator
+from typing import Any, AsyncGenerator, List, Optional, Set, Generator
 from rigour.names import Symbol
+from followthemoney import EntityProxy, Property, Schema, registry
+from followthemoney.util import sanitize_text
 
 from yente import settings
 from yente.logs import get_logger
@@ -21,11 +20,14 @@ log = get_logger(__name__)
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
 
-def safe_string(value: str) -> str:
-    """Make sure a value coming from the API is a safe string for data comparison."""
-    value = unicodedata.normalize("NFC", value)
-    value = remove_unsafe_chars(value)
-    return value.strip()
+def extract_values(values: Any) -> List[str]:
+    """Extract a list of string values from a property value, which may be a string or a list."""
+    sanitized: List[str | None] = []
+    if isinstance(values, (list, tuple, set)):
+        sanitized = [sanitize_text(v) for v in values]
+    else:
+        sanitized = [sanitize_text(values)]
+    return [v for v in sanitized if v is not None and len(v) > 0]
 
 
 def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:

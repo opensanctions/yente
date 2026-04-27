@@ -64,7 +64,17 @@ def test_match_no_schema():
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 422, resp.text
 
-    query = {"queries": {"fail": {"schema": "xxx", "properties": {"name": "Banana"}}}}
+    # Multi-query batch: an invalid schema in one query triggers a 400 in a
+    # TaskGroup task and cancels its in-flight siblings. The response must
+    # surface the original 400, not a leaked 500 / ExceptionGroup from the
+    # sibling cancellations.
+    query = {
+        "queries": {
+            "fail": {"schema": "xxx", "properties": {"name": "Banana"}},
+            "ok1": {"schema": "Person", "properties": {"name": ["Vladimir Putin"]}},
+            "ok2": {"schema": "Person", "properties": {"name": ["John Doe"]}},
+        }
+    }
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 400, resp.text
 
@@ -221,6 +231,24 @@ def test_fuzzy_names():
         res = data["responses"]["a"]
         assert len(res["results"]) > 0, res
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
+
+
+def test_match_numeric_property_value():
+    # Numeric values in a property list are coerced to strings by
+    # extract_values; the request must succeed and echo the value back as a
+    # string.
+    query = {
+        "queries": {
+            "q": {
+                "schema": "Person",
+                "properties": {"name": ["Vladimir Putin"], "birthDate": [1952]},
+            }
+        }
+    }
+    resp = client.post("/match/default", json=query)
+    assert resp.status_code == 200, resp.text
+    res = resp.json()["responses"]["q"]
+    assert "1952" in res["query"]["properties"].get("birthDate", []), res["query"]
 
 
 def test_exclude_entity_ids():

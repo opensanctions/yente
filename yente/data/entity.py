@@ -5,7 +5,7 @@ from followthemoney.helpers import combine_names
 from rigour.names import pick_name
 
 from yente import settings
-from yente.data.util import safe_string
+from yente.data.util import extract_values
 from yente.logs import get_logger
 
 if TYPE_CHECKING:
@@ -52,10 +52,7 @@ class Entity(ValueEntity):
                     value=repr(values),
                 )
                 continue
-            if isinstance(values, str):
-                values = [values]
-            for value in values:
-                value = safe_string(value)
+            for value in extract_values(values):
                 obj.unsafe_add(prop, value, cleaned=False, fuzzy=True)
 
         if obj.id is None:
