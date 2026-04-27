@@ -271,10 +271,16 @@ async def match(
                     threshold,
                 )
                 tasks.append(tg.create_task(coroutine))
-    except* HTTPException as exc:
-        # If any of the tasks raised an HTTPException, we want to return that error.
-        # We assume that all tasks will raise the same error, so we just take the first one.
-        raise exc.exceptions[0]
+    except BaseExceptionGroup as eg:
+        # When one task fails, the TaskGroup cancels its siblings; surface the
+        # original failure rather than the cancellation noise.
+        real, _ = eg.split(lambda e: not isinstance(e, asyncio.CancelledError))
+        if real is None:
+            raise
+        leaf: BaseException = real
+        while isinstance(leaf, BaseExceptionGroup):
+            leaf = leaf.exceptions[0]
+        raise leaf
 
     responses: Dict[str, EntityMatches] = {}
     for task in tasks:
