@@ -220,7 +220,7 @@ LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 # Used to pad out first_seen, last_seen on static collections
 RUN_DT = utc_now()
 
-# ReDoc API documentation bundle, served at GET /.
+# ReDoc API documentation bundle used by API documentation page served at `/`.
 # URL is versioned so the path is stable and the SRI hash doesn't need updating
 # unless you deliberately upgrade. To upgrade:
 #   1. Hosted in assets.opensanctions.org to address security / privacy concerns
