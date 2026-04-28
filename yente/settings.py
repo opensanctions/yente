@@ -223,8 +223,7 @@ RUN_DT = utc_now()
 # ReDoc API documentation bundle, served at GET /.
 # URL is versioned so the path is stable and the SRI hash doesn't need updating
 # unless you deliberately upgrade. To upgrade:
-#   1. Update REDOC_VERSION in knowledgebase/Makefile and run `make assets`
-#      hosted in assets.opensanctions.org to address security / privacy concerns
+#   1. Hosted in assets.opensanctions.org to address security / privacy concerns
 #   2. Update the URL and recompute the hash:
 #      curl -sL <new_url> | openssl dgst -sha384 -binary | openssl base64 -A
 REDOC_JS_URL = env_str(
