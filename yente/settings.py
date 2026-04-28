@@ -219,3 +219,18 @@ LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 # Used to pad out first_seen, last_seen on static collections
 RUN_DT = utc_now()
+
+# ReDoc API documentation bundle used by API documentation page served at `/`.
+# URL is versioned so the path is stable and the SRI hash doesn't need updating
+# unless you deliberately upgrade. To upgrade:
+#   1. Hosted in assets.opensanctions.org to address security / privacy concerns
+#   2. Update the URL and recompute the hash:
+#      curl -sL <new_url> | openssl dgst -sha384 -binary | openssl base64 -A
+REDOC_JS_URL = env_str(
+    "YENTE_REDOC_JS_URL",
+    "https://assets.opensanctions.org/scripts/redoc-2.5.2.standalone.js",
+)
+REDOC_JS_SRI = env_str(
+    "YENTE_REDOC_JS_SRI",
+    "sha384-70P5pmIdaQdVbxvjhrcTDv1uKcKqalZ3OHi7S2J+uzDl0PW8dO6L+pHOpm9EEjGJ",
+)
