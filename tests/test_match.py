@@ -64,10 +64,9 @@ def test_match_no_schema():
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 422, resp.text
 
-    # Multi-query batch: an invalid schema in one query triggers a 400 in a
-    # TaskGroup task and cancels its in-flight siblings. The response must
-    # surface the original 400, not a leaked 500 / ExceptionGroup from the
-    # sibling cancellations.
+    # Multi-query batch: an invalid schema in one query must surface a 400 to
+    # the caller even when sibling queries are still in flight under
+    # asyncio.gather.
     query = {
         "queries": {
             "fail": {"schema": "xxx", "properties": {"name": "Banana"}},

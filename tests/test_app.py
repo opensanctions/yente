@@ -1,5 +1,4 @@
 import json
-import pytest
 
 from fastapi.testclient import TestClient
 
@@ -11,13 +10,6 @@ EXAMPLE = {
     "schema": "Person",
     "properties": {"name": ["Vladimir Putin"]},
 }
-
-
-@pytest.fixture(scope="session", autouse=True)
-def load_data():
-    """Shadow the ES-requiring load_data fixture from conftest for this module.
-    Tests here that need indexed data must request it explicitly."""
-    yield
 
 
 def test_redoc_has_sri():
