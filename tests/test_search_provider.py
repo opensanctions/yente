@@ -1,13 +1,16 @@
 # mypy: ignore-errors
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from yente import settings
+from yente.data.entity import Entity
 from yente.exc import YenteIndexError, YenteNotFoundError
 from yente.provider import SearchProvider
 from yente.provider.elastic import ElasticSearchProvider
 from yente.provider.opensearch import OpenSearchProvider
+from yente.search.indexer import build_indexable_entity_doc
 from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 
 # Constants for testing
@@ -153,10 +156,64 @@ async def test_clone_index_failure_restores_read_only(search_provider: SearchPro
     index_settings = resp[source]["settings"]["index"]
     blocks = index_settings.get("blocks", {})
     read_only = blocks.get("read_only", "false")
-    assert (
-        str(read_only).lower() != "true"
-    ), f"Source index is still read-only after failed clone: {read_only}"
+    assert str(read_only).lower() != "true", (
+        f"Source index is still read-only after failed clone: {read_only}"
+    )
 
     # Clean up
     await search_provider.delete_index(source)
     await search_provider.delete_index(target)
+
+
+@pytest.mark.asyncio
+async def test_get_index_max_date(search_provider: SearchProvider):
+    temp_index = settings.ENTITY_INDEX + "-max-date-test"
+    await search_provider.create_index(
+        temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
+
+    # An empty index should return None
+    await search_provider.refresh(temp_index)
+    assert await search_provider.get_index_max_date(temp_index, "last_seen") is None
+
+    older_last_seen = "2024-01-15T08:00:00"
+    newer_last_seen = "2024-06-01T10:57:03"
+
+    entities = [
+        Entity.from_dict(
+            {
+                "id": "test-max-date-1",
+                "schema": "Person",
+                "properties": {"name": ["Alice Test"]},
+                "datasets": ["test"],
+                "first_seen": "2024-01-01T00:00:00",
+                "last_seen": older_last_seen,
+                "last_change": older_last_seen,
+            }
+        ),
+        Entity.from_dict(
+            {
+                "id": "test-max-date-2",
+                "schema": "Person",
+                "properties": {"name": ["Bob Test"]},
+                "datasets": ["test"],
+                "first_seen": "2024-01-01T00:00:00",
+                "last_seen": newer_last_seen,
+                "last_change": newer_last_seen,
+            }
+        ),
+    ]
+    actions = [
+        {"_index": temp_index, "_id": e.id, "_source": build_indexable_entity_doc(e)}
+        for e in entities
+    ]
+    await search_provider.bulk_index(actions)
+    await search_provider.refresh(temp_index)
+
+    result = await search_provider.get_index_max_date(temp_index, "last_seen")
+    expected = int(
+        datetime.fromisoformat(newer_last_seen).replace(tzinfo=timezone.utc).timestamp()
+    )
+    assert result == expected
+
+    await search_provider.delete_index(temp_index)
