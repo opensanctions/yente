@@ -1,7 +1,6 @@
 import asyncio
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Coroutine, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
-from followthemoney.exc import InvalidData
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
@@ -246,47 +245,33 @@ async def match(
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
-    tasks: List[asyncio.Task[Tuple[str, EntityMatches]]] = []
-    try:
-        async with asyncio.TaskGroup() as tg:
-            for name, example in match.queries.items():
-                if example is None:
-                    continue
-                # TODO: add more arguments here for readability:
-                coroutine = _match_one_query(
-                    ds,
-                    algorithm,
-                    match,
-                    name,
-                    example,
-                    filters,
-                    include_dataset,
-                    exclude_schema,
-                    exclude_dataset,
-                    changed_since,
-                    exclude_entity_ids,
-                    provider,
-                    candidates,
-                    limit,
-                    cutoff,
-                    threshold,
-                )
-                tasks.append(tg.create_task(coroutine))
-    except BaseExceptionGroup as eg:
-        # The TaskGroup cancels siblings on any failure, and those
-        # cancellations surface as YenteIndexError from the provider. Unwrap
-        # to a single leaf so the registered exception handlers (YenteError,
-        # HTTPException) render a proper response instead of a generic 500.
-        # Prefer HTTPException when present — it's the user-actionable error.
-        matched, _ = eg.split((HTTPException, InvalidData))
-        leaf: BaseException = matched if matched is not None else eg
-        while isinstance(leaf, BaseExceptionGroup):
-            leaf = leaf.exceptions[0]
-        raise leaf
-
+    tasks: List[Coroutine[Any, Any, Tuple[str, EntityMatches]]] = []
+    for name, example in match.queries.items():
+        if example is None:
+            continue
+        # TODO: add more arguments here for readability:
+        coroutine = _match_one_query(
+            ds,
+            algorithm,
+            match,
+            name,
+            example,
+            filters,
+            include_dataset,
+            exclude_schema,
+            exclude_dataset,
+            changed_since,
+            exclude_entity_ids,
+            provider,
+            candidates,
+            limit,
+            cutoff,
+            threshold,
+        )
+        tasks.append(coroutine)
+    task_results = await asyncio.gather(*tasks)
     responses: Dict[str, EntityMatches] = {}
-    for task in tasks:
-        name, matches = task.result()
+    for name, matches in task_results:
         responses[name] = matches
 
     if not len(responses):
