@@ -110,6 +110,7 @@ async def validation_error_handler(req: Request, exc: ValidationError) -> Respon
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
+    InvalidData: ftm_error_handler,
 }
 
 
