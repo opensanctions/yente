@@ -200,7 +200,7 @@ class FreebaseEntityResult(BaseModel):
     result: List[FreebaseScoredEntity]
 
 
-ReconPropertyValue = Union[str, dict, list[Union[str, dict]]]
+ReconPropertyValue = Union[str, list[str]]
 
 
 class FreebaseReconPropertyFilter(BaseModel):
@@ -217,5 +217,4 @@ class FreebaseReconQuery(BaseModel):
     properties: list[FreebaseReconPropertyFilter] = []
 
 
-class FreebaseReconBatch(RootModel):
-    root: dict[str, FreebaseReconQuery]
+FreebaseReconBatch = RootModel[Dict[str, FreebaseReconQuery]]
