@@ -4,7 +4,7 @@ from followthemoney import model
 from followthemoney.names import entity_names
 from rigour.names import NamePartTag
 
-from yente.data import get_catalog
+from yente.data import get_catalog, reset_catalog
 from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
@@ -22,8 +22,7 @@ async def test_manifest():
 @pytest.mark.asyncio
 async def test_manifest_with_auth_token():
     # Clear any cached catalog instance
-    Catalog.instance = None
-
+    reset_catalog()
     catalog_response_data = {"datasets": []}
 
     with patch_catalog_response(catalog_response_data) as (
@@ -53,8 +52,7 @@ async def test_manifest_with_auth_token():
 @pytest.mark.asyncio
 async def test_manifest_with_auth_token_env_expansion(monkeypatch):
     # Clear any cached catalog instance
-    Catalog.instance = None
-
+    reset_catalog()
     monkeypatch.setenv("TEST_CATALOG_AUTH_TOKEN", "secretenv")
 
     catalog_response_data = {"datasets": []}
@@ -100,8 +98,7 @@ async def test_local_dataset():
 async def test_catalog_and_local_dataset():
     """Test that a datasets and catalog datasets are both loaded into the internal catalog."""
     # Clear any cached catalog instance
-    Catalog.instance = None
-
+    reset_catalog()
     catalog_response_data = {"datasets": [{"name": "eu_fsf", "title": "EU FSF"}]}
 
     with patch_catalog_response(catalog_response_data):
