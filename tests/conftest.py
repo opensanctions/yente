@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict
 from uuid import uuid4
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from contextlib import contextmanager
 from fastapi.testclient import TestClient
 from followthemoney import model
@@ -17,6 +17,7 @@ from yente import settings
 from yente.app import create_app
 from yente.search.indexer import update_index
 from yente.provider import with_provider, close_provider
+from yente.data.manifest import Catalog, Manifest
 
 
 run_id = uuid4().hex
@@ -44,6 +45,28 @@ def sanctions_catalog():
     settings.MANIFEST = str(FIXTURES_PATH / "sanctions.yml")
     yield
     settings.MANIFEST = manifest_tmp
+
+
+@pytest_asyncio.fixture(scope="function", autouse=False)
+async def zala_test_dataset():
+    zala_path = FIXTURES_PATH / "dataset" / "zala"
+    catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "datasets": [
+                    {
+                        "name": "zala",
+                        "title": "Zala Test Dataset",
+                        "entities_url": (zala_path / "entities.ftm.json").as_uri(),
+                        "load": True,
+                    }
+                ]
+            }
+        )
+    )
+
+    with patch("yente.data.get_catalog", AsyncMock(return_value=catalog)):
+        yield catalog
 
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
