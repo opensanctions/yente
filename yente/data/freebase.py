@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, Field, RootModel
 from pydantic.networks import AnyHttpUrl
 from followthemoney import model
 from followthemoney.proxy import EntityProxy
@@ -198,3 +198,23 @@ class FreebaseManifest(BaseModel):
 
 class FreebaseEntityResult(BaseModel):
     result: List[FreebaseScoredEntity]
+
+
+ReconPropertyValue = Union[str, list[str]]
+
+
+class FreebaseReconPropertyFilter(BaseModel):
+    pid: str
+    v: ReconPropertyValue
+
+
+# https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#structure-of-a-reconciliation-query
+# will be completely different in v1.0
+class FreebaseReconQuery(BaseModel):
+    query: Optional[str] = None
+    type: Optional[Union[str, list[str]]] = None
+    limit: int = 5
+    properties: list[FreebaseReconPropertyFilter] = []
+
+
+FreebaseReconBatch = RootModel[Dict[str, FreebaseReconQuery]]

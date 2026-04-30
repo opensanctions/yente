@@ -1,6 +1,6 @@
 from unittest import mock
 
-from .conftest import client
+from .conftest import client, assert_entity_shape
 
 EXAMPLE = {
     "schema": "Person",
@@ -38,6 +38,7 @@ def test_match_putin():
     assert res["total"]["value"] > 0, res["total"]
     res0 = res["results"][0]
     assert res0["id"] == "Q7747", res0
+    assert_entity_shape(res0)
 
 
 def test_match_putin_name_based_mode():
@@ -55,6 +56,7 @@ def test_match_putin_name_based_mode():
     res0 = res["results"][0]
     assert res0["id"] == "Q7747", res0
     assert res0["score"] > 0.70, res0
+    assert_entity_shape(res0)
 
 
 def test_match_no_schema():
@@ -62,7 +64,16 @@ def test_match_no_schema():
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 422, resp.text
 
-    query = {"queries": {"fail": {"schema": "xxx", "properties": {"name": "Banana"}}}}
+    # Multi-query batch: an invalid schema in one query must surface a 400 to
+    # the caller even when sibling queries are still in flight under
+    # asyncio.gather.
+    query = {
+        "queries": {
+            "fail": {"schema": "xxx", "properties": {"name": "Banana"}},
+            "ok1": {"schema": "Person", "properties": {"name": ["Vladimir Putin"]}},
+            "ok2": {"schema": "Person", "properties": {"name": ["John Doe"]}},
+        }
+    }
     resp = client.post("/match/default", json=query)
     assert resp.status_code == 400, resp.text
 
@@ -219,6 +230,24 @@ def test_fuzzy_names():
         res = data["responses"]["a"]
         assert len(res["results"]) > 0, res
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
+
+
+def test_match_numeric_property_value():
+    # Numeric values in a property list are coerced to strings by
+    # extract_values; the request must succeed and echo the value back as a
+    # string.
+    query = {
+        "queries": {
+            "q": {
+                "schema": "Person",
+                "properties": {"name": ["Vladimir Putin"], "birthDate": [1952]},
+            }
+        }
+    }
+    resp = client.post("/match/default", json=query)
+    assert resp.status_code == 200, resp.text
+    res = resp.json()["responses"]["q"]
+    assert "1952" in res["query"]["properties"].get("birthDate", []), res["query"]
 
 
 def test_exclude_entity_ids():

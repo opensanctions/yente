@@ -41,6 +41,7 @@ class ElasticSearchProvider(SearchProvider):
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
+            es: Optional[AsyncElasticsearch] = None
             try:
                 es = AsyncElasticsearch(**kwargs)
                 es_ = es.options(request_timeout=15)
@@ -48,6 +49,8 @@ class ElasticSearchProvider(SearchProvider):
                 return ElasticSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to ElasticSearch: %r" % exc)
+                if es is not None:
+                    await es.close()
                 await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to ElasticSearch.")
@@ -237,13 +240,7 @@ class ElasticSearchProvider(SearchProvider):
                 query=json.dumps(query),
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
-        except (
-            KeyboardInterrupt,
-            OSError,
-            Exception,
-            asyncio.TimeoutError,
-            asyncio.CancelledError,
-        ) as exc:
+        except (OSError, Exception, asyncio.TimeoutError) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
@@ -273,4 +270,11 @@ class ElasticSearchProvider(SearchProvider):
                 stats_only=True,
             )
         except BulkIndexError as exc:
-            raise YenteIndexError(f"Could not index entities: {exc}") from exc
+            sample = exc.errors[:3] if exc.errors else []
+            log.warning(
+                f"Bulk index failed: {len(exc.errors)} document(s) rejected",
+                errors=sample,
+            )
+            raise YenteIndexError(
+                f"Could not index entities: {exc} (see log for sample errors)"
+            ) from exc

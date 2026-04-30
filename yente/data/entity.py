@@ -5,7 +5,7 @@ from followthemoney.helpers import combine_names
 from rigour.names import pick_name
 
 from yente import settings
-from yente.data.util import safe_string
+from yente.data.util import extract_values
 from yente.logs import get_logger
 
 if TYPE_CHECKING:
@@ -36,13 +36,12 @@ class Entity(ValueEntity):
 
     @classmethod
     def from_example(cls, example: "EntityExample") -> "Entity":
-        data = {"id": example.id, "schema": example.schema_}
         schema = model.get(example.schema_)
         if schema is None:
             raise InvalidData(f"Unknown schema: {example.schema_!r}")
-        obj = cls(schema, data)
-        if obj.schema.name != settings.BASE_SCHEMA and not obj.schema.matchable:
-            raise TypeError("Non-matchable schema for query: %s" % obj.schema.name)
+        if schema.name != settings.BASE_SCHEMA and not schema.matchable:
+            raise TypeError(f"Non-matchable schema for query: {schema.name}")
+        obj = cls(schema, {})
 
         for prop_name, values in example.properties.items():
             prop = schema.get(prop_name)
@@ -53,14 +52,15 @@ class Entity(ValueEntity):
                     value=repr(values),
                 )
                 continue
-            if isinstance(values, str):
-                values = [values]
-            for value in values:
-                value = safe_string(value)
+            for value in extract_values(values):
                 obj.unsafe_add(prop, value, cleaned=False, fuzzy=True)
 
+        if obj.id is None:
+            obj.id = obj.checksum
+
         # Generate names from name parts
-        combine_names(obj)
+        if not len(obj.get_type_values(registry.name, matchable=True)):
+            combine_names(obj)
 
         # Extract names from IBANs, phone numbers etc.
         countries = obj.get_type_values(registry.country)
