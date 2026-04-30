@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Any, Dict, List, Union, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from nomenklatura.matching.types import (
     MatchingResult,
     FeatureDocs,
     AlgorithmDocs,
-    FtResult,
 )
 
 from yente import settings
@@ -17,6 +16,14 @@ EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
 
 class ErrorResponse(BaseModel):
     detail: str = Field(..., examples=["Detailed error message"])
+
+
+class FtResultResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    score: float
+    detail: Optional[str] = None
+    query: Optional[str] = None
+    candidate: Optional[str] = None
 
 
 class EntityResponse(BaseModel):
@@ -41,7 +48,7 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    explanations: Dict[str, FtResult] = Field(
+    explanations: Dict[str, FtResultResponse] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
     match: bool = Field(description="Whether the score is above the match threshold.")
