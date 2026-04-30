@@ -6,5 +6,5 @@ catalogs:
 datasets:
   - name: parteispenden
     title: German political party donations
-    path: tests/fixtures/donations.ijson
+    path: tests/fixtures/dataset/parteispenden/entities.ftm.json
     version: "100"

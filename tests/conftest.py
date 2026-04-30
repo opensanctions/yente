@@ -48,6 +48,30 @@ def sanctions_catalog():
 
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
+async def parteispenden_test_dataset():
+    parteispenden_path = FIXTURES_PATH / "dataset" / "parteispenden"
+    catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "datasets": [
+                    {
+                        "name": "parteispenden",
+                        "title": "German political party donations",
+                        "entities_url": (
+                            parteispenden_path / "entities.ftm.json"
+                        ).as_uri(),
+                        "load": True,
+                    }
+                ]
+            }
+        )
+    )
+
+    with patch("yente.data.get_catalog", AsyncMock(return_value=catalog)):
+        yield catalog
+
+
+@pytest_asyncio.fixture(scope="function", autouse=False)
 async def zala_test_dataset():
     zala_path = FIXTURES_PATH / "dataset" / "zala"
     catalog = await Catalog.load(
