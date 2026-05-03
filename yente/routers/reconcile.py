@@ -258,7 +258,10 @@ async def reconcile_query(
     resp = await search_entities(provider, es_query, limit=candidates, offset=offset)
     algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
-    total, scoreds = await score_results(algorithm_, proxy, entities, limit=query.limit)
+
+    total, scoreds = await asyncio.to_thread(
+        score_results, algorithm_, proxy, entities, limit=query.limit
+    )
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]
     log.info(
         f"/reconcile/{dataset.name}",

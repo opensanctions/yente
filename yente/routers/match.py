@@ -69,7 +69,8 @@ async def _match_one_query(
     )
     ents = result_entities(search_result)
     algorithm_type = get_algorithm_by_name(algorithm)
-    total, scored = await score_results(
+    total, scored = await asyncio.to_thread(
+        score_results,
         algorithm_type,
         entity,
         ents,

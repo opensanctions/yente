@@ -19,7 +19,7 @@ _compare_duration = _meter.create_histogram(
 )
 
 
-async def score_results(
+def score_results(
     algorithm: Type[ScoringAlgorithm],
     entity: Entity,
     results: Iterable[Tuple[Entity, float]],
