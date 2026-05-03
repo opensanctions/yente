@@ -1,4 +1,5 @@
 import time
+import asyncio
 from typing import Iterable, List, Optional, Type, Tuple
 from opentelemetry import trace, metrics
 from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
@@ -19,7 +20,7 @@ _compare_duration = _meter.create_histogram(
 )
 
 
-def score_results(
+async def score_results(
     algorithm: Type[ScoringAlgorithm],
     entity: Entity,
     results: Iterable[Tuple[Entity, float]],
@@ -55,9 +56,7 @@ def score_results(
             # Yield control to the event loop
             # This might allow the event loop to process another request, resulting in
             # more even response times when CPU-bound scoring requests pile up.
-
-            # EXPERIMENT:
-            # await asyncio.sleep(0)
+            await asyncio.sleep(0)
             response = ScoredEntityResponse.from_entity_result(
                 result, scoring, threshold
             )
