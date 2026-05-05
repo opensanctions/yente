@@ -2,6 +2,21 @@ from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
 
 
 class SearchProvider(object):
+    async def get_index_max_date(self, index: str, field: str) -> Optional[int]:
+        """Return the max value of a date field across all documents in the index,
+        as a Unix timestamp in seconds. Returns None if the index is empty."""
+        response = await self.search(
+            index=index,
+            query={"match_all": {}},
+            size=0,
+            aggregations={"max_date": {"max": {"field": field}}},
+        )
+        value_ms: Optional[float] = (
+            response.get("aggregations", {}).get("max_date", {}).get("value")
+        )
+        if value_ms is None:
+            return None
+        return int(value_ms / 1000.0)
 
     async def close(self) -> None:
         raise NotImplementedError

@@ -8,6 +8,7 @@ log = get_logger(__name__)
 
 
 async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
+    """Sync dataset index_version for all datasets in the passed catalog."""
     for aliased_index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             index_info = parse_index_name(aliased_index)
