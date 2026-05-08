@@ -24,11 +24,33 @@ INDEX_SETTINGS = {
                 "filter": ["lowercase", "asciifolding"],
             }
         },
+        "filter": {
+            # Concatenates adjacent name tokens with no separator to produce compound tokens.
+            # "Vladimir Putin" → ["vladimir", "putin", "vladimirputin"]
+            # This allows queries where the space between adjacent name parts is omitted
+            # (e.g. "vladimirputin") to match the compound token at index time.
+            "name-token-concat": {
+                "type": "shingle",
+                "min_shingle_size": 2,
+                # Raising this to 3 would also handle three-part names with omitted spaces
+                # (e.g. "vladimirputinovanov"), at the cost of a larger index.
+                "max_shingle_size": 2,
+                "output_unigrams": True,
+                "token_separator": "",
+            },
+        },
         "analyzer": {
             "osa-analyzer": {
                 "tokenizer": "standard",
                 "filter": ["lowercase", "asciifolding"],
-            }
+            },
+            # Index-time only: emits compound tokens for adjacent name parts in addition
+            # to unigrams. Used as analyzer on NAMES_FIELD; osa-analyzer is used as
+            # search_analyzer so query-time analysis is not affected.
+            "osa-names-index-analyzer": {
+                "tokenizer": "standard",
+                "filter": ["lowercase", "asciifolding", "name-token-concat"],
+            },
         },
     },
     "index": {
@@ -175,6 +197,10 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
     # Weaker length normalization for names. Merged entities have a lot of names,
     # and we don't want to penalize them for that.
     mapping[NAMES_FIELD]["similarity"] = "weak_length_norm"
+    # Use osa-names-index-analyzer at index time to emit compound tokens for adjacent name
+    # parts (see name-token-concat filter above), and plain osa-analyzer at query time.
+    mapping[NAMES_FIELD]["analyzer"] = "osa-names-index-analyzer"
+    mapping[NAMES_FIELD]["search_analyzer"] = "osa-analyzer"
 
     # These fields will be pruned from the _source field after the document has been
     # indexed, but before the _source field is stored. We can still search on these fields,

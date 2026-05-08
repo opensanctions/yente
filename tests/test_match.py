@@ -202,6 +202,25 @@ def test_id_pass_through():
     assert res["query"]["id"] == "rotenberg"
 
 
+def test_match_name_without_spaces():
+    # A name query with spaces omitted ("vladimirovichputin") is a single token to the query
+    # analyzer, so ES fuzziness can't bridge the gap to the separate indexed tokens. We
+    # solve this at index time by also indexing compound tokens for adjacent name parts,
+    # and this test verifies that.
+    # The test also shows a limitation of our approach: the eu_fsf dataset only contains
+    # the full name "Vladimir Vladimirovich Putin", so we can't match "vladimirputin"
+    query = {
+        "queries": {
+            "a": {"schema": "Person", "properties": {"name": ["vladimirovichputin"]}}
+        }
+    }
+    resp = client.post("/match/default", json=query)
+    assert resp.status_code == 200, resp.text
+    res = resp.json()["responses"]["a"]
+    assert len(res["results"]) > 0, res
+    assert res["results"][0]["id"] == "Q7747", res["results"][0]
+
+
 def test_fuzzy_names():
     """Test that fuzzy retrieval from the index works."""
     query = {
