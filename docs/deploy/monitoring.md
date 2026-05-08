@@ -53,3 +53,20 @@ For monitoring purposes, I suggest you do the following:
 - Check if `index_stale`. This will let you know if something is preventing new data from being indexed and made searchable.
 
 Note that both are required: if catalog updates are broken, yente will never know that a new version of a dataset has been published, and consequently never mark the index as stale.
+
+## Metrics & traces using OpenTelemetry
+
+Yente is instrumented with a fairly standard OpenTelemetry setup that exports metrics such as HTTP response times & codes. To enable it, run yente via the `opentelemetry-instrument` wrapper — see the [OpenTelemetry Python zero-code instrumentation docs](https://opentelemetry.io/docs/zero-code/python/) for the full list of configuration options.
+
+Override the default command in your `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    command: ["opentelemetry-instrument", "yente", "serve"]
+    environment:
+      # Only enable if you want traces
+      OTEL_TRACES_EXPORTER: none
+```
+
+In many cloud deployment scenarios you'll probably want to run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) as a sidecar to handle your provider's quirks — batching, retries, authentication headers, and format translation.
