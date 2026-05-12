@@ -13,9 +13,13 @@ from nomenklatura.matching.logic_v2.names.analysis import entity_names
 from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.util import entity_weak_names, index_symbols
+from yente.data.util import entity_weak_names, index_symbols, name_part_fuzzy_keys
 from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD
+from yente.search.mapping import (
+    NAME_PART_FIELD,
+    NAME_PART_FUZZY_FIELD,
+    NAME_PHONETIC_FIELD,
+)
 
 log = get_logger(__name__)
 Clause = Dict[str, Any]
@@ -135,11 +139,10 @@ def filter_query(
 def names_query(entity: EntityProxy) -> List[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     name_objs = entity_names(entity, is_query=True)
-    # Single-word names are hard to match, so we use fuzzy matching more aggressively.
-    # FIXME: This could make sense for 2 part names as well?
-    is_short = max((len(n.parts) for n in name_objs), default=0) < 2
     shoulds: List[Clause] = []
     for picked_name in representative_names(names, 5):
+        # Exact phrase-like signal on the whole name. Per-token fuzzy recall is
+        # carried by NAME_PART_FUZZY_FIELD in the dis_max clauses below.
         match = {
             NAMES_FIELD: {
                 "query": picked_name,
@@ -147,8 +150,6 @@ def names_query(entity: EntityProxy) -> List[Clause]:
                 "boost": 3.0,
             }
         }
-        if settings.MATCH_FUZZY or is_short:
-            match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
 
     seen: Set[str] = set()
@@ -179,6 +180,21 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             # to this name part just because multiple variants match.
             query_variants: List[Clause] = []
             query_variants.append(tq(NAME_PART_FIELD, part.comparable))
+
+            # Fuzzy variant: emit the same SymSpell deletion keys as the indexer
+            # and look them up against NAME_PART_FUZZY_FIELD, giving edit-distance-1
+            # recall via a plain terms query.
+            if settings.MATCH_FUZZY:
+                fuzzy_keys = name_part_fuzzy_keys(part.comparable)
+                if len(fuzzy_keys) > 1:
+                    query_variants.append(
+                        {
+                            "terms": {
+                                NAME_PART_FUZZY_FIELD: list(fuzzy_keys),
+                                "boost": boost * 0.7,
+                            }
+                        }
+                    )
 
             metaphone = part.metaphone
             if metaphone is not None and len(metaphone) > 2:

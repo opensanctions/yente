@@ -59,6 +59,7 @@ INDEX_SETTINGS = {
 }
 NAMES_FIELD = NameType.group or "names"
 NAME_PART_FIELD = "name_parts"
+NAME_PART_FUZZY_FIELD = "name_parts_fuzzy"
 NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_PHONETIC_FIELD = "name_phonetic"
 
@@ -157,6 +158,17 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         "entity_values_count": make_field("integer"),
         NAME_PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_field("keyword", copy_to=["text"]),
+        # Fuzzy-match channel for name tokens. We trade index size and indexing
+        # time for cheap query-time fuzzy lookup: each token is expanded into a
+        # SymSpell deletion neighborhood (the token itself plus every string
+        # obtained by deleting one character) and stored here as keywords. The
+        # query side does the same expansion and runs a plain `terms` lookup,
+        # so fuzzy matching becomes inverted-index intersection rather than a
+        # term-dictionary scan. The expansion factor is roughly 1 + token_length,
+        # bounded and linear in token length. Recall can be extended to edit
+        # distance 2 in the future by deepening the deletion neighborhood, at a
+        # superlinear cost in keys per token.
+        NAME_PART_FUZZY_FIELD: make_keyword(),
         # NAME_KEY_FIELD: make_field("keyword"),
         NAME_SYMBOLS_FIELD: make_field("keyword"),
         "last_change": make_field("date", format=DATE_FORMAT),
@@ -183,6 +195,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
     drop_fields.append("text")
     drop_fields.append(NAME_PHONETIC_FIELD)
     drop_fields.append(NAME_PART_FIELD)
+    drop_fields.append(NAME_PART_FUZZY_FIELD)
     # drop_fields.append(NAME_KEY_FIELD)
     drop_fields.append(NAME_SYMBOLS_FIELD)
     drop_fields.remove(NAMES_FIELD)

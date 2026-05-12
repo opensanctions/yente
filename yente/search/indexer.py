@@ -24,6 +24,7 @@ from yente.search import audit_log
 from yente.search.audit_log import get_audit_log_index_name, AuditLogEventType
 from yente.search.mapping import (
     NAME_PART_FIELD,
+    NAME_PART_FUZZY_FIELD,
     NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
     make_entity_mapping,
@@ -36,7 +37,12 @@ from yente.search.versions import (
     build_index_name,
     get_system_version,
 )
-from yente.data.util import entity_weak_names, expand_dates, index_symbols
+from yente.data.util import (
+    entity_weak_names,
+    expand_dates,
+    index_symbols,
+    name_part_fuzzy_keys,
+)
 
 
 log = get_logger(__name__)
@@ -110,7 +116,13 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     for weak in entity_weak_names(entity):
         name_parts.add(weak)
 
+    # Pre-compute fuzzy lookup keys per name token; see mapping.NAME_PART_FUZZY_FIELD.
+    name_part_fuzzy: Set[str] = set()
+    for part_str in name_parts:
+        name_part_fuzzy.update(name_part_fuzzy_keys(part_str))
+
     doc[NAME_PART_FIELD] = list(name_parts)
+    doc[NAME_PART_FUZZY_FIELD] = list(name_part_fuzzy)
     doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
     if registry.date.group is not None:
