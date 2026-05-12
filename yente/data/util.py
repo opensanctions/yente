@@ -37,6 +37,28 @@ def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:
             yield f"{symbol.category.value}:{symbol.id}"
 
 
+# Fuzzy matching for name tokens via a SymSpell-style deletion neighborhood: a
+# token's fuzzy keys are the token itself plus every string obtained by deleting
+# one character. Emitting the same set on both indexing and query side makes two
+# tokens match iff they are within edit distance 1 (transpositions included) — a
+# plain `terms` lookup with no per-query term-dictionary scan.
+NAME_PART_FUZZY_MIN_LENGTH = 4
+
+
+def name_part_fuzzy_keys(part: str) -> Set[str]:
+    """SymSpell deletion keys for a normalized name token.
+
+    Tokens shorter than NAME_PART_FUZZY_MIN_LENGTH return only the token itself —
+    their deletions are too short to be selective and would balloon posting lists.
+    """
+    result: Set[str] = {part}
+    if len(part) < NAME_PART_FUZZY_MIN_LENGTH:
+        return result
+    for i in range(len(part)):
+        result.add(part[:i] + part[i + 1 :])
+    return result
+
+
 @cache
 def _entity_weak_props(schema: Schema) -> Set[Property]:
     """Get the set of properties that are not used for matching but can be used for

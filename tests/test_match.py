@@ -204,30 +204,93 @@ def test_id_pass_through():
 
 def test_fuzzy_names():
     """Test that fuzzy retrieval from the index works."""
-    query = {
-        "queries": {"a": {"schema": "Person", "properties": {"name": "Viadimit Putln"}}}
-    }
 
+    # With MATCH_FUZZY off, even a single-character typo on any name token should
+    # prevent the entity from being retrieved.
     with mock.patch("yente.settings.MATCH_FUZZY", False):
-        # We need to set a lower threshold to get logic-v2 to score it high enough.
-        # That's okay, we care about testing the fuzzy retrieval from the index,
-        # not the details of the scoring algorithm.
-        resp = client.post(
-            "/match/default", json=query, params={"algorithm": "best", "threshold": 0.2}
-        )
-        data = resp.json()
-        res = data["responses"]["a"]
-        assert len(res["results"]) == 0, res
-
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        # The result scores quite low, so we need to set a lower threshold to get a result
+        # Edit-1 typo on each token. Both tokens have to be typo'd, otherwise an
+        # exact match on the untouched token alone is enough to retrieve Putin
+        # even without fuzzy matching. The typos are also chosen so their
+        # metaphones (FLTMT, PTNK) differ from those of the original ("Vladimir",
+        # "Putin" → FLTMR, PTN), so the phonetic channel doesn't retrieve Putin
+        # either.
         resp = client.post(
             "/match/default",
-            params={"threshold": 0.2, "algorithm": "logic-v2"},
-            json=query,
+            json={
+                "queries": {
+                    "a": {
+                        "schema": "Person",
+                        "properties": {"name": "Vladimit Puting"},
+                    }
+                }
+            },
+            params={"algorithm": "best", "threshold": 0.2},
         )
-        data = resp.json()
-        res = data["responses"]["a"]
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) == 0, res
+
+        # Edit-2 typos on both tokens, again chosen so the metaphones (FTMT, PFM)
+        # differ from the originals (FLTMR, PTN).
+        resp = client.post(
+            "/match/default",
+            json={
+                "queries": {
+                    "a": {
+                        "schema": "Person",
+                        "properties": {"name": "Viadimit Pufim"},
+                    }
+                }
+            },
+            params={"algorithm": "best", "threshold": 0.2},
+        )
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) == 0, res
+
+    # With MATCH_FUZZY on, both queries should recover Putin. We're testing
+    # Elasticsearch retrieval here, not the logic-v2 scoring algorithm — the
+    # threshold is set low because logic-v2 penalizes typo'd inputs and the score
+    # is not what this test is about.
+    with mock.patch("yente.settings.MATCH_FUZZY", True):
+        # Edit-1 typo on each token. Both tokens have to be typo'd, otherwise an
+        # exact match on the untouched token alone is enough to retrieve Putin
+        # even without fuzzy matching. The typos are also chosen so their
+        # metaphones (FLTMT, PTNK) differ from those of the original ("Vladimir",
+        # "Putin" → FLTMR, PTN), so the phonetic channel doesn't retrieve Putin
+        # either.
+        resp = client.post(
+            "/match/default",
+            json={
+                "queries": {
+                    "a": {
+                        "schema": "Person",
+                        "properties": {"name": "Vladimit Puting"},
+                    }
+                }
+            },
+            params={"algorithm": "logic-v2", "threshold": 0.2},
+        )
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) > 0, res
+        assert res["results"][0]["id"] == "Q7747", res["results"][0]
+
+        # Edit-2 typos on both tokens, again chosen so the metaphones (FTMT, PFM)
+        # differ from the originals (FLTMR, PTN). EXPECTED TO FAIL: the
+        # NAME_PART_FUZZY_FIELD deletion neighborhood is generated at depth 1, so
+        # only edit-distance-1 token typos are recovered. Extending the deletion
+        # depth to 2 would make this case pass.
+        resp = client.post(
+            "/match/default",
+            json={
+                "queries": {
+                    "a": {
+                        "schema": "Person",
+                        "properties": {"name": "Viadimit Pufim"},
+                    }
+                }
+            },
+            params={"algorithm": "logic-v2", "threshold": 0.2},
+        )
+        res = resp.json()["responses"]["a"]
         assert len(res["results"]) > 0, res
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
 
