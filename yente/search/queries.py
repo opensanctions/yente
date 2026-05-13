@@ -1,4 +1,5 @@
 import enum
+import itertools
 from pprint import pprint  # noqa
 from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
@@ -14,7 +15,8 @@ from yente import settings
 from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.util import entity_weak_names, index_symbols
-from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
+from yente.search.indexer import build_name_variants
+from yente.search.mapping import NAME_SYMBOLS_FIELD, NAME_VARIANTS_FIELD, NAMES_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD
 
 log = get_logger(__name__)
@@ -60,8 +62,8 @@ def tq(field: str, value: str | bool, boost: float = 1.0) -> Clause:
     return {"term": {field: {"value": value, "boost": boost}}}
 
 
-def tqs(field: str, values: Iterable[str | bool | float]) -> Clause:
-    return {"terms": {field: list(values)}}
+def tqs(field: str, values: Iterable[str | bool | float], boost: float = 1.0) -> Clause:
+    return {"terms": {field: list(values), "boost": boost}}
 
 
 def filter_query(
@@ -152,7 +154,19 @@ def names_query(entity: EntityProxy) -> List[Clause]:
         shoulds.append({"match": match})
 
     seen: Set[str] = set()
-    for name in Name.consolidate_names(name_objs):
+    consolidated_names = Name.consolidate_names(name_objs)
+
+    # Name variants are keyword renditions of common name variations that people expect to
+    # match but that the ES fuzzyness does not catch.
+    # Example: "vladimirputin" (without a space) does not get matched by the per-token fuzzyness
+    name_variants = set(
+        itertools.chain.from_iterable(
+            build_name_variants(name) for name in consolidated_names
+        )
+    )
+    shoulds.append(tqs(NAME_VARIANTS_FIELD, name_variants, boost=2))
+
+    for name in consolidated_names:
         part_symbols: Dict[NamePart, Set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
