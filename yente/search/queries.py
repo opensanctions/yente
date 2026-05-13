@@ -1,4 +1,5 @@
 import enum
+import itertools
 from pprint import pprint  # noqa
 from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
@@ -153,13 +154,19 @@ def names_query(entity: EntityProxy) -> List[Clause]:
         shoulds.append({"match": match})
 
     seen: Set[str] = set()
-    for name in Name.consolidate_names(name_objs):
-        # Name variants are keyword renditions of common name variations that people expect to
-        # match but that the ES fuzzyness does not catch.
-        # Example: "vladimirputin" (without a space) does not get matched by the per-token fuzzyness
-        name_variants = build_name_variants(name)
-        shoulds.append(tqs(NAME_VARIANTS_FIELD, name_variants, boost=2))
+    consolidated_names = Name.consolidate_names(name_objs)
 
+    # Name variants are keyword renditions of common name variations that people expect to
+    # match but that the ES fuzzyness does not catch.
+    # Example: "vladimirputin" (without a space) does not get matched by the per-token fuzzyness
+    name_variants = set(
+        itertools.chain.from_iterable(
+            build_name_variants(name) for name in consolidated_names
+        )
+    )
+    shoulds.append(tqs(NAME_VARIANTS_FIELD, name_variants, boost=2))
+
+    for name in consolidated_names:
         part_symbols: Dict[NamePart, Set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
