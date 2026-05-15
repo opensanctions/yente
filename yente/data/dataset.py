@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Dict, Optional, Any
 from pydantic import Field, FilePath, computed_field, field_validator
 from rigour.time import datetime_iso
-from nomenklatura.util import iso_to_version
 from followthemoney.dataset import Dataset as FollowTheMoneyDataset
 from followthemoney.dataset.dataset import DatasetModel
 from followthemoney.dataset.util import Url
@@ -10,7 +9,7 @@ from followthemoney.namespace import Namespace
 
 from yente import settings
 from yente.logs import get_logger
-from yente.data.util import get_url_local_path
+from yente.data.util import get_url_local_path, iso_to_version
 
 log = get_logger(__name__)
 

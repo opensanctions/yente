@@ -7,6 +7,7 @@ from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, List, Optional, Set, Generator
 from rigour.names import Symbol
+from rigour.time import iso_datetime
 from followthemoney import EntityProxy, Property, Schema, registry
 from followthemoney.util import sanitize_text
 
@@ -66,6 +67,14 @@ def expand_dates(dates: List[str]) -> List[str]:
             if len(date) > prec.value:
                 expanded.add(date[: prec.value])
     return list(expanded)
+
+
+def iso_to_version(value: str) -> Optional[str]:
+    ## Phase this out - it won't be used in new FtM metadata, is used by yente
+    dt = iso_datetime(value)
+    if dt is not None:
+        return dt.strftime("%Y%m%d%H%M%S")
+    return None
 
 
 def get_url_local_path(url: str) -> Optional[Path]:
