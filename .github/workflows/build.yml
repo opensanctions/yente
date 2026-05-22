@@ -223,6 +223,13 @@ jobs:
             echo "::endgroup::"
           done < platform_digests.env
 
+      - name: Attach VEX as cosign attestation
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cosign attest --yes --type openvex \
+            --predicate security/vex/openvex.json \
+            "ghcr.io/opensanctions/yente@${{ steps.push.outputs.digest }}"
+
       - name: Attest image build provenance
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest-build-provenance@v4
