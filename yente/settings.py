@@ -166,6 +166,10 @@ MAX_MATCHES = env_int("YENTE_MAX_MATCHES", 500)
 # How many candidates to retrieve as a multiplier of the /match limit:
 MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 
+# How many candidates to retrieve & score at most
+# Used so that limit * MATCH_CANDIDATES doesn't get out of hand for high values of limit
+MAX_MATCH_CANDIDATES = env_int("YENTE_MAX_MATCH_CANDIDATES", 500)
+
 # Whether to run expensive levenshtein queries inside ElasticSearch:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 

@@ -253,7 +253,15 @@ async def reconcile_query(
         es_query = entity_query(dataset, proxy, changed_since=changed_since)
     except Exception as exc:
         raise HTTPException(400, detail=str(exc))
+
     candidates = query.limit * settings.MATCH_CANDIDATES
+    # We want at least 20 candidates to score to have good results even for limit = 1
+    candidates = max(20, min(settings.MAX_RESULTS, candidates))
+    # We want to retrieve at most MAX_MATCH_CANDIDATES, other wise we will be
+    # very slow or OOM for high values of limit.
+    # One day we might drop the max for limit, see https://github.com/opensanctions/yente/issues/927
+    candidates = min(candidates, settings.MAX_MATCH_CANDIDATES)
+
     candidates, offset = limit_window(candidates, 0)
     resp = await search_entities(provider, es_query, limit=candidates, offset=offset)
     algorithm_ = get_algorithm_by_name(algorithm)

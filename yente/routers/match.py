@@ -241,7 +241,12 @@ async def match(
     # get a broad range of candidates to score against. This is a trade-off
     # between speed and accuracy.
     candidates = limit * settings.MATCH_CANDIDATES
+    # We want at least 20 candidates to score to have good results even for limit = 1
     candidates = max(20, min(settings.MAX_RESULTS, candidates))
+    # We want to retrieve at most MAX_MATCH_CANDIDATES, other wise we will be
+    # very slow or OOM for high values of limit.
+    # One day we might drop the max for limit, see https://github.com/opensanctions/yente/issues/927
+    candidates = min(candidates, settings.MAX_MATCH_CANDIDATES)
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
