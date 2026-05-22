@@ -7,6 +7,8 @@ on:
 permissions:
   packages: write
   id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   test-elasticsearch:
@@ -100,6 +102,11 @@ jobs:
       - name: Build a distribution
         run: |
           python3 -m build --wheel
+      - name: Attest wheel build provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'dist/*.whl'
       - name: Publish a Python distribution to PyPI
         if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -179,3 +186,47 @@ jobs:
           name: sboms
           path: sbom/
           if-no-files-found: error
+
+      - name: Install cosign
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: sigstore/cosign-installer@v4
+
+      - name: Resolve per-platform image digests
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          IMAGE_REF="ghcr.io/opensanctions/yente@${{ steps.push.outputs.digest }}"
+          docker buildx imagetools inspect "$IMAGE_REF" --raw \
+            | jq -r '.manifests[]
+                | select(.platform.os == "linux" and .platform.architecture != "unknown")
+                | "\(.platform.architecture)=\(.digest)"' \
+            > platform_digests.env
+          cat platform_digests.env
+
+      - name: Sign image (manifest list and per-platform)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cosign sign --yes --recursive \
+            "ghcr.io/opensanctions/yente@${{ steps.push.outputs.digest }}"
+
+      - name: Attach SBOMs as cosign attestations (per platform)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          while IFS='=' read -r arch digest; do
+            target="ghcr.io/opensanctions/yente@${digest}"
+            echo "::group::Attest linux/${arch} (${digest})"
+            cosign attest --yes --type cyclonedx \
+              --predicate "sbom/sbom-linux-${arch}.cdx.json" "$target"
+            cosign attest --yes --type spdxjson \
+              --predicate "sbom/sbom-linux-${arch}.spdx.json" "$target"
+            echo "::endgroup::"
+          done < platform_digests.env
+
+      - name: Attest image build provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ghcr.io/opensanctions/yente
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
