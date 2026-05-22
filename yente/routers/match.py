@@ -245,8 +245,9 @@ async def match(
     candidates = max(20, min(settings.MAX_RESULTS, candidates))
     # We want to retrieve at most MAX_MATCH_CANDIDATES, other wise we will be
     # very slow or OOM for high values of limit.
+    # But at least `limit` candidates, otherwise we'll run out of results to return.
     # One day we might drop the max for limit, see https://github.com/opensanctions/yente/issues/927
-    candidates = min(candidates, settings.MAX_MATCH_CANDIDATES)
+    candidates = min(candidates, max(settings.MAX_MATCH_CANDIDATES, limit))
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
