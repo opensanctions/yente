@@ -140,6 +140,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push release
+        id: push
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -150,3 +151,37 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # ------------------------------------------------------------------
+      # SBOM emission (Phase 1 of the SBOM/CRA workstream — see
+      # plans/sbom-and-cra-artifacts.md). Tag pushes only; we don't
+      # publish supply-chain artifacts for every commit. Signing,
+      # provenance, and release attachment are added in later phases.
+      # ------------------------------------------------------------------
+      - name: Install syft
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate per-platform SBOMs
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          IMAGE_REF="ghcr.io/opensanctions/yente@${{ steps.push.outputs.digest }}"
+          mkdir -p sbom
+          for arch in amd64 arm64; do
+            echo "::group::Scanning linux/${arch}"
+            syft "registry:${IMAGE_REF}" \
+              --platform "linux/${arch}" \
+              -o "cyclonedx-json=sbom/sbom-linux-${arch}.cdx.json" \
+              -o "spdx-json=sbom/sbom-linux-${arch}.spdx.json"
+            echo "::endgroup::"
+          done
+          ls -la sbom/
+
+      - name: Upload SBOMs as workflow artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: sbom/
+          if-no-files-found: error
