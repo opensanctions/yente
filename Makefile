@@ -1,4 +1,4 @@
-.PHONY: build all shell stop services api test typecheck check docs
+.PHONY: build all shell stop services api test typecheck check docs lock
 
 all:
 	make api
@@ -28,3 +28,11 @@ check: typecheck test
 
 docs:
 	mkdocs build -c -d site
+
+# Regenerate the PEP 751 lockfile (pylock.toml) inside the Dockerfile's `lock`
+# stage so the resolved wheels match the python_image we ship. pip lock is
+# experimental in pip 26.x.
+lock:
+	docker build --platform=linux/amd64 --target=lock -t yente-lock .
+	docker run --rm --platform=linux/amd64 -v "$(CURDIR):/work" -w /work yente-lock \
+		pip lock . -o pylock.toml --quiet

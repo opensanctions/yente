@@ -1,5 +1,19 @@
-# Define the base image to use for both stages
+# Define the base image to use for all stages
 ARG python_image=python:3.12-slim
+
+# ------------------------------------------------------------------------
+# Stage: Lock — environment used by `make lock` to produce pylock.toml.
+# Not part of the runtime image. Shares the python_image ARG so the
+# lockfile is resolved against the same interpreter we ship.
+# ------------------------------------------------------------------------
+FROM ${python_image} AS lock
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    libicu-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir 'pip>=26.1'
 
 # ------------------------------------------------------------------------
 # Stage 1: Build and install dependencies
