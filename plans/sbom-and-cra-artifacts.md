@@ -1,5 +1,5 @@
 ---
-description: Plan for producing per-release SBOMs and CRA-adjacent supply-chain artifacts for yente, scanning the built image (no lockfile prerequisite)
+description: SBOM and CRA-adjacent artifacts for yente — current state plus remaining work
 date: 2026-05-22
 tags: [security, sbom, cra, release-engineering, supply-chain]
 ---
@@ -10,141 +10,112 @@ tags: [security, sbom, cra, release-engineering, supply-chain]
 
 GitHub's auto-generated dependency-graph SBOM has two gaps for our purposes:
 
-1. **Incomplete scope.** It captures direct Python deps from `pyproject.toml` but misses the OS packages we install on top of `python:3.12-slim` (`libicu76`, `ca-certificates`, `curl`, plus the build stage's `build-essential`, `pkg-config`, `locales`, `libicu-dev`) and the contents of the base image itself.
-2. **Not frozen per release.** It reflects whatever is on `main` at scan time, not the `ghcr.io/opensanctions/yente:5.4.0` image that customers actually pull. CRA Annex I expects "the SBOM for the version you are running" — not a moving target.
+1. **Incomplete scope.** It captures direct Python deps from `pyproject.toml` but misses the OS packages we install on top of `python:3.12-slim` and the contents of the base image itself.
+2. **Not frozen per release.** It reflects whatever is on `main` at scan time, not the `ghcr.io/opensanctions/yente:5.4.0` image customers actually pull. CRA Annex I expects "the SBOM for the version you are running" — not a moving target.
 
-The EU Cyber Resilience Act (in force, with the bulk of manufacturer obligations applying from December 2027) requires an SBOM "at least covering the top-level dependencies", coordinated vulnerability handling, and security/risk documentation. This plan is about being CRA-conformant by the time those obligations bite, and making life easier for downstream customers asking the same questions today.
+The EU Cyber Resilience Act (in force, with the bulk of manufacturer obligations applying from December 2027) requires an SBOM "at least covering the top-level dependencies", coordinated vulnerability handling, and security/risk documentation. This plan is about being CRA-conformant by the time those obligations bite, and reducing the customer-question burden today.
 
 ## 2. Scope
 
 In scope:
 
-- yente Python package as published to PyPI (wheel + sdist)
-- The container image at `ghcr.io/opensanctions/yente`, both `linux/amd64` and `linux/arm64`
-- Build-time and runtime OS packages inside that image
-- Direct and transitive Python dependencies, including first-party OpenSanctions deps (`nomenklatura`, `followthemoney`, `rigour`, `normality`, `fingerprints`, `countrynames`)
-- Native code linked via `pyicu`, `cryptography`, `aiohttp[speedups]`, `httpx[http2]`, `orjson`
+- The container image at `ghcr.io/opensanctions/yente` (both arches) and the PyPI wheel + sdist
+- Build-time and runtime OS packages inside the image
+- Direct and transitive Python dependencies, native code linked via `pyicu`, `cryptography`, `aiohttp[speedups]`, `httpx[http2]`, `orjson`
 
 Out of scope:
 
-- The Elasticsearch / OpenSearch / S3 backends in `docker-compose.yml`. Operator-supplied infrastructure, not part of the yente product. Document supported versions; don't claim SBOM coverage.
-- Customer-supplied data and manifests.
-- **Build reproducibility / lockfiles.** Explored and shelved as a separate concern — see §8. The SBOM describes what shipped regardless of whether the resolution was reproducible.
+- Elasticsearch / OpenSearch / S3 backends in `docker-compose.yml` — operator-supplied infrastructure
+- Customer-supplied data and manifests
+- **Build reproducibility / lockfiles** — explored separately, deprioritised; see §8
 
 ## 3. Artifact set
 
-Per release, attached to the GitHub Release and pushed to the registry as OCI referrers.
+### 3.1 SBOMs — implemented
 
-### 3.1 SBOM (primary)
+`syft` scans the published image per platform on tag push, emitting CycloneDX 1.6 + SPDX 2.3 JSON to a workflow artifact and as cosign attestations on each platform's image digest.
 
-Generate the SBOM from the **built artifact**, not from `pyproject.toml`. The installed venv inside the image already has exact pinned versions for every transitive dep — that's the source of truth. The SBOM describes what shipped; we don't need a lockfile to know what shipped.
+- **Why scan the built image, not the lockfile or pyproject.** The installed venv inside the image is the bit-exact record of what shipped. Lockfiles describe what *would* be installed; the SBOM should describe what *was* installed.
+- **Why per-platform.** A multi-arch image is two different sets of bytes; merging into one SBOM would lie about which file ships where.
+- **Why both CycloneDX and SPDX.** Customer procurement asks for one or the other (occasionally both). Emitting both is free.
+- **Wheel SBOM deliberately skipped.** A Python wheel's transitive set depends on the install-time environment, so a per-release wheel SBOM is a snapshot of one moment rather than a property of the wheel. Revisit if customers ask.
 
-- **Format:** CycloneDX 1.6 JSON as the primary format; also emit SPDX 2.3 JSON for procurement / ISO-preferring downstream users. Both are CRA-acceptable.
-- **Tooling:** `syft <image-digest> -o cyclonedx-json -o spdx-json` for the container image. Multi-ecosystem in one pass — catches apt + the installed Python venv + base-image layers.
-- **Per-platform:** generate one SBOM per arch (amd64 + arm64). Two SBOMs describe two different sets of bytes; merging them would be a lie.
-- **Wheel/sdist SBOM:** murky territory. A Python wheel is a building block, not a runtime — its real dep set depends on the resolver and environment at `pip install` time. Two options:
-  - (a) Don't publish a wheel-level SBOM. Let downstream users generate their own per-environment SBOM after install. The image SBOM is the high-value artifact.
-  - (b) Publish a "top-level only" SBOM listing the deps declared in `pyproject.toml`, with an explicit note that transitive coverage is environment-dependent.
-  - Recommendation: start with (a). Revisit if procurement asks for (b).
-- Scans run against the *built* artifact, not the source tree. What we ship is what we describe.
+### 3.2 VEX — implemented
 
-### 3.2 VEX (Vulnerability Exploitability eXchange)
+`security/vex/openvex.json` (OpenVEX 0.2.0, empty statements) is committed. A weekly grype cron (`.github/workflows/security-scan.yml`) scans the latest published image with `--vex` applied and opens or updates a single tracking issue on un-suppressed high-severity findings. The release workflow `cosign attest`s the VEX at the manifest-list digest.
 
-A published, version-controlled answer sheet of "yes / no / not yet decided" for CVEs flagged against our SBOM. VEX does not detect anything — the scanner detects, the VEX suppresses noise the scanner would otherwise produce.
+- **Why publish a VEX at all.** Without it, every customer scanner re-reports the same false positives, and every customer security team independently asks "are you affected by CVE-X?". The VEX is the published, version-controlled answer — for both their scanner and ours.
+- **Why OpenVEX over CycloneDX VEX.** Simpler schema, dedicated `vexctl` CLI, no functional cost.
+- **Why a cron rather than per-PR scan.** Vulnerability databases update continuously; new CVEs land independently of our commits. A cron catches drift that the PR loop wouldn't.
+- **Why attach at manifest-list level (not per-platform).** VEX statements are scoped by package + CVE, which are the same across arches.
+- **Operational note.** Triage is realistically zero entries most weeks, 1–3 when something fires, 10+ during a news-cycle event. Scope statements with version ranges and re-triage on each minor release; the failure mode is "still says not_affected after 5.5 starts reaching the vulnerable path".
 
-- **Format:** OpenVEX (single `security/vex/openvex.json`) or CycloneDX VEX. Functionally equivalent at our scale. OpenVEX has a dedicated `vexctl` CLI; CycloneDX VEX pairs natively with our SBOM document family. Lean OpenVEX unless we hit a tooling wall.
-- **Producer-side detection loop:** weekly CI cron runs `grype ghcr.io/opensanctions/yente:latest --vex security/vex/openvex.json`. New findings (not covered by VEX) open a GitHub issue. Triage decides one of:
-  - `not_affected` + standard justification code (most commonly `vulnerable_code_not_in_execute_path`; others include `inline_mitigation_already_exists`, `vulnerable_code_cannot_be_controlled_by_adversary`, `vulnerable_code_not_present`)
-  - `affected` + planned response (typically: bump the dep)
-  - `under_investigation` if undecided today (acceptable short-term state; scanners will keep reporting)
-- **Distribution to customers:** attach the VEX as an OCI referrer alongside the SBOM via `cosign attest --type openvex --predicate openvex.json <image-digest>`. Customer scanners that respect attached VEX (grype, trivy) auto-discover it and apply the same suppression we do — they see the same noise-filtered view, and stop emailing us about CVEs we've already triaged.
-- **Triage cadence:** realistically zero entries most weeks; 1–3 when something fires; 10+ during a news-cycle event (log4shell-style). Steady-state well under an hour per month, dominated by the news-cycle events.
-- **Version scoping is the failure mode to watch.** A VEX entry saying "yente 5.4 doesn't reach the vulnerable path" can become wrong in 5.5 if we start calling that function. Scope entries with version ranges (the `affects` blocks support this) and re-triage existing entries on each minor release.
+### 3.3 Build provenance (SLSA) — implemented
 
-### 3.3 Build provenance (SLSA)
+`actions/attest-build-provenance@v4` emits SLSA v1 provenance for the wheel before PyPI publication and for the image manifest-list digest (pushed to GHCR as an OCI referrer).
 
-- `actions/attest@v4` (not `actions/attest-build-provenance` — that's now a wrapper around `actions/attest@v4`; new code should call the wrapped action directly) produces SLSA v1 provenance.
-  - Wheel: `subject-path: dist/*.whl`
-  - Image: `subject-name: ghcr.io/opensanctions/yente` + `subject-digest: ${{ steps.push.outputs.digest }}` from the existing `docker/build-push-action@v7` step, `push-to-registry: true`.
-- **New workflow permissions required** in `build.yml`: currently `packages: write` + `id-token: write`; `actions/attest@v4` also needs `attestations: write` + `artifact-metadata: write`.
-- Provenance answers "was this artifact built from this commit by this workflow?" — CRA's "secure by design" expectation, and protection against compromised release pipelines.
+- **Why both surfaces (GitHub attestations + OCI referrer).** The GitHub-side attestation store powers `gh attestation verify` and the repo's Attestations tab; OCI referrers power container scanners. Different consumers, both needed.
+- **Why the wrapper action, not raw `actions/attest`.** `attest-build-provenance` auto-generates the SLSA predicate body from the workflow context; `actions/attest` would require hand-constructing it.
 
-### 3.4 Signing
+### 3.4 Signing — implemented
 
-- Container images and SBOMs signed via `cosign` (keyless / Sigstore — OIDC against the GitHub Actions identity, no key management).
-  - Image: `cosign sign <image-digest>`
-  - SBOM-as-attestation: `cosign attest --type cyclonedx --predicate sbom.cdx.json <image-digest>` (and `--type spdx`, `--type openvex` for the other artifacts). Cosign's built-in `--type` values cover `cyclonedx`, `spdx`, `spdxjson`, `slsaprovenance1`, `vuln`, `openvex` — so each artifact gets a correctly-typed attestation.
-- **PyPI / PEP 740 attestations are already engaged.** `pypa/gh-action-pypi-publish` ≥ v1.11.0 produces and uploads PEP 740 attestations by default for any project using Trusted Publishing. The existing `build.yml` publish step is tokenless (Trusted Publishing), so attestations are already happening with no workflow change required. Verify the attestation badge on the next tag release.
+`cosign sign --recursive` over the manifest list (covers list + both per-platform images), `cosign attest` for each SBOM and the VEX. All keyless via Sigstore against the GitHub OIDC identity. The wheel carries PEP 740 attestations automatically via the existing tokenless `pypa/gh-action-pypi-publish` step.
 
-### 3.5 License inventory
+- **Why keyless / Sigstore.** No long-lived signing keys to rotate, lose, or compromise. The trust root is "built by this GitHub Actions workflow at this commit", which is what we actually want to attest.
+- **Why `--recursive`.** A multi-arch tag's manifest list and per-platform images each need their own signature; `--recursive` does both in one call.
 
-A `LICENSES.md` derived from the SBOM, attached per release. CRA doesn't mandate this, but customer procurement will ask. Cheap to generate from `syft` output (small `jq` filter, or `cyclonedx-py` license report).
+### 3.5 License inventory — TBD
 
-### 3.6 CRA companion documentation
+`LICENSES.md` derived from the SBOM, attached per release. Cheap to generate (`jq` over `sbom.cdx.json`); deferred until it can land alongside the GitHub Release automation that bundles it.
 
-Not SBOM artifacts but the documents CRA assumes you have alongside. Same workstream because the audience overlaps:
+### 3.6 CRA companion documentation — TBD
 
-- **Expanded vulnerability disclosure policy.** Current `SECURITY.md` is two sentences. CRA wants a coordinated disclosure policy with response timelines.
-- **Support / update window.** Declare which yente major versions receive security updates and for how long. CRA's "expected product lifetime".
-- **CSAF advisories.** When we issue a security fix, publish a CSAF 2.0 advisory alongside the GitHub Security Advisory. CSAF is the format the EU CSIRT network speaks under CRA's coordinated-disclosure machinery.
-- **Risk assessment / threat model.** A one-pager covering trust boundaries (the API, the index backend, the delivery token, manifest loading from S3). CRA Annex I requires the manufacturer to have performed one; publishing is not required, but having it written down means we can hand it to an auditor.
-- **EU Declaration of Conformity.** Required at point of CE-marking. Drafted closer to the 2027 deadline against final CRA implementing acts.
+Not SBOM artifacts but documents CRA assumes you have alongside:
 
-## 4. Pipeline integration
+- **Expanded `SECURITY.md`** — current file is two sentences; CRA expects coordinated disclosure timelines.
+- **Support / update window statement** — which yente major versions get security updates and for how long.
+- **CSAF 2.0 advisories** — the format the EU CSIRT network speaks under CRA's coordinated-disclosure machinery; publish alongside the existing GitHub Security Advisory when issuing security fixes.
+- **Risk assessment / threat model** — one-pager covering trust boundaries (API, index backend, delivery token, manifest loading from S3). CRA Annex I requires having one; publishing it isn't required.
+- **EU Declaration of Conformity** — drafted closer to the 2027 deadline against final CRA implementing acts.
 
-All of this runs on **tag pushes only**. PR / `main` pushes keep today's behaviour — we don't publish supply-chain artifacts for every commit.
+## 4. Remaining pipeline work
 
-Changes to `.github/workflows/build.yml`:
+Done: SBOM emission, signing, cosign + GitHub attestations on tag push; weekly VEX-aware grype cron.
 
-1. After `docker/build-push-action@v7` pushes the image, run `syft <image-digest> -o cyclonedx-json=sbom.cdx.json -o spdx-json=sbom.spdx.json` per platform.
-2. `cosign sign <image-digest>` and `cosign attest --type cyclonedx --predicate sbom.cdx.json <image-digest>` (also for SPDX, and for VEX). All keyless via Sigstore.
-3. `actions/attest@v4` for both the wheel digest and the image digest. Add the `attestations: write` + `artifact-metadata: write` permissions to the workflow.
-4. Generate `LICENSES.md` from the SBOM (small `jq` over `sbom.cdx.json`).
-5. Verify PEP 740 PyPI attestations engage on next tag release. No workflow change required.
-6. `softprops/action-gh-release@v2` creates the GitHub Release on tag push and attaches the artifact bundle (wheel, sdist, SBOMs per arch, VEX file, `LICENSES.md`, provenance bundle, plus a single `yente-<version>-supply-chain.zip` for one-click download). Use `generate_release_notes: true` to preserve the auto-changelog. **This replaces the current manual Release-creation flow.**
+Open:
 
-Separate weekly workflow (not gated on tags) for VEX maintenance: cron runs `grype ghcr.io/opensanctions/yente:latest --vex security/vex/openvex.json --fail-on high`. Non-zero exit → open or update a GitHub issue listing un-VEX'd findings.
+1. **GitHub Release automation.** Replace manual `gh release create` with `softprops/action-gh-release@v2` on tag push. Attach the artifact bundle (wheel, sdist, both SBOMs per arch, VEX, `LICENSES.md`, provenance). `generate_release_notes: true` preserves the auto-changelog from manual creation.
+2. **`LICENSES.md` generation.** Small step in the release workflow before the Release-creation step; derive from `sbom.cdx.json`.
+3. **PEP 740 attestation verification on the first real tag release.** No workflow change — open the published PyPI page and confirm the attestation badge appears.
 
 ## 5. Storage and distribution
 
-- **Primary:** GitHub Release page, created and populated by CI on tag push (`softprops/action-gh-release@v2`). Individual artifact files attached directly so they're greppable / linkable; a single zip bundle alongside for one-click procurement download.
-- **Secondary:** OCI registry — SBOMs, VEX, provenance, and signatures attached as referrers to the image digest via `cosign`. This is what `trivy` / `grype` / customer scanners look for automatically.
-- **PyPI:** PEP 740 attestation only. Don't try to push SBOMs into PyPI metadata.
-- Discoverability: link the latest release's artifacts from `SECURITY.md` and from the docs site.
+- **OCI registry** — SBOMs, VEX, provenance, and signatures attached as referrers to image digests via `cosign`. Customer scanners auto-discover.
+- **GitHub Release page** — currently manual; once §4.1 lands, CI-populated with the artifact bundle plus a one-click `yente-<version>-supply-chain.zip`.
+- **PyPI** — PEP 740 attestation only.
 
 ## 6. Open questions
 
-- **OpenVEX vs CycloneDX VEX.** Lean OpenVEX for simplicity (`vexctl` workflow, smaller schema) unless we hit a tooling wall.
-- **Wheel SBOM strategy** (per §3.1) — start with no wheel SBOM and revisit if customers ask.
-- **First-party deps (`nomenklatura` etc.) and their own SBOMs.** For CRA purposes yente is the product placed on the EU market, so yente's SBOM is what matters. Upstream packages need clean SPDX license metadata; per-release SBOMs would be nice but aren't blocking. Separate workstream.
-- **Container hardening adjacent to CRA "secure by default"** — distroless base, drop `curl` from runtime, pin base image by digest. Not in this workstream.
+- **Wheel SBOM strategy** (§3.1) — currently not publishing one. Revisit if customers ask.
+- **Container hardening** — distroless base, drop `curl` from runtime, pin base image by digest. Not on this plan's critical path.
+- **First-party OpenSanctions deps' own SBOMs** — yente's SBOM is what matters for CRA, but `nomenklatura`, `followthemoney`, etc. would benefit from per-release SBOMs of their own. Separate workstream.
 
-## 7. Suggested phasing
+## 7. Remaining phases
 
-1. **SBOM emission (medium):** add `syft` to the release workflow, emit CycloneDX + SPDX per platform, attach to GitHub Release and OCI referrers. **Foundation of everything else.**
-2. **Signing + provenance (small):** `cosign sign` + `cosign attest` + `actions/attest@v4`. Cheap once the workflow already has the right permissions.
-3. **GitHub Release automation (small):** `softprops/action-gh-release@v2` replaces manual Release creation; bundles the artifacts.
-4. **VEX scaffolding (small):** empty `security/vex/openvex.json`, weekly grype cron, document the triage process. Populate as findings come in.
-5. **Documentation pass (medium, mostly writing):** expand `SECURITY.md`, write the support window statement, draft the threat model, set up CSAF publishing.
-6. **EU DoC + conformity assessment:** revisit in 2027 against final CRA implementing acts.
+1. **GitHub Release automation + `LICENSES.md`** (small) — finishes the release-artifact pipeline.
+2. **Documentation pass** (medium, mostly writing) — expand `SECURITY.md`, support-window statement, CSAF process, threat model.
+3. **EU Declaration of Conformity** — revisit in 2027 against final CRA implementing acts.
 
-Steps 1–3 give us a defensible "yes, we publish per-release SBOMs, signed, with provenance" answer to procurement and to CRA market-surveillance authorities. Step 4 reduces ongoing customer-question burden. Step 5 covers CRA companion docs.
+Steps 1–2 close the loop on producer-side burden reduction. Step 3 is on the calendar, not the to-do list.
 
-## 8. Related but out-of-scope: build reproducibility / lockfiles
+## 8. Build reproducibility / lockfiles — out of scope
 
-Initially treated as a prerequisite for the SBOM; revisited and dropped. The SBOM describes what shipped (via scanning the built image's installed venv) regardless of whether the resolution was reproducible — the lockfile and the SBOM solve different problems.
+Initially treated as a prerequisite, revisited and dropped. The SBOM describes what shipped (via scanning the built image's installed venv) regardless of whether the resolution was reproducible. Lockfile and SBOM solve different problems.
 
-A lockfile (PEP 751 `pylock.toml`) is still genuinely useful for other reasons:
+A lockfile (PEP 751 `pylock.toml`) is still useful for forensic rebuilds, stable security-review surfaces, faster CI, and Dependabot transitive-bump signal — but it's expensive to get right end-to-end at yente's scope. The exploratory work on the `sbom-cra-artifacts` branch (#1147) found three real costs:
 
-- Reproducible rebuilds for forensics
-- Stable security-review surface (review once, ship many times)
-- Faster CI installs
-- Dependabot signal on transitive bumps
+- **Multi-arch lockfiles.** PEP 751 is single-platform per file. The amd64 + arm64 buildx flow needs per-arch lockfiles, regenerated together on every dep bump (arm64 regen requires qemu, ~10× slowdown — unless we use uv as the resolver).
+- **Dependency-group splitting.** `pip install -r pylock.toml` doesn't support extras / dep groups, so the dev/docs sets need separate `pylock.dev.toml` files per the PEP's convention.
+- **Scanner-tooling gaps.** Neither `syft` nor `cyclonedx-py` parses `pylock.toml` today. The workaround — scan the installed venv — is what we do for the SBOM anyway, which obviates the lockfile's main SBOM rationale.
 
-…but it's expensive to get right end-to-end at yente's scope. The exploratory work on the `sbom-cra-artifacts` branch found three real costs that aren't worth paying just to enable SBOMs:
-
-- **Multi-arch lockfiles.** PEP 751 is single-platform per file. The amd64 + arm64 buildx flow needs per-arch lockfiles, picked via `TARGETPLATFORM` in the Dockerfile, regenerated together on every dep bump (arm64 regen requires qemu emulation, ~10× slowdown — or use uv as the resolver).
-- **Dependency group splitting.** `pip install -r pylock.toml` doesn't yet support extras / dep groups. We'd need `pylock.toml` (runtime) + `pylock.dev.toml` (CI extras) per the PEP's split-lockfile convention.
-- **Scanner-tooling gaps.** Neither `syft` nor `cyclonedx-py` parse `pylock.toml` today (only `pip-audit` does). The natural workaround — scan the installed venv instead of the lockfile — is what we're doing for the SBOM anyway, which obviates the lockfile's main SBOM rationale.
-
-If build reproducibility becomes a priority on its own merits, pick this up as a standalone effort with the costs understood up front. Nothing in the SBOM workstream depends on it.
+Pick this up as a standalone effort if build reproducibility becomes a priority on its own merits. Nothing in the SBOM workstream depends on it.
