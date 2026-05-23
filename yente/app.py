@@ -19,7 +19,11 @@ from yente.data.entity import Entity
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 from yente.provider import close_provider
-from yente.middleware import RequestLogMiddleware, TraceContextMiddleware
+from yente.middleware import (
+    MaxURLLengthMiddleware,
+    RequestLogMiddleware,
+    TraceContextMiddleware,
+)
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
@@ -140,6 +144,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=500)
+    app.add_middleware(MaxURLLengthMiddleware)
     app.include_router(match.router)
     app.include_router(search.router)
     app.include_router(reconcile.router)

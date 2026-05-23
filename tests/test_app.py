@@ -34,3 +34,19 @@ def test_match_without_content_type_header():
     res = client.post("/match/default", content=json.dumps(query))
     # Not 422 Unprocessable Entity
     assert res.status_code == 200, res.json()
+
+
+def test_max_url_length_rejects_oversized_query():
+    """A URL above the cap is rejected with 414 before it can reach a handler."""
+    long_q = "a" * (settings.MAX_URL_LENGTH + 100)
+    res = client.get(f"/search/default?q={long_q}")
+    assert res.status_code == 414, res.text
+    assert res.json() == {"detail": "Request URI too long"}
+
+
+def test_max_url_length_allows_normal_query():
+    """A regular query string is unaffected by the middleware."""
+    res = client.get("/search/default?q=acme")
+    # 200 if the index is populated, 503 if it isn't — either confirms the
+    # request reached the search handler rather than being short-circuited.
+    assert res.status_code in (200, 503), res.text

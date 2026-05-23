@@ -157,6 +157,11 @@ MAX_BATCH = int(env_str("YENTE_MAX_BATCH", "100"))
 MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 
+# Maximum length of an incoming request URL (path + query string), in bytes.
+# Sits below httptools' 65 536-byte wrap-around so we reject with 414 before
+# the parser silently truncates.
+MAX_URL_LENGTH = env_int("YENTE_MAX_URL_LENGTH", 60000)
+
 # How many results to return per /match query by default:
 MATCH_PAGE = env_int("YENTE_MATCH_PAGE", 5)
 
