@@ -13,6 +13,11 @@ class MaxURLLengthMiddleware:
     Defends against an upstream parser bug (``httptools.parse_url`` wraps at
     65 536 bytes and silently truncates the path/query) by capping URL length
     below the wrap point so a client error is returned instead of data loss.
+
+    We handle this at the application layer because yente uses uvicorn by default
+    and even though it would be better to handle this at the HTTP paser layer,
+    we want to provide a safe default that errors instead of silently altering
+    the meaning of the request.
     """
 
     def __init__(self, app: ASGIApp) -> None:
