@@ -6,7 +6,7 @@ from typing import Any, Dict
 from uuid import uuid4
 from pathlib import Path
 from unittest.mock import Mock, patch
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from fastapi.testclient import TestClient
 from followthemoney import model
 from followthemoney.dataset.util import dataset_name_check
@@ -18,6 +18,16 @@ from yente.search.indexer import update_index
 from yente.provider import with_provider, close_provider
 from yente.data.manifest import Catalog, Manifest
 import yente.data
+
+
+@asynccontextmanager
+async def patch_yente_catalog(manifest: Manifest):
+    old_catalog = yente.data._catalog
+    yente.data._catalog = await Catalog.load(manifest)
+    try:
+        yield
+    finally:
+        yente.data._catalog = old_catalog
 
 
 run_id = uuid4().hex
@@ -48,10 +58,8 @@ async def cleanup_test_indices():
 # This can get overridden temporarily by function-scoped fixtures.
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def empty_catalog():
-    old_catalog = yente.data._catalog
-    yente.data._catalog = await Catalog.load(Manifest.model_validate({}))
-    yield
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(Manifest.model_validate({})):
+        yield
 
 
 # The basic idea is to have each fixture operate in a separate index prefix.
@@ -93,11 +101,9 @@ EU_FSF_MANIFEST = Manifest.model_validate(
 @pytest_asyncio.fixture(scope="session", autouse=False)
 async def load_live_catalog_eu_fsf():
     old_entity_index = settings.ENTITY_INDEX
-    old_catalog = yente.data._catalog
     settings.ENTITY_INDEX = build_index_alias_name_for_fixture("eu_fsf")
-    yente.data._catalog = await Catalog.load(EU_FSF_MANIFEST)
-    await update_index(force=True)
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(EU_FSF_MANIFEST):
+        await update_index(force=True)
     settings.ENTITY_INDEX = old_entity_index
     yield
 
@@ -105,13 +111,11 @@ async def load_live_catalog_eu_fsf():
 # This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def live_catalog_eu_fsf(monkeypatch, load_live_catalog_eu_fsf):
-    old_catalog = yente.data._catalog
-    yente.data._catalog = await Catalog.load(EU_FSF_MANIFEST)
     monkeypatch.setattr(
         settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("eu_fsf")
     )
-    yield
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(EU_FSF_MANIFEST):
+        yield
 
 
 PARTEISPENDEN_MANIFEST = Manifest.model_validate(
@@ -137,11 +141,9 @@ PARTEISPENDEN_MANIFEST = Manifest.model_validate(
 @pytest_asyncio.fixture(scope="session", autouse=False)
 async def load_parteispenden_test_dataset():
     old_entity_index = settings.ENTITY_INDEX
-    old_catalog = yente.data._catalog
     settings.ENTITY_INDEX = build_index_alias_name_for_fixture("parteispenden")
-    yente.data._catalog = await Catalog.load(PARTEISPENDEN_MANIFEST)
-    await update_index(force=True)
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(PARTEISPENDEN_MANIFEST):
+        await update_index(force=True)
     settings.ENTITY_INDEX = old_entity_index
     yield
 
@@ -149,15 +151,13 @@ async def load_parteispenden_test_dataset():
 # This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def parteispenden_test_dataset(monkeypatch, load_parteispenden_test_dataset):
-    old_catalog = yente.data._catalog
-    yente.data._catalog = await Catalog.load(PARTEISPENDEN_MANIFEST)
     monkeypatch.setattr(
         settings,
         "ENTITY_INDEX",
         build_index_alias_name_for_fixture("parteispenden"),
     )
-    yield
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(PARTEISPENDEN_MANIFEST):
+        yield
 
 
 ZALA_MANIFEST = Manifest.model_validate(
@@ -183,11 +183,9 @@ ZALA_MANIFEST = Manifest.model_validate(
 @pytest_asyncio.fixture(scope="session", autouse=False)
 async def load_zala_test_dataset():
     old_entity_index = settings.ENTITY_INDEX
-    old_catalog = yente.data._catalog
     settings.ENTITY_INDEX = build_index_alias_name_for_fixture("zala")
-    yente.data._catalog = await Catalog.load(ZALA_MANIFEST)
-    await update_index(force=True)
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(ZALA_MANIFEST):
+        await update_index(force=True)
     settings.ENTITY_INDEX = old_entity_index
     yield
 
@@ -195,15 +193,13 @@ async def load_zala_test_dataset():
 # This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
 async def zala_test_dataset(monkeypatch, load_zala_test_dataset):
-    old_catalog = yente.data._catalog
-    yente.data._catalog = await Catalog.load(ZALA_MANIFEST)
     monkeypatch.setattr(
         settings,
         "ENTITY_INDEX",
         build_index_alias_name_for_fixture("zala"),
     )
-    yield
-    yente.data._catalog = old_catalog
+    async with patch_yente_catalog(ZALA_MANIFEST):
+        yield
 
 
 @pytest_asyncio.fixture(scope="function", autouse=False)
