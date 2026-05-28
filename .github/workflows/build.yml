@@ -189,7 +189,7 @@ jobs:
 
       - name: Install cosign
         if: startsWith(github.ref, 'refs/tags/')
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.1.0
 
       - name: Resolve per-platform image digests
         if: startsWith(github.ref, 'refs/tags/')
