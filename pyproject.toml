@@ -35,7 +35,7 @@ dependencies = [
     "rigour == 2.1.1",
     "asyncstdlib == 3.14.0",
     "aiocron == 2.1",
-    "aiocsv == 1.4.0",
+    "aiocsv == 1.4.1",
     "aiofiles == 25.1.0",
     "rich",
     "opentelemetry-distro[otlp]",
