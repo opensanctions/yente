@@ -24,11 +24,6 @@ async def get_catalog() -> Catalog:
     return _catalog
 
 
-def reset_catalog() -> None:
-    global _catalog
-    _catalog = None
-
-
 async def refresh_catalog() -> None:
     global _catalog
     log.info("Refreshing manifest/catalog...", catalog=_catalog)
