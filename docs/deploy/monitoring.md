@@ -8,8 +8,9 @@ yente provides standard health check endpoints:
 
 * `/healthz`: Returns `200 OK` if the Python application is responsive. Use this for basic liveness probes.
 * `/readyz`: Returns `200 OK` if the search index is available and searchable. Use this for readiness probes to ensure the service doesn't receive traffic before the initial indexing is complete.
+* `/statusz`: Returns `{"status": "ok"}` when the service is idle, or `{"status": "indexing"}` when a re-index is in progress. Use this to trigger downstream workflows after an index rebuild completes.
 
-Note that `/readyz` will return `200 OK` even if the index is stale, as long as it is searchable. Read on for how to monitor data freshness.
+Note that `/readyz` will return `200 OK` even if the index is stale, as long as it is searchable. Similarly, `/statusz` does not indicate whether the data is fresh — only whether a re-index operation is currently running. Read on for how to monitor data freshness.
 
 ## Monitoring catalog and index freshness
 
