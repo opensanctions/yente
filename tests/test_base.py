@@ -1,3 +1,5 @@
+import pytest
+
 from .conftest import client
 
 from yente import settings
@@ -9,12 +11,14 @@ def test_healthz():
     assert res.json().get("status") == "ok", res
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_readyz():
     res = client.get("/readyz")
     assert res.status_code == 200, res
     assert res.json().get("status") == "ok", res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_manifest():
     res = client.get("/manifest")
     assert res.status_code == 200, res
@@ -52,6 +56,7 @@ def test_algorithms_hidden(monkeypatch):
     assert "logic-v1" not in visible_algorithms
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_catalog():
     res = client.get("/catalog")
     assert res.status_code == 200, res

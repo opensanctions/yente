@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+import pytest
 from .conftest import client, assert_entity_shape
 
 
@@ -9,17 +10,19 @@ def by_id(dicts: List[Dict[str, Any]], id_: str):
     return matches[0]
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_entity_404():
     res = client.get("/entities/banana")
     assert res.status_code == 404, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_entity_fetch():
-    res = client.get("/entities/Q7747")
+    res = client.get("/entities/NK-aU5ybkbRFJucf8YMwsJvDw")
     assert res.status_code == 200, res
     data = res.json()
     assert_entity_shape(data)
-    assert data["id"] == "Q7747"
+    assert data["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
     assert data["schema"] == "Person"
     assert "eu_fsf" in data["datasets"]
     assert len(data["referents"]) > 5, data["referents"]
@@ -34,6 +37,7 @@ def test_entity_fetch():
     assert sanc["schema"] == "Sanction"
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_entity_not_nested():
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9?nested=false")
     assert res.status_code == 200
@@ -44,6 +48,7 @@ def test_entity_not_nested():
     assert "paymentPayer" not in props
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_entity_nested():
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9")
     assert res.status_code == 200
@@ -79,6 +84,7 @@ def test_entity_nested():
     ]
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent():
     """
     Same data as nested entity endpoint, limited to 10 adjacent per prop
@@ -134,9 +140,10 @@ def test_adjacent():
     payer["properties"].keys() == {"addressEntity", "country", "name"}
     assert len(payer["properties"]["addressEntity"]) == 2
     for addr in payer["properties"]["addressEntity"]:
-        assert type(addr) == str
+        assert isinstance(addr, str)
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent_limit():
     """Get the first of two adjacent entities for outgoing and incoming edges"""
     res = client.get(
@@ -176,6 +183,7 @@ def test_adjacent_limit():
     assert len(adj["beneficiary"]["results"]) == 1
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent_offset():
     """Get the second of two adjacent entities for outgoing and incoming edges"""
     res = client.get(
@@ -203,6 +211,7 @@ def test_adjacent_offset():
     assert cdu["properties"]["name"] == ["CDU"]
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent_prop():
     res = client.get(
         "/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent/address"
@@ -241,6 +250,7 @@ def test_adjacent_prop():
     assert cdu["properties"]["name"] == ["CDU"]
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent_prop_limit():
     """Get the first of two adjacent entities"""
     res = client.get(
@@ -271,6 +281,7 @@ def test_adjacent_prop_limit():
     assert fake_org["properties"]["name"] == ["Fake"]
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_adjacent_prop_offset():
     """Get the second of two adjacent entities"""
     res = client.get(

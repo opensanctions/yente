@@ -19,6 +19,7 @@ def span_exporter():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("zala_test_dataset")
 async def test_search_provider_creates_spans(search_provider, span_exporter):
     """Verify that SearchProvider operations produce OTEL spans."""
     from yente import settings
@@ -40,6 +41,7 @@ async def test_search_provider_creates_spans(search_provider, span_exporter):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("zala_test_dataset")
 async def test_search_provider_records_errors_in_spans(search_provider, span_exporter):
     """Verify that SearchProvider errors are recorded in OTEL spans."""
     from yente.exc import YenteNotFoundError

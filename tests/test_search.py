@@ -1,8 +1,10 @@
+import pytest
 from datetime import datetime, timedelta
 
 from .conftest import client, assert_entity_shape
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_putin():
     res = client.get("/search/default?q=vladimir putin")
     assert res.status_code == 200, res
@@ -19,6 +21,7 @@ def test_search_putin():
     assert "default" not in putin["datasets"]
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_no_query():
     res = client.get("/search/default")
     assert res.status_code == 200, res
@@ -26,6 +29,7 @@ def test_search_no_query():
     assert len(results) > 9, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_invalid_query():
     res = client.get("/search/default?q=invalid/query")
     assert res.status_code == 400, res
@@ -38,11 +42,13 @@ def test_search_missing_dataset():
     assert res.status_code == 404, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_schema_invalid():
     res = client.get("/search/default?q=angela merkel&schema=Banana")
     assert res.status_code == 400, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_schema_remove():
     res = client.get("/search/default?q=angela merkel&schema=Vessel")
     assert res.status_code == 200, res
@@ -50,6 +56,7 @@ def test_search_filter_schema_remove():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_exclude_schema():
     res = client.get("/search/default?q=moscow")
     assert res.status_code == 200, res
@@ -61,6 +68,7 @@ def test_search_filter_exclude_schema():
     assert new_total < total, new_total
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_exclude_dataset():
     res = client.get("/search/default?q=vladimir putin")
     assert res.status_code == 200, res
@@ -72,6 +80,7 @@ def test_search_filter_exclude_dataset():
     assert new_total == 0
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_include_dataset():
     res = client.get("/search/default?q=vladimir putin")
     assert res.status_code == 200, res
@@ -95,6 +104,7 @@ def test_search_filter_include_dataset():
     assert new_total == 0
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_changed_since():
     ts = datetime.now() + timedelta(days=1)
     tx = ts.isoformat(sep="T", timespec="minutes")
@@ -104,6 +114,7 @@ def test_search_filter_changed_since():
     assert total == 0, total
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_schema_keep():
     res = client.get("/search/default?q=vladimir putin&schema=Person")
     assert res.status_code == 200, res
@@ -111,6 +122,7 @@ def test_search_filter_schema_keep():
     assert len(results) > 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_countries_remove():
     res = client.get("/search/default?q=vladimir putin&countries=ke")
     assert res.status_code == 200, res
@@ -118,6 +130,7 @@ def test_search_filter_countries_remove():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter_countries_operator():
     res = client.get("/search/default?q=vladimir putin&countries=ke&countries=ru")
     assert res.status_code == 200, res
@@ -132,6 +145,7 @@ def test_search_filter_countries_operator():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_filter():
     res = client.get(
         "/search/default?q=vladimir putin&filter=properties.birthDate:1972-01-26§"
@@ -141,6 +155,7 @@ def test_search_filter():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_facet_datasets_default():
     res = client.get("/search/default")
     assert res.status_code == 200, res
@@ -150,6 +165,7 @@ def test_search_facet_datasets_default():
     assert "parteispenden" not in names, names
 
 
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_search_facet_datasets_spenden():
     res = client.get("/search/parteispenden")
     assert res.status_code == 200, res
@@ -159,6 +175,7 @@ def test_search_facet_datasets_spenden():
     assert "parteispenden" in names, names
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_facet_countries():
     res = client.get("/search/default?q=vladimir putin&countries=ru")
     assert res.status_code == 200, res
@@ -169,6 +186,7 @@ def test_search_facet_countries():
     assert "lb" not in names, names
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_facet_topics():
     res = client.get("/search/default?topics=sanction")
     assert res.status_code == 200, res
@@ -182,6 +200,7 @@ def test_search_facet_topics():
     assert "sanction" in names, names
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_facet_schema():
     res = client.get("/search/default?schema=Address")
     assert res.status_code == 200, res
@@ -195,6 +214,7 @@ def test_search_facet_schema():
     assert "Address" in names, names
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_facet_parameter():
     res = client.get("/search/default")
     assert res.status_code == 200, res
@@ -215,6 +235,7 @@ def test_search_facet_parameter():
     assert "countries" not in facets
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_no_targets():
     res = client.get("/search/default?schema=LegalEntity&target=false")
     assert res.status_code == 200, res
@@ -226,6 +247,7 @@ def test_search_no_targets():
     #     assert res["target"] == False, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_targets():
     res = client.get("/search/default?schema=LegalEntity&target=true")
     assert res.status_code == 200, res
@@ -237,6 +259,7 @@ def test_search_targets():
         assert res["target"] is True, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_sorted():
     res = client.get("/search/default?sort=first_seen:desc")
     data = res.json()
@@ -249,6 +272,7 @@ def test_search_sorted():
         prev_seen = res["first_seen"]
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_putin_scope():
     res = client.get("/search/peps?q=vladimir putin")
     assert res.status_code == 200, res
@@ -257,6 +281,7 @@ def test_search_putin_scope():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_limit():
     res = client.get("/search/default?limit=0&q=vladimir putin")
     assert res.status_code == 200, res
@@ -266,6 +291,7 @@ def test_search_limit():
     assert len(results) == 0, results
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_offset():
     res = client.get("/search/default?offset=100&q=vladimir putin")
     assert res.status_code == 200, res
@@ -281,6 +307,7 @@ def test_search_range_offset():
     assert res.status_code == 422, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_search_range_limit():
     res = client.get("/search/default?limit=10000&q=putin")
     assert res.status_code == 422, res
