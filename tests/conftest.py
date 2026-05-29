@@ -1,4 +1,11 @@
 # mypy: ignore-errors
+#
+# Fixtures strategy: when adding a test, pull in the smallest dataset that has
+# what you need via @pytest.mark.usefixtures("<fixture_name>"):
+#
+#   - zala_test_dataset:          small local sanctions cluster (Zakharov + Zala Aero)
+#   - parteispenden_test_dataset: small local dataset of German political donations
+#   - live_catalog_eu_fsf:        real eu_fsf catalog, fetched live from data.opensanctions.org
 import re
 import pytest_asyncio
 from datetime import datetime
