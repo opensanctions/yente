@@ -1,28 +1,35 @@
 import asyncio
 import httpx
 import structlog
+from typing import Optional
 from structlog.stdlib import BoundLogger
 
-from yente.data.manifest import Catalog
+from yente import settings
+from yente.data.manifest import Catalog, Manifest
 
 log: BoundLogger = structlog.get_logger(__name__)
 lock = asyncio.Lock()
+_catalog: Optional[Catalog] = None
 
 
 async def get_catalog() -> Catalog:
-    if Catalog.instance is None:
+    global _catalog
+    if _catalog is None:
         async with lock:
-            if Catalog.instance is None:
-                Catalog.instance = await Catalog.load()
+            if _catalog is None:
+                manifest = await Manifest.load(settings.MANIFEST)
+                _catalog = await Catalog.load(manifest)
     # Silence mypy, which doesn't understand the double if block:
-    assert Catalog.instance is not None, "Catalog should be initialized"
-    return Catalog.instance
+    assert _catalog is not None, "Catalog should be initialized"
+    return _catalog
 
 
 async def refresh_catalog() -> None:
-    log.info("Refreshing manifest/catalog...", catalog=Catalog.instance)
+    global _catalog
+    log.info("Refreshing manifest/catalog...", catalog=_catalog)
     try:
-        Catalog.instance = await Catalog.load()
+        manifest = await Manifest.load(settings.MANIFEST)
+        _catalog = await Catalog.load(manifest)
     except httpx.HTTPError as exc:
         log.exception("Metadata fetch error (%s): %s" % (exc.request.url, exc))
     except (Exception, KeyboardInterrupt) as exc:

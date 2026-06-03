@@ -1,10 +1,12 @@
 import re
 import json
 import pytest
+import yente.data
 from .conftest import FIXTURES_PATH
 from typing import List, Any
 
-from yente.data import get_catalog, refresh_catalog
+from yente.data import get_catalog
+from yente.data.manifest import Catalog, Manifest
 from yente.data.updater import DatasetUpdater
 from yente.search.versions import get_system_version, parse_index_name, build_index_name
 
@@ -15,7 +17,7 @@ def non_mocked_hosts() -> List[str]:
 
 
 @pytest.mark.asyncio
-async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
+async def test_updater(httpx_mock: Any) -> None:
     """
     Test getting the delta versions and updating the index, using the data
     mocks in the fixtures directory.
@@ -35,7 +37,19 @@ async def test_updater(httpx_mock: Any, sanctions_catalog: None) -> None:
         url="https://data.opensanctions.org/datasets/latest/index.json",
         content=(FIXTURES_PATH / "dataset/t1/index.json").read_bytes(),
     )
-    await refresh_catalog()
+    yente.data._catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "catalogs": [
+                    {
+                        "url": "https://data.opensanctions.org/datasets/latest/index.json",
+                        "scope": "sanctions",
+                        "resource_name": "entities.ftm.json",
+                    }
+                ],
+            }
+        )
+    )
     catalog = await get_catalog()
     dataset = catalog.get("sanctions")
     assert dataset is not None

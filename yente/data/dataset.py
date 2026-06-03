@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from pydantic import Field, FilePath, computed_field, field_validator
 from rigour.time import datetime_iso
@@ -57,7 +57,7 @@ class Dataset(FollowTheMoneyDataset):
                 path = get_url_local_path(self.model.entities_url)
                 if path is not None and path.exists():
                     mtime = path.stat().st_mtime
-                    mdt = datetime.fromtimestamp(mtime)
+                    mdt = datetime.fromtimestamp(mtime, tz=timezone.utc)
                     ts = datetime_iso(mdt)
             if ts is not None:
                 self.model.version = iso_to_version(ts) or "static"

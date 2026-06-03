@@ -1,3 +1,4 @@
+import pytest
 from unittest import mock
 
 from .conftest import client, assert_entity_shape
@@ -5,8 +6,8 @@ from .conftest import client, assert_entity_shape
 EXAMPLE = {
     "schema": "Person",
     "properties": {
-        "name": ["Vladimir Putin"],
-        "birthDate": ["1952"],
+        "name": ["Alexander Vyacheslavovich ZAKHAROV"],
+        "birthDate": ["1965"],
         "country": "Russia",
     },
 }
@@ -27,9 +28,10 @@ MANY_NAMES = {
 }
 
 
-def test_match_putin():
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_match_zakharov():
     query = {"queries": {"vv": EXAMPLE, "xx": EXAMPLE, "zz": EXAMPLE}}
-    resp = client.post("/match/default", json=query)
+    resp = client.post("/match/zala", json=query)
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["responses"]["vv"]
@@ -37,16 +39,17 @@ def test_match_putin():
     assert res["query"]["properties"]["country"][0] == "ru"
     assert res["total"]["value"] > 0, res["total"]
     res0 = res["results"][0]
-    assert res0["id"] == "Q7747", res0
+    assert res0["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw", res0
     assert_entity_shape(res0)
 
 
-def test_match_putin_name_based_mode():
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_match_zakharov_name_based_mode():
     query = {"queries": {"vv": EXAMPLE}}
-    resp = client.post("/match/default", json=query, params={"algorithm": "neural-net"})
+    resp = client.post("/match/zala", json=query, params={"algorithm": "neural-net"})
     assert resp.status_code == 400, resp.text
 
-    resp = client.post("/match/default", json=query, params={"algorithm": "name-based"})
+    resp = client.post("/match/zala", json=query, params={"algorithm": "name-based"})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["responses"]["vv"]
@@ -54,14 +57,15 @@ def test_match_putin_name_based_mode():
     assert res["query"]["properties"]["country"][0] == "ru"
     assert res["total"]["value"] > 0, res["total"]
     res0 = res["results"][0]
-    assert res0["id"] == "Q7747", res0
+    assert res0["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw", res0
     assert res0["score"] > 0.70, res0
     assert_entity_shape(res0)
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_match_no_schema():
     query = {"queries": {"fail": {"properties": {"name": "Banana"}}}}
-    resp = client.post("/match/default", json=query)
+    resp = client.post("/match/zala", json=query)
     assert resp.status_code == 422, resp.text
 
     # Multi-query batch: an invalid schema in one query must surface a 400 to
@@ -74,10 +78,11 @@ def test_match_no_schema():
             "ok2": {"schema": "Person", "properties": {"name": ["John Doe"]}},
         }
     }
-    resp = client.post("/match/default", json=query)
+    resp = client.post("/match/zala", json=query)
     assert resp.status_code == 400, resp.text
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_many_names_logic_v1():
     query = {"queries": {"q": MANY_NAMES}}
     params = {"algorithm": "logic-v1"}
@@ -93,6 +98,7 @@ def test_match_many_names_logic_v1():
     assert len(results) == len(results2), results2
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_many_names():
     query = {"queries": {"q": MANY_NAMES}}
     params = {"algorithm": "best"}
@@ -108,6 +114,7 @@ def test_match_many_names():
     assert len(results) == len(results2), results2
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_exclude_dataset():
     query = {"queries": {"vv": EXAMPLE}}
     params = {"algorithm": "name-based", "exclude_dataset": "eu_fsf"}
@@ -118,6 +125,7 @@ def test_match_exclude_dataset():
     assert len(res["results"]) == 0, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_include_dataset():
     # When querying Putin
     query = {"queries": {"vv": EXAMPLE}}
@@ -156,6 +164,7 @@ def test_match_include_dataset():
     assert len(res["results"]) == 0, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_logic_v2_with_algorithm_config():
     query = {"queries": {"vv": EXAMPLE}, "config": {"nm_number_mismatch": 0.4}}
     with mock.patch(
@@ -181,16 +190,18 @@ def test_match_logic_v2_with_algorithm_config():
     assert resp.status_code == 400, resp.text
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_filter_topic():
     query = {"queries": {"vv": EXAMPLE}}
     params = {"algorithm": "name-based", "topics": "crime.cyber"}
-    resp = client.post("/match/default", json=query, params=params)
+    resp = client.post("/match/zala", json=query, params=params)
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["responses"]["vv"]
     assert len(res["results"]) == 0, res
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_id_pass_through():
     body = dict(MANY_NAMES)
     body["id"] = "rotenberg"
@@ -202,6 +213,7 @@ def test_id_pass_through():
     assert res["query"]["id"] == "rotenberg"
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_name_without_spaces():
     # A name query with spaces omitted is a single token to the query
     # analyzer, so ES fuzziness can't bridge the gap to the separate indexed tokens. We
@@ -225,6 +237,7 @@ def test_match_name_without_spaces():
     assert res["results"][0]["id"] == "Q7747", res["results"][0]
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_fuzzy_names():
     """Test that fuzzy retrieval from the index works."""
     query = {
@@ -255,6 +268,7 @@ def test_fuzzy_names():
         assert res["results"][0]["id"] == "Q7747", res["results"][0]
 
 
+@pytest.mark.usefixtures("live_catalog_eu_fsf")
 def test_match_numeric_property_value():
     # Numeric values in a property list are coerced to strings by
     # extract_values; the request must succeed and echo the value back as a
@@ -273,21 +287,26 @@ def test_match_numeric_property_value():
     assert "1952" in res["query"]["properties"].get("birthDate", []), res["query"]
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_exclude_entity_ids():
     query = {"queries": {"q": EXAMPLE}}
 
-    # First test: no exclusions should return Q7747 as first result
-    resp = client.post("/match/default", json=query)
-    assert resp.json()["responses"]["q"]["results"][0]["id"] == "Q7747"
+    # First test: no exclusions should return NK-aU5ybkbRFJucf8YMwsJvDw as first result
+    resp = client.post("/match/zala", json=query)
+    assert (
+        resp.json()["responses"]["q"]["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
+    )
 
-    # Second test: exclude canonical ID Q7747
+    # Second test: exclude canonical ID NK-aU5ybkbRFJucf8YMwsJvDw, should return no results
     resp = client.post(
-        "/match/default", json=query, params={"exclude_entity_ids": ["Q7747"]}
+        "/match/zala",
+        json=query,
+        params={"exclude_entity_ids": ["NK-aU5ybkbRFJucf8YMwsJvDw"]},
     )
     assert len(resp.json()["responses"]["q"]["results"]) == 0
 
-    # Third test: exclude referent ID gb-hmt-14196 (canonical ID is Q7747)
+    # Third test: exclude referent ID gb-hmt-14196 (canonical ID is NK-aU5ybkbRFJucf8YMwsJvDw)
     resp = client.post(
-        "/match/default", json=query, params={"exclude_entity_ids": ["gb-hmt-14196"]}
+        "/match/zala", json=query, params={"exclude_entity_ids": ["ofac-45937"]}
     )
     assert len(resp.json()["responses"]["q"]["results"]) == 0
