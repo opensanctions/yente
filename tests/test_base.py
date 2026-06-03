@@ -18,13 +18,13 @@ def test_readyz():
     assert res.json().get("status") == "ok", res
 
 
-@pytest.mark.usefixtures("live_catalog_eu_fsf")
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_manifest():
     res = client.get("/manifest")
     assert res.status_code == 200, res
     data = res.json()
     assert "datasets" in data
-    assert len(data["datasets"]) > 5
+    assert len(data["datasets"]) == 1
 
 
 def test_algorithms(monkeypatch):

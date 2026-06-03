@@ -16,7 +16,7 @@ def test_entity_404():
     assert res.status_code == 404, res
 
 
-@pytest.mark.usefixtures("live_catalog_eu_fsf")
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_entity_fetch():
     res = client.get("/entities/NK-aU5ybkbRFJucf8YMwsJvDw")
     assert res.status_code == 200, res
@@ -24,7 +24,7 @@ def test_entity_fetch():
     assert_entity_shape(data)
     assert data["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
     assert data["schema"] == "Person"
-    assert "eu_fsf" in data["datasets"]
+    assert "zala" in data["datasets"]
     assert len(data["referents"]) > 5, data["referents"]
 
     props = data["properties"]
