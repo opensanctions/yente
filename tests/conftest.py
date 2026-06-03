@@ -101,27 +101,16 @@ EU_FSF_MANIFEST = Manifest.model_validate(
 )
 
 
-# This fixture is session-scoped and does the heavy lifting of loading the dataset,
-# but to a fixture-specific index alias. The live_catalog_eu_fsf fixture then just
-# points the settings to that alias for the duration of the test. This is a work-around
-# to have multiple fixtures loaded without stepping on each other's toes.
-@pytest_asyncio.fixture(scope="session", autouse=False)
-async def load_live_catalog_eu_fsf():
-    old_entity_index = settings.ENTITY_INDEX
-    settings.ENTITY_INDEX = build_index_alias_name_for_fixture("eu_fsf")
-    async with patch_yente_catalog(EU_FSF_MANIFEST):
-        await update_index(force=True)
-    settings.ENTITY_INDEX = old_entity_index
-    yield
-
-
 # This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
-async def live_catalog_eu_fsf(monkeypatch, load_live_catalog_eu_fsf):
+async def live_catalog_eu_fsf(monkeypatch):
     monkeypatch.setattr(
         settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("eu_fsf")
     )
     async with patch_yente_catalog(EU_FSF_MANIFEST):
+        # This call will only index the first time the fixture is used,
+        # all subsequent uses will be fast.
+        await update_index()
         yield
 
 
@@ -141,29 +130,17 @@ PARTEISPENDEN_MANIFEST = Manifest.model_validate(
 )
 
 
-# This fixture is session-scoped and does the heavy lifting of loading the dataset,
-# but to a fixture-specific index alias. The parteispenden_test_dataset fixture then just
-# points the settings to that alias for the duration of the test. This is a work-around
-# to have multiple fixtures loaded without stepping on each other's toes.
-@pytest_asyncio.fixture(scope="session", autouse=False)
-async def load_parteispenden_test_dataset():
-    old_entity_index = settings.ENTITY_INDEX
-    settings.ENTITY_INDEX = build_index_alias_name_for_fixture("parteispenden")
-    async with patch_yente_catalog(PARTEISPENDEN_MANIFEST):
-        await update_index(force=True)
-    settings.ENTITY_INDEX = old_entity_index
-    yield
-
-
-# This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
-async def parteispenden_test_dataset(monkeypatch, load_parteispenden_test_dataset):
+async def parteispenden_test_dataset(monkeypatch):
     monkeypatch.setattr(
         settings,
         "ENTITY_INDEX",
         build_index_alias_name_for_fixture("parteispenden"),
     )
     async with patch_yente_catalog(PARTEISPENDEN_MANIFEST):
+        # This call will only index the first time the fixture is used,
+        # all subsequent uses will be fast.
+        await update_index()
         yield
 
 
@@ -183,29 +160,17 @@ ZALA_MANIFEST = Manifest.model_validate(
 )
 
 
-# This fixture is session-scoped and does the heavy lifting of loading the dataset,
-# but to a fixture-specific index alias. The zala_test_dataset fixture then just
-# points the settings to that alias for the duration of the test. This is a work-around
-# to have multiple fixtures loaded without stepping on each other's toes.
-@pytest_asyncio.fixture(scope="session", autouse=False)
-async def load_zala_test_dataset():
-    old_entity_index = settings.ENTITY_INDEX
-    settings.ENTITY_INDEX = build_index_alias_name_for_fixture("zala")
-    async with patch_yente_catalog(ZALA_MANIFEST):
-        await update_index(force=True)
-    settings.ENTITY_INDEX = old_entity_index
-    yield
-
-
-# This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
 @pytest_asyncio.fixture(scope="function", autouse=False)
-async def zala_test_dataset(monkeypatch, load_zala_test_dataset):
+async def zala_test_dataset(monkeypatch):
     monkeypatch.setattr(
         settings,
         "ENTITY_INDEX",
         build_index_alias_name_for_fixture("zala"),
     )
     async with patch_yente_catalog(ZALA_MANIFEST):
+        # This call will only index the first time the fixture is used,
+        # all subsequent uses will be fast.
+        await update_index()
         yield
 
 
