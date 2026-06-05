@@ -8,7 +8,9 @@ log = get_logger(__name__)
 
 
 async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> None:
-    """Sync dataset index_version for all datasets in the passed catalog."""
+    """For each dataset in the catalog, look at the currently aliased index in
+    ElasticSearch and update the dataset's `index_version` attribute on the
+    in-memory catalog to match the version embedded in that index name."""
     for aliased_index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             index_info = parse_index_name(aliased_index)
