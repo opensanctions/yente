@@ -168,6 +168,27 @@ class ElasticSearchProvider(SearchProvider):
         except (ApiError, TransportError) as te:
             raise YenteIndexError(f"Could not delete index: {te}") from te
 
+    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+        try:
+            await self.client().indices.put_mapping(
+                index=index, body={"_meta": metadata}
+            )
+        except (ApiError, TransportError) as te:
+            raise YenteIndexError(f"Could not set index metadata: {te}") from te
+
+    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+        try:
+            response = await self.client().indices.get_mapping(index=index)
+        except NotFoundError as nf:
+            raise YenteIndexError(f"Could not get index metadata: {nf}") from nf
+        except (ApiError, TransportError) as te:
+            raise YenteIndexError(f"Could not get index metadata: {te}") from te
+        body = response.body if hasattr(response, "body") else response
+        index_block = body.get(index, {})
+        mappings = index_block.get("mappings", {})
+        meta = mappings.get("_meta", {})
+        return cast(Dict[str, Any], meta)
+
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
         try:

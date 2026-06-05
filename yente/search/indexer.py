@@ -213,6 +213,17 @@ async def index_entities(
             next_index, mappings=make_entity_mapping(), settings=INDEX_SETTINGS
         )
 
+    # Always overwrite metadata: a fresh index has none, and a cloned index
+    # inherits the source's _meta (mappings can't be overridden in a clone request).
+    #
+    # Dates in ES documents would normally be stored as timestamps, but index
+    # metadata is just an opaque blob — ES doesn't parse or process it. For
+    # consistency we store values here exactly as we got them from the catalog.
+    index_metadata: Dict[str, Any] = {}
+    if dataset.model.last_export is not None:
+        index_metadata["last_export"] = dataset.model.last_export.isoformat()
+    await provider.set_index_metadata(next_index, index_metadata)
+
     try:
         docs = iter_entity_docs(updater, next_index)
 
