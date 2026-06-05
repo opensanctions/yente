@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Set
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional, Set
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.names import entity_names
@@ -45,6 +45,37 @@ log = get_logger(__name__)
 lock = threading.Lock()
 
 
+def build_entity_action(
+    index: str,
+    op_code: str,
+    entity_data: Dict[str, Any],
+    datasets: Set[str],
+    dataset: Dataset,
+) -> Optional[Dict[str, Any]]:
+    """Build a single bulk action dict from a raw entity op, or None on error."""
+    if op_code == "DEL":
+        return {
+            "_op_type": "delete",
+            "_index": index,
+            "_id": entity_data["id"],
+        }
+    try:
+        entity = Entity.from_dict(entity_data)
+        entity.datasets = entity.datasets.intersection(datasets)
+        if not len(entity.datasets):
+            entity.datasets.add(dataset.name)
+        if dataset.ns is not None:
+            entity = dataset.ns.apply(entity)
+        return {
+            "_index": index,
+            "_id": entity.id,
+            "_source": build_indexable_entity_doc(entity),
+        }
+    except FollowTheMoneyException as exc:
+        log.error("Invalid entity: %s" % exc, data=entity_data)
+        return None
+
+
 async def iter_entity_docs(
     updater: DatasetUpdater, index: str
 ) -> AsyncGenerator[Dict[str, Any], None]:
@@ -58,29 +89,9 @@ async def iter_entity_docs(
         op_code = data["op"]
         idx += 1
         ops[op_code] += 1
-        if op_code == "DEL":
-            yield {
-                "_op_type": "delete",
-                "_index": index,
-                "_id": data["entity"]["id"],
-            }
-            continue
-
-        try:
-            entity = Entity.from_dict(data["entity"])
-            entity.datasets = entity.datasets.intersection(datasets)
-            if not len(entity.datasets):
-                entity.datasets.add(dataset.name)
-            if dataset.ns is not None:
-                entity = dataset.ns.apply(entity)
-
-            yield {
-                "_index": index,
-                "_id": entity.id,
-                "_source": build_indexable_entity_doc(entity),
-            }
-        except FollowTheMoneyException as exc:
-            log.error("Invalid entity: %s" % exc, data=data)
+        action = build_entity_action(index, op_code, data["entity"], datasets, dataset)
+        if action is not None:
+            yield action
     log.info(
         "Indexed %d entities" % idx,
         added=ops["ADD"],
