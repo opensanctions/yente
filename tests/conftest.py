@@ -5,7 +5,12 @@
 #
 #   - zala_test_dataset:          small local sanctions cluster (Zakharov + Zala Aero)
 #   - parteispenden_test_dataset: small local dataset of German political donations
-#   - live_catalog_eu_fsf:        real eu_fsf catalog, fetched live from data.opensanctions.org
+#
+# For tests that exercise something very specific (a particular catalog shape,
+# scoping behaviour, etc.), prefer building a custom minimal manifest inline
+# in the test instead of adding a new shared fixture. This keeps each test
+# unit-testy (one thing under test), reduces fixture sprawl, and avoids
+# cross-test coupling. See test_catalog in tests/test_base.py for an example.
 import re
 import pytest_asyncio
 from datetime import datetime
@@ -81,42 +86,6 @@ async def empty_catalog():
 # during testing, which is slow
 def build_index_alias_name_for_fixture(fixture_name: str) -> str:
     return f"{settings.INDEX_NAME}-fixture-{fixture_name}"
-
-
-EU_FSF_MANIFEST = Manifest.model_validate(
-    {
-        "catalogs": [
-            {
-                "url": "https://data.opensanctions.org/datasets/latest/index.json",
-                "scope": "eu_fsf",
-                "resource_name": "entities.ftm.json",
-            }
-        ],
-        "datasets": [
-            {
-                "name": "parteispenden",
-                "title": "German political party donations",
-                "path": str(
-                    FIXTURES_PATH / "dataset" / "parteispenden" / "entities.ftm.json"
-                ),
-                "version": "100",
-            }
-        ],
-    }
-)
-
-
-# This fixture is function-scoped and just points the settings to the pre-loaded fixture-specific index alias
-@pytest_asyncio.fixture(scope="function", autouse=False)
-async def live_catalog_eu_fsf(monkeypatch):
-    monkeypatch.setattr(
-        settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("eu_fsf")
-    )
-    async with patch_yente_catalog(EU_FSF_MANIFEST):
-        # This call will only index the first time the fixture is used,
-        # all subsequent uses will be fast.
-        await update_index()
-        yield
 
 
 PARTEISPENDEN_MANIFEST = Manifest.model_validate(

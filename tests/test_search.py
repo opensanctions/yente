@@ -1,6 +1,16 @@
 import pytest
 
-from .conftest import client, assert_entity_shape
+from .conftest import (
+    ZALA_MANIFEST,
+    assert_entity_shape,
+    build_index_alias_name_for_fixture,
+    client,
+    patch_yente_catalog,
+)
+
+from yente import settings
+from yente.data.manifest import Manifest
+from yente.search.indexer import update_index
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
@@ -263,13 +273,42 @@ def test_search_sorted():
         prev_seen = res["first_seen"]
 
 
-@pytest.mark.usefixtures("live_catalog_eu_fsf")
-def test_search_zakharov_scope():
-    res = client.get("/search/peps?q=alexander zakharov")
-    assert res.status_code == 200, res
-    data = res.json()
-    results = data.get("results")
-    assert len(results) == 0, results
+@pytest.mark.asyncio
+async def test_search_zakharov_scope(monkeypatch):
+    monkeypatch.setattr(
+        settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("zala_zulu")
+    )
+    # Extend the ZALA manifest with a second, empty "zulu" dataset backed by
+    # /dev/null. Zakharov should be found when scoping to /search/zala but not
+    # to /search/zulu, exercising the dataset scope filter.
+    manifest = Manifest.model_validate(
+        {
+            "datasets": [
+                *(ds.copy() for ds in ZALA_MANIFEST.datasets),
+                {
+                    "name": "zulu",
+                    "title": "Empty test dataset",
+                    "entities_url": "file:///dev/null",
+                    "load": True,
+                    "version": "1",
+                },
+            ]
+        }
+    )
+
+    async with patch_yente_catalog(manifest):
+        await update_index()
+        zala_res = client.get("/search/zala?q=alexander zakharov")
+        zulu_res = client.get("/search/zulu?q=alexander zakharov")
+
+    assert zala_res.status_code == 200
+    zala_results = zala_res.json().get("results")
+    assert len(zala_results) > 0
+    assert any(r["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw" for r in zala_results)
+
+    assert zulu_res.status_code == 200
+    zulu_results = zulu_res.json().get("results")
+    assert len(zulu_results) == 0
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
