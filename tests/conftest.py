@@ -24,12 +24,22 @@ from followthemoney import model
 from followthemoney.dataset.util import dataset_name_check
 import orjson
 
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
 from yente import settings
 from yente.app import create_app
 from yente.search.indexer import update_index
 from yente.provider import with_provider, close_provider
 from yente.data.manifest import Catalog, Manifest
 import yente.data
+
+
+# In-memory OpenTelemetry metric reader so tests can assert on gauge values.
+# MeterProvider can only be set once globally, so we wire it up at module import.
+metric_reader = InMemoryMetricReader()
+metrics.set_meter_provider(MeterProvider(metric_readers=[metric_reader]))
 
 
 @asynccontextmanager

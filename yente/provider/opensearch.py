@@ -223,10 +223,8 @@ class OpenSearchProvider(SearchProvider):
     async def get_index_metadata(self, index: str) -> Dict[str, Any]:
         try:
             response = await self.client.indices.get_mapping(index=index)
-        except NotFoundError as nf:
-            raise YenteIndexError(f"Could not get index metadata: {nf}") from nf
-        except TransportError as te:
-            raise YenteIndexError(f"Could not get index metadata: {te}") from te
+        except (NotFoundError, TransportError) as exc:
+            raise YenteIndexError(f"Could not get index metadata: {exc}") from exc
         index_block = response.get(index, {})
         mappings = index_block.get("mappings", {})
         meta = mappings.get("_meta", {})

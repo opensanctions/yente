@@ -18,7 +18,8 @@ from yente.data import refresh_catalog
 from yente.data.entity import Entity
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
-from yente.provider import close_provider
+from yente.data.metrics import update_metrics
+from yente.provider import with_provider, close_provider
 from yente.middleware import (
     MaxURLLengthMiddleware,
     RequestLogMiddleware,
@@ -29,10 +30,15 @@ log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
 
 
-async def cron_task() -> None:
+async def refresh_catalog_cron_task() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
+
+
+async def update_metrics_task() -> None:
+    async with with_provider() as provider:
+        await update_metrics(provider)
 
 
 async def warm_up() -> None:
@@ -41,6 +47,7 @@ async def warm_up() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
+    await update_metrics_task()
 
     log.debug("Warming up matcher algorithms...")
     # This is the pragmatic and easy way to warm up the matcher algorithms. If anyone feels the call to
@@ -78,7 +85,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         crontab=settings.CRONTAB,
         auto_reindex=settings.AUTO_REINDEX,
     )
-    settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
+    settings.CRON = aiocron.crontab(settings.CRONTAB, func=refresh_catalog_cron_task)
+    # Local handle keeps the cron alive for the lifetime of the lifespan context.
+    _metrics_cron = aiocron.crontab("* * * * *", func=update_metrics_task)
     yield
     await close_provider()
 
