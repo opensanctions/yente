@@ -92,6 +92,8 @@ EU_FSF_MANIFEST = Manifest.model_validate(
                 "resource_name": "entities.ftm.json",
             }
         ],
+        # parteispenden is included as a local dataset alongside the remote
+        # catalog so tests can exercise the "catalog + local dataset" mix.
         "datasets": [
             {
                 "name": "parteispenden",
