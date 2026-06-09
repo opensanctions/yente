@@ -169,16 +169,14 @@ async def load_json_lines(
         log.info("Reading local data", url=url, path=path.as_posix())
         async for line in read_path_lines(path):
             yield line
+        return
 
-    elif not settings.STREAM_LOAD:
+    actual_checksum: str
+    if not settings.STREAM_LOAD:
         path = settings.DATA_PATH.joinpath(base_name)
         log.info("Fetching data", url=url, path=path.as_posix())
         try:
             actual_checksum = await fetch_url_to_path(url, path, auth_token=auth_token)
-            if expected_checksum is not None and actual_checksum != expected_checksum:
-                raise ChecksumError(
-                    actual=actual_checksum, expected=expected_checksum, url=url
-                )
             async for line in read_path_lines(path):
                 yield line
         finally:
@@ -188,7 +186,9 @@ async def load_json_lines(
         stream = HttpLineStream(url, auth_token=auth_token)
         async for line in stream:
             yield line
-        if expected_checksum is not None and stream.checksum != expected_checksum:
-            raise ChecksumError(
-                actual=stream.checksum, expected=expected_checksum, url=url
-            )
+        actual_checksum = stream.checksum
+
+    if expected_checksum is not None and actual_checksum != expected_checksum:
+        raise ChecksumError(
+            actual=actual_checksum, expected=expected_checksum, url=url
+        )
