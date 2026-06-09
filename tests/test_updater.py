@@ -8,6 +8,7 @@ from typing import List, Any
 from yente.data import get_catalog
 from yente.data.manifest import Catalog, Manifest
 from yente.data.updater import DatasetUpdater
+from yente.exc import ChecksumError
 from yente.search.versions import get_system_version, parse_index_name, build_index_name
 
 
@@ -106,6 +107,45 @@ async def test_updater(httpx_mock: Any) -> None:
     assert ops["ADD"] == 4
     assert ops["DEL"] == 1
     assert ops["MOD"] == 1
+
+
+@pytest.mark.asyncio
+async def test_updater_checksum_mismatch(httpx_mock: Any) -> None:
+    """
+    The catalog declares a SHA1 for the sanctions entities resource; if the
+    streamed content hashes to anything else, load() must raise ChecksumError.
+    """
+    url_pat = re.compile(
+        "https:\/\/data\.opensanctions\.org\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
+    )
+    mismatched = (FIXTURES_PATH / "dataset/t1/entities.ftm.json").read_bytes() + b"\n"
+    httpx_mock.add_response(200, url=url_pat, content=mismatched)
+    httpx_mock.add_response(
+        200,
+        url="https://data.opensanctions.org/datasets/latest/index.json",
+        content=(FIXTURES_PATH / "dataset/t1/index.json").read_bytes(),
+    )
+    yente.data._catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "catalogs": [
+                    {
+                        "url": "https://data.opensanctions.org/datasets/latest/index.json",
+                        "scope": "sanctions",
+                        "resource_name": "entities.ftm.json",
+                    }
+                ],
+            }
+        )
+    )
+    catalog = await get_catalog()
+    dataset = catalog.get("sanctions")
+    assert dataset is not None
+    assert dataset.model.entities_checksum is not None
+
+    updater = await DatasetUpdater.build(dataset, None)
+    with pytest.raises(ChecksumError):
+        [x async for x in updater.load()]
 
 
 def test_parse_index_name():
