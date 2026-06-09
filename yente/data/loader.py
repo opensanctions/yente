@@ -89,7 +89,7 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
             yield orjson.loads(line)
 
 
-class HashedStream:
+class HashingResponseStream:
     def __init__(self, stream: httpx.Response) -> None:
         self.stream = stream
         self.digest = sha1()
@@ -103,9 +103,7 @@ class HashedStream:
         return self.digest.hexdigest()
 
 
-async def split_json_lines(
-    chunks: AsyncIterable[bytes],
-) -> AsyncGenerator[Any, None]:
+async def split_json_lines(chunks: AsyncIterable[bytes]) -> AsyncGenerator[Any, None]:
     """Split byte chunks on newlines and yield each non-empty line as parsed JSON."""
     buf = b""
     async for chunk in chunks:
@@ -118,7 +116,7 @@ async def split_json_lines(
         yield orjson.loads(buf)
 
 
-class HttpLineStream:
+class HttpJsonLinesStream:
     """Stream JSON lines from a URL; ``checksum`` holds the SHA1 hex digest once fully consumed."""
 
     def __init__(self, url: str, auth_token: Optional[str] = None) -> None:
@@ -131,11 +129,11 @@ class HttpLineStream:
 
     @property
     def checksum(self) -> str:
-        if self._checksum is None:
-            raise RuntimeError(
-                "HttpLineStream checksum is not available until iteration completes"
-            )
-        return self._checksum
+        if self._checksum is not None:
+            return self._checksum
+
+        msg = "HttpJsonLinesStream checksum is not available until iteration completes"
+        raise RuntimeError(msg)
 
     async def _stream(self) -> AsyncGenerator[Any, None]:
         for retry in count():
@@ -144,7 +142,7 @@ class HttpLineStream:
                     async with client.stream("GET", self.url) as resp:
                         # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
                         raise_for_status_with_custom_error(resp)
-                        hashed_stream = HashedStream(resp)
+                        hashed_stream = HashingResponseStream(resp)
                         async for line in split_json_lines(hashed_stream):
                             yield line
                 self._checksum = hashed_stream.hexdigest()
@@ -183,12 +181,10 @@ async def load_json_lines(
             path.unlink(missing_ok=True)
     else:
         log.info("Streaming data", url=url)
-        stream = HttpLineStream(url, auth_token=auth_token)
+        stream = HttpJsonLinesStream(url, auth_token=auth_token)
         async for line in stream:
             yield line
         actual_checksum = stream.checksum
 
     if expected_checksum is not None and actual_checksum != expected_checksum:
-        raise ChecksumError(
-            actual=actual_checksum, expected=expected_checksum, url=url
-        )
+        raise ChecksumError(actual=actual_checksum, expected=expected_checksum, url=url)
