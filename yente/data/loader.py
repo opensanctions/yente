@@ -124,10 +124,18 @@ class HttpLineStream:
     def __init__(self, url: str, auth_token: Optional[str] = None) -> None:
         self.url = url
         self.auth_token = auth_token
-        self.checksum: Optional[str] = None
+        self._checksum: Optional[str] = None
 
     def __aiter__(self) -> AsyncIterator[Any]:
         return self._stream()
+
+    @property
+    def checksum(self) -> str:
+        if self._checksum is None:
+            raise RuntimeError(
+                "HttpLineStream checksum is not available until iteration completes"
+            )
+        return self._checksum
 
     async def _stream(self) -> AsyncGenerator[Any, None]:
         for retry in count():
@@ -139,7 +147,7 @@ class HttpLineStream:
                         hashed_stream = HashedStream(resp)
                         async for line in split_json_lines(hashed_stream):
                             yield line
-                self.checksum = hashed_stream.hexdigest()
+                self._checksum = hashed_stream.hexdigest()
                 return
             except httpx.TransportError as exc:
                 if retry > 3:
@@ -180,5 +188,5 @@ async def load_json_lines(
             yield line
         if expected_checksum is not None and stream.checksum != expected_checksum:
             raise ChecksumError(
-                actual=str(stream.checksum), expected=expected_checksum, url=url
+                actual=stream.checksum, expected=expected_checksum, url=url
             )
