@@ -123,6 +123,9 @@ AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
 
 # Fetch the entire bulk data file before indexing into the search index:
 STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
+
+# Verify the SHA1 checksum of fetched entity data against the catalog:
+VERIFY_CHECKSUM = as_bool(env_str("YENTE_VERIFY_CHECKSUM", "true"))
 # this would be cached here:
 DATA_PATH = Path(env_str("YENTE_DATA_PATH", "/tmp"))
 
