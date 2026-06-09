@@ -86,6 +86,7 @@ class Dataset(FollowTheMoneyDataset):
                 return resource
             if resource_type is not None and resource.mime_type == resource_type:
                 return resource
+        return None
 
     def to_dict(self) -> Dict[str, Any]:
         data = super().to_dict()
