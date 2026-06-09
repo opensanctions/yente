@@ -213,6 +213,24 @@ class OpenSearchProvider(SearchProvider):
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
     @traced
+    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+        try:
+            await self.client.indices.put_mapping(index=index, body={"_meta": metadata})
+        except TransportError as te:
+            raise YenteIndexError(f"Could not set index metadata: {te}") from te
+
+    @traced
+    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+        try:
+            response = await self.client.indices.get_mapping(index=index)
+        except (NotFoundError, TransportError) as exc:
+            raise YenteIndexError(f"Could not get index metadata: {exc}") from exc
+        index_block = response.get(index, {})
+        mappings = index_block.get("mappings", {})
+        meta = mappings.get("_meta", {})
+        return cast(Dict[str, Any], meta)
+
+    @traced
     async def delete_index(self, index: str) -> None:
         """Delete a given index if it exists."""
         try:

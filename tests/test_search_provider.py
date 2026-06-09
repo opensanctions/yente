@@ -153,10 +153,67 @@ async def test_clone_index_failure_restores_read_only(search_provider: SearchPro
     index_settings = resp[source]["settings"]["index"]
     blocks = index_settings.get("blocks", {})
     read_only = blocks.get("read_only", "false")
-    assert (
-        str(read_only).lower() != "true"
-    ), f"Source index is still read-only after failed clone: {read_only}"
+    assert str(read_only).lower() != "true", (
+        f"Source index is still read-only after failed clone: {read_only}"
+    )
 
     # Clean up
     await search_provider.delete_index(source)
     await search_provider.delete_index(target)
+
+
+@pytest.mark.asyncio
+async def test_index_metadata_roundtrip(search_provider: SearchProvider):
+    temp_index = settings.ENTITY_INDEX + "-meta-test"
+    await search_provider.create_index(
+        temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
+    try:
+        # Fresh index has no metadata
+        assert await search_provider.get_index_metadata(temp_index) == {}
+
+        # Round-trip a multi-key metadata dict
+        meta_v1 = {"last_export": "2026-06-01T12:00:00", "other": "x"}
+        await search_provider.set_index_metadata(temp_index, meta_v1)
+        assert await search_provider.get_index_metadata(temp_index) == meta_v1
+
+        # Replace-not-merge: setting a smaller dict drops keys not in it
+        meta_v2 = {"last_export": "2026-06-02T12:00:00"}
+        await search_provider.set_index_metadata(temp_index, meta_v2)
+        assert await search_provider.get_index_metadata(temp_index) == meta_v2
+
+        # Clearing
+        await search_provider.set_index_metadata(temp_index, {})
+        assert await search_provider.get_index_metadata(temp_index) == {}
+    finally:
+        await search_provider.delete_index(temp_index)
+
+
+@pytest.mark.asyncio
+async def test_index_metadata_clone_inherits_then_overwrites(
+    search_provider: SearchProvider,
+):
+    """Cloning copies the source's _meta to the target. Our indexer relies on
+    set_index_metadata being able to overwrite that inherited value."""
+    source = settings.ENTITY_INDEX + "-meta-clone-src"
+    target = settings.ENTITY_INDEX + "-meta-clone-tgt"
+    await search_provider.create_index(
+        source, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
+    )
+    try:
+        await search_provider.set_index_metadata(source, {"last_export": "A"})
+        await search_provider.clone_index(source, target)
+        try:
+            # Pin the ES behavior we're relying on
+            assert await search_provider.get_index_metadata(target) == {
+                "last_export": "A"
+            }
+            # And our overwrite works on the cloned index
+            await search_provider.set_index_metadata(target, {"last_export": "B"})
+            assert await search_provider.get_index_metadata(target) == {
+                "last_export": "B"
+            }
+        finally:
+            await search_provider.delete_index(target)
+    finally:
+        await search_provider.delete_index(source)

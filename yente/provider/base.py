@@ -2,8 +2,20 @@ from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
 
 
 class SearchProvider(object):
-
     async def close(self) -> None:
+        raise NotImplementedError
+
+    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+        """Replace the index-level metadata dict with `metadata`.
+
+        Note: this is a full replace, not a merge — any keys previously present
+        and not in `metadata` will be removed. Callers must pass the complete
+        desired metadata.
+        """
+        raise NotImplementedError
+
+    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+        """Return the index-level metadata dict, or an empty dict if none is set."""
         raise NotImplementedError
 
     async def refresh(self, index: str) -> None:

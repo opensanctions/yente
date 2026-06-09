@@ -39,6 +39,7 @@ from yente.search.versions import (
     get_system_version,
 )
 from yente.data.util import entity_weak_names, expand_dates, index_symbols
+from yente.data.metrics import update_dataset_version_metric
 
 
 log = get_logger(__name__)
@@ -272,6 +273,17 @@ async def index_entities(
             )
         raise exc
 
+    # Always overwrite metadata: a fresh index has none, and a cloned index
+    # inherits the source's _meta (mappings can't be overridden in a clone request).
+    #
+    # Dates in ES documents would normally be stored as timestamps, but index
+    # metadata is just an opaque blob — ES doesn't parse or process it. For
+    # consistency we store values here exactly as we got them from the catalog.
+    index_metadata: Dict[str, Any] = {}
+    if dataset.model.last_export is not None:
+        index_metadata["last_export"] = dataset.model.last_export.isoformat()
+    await provider.set_index_metadata(next_index, index_metadata)
+
     await provider.refresh(index=next_index)
     dataset_prefix = build_index_name_prefix(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
@@ -289,6 +301,10 @@ async def index_entities(
         message=f"Alias {alias} prefixed {dataset_prefix} now points to {next_index}",
     )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
+    # Also refreshed periodically by update_metrics in a cron — calling it
+    # here just makes the gauge reflect a fresh reindex without waiting for
+    # the next cron tick.
+    await update_dataset_version_metric(dataset.name, next_index, provider)
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
