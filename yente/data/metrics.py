@@ -11,7 +11,7 @@ log = get_logger(__name__)
 
 _meter = metrics.get_meter("yente.data")
 _indexed_dataset_version_time = _meter.create_gauge(
-    "indexed_dataset_version_time",
+    "yente.data.indexed_dataset_version_time",
     unit="s",
     description="Unix timestamp of the dataset's last_export for each indexed dataset",
 )

@@ -96,7 +96,7 @@ async def test_reindex_with_new_last_export_updates_gauge(
     creates a fresh index (the version is derived from `last_export`) and the
     gauge moves to the new timestamp."""
     # First load (via the fixture) — gauge should reflect the initial export.
-    initial_values = _gauge_values_by_dataset("indexed_dataset_version_time")
+    initial_values = _gauge_values_by_dataset("yente.data.indexed_dataset_version_time")
     assert initial_values.get("zala") == int(
         datetime.fromisoformat(INITIAL_LAST_EXPORT_ISO).timestamp()
     )
@@ -105,7 +105,7 @@ async def test_reindex_with_new_last_export_updates_gauge(
     async with patch_yente_catalog(ZALA_WITH_UPDATED_LAST_EXPORT_MANIFEST):
         await update_index()
 
-    updated_values = _gauge_values_by_dataset("indexed_dataset_version_time")
+    updated_values = _gauge_values_by_dataset("yente.data.indexed_dataset_version_time")
     assert updated_values.get("zala") == int(
         datetime.fromisoformat(UPDATED_LAST_EXPORT_ISO).timestamp()
     )
@@ -125,7 +125,7 @@ async def test_update_dataset_version_metric_missing_metadata(
         await update_dataset_version_metric(
             "dataset-with-no-meta", temp_index, search_provider
         )
-        values = _gauge_values_by_dataset("indexed_dataset_version_time")
+        values = _gauge_values_by_dataset("yente.data.indexed_dataset_version_time")
         assert "dataset-with-no-meta" not in values
     finally:
         await search_provider.delete_index(temp_index)
