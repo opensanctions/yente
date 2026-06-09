@@ -6,7 +6,13 @@ import aiofiles
 from hashlib import sha1
 from pathlib import Path
 from itertools import count
-from typing import Any, AsyncGenerator, AsyncIterator, Optional
+from typing import (
+    Any,
+    AsyncGenerator,
+    AsyncIterable,
+    AsyncIterator,
+    Optional,
+)
 
 from yente import settings
 from yente.exc import ChecksumError
@@ -83,6 +89,35 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
             yield orjson.loads(line)
 
 
+class HashedStream:
+    def __init__(self, stream: httpx.Response) -> None:
+        self.stream = stream
+        self.digest = sha1()
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        async for chunk in self.stream.aiter_bytes():
+            self.digest.update(chunk)
+            yield chunk
+
+    def hexdigest(self) -> str:
+        return self.digest.hexdigest()
+
+
+async def split_json_lines(
+    chunks: AsyncIterable[bytes],
+) -> AsyncGenerator[Any, None]:
+    """Split byte chunks on newlines and yield each non-empty line as parsed JSON."""
+    buf = b""
+    async for chunk in chunks:
+        buf += chunk
+        while b"\n" in buf:
+            raw_line, buf = buf.split(b"\n", 1)
+            if raw_line.strip():
+                yield orjson.loads(raw_line)
+    if buf.strip():
+        yield orjson.loads(buf)
+
+
 class HttpLineStream:
     """Stream JSON lines from a URL; ``checksum`` holds the SHA1 hex digest once fully consumed."""
 
@@ -96,23 +131,15 @@ class HttpLineStream:
 
     async def _stream(self) -> AsyncGenerator[Any, None]:
         for retry in count():
-            digest = sha1()
             try:
                 async with httpx_session(auth_token=self.auth_token) as client:
                     async with client.stream("GET", self.url) as resp:
                         # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
                         raise_for_status_with_custom_error(resp)
-                        buf = b""
-                        async for chunk in resp.aiter_bytes():
-                            digest.update(chunk)
-                            buf += chunk
-                            while b"\n" in buf:
-                                raw_line, buf = buf.split(b"\n", 1)
-                                if raw_line.strip():
-                                    yield orjson.loads(raw_line)
-                        if buf.strip():
-                            yield orjson.loads(buf)
-                self.checksum = digest.hexdigest()
+                        hashed_stream = HashedStream(resp)
+                        async for line in split_json_lines(hashed_stream):
+                            yield line
+                self.checksum = hashed_stream.hexdigest()
                 return
             except httpx.TransportError as exc:
                 if retry > 3:
