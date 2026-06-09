@@ -3,11 +3,13 @@ import httpx
 import orjson
 import asyncio
 import aiofiles
+from hashlib import sha1
 from pathlib import Path
 from itertools import count
 from typing import Any, AsyncGenerator, Optional
 
 from yente import settings
+from yente.exc import ChecksumError
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path, httpx_session
 
@@ -61,14 +63,18 @@ async def load_json_url(url: str, auth_token: Optional[str] = None) -> Any:
 
 async def fetch_url_to_path(
     url: str, path: Path, auth_token: Optional[str] = None
-) -> None:
+) -> str:
+    """Download url to path, returning the SHA1 hex digest of the downloaded bytes."""
+    digest = sha1()
     async with httpx_session(auth_token=auth_token) as client:
         async with client.stream("GET", url) as resp:
             # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
             raise_for_status_with_custom_error(resp)
             async with aiofiles.open(path, "wb") as outfh:
                 async for chunk in resp.aiter_bytes():
+                    digest.update(chunk)
                     await outfh.write(chunk)
+    return digest.hexdigest()
 
 
 async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
@@ -78,16 +84,39 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
 
 
 async def stream_http_lines(
-    url: str, auth_token: Optional[str] = None
+    url: str,
+    auth_token: Optional[str] = None,
+    expected_checksum: Optional[str] = None,
 ) -> AsyncGenerator[Any, None]:
     for retry in count():
+        digest = sha1() if expected_checksum is not None else None
         try:
             async with httpx_session(auth_token=auth_token) as client:
                 async with client.stream("GET", url) as resp:
                     # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
                     raise_for_status_with_custom_error(resp)
-                    async for line in resp.aiter_lines():
-                        yield orjson.loads(line)
+                    if digest is not None:
+                        # Use raw bytes to hash the same bytes as the on-disk file,
+                        # then split lines manually.
+                        buf = b""
+                        async for chunk in resp.aiter_bytes():
+                            digest.update(chunk)
+                            buf += chunk
+                            while b"\n" in buf:
+                                raw_line, buf = buf.split(b"\n", 1)
+                                if raw_line.strip():
+                                    yield orjson.loads(raw_line)
+                        if buf.strip():
+                            yield orjson.loads(buf)
+                    else:
+                        async for line in resp.aiter_lines():
+                            yield orjson.loads(line)
+                    if digest is not None:
+                        actual = digest.hexdigest()
+                        if actual != expected_checksum:
+                            raise ChecksumError(
+                                actual=actual, expected=str(expected_checksum), url=url
+                            )
                     return
         except httpx.TransportError as exc:
             if retry > 3:
@@ -97,7 +126,10 @@ async def stream_http_lines(
 
 
 async def load_json_lines(
-    url: str, base_name: str, auth_token: Optional[str] = None
+    url: str,
+    base_name: str,
+    auth_token: Optional[str] = None,
+    expected_checksum: Optional[str] = None,
 ) -> AsyncGenerator[Any, None]:
     path = get_url_local_path(url)
     if path is not None:
@@ -109,12 +141,18 @@ async def load_json_lines(
         path = settings.DATA_PATH.joinpath(base_name)
         log.info("Fetching data", url=url, path=path.as_posix())
         try:
-            await fetch_url_to_path(url, path, auth_token=auth_token)
+            actual_checksum = await fetch_url_to_path(url, path, auth_token=auth_token)
+            if expected_checksum is not None and actual_checksum != expected_checksum:
+                raise ChecksumError(
+                    actual=actual_checksum, expected=expected_checksum, url=url
+                )
             async for line in read_path_lines(path):
                 yield line
         finally:
             path.unlink(missing_ok=True)
     else:
         log.info("Streaming data", url=url)
-        async for line in stream_http_lines(url, auth_token=auth_token):
+        async for line in stream_http_lines(
+            url, auth_token=auth_token, expected_checksum=expected_checksum
+        ):
             yield line

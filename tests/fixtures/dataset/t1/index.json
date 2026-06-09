@@ -50531,7 +50531,7 @@
         {
           "name": "entities.ftm.json",
           "url": "https://data.opensanctions.org/datasets/20240613/sanctions/entities.ftm.json",
-          "checksum": "99b1ba01c67f88f06fd481a833250d90bfd4b4fa",
+          "checksum": "fe862534952801894f680004869f9e879b8910d9",
           "mime_type": "application/json+ftm",
           "mime_type_label": "FollowTheMoney Entities",
           "title": "FollowTheMoney entities",
