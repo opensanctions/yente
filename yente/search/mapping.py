@@ -18,6 +18,13 @@ DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-
 TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
     "analysis": {
+        "filter": {
+            "osa-ngram-filter": {
+                "type": "ngram",
+                "min_gram": 3,
+                "max_gram": 3,
+            }
+        },
         "normalizer": {
             "osa-normalizer": {
                 "type": "custom",
@@ -28,7 +35,11 @@ INDEX_SETTINGS = {
             "osa-analyzer": {
                 "tokenizer": "standard",
                 "filter": ["lowercase", "asciifolding"],
-            }
+            },
+            "osa-ngram-analyzer": {
+                "tokenizer": "standard",
+                "filter": ["lowercase", "asciifolding", "osa-ngram-filter"],
+            },
         },
     },
     "index": {
@@ -58,6 +69,7 @@ INDEX_SETTINGS = {
     },
 }
 NAMES_FIELD = NameType.group or "names"
+NAME_NGRAMS_FIELD = f"{NAMES_FIELD}.ngrams"
 NAME_PART_FIELD = "name_parts"
 NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_PHONETIC_FIELD = "name_phonetic"
@@ -176,6 +188,13 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
     # Weaker length normalization for names. Merged entities have a lot of names,
     # and we don't want to penalize them for that.
     mapping[NAMES_FIELD]["similarity"] = "weak_length_norm"
+    # Trigram sub-field for fuzzy candidate retrieval without query-time Levenshtein expansion.
+    mapping[NAMES_FIELD]["fields"] = {
+        "ngrams": {
+            "type": "text",
+            "analyzer": "osa-ngram-analyzer",
+        }
+    }
 
     # These fields will be pruned from the _source field after the document has been
     # indexed, but before the _source field is stored. We can still search on these fields,
