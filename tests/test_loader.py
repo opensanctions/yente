@@ -8,11 +8,6 @@ from yente.data.loader import load_json_lines, split_json_lines
 from yente.exc import ChecksumError
 
 
-@pytest.fixture
-def non_mocked_hosts() -> List[str]:
-    return ["localhost"]
-
-
 async def _aiter(chunks: List[bytes]):
     for chunk in chunks:
         yield chunk
