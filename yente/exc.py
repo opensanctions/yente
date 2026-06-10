@@ -34,3 +34,14 @@ class IndexNotReadyError(YenteIndexError):
 
 class YenteNotFoundError(YenteIndexError):
     STATUS = 404
+
+
+class ChecksumError(YenteIndexError):
+    """Raised when the SHA1 checksum of a downloaded resource does not match the catalog."""
+
+    def __init__(self, actual: str, expected: str, url: str = ""):
+        detail = f"Checksum mismatch for {url!r}: got {actual!r}, expected {expected!r}"
+        super().__init__(detail)
+        self.actual = actual
+        self.expected = expected
+        self.url = url
