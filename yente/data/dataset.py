@@ -56,11 +56,14 @@ class Dataset(FollowTheMoneyDataset):
                 resource = self._get_entities_resource(data)
                 if resource is not None:
                     self.model.entities_url = resource.url
-                    self.model.entities_checksum = resource.checksum
-                    if self.model.entities_checksum is None:
-                        log.warning(
-                            "Resource %s does not have a checksum.", resource.url
-                        )
+                    if settings.VERIFY_CHECKSUM:
+                        self.model.entities_checksum = resource.checksum
+                        # If checksum check is enabled and we're using a resource as a data source,
+                        # warn if the resource does not have a checksum.
+                        if self.model.entities_checksum is None:
+                            log.warning(
+                                "Resource %s does not have a checksum.", resource.url
+                            )
 
         if self.model.version is None:
             ts: Optional[str] = data.get("last_export", datetime_iso(settings.RUN_DT))

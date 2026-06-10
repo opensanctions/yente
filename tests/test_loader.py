@@ -100,23 +100,3 @@ async def test_load_json_lines_file_branch_mismatched_checksum(
             )
         ]
     assert not (tmp_path / "test-mismatch").exists()
-
-
-@pytest.mark.asyncio
-async def test_load_json_lines_skips_verification_when_disabled(
-    httpx_mock: Any, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """With VERIFY_CHECKSUM off, a mismatched expected_checksum must not raise."""
-    monkeypatch.setattr(settings, "VERIFY_CHECKSUM", False)
-
-    url = "https://example.com/entities.ftm.json"
-    content = b'{"a":1}\n{"b":2}\n'
-    httpx_mock.add_response(200, url=url, content=content)
-
-    lines = [
-        x
-        async for x in load_json_lines(
-            url, "test-skip", expected_checksum="0" * 40
-        )
-    ]
-    assert lines == [{"a": 1}, {"b": 2}]

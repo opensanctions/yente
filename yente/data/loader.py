@@ -160,8 +160,6 @@ async def load_json_lines(
     auth_token: Optional[str] = None,
     expected_checksum: Optional[str] = None,
 ) -> AsyncGenerator[Any, None]:
-    if not settings.VERIFY_CHECKSUM:
-        expected_checksum = None
     path = get_url_local_path(url)
     if path is not None:
         log.info("Reading local data", url=url, path=path.as_posix())
