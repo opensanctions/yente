@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from pydantic import Field, FilePath, computed_field, field_validator
 from rigour.time import datetime_iso
-from followthemoney.dataset import Dataset as FollowTheMoneyDataset
+from followthemoney.dataset import DataResource, Dataset as FollowTheMoneyDataset
 from followthemoney.dataset.dataset import DatasetModel
 from followthemoney.dataset.util import Url
 from followthemoney.namespace import Namespace
@@ -17,6 +17,7 @@ log = get_logger(__name__)
 class YenteDatasetModel(DatasetModel):
     load: Optional[bool] = None
     entities_url: Optional[str] = None
+    entities_checksum: Optional[str] = Field(None, exclude=True)
     path: Optional[FilePath] = Field(None, exclude=True)
     auth_token: Optional[str] = Field(None, exclude=True)
     delta_url: Optional[Url] = None
@@ -49,7 +50,20 @@ class Dataset(FollowTheMoneyDataset):
         if self.model.load is None:
             self.model.load = not self.is_collection
         if self.model.entities_url is None:
-            self.model.entities_url = self._get_entities_url(data)
+            if self.model.path is not None:
+                self.model.entities_url = self.model.path.resolve().as_uri()
+            else:
+                resource = self._get_entities_resource(data)
+                if resource is not None:
+                    self.model.entities_url = resource.url
+                    if settings.VERIFY_CHECKSUM:
+                        self.model.entities_checksum = resource.checksum
+                        # If checksum check is enabled and we're using a resource as a data source,
+                        # warn if the resource does not have a checksum.
+                        if self.model.entities_checksum is None:
+                            log.warning(
+                                "Resource %s does not have a checksum.", resource.url
+                            )
 
         if self.model.version is None:
             ts: Optional[str] = data.get("last_export", datetime_iso(settings.RUN_DT))
@@ -64,18 +78,17 @@ class Dataset(FollowTheMoneyDataset):
 
         self.ns = Namespace(self.name) if self.model.namespace else None
 
-    def _get_entities_url(self, data: Dict[str, Any]) -> Optional[str]:
-        if self.model.path is not None:
-            return self.model.path.resolve().as_uri()
+    def _get_entities_resource(self, data: Dict[str, Any]) -> Optional[DataResource]:
+        """Return entities resource identified by catalog options."""
         resource_name = self.model.resource_name
         resource_type = self.model.resource_type
         for resource in self.model.resources:
             if resource.url is None:
                 continue
             if resource_name is not None and resource.name == resource_name:
-                return resource.url
+                return resource
             if resource_type is not None and resource.mime_type == resource_type:
-                return resource.url
+                return resource
         return None
 
     def to_dict(self) -> Dict[str, Any]:

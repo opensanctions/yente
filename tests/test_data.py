@@ -4,13 +4,49 @@ from followthemoney import model
 from followthemoney.names import entity_names
 from rigour.names import NamePartTag
 
+from yente import settings
 from yente.data import get_catalog
+from yente.data.dataset import Dataset
 from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
 from yente.data.util import expand_dates
 from yente.exc import YenteConfigError
 from .conftest import patch_catalog_response
+
+
+def _resource_dataset_spec(checksum: str) -> dict:
+    return {
+        "name": "test_dataset",
+        "title": "Test Dataset",
+        "resource_name": "entities.ftm.json",
+        "resources": [
+            {
+                "name": "entities.ftm.json",
+                "url": "https://example.com/entities.ftm.json",
+                "checksum": checksum,
+                "mime_type": "application/json+ftm",
+            }
+        ],
+    }
+
+
+def test_dataset_captures_checksum_when_verify_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "VERIFY_CHECKSUM", True)
+    dataset = Dataset(_resource_dataset_spec("abc123"))
+    assert dataset.model.entities_url == "https://example.com/entities.ftm.json"
+    assert dataset.model.entities_checksum == "abc123"
+
+
+def test_dataset_skips_checksum_when_verify_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "VERIFY_CHECKSUM", False)
+    dataset = Dataset(_resource_dataset_spec("abc123"))
+    assert dataset.model.entities_url == "https://example.com/entities.ftm.json"
+    assert dataset.model.entities_checksum is None
 
 
 @pytest.mark.asyncio
