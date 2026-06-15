@@ -36,8 +36,8 @@ async def test_search_provider_creates_spans(search_provider, span_exporter):
     assert len(spans) == 1, f"Expected 1 search span, got: {[s.name for s in spans]}"
 
     span = spans[0]
-    assert span.attributes["db.system"] in ("elasticsearch", "opensearch")
-    assert span.attributes["db.operation"] == "search"
+    assert span.attributes["db.system.name"] in ("elasticsearch", "opensearch")
+    assert span.attributes["db.operation.name"] == "search"
 
 
 @pytest.mark.asyncio

@@ -41,8 +41,8 @@ def traced(method: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(method)
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         span = trace.get_current_span()
-        span.set_attribute("db.system", "opensearch")
-        span.set_attribute("db.operation", name)
+        span.set_attribute("db.system.name", "opensearch")
+        span.set_attribute("db.operation.name", name)
         return await method(self, *args, **kwargs)
 
     return wrapper

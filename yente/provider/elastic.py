@@ -28,8 +28,8 @@ class ElasticSearchProvider(SearchProvider):
         )
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
-            kwargs["sniffer_timeout"] = 60
-            kwargs["sniff_on_connection_fail"] = True
+            kwargs["min_delay_between_sniffing"] = 60
+            kwargs["sniff_on_node_failure"] = True
         if settings.ES_CLOUD_ID:
             log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
             kwargs["cloud_id"] = settings.ES_CLOUD_ID
@@ -122,9 +122,7 @@ class ElasticSearchProvider(SearchProvider):
                 await self.client().indices.clone(
                     index=base_version,
                     target=target_version,
-                    body={
-                        "settings": {"index": {"blocks": {"read_only": False}}},
-                    },
+                    settings={"index": {"blocks": {"read_only": False}}},
                 )
             except Exception:
                 # On failure, clean up our failed clone and re-raise
@@ -170,9 +168,7 @@ class ElasticSearchProvider(SearchProvider):
 
     async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
         try:
-            await self.client().indices.put_mapping(
-                index=index, body={"_meta": metadata}
-            )
+            await self.client().indices.put_mapping(index=index, meta=metadata)
         except (ApiError, TransportError) as te:
             raise YenteIndexError(f"Could not set index metadata: {te}") from te
 
