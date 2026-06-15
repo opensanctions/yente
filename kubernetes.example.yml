@@ -213,7 +213,7 @@ kind: Elasticsearch
 metadata:
   name: yente-index
 spec:
-  version: 8.14.3
+  version: 9.4.2
   http:
     tls:
       selfSignedCertificate:
