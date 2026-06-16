@@ -17,7 +17,7 @@ from yente.data.dataset import Dataset
 from yente.data.util import entity_weak_names, index_symbols
 from yente.search.indexer import build_name_variants
 from yente.search.mapping import NAME_SYMBOLS_FIELD, NAME_VARIANTS_FIELD, NAMES_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD
+from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD, NAME_NGRAMS_FIELD
 
 log = get_logger(__name__)
 Clause = Dict[str, Any]
@@ -149,9 +149,20 @@ def names_query(entity: EntityProxy) -> List[Clause]:
                 "boost": 3.0,
             }
         }
-        if settings.MATCH_FUZZY or is_short:
-            match[NAMES_FIELD]["fuzziness"] = "AUTO"
         shoulds.append({"match": match})
+
+        if settings.MATCH_FUZZY or is_short:
+            shoulds.append(
+                {
+                    "match": {
+                        NAME_NGRAMS_FIELD: {
+                            "query": picked_name,
+                            "minimum_should_match": "70%",
+                            "boost": 1.5,
+                        }
+                    }
+                }
+            )
 
     seen: Set[str] = set()
     consolidated_names = Name.consolidate_names(name_objs)
