@@ -209,7 +209,7 @@ ENTITY_INDEX = f"{INDEX_NAME}-entities"
 # Bump this when the index format changes and a full reindex is required.
 # Be careful to make the query code compatible with the old index format, otherwise
 # yente will be unable to serve requests after the upgrade until the first reindex completes.
-INDEX_VERSION = "016"
+INDEX_VERSION = "017"
 # Bump this evn var when you want to trigger a full reindex.
 INDEX_REBUILD_ID = env_str("YENTE_INDEX_REBUILD_ID", "a")
 
