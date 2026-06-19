@@ -36,11 +36,11 @@ At this point, your yente is running entirely from the `yente-blue` indices. You
 
 ## Upgrading from Elasticsearch 8 to 9
 
-Elasticsearch is the search index software underlying yente. Version 9 of Elasticsearch was released in April 2025, and version 8 will be end-of-life in January 2027. Versions of yente released in 2025 or later are already compatible with both version 8 and 9 of the Elastic server, but versions of yente released after May 2026 will only be compatible with Elastic server 9. See the [official documentation for more information](https://www.elastic.co/docs/reference/elasticsearch/clients/python#_compatibility).
+Elasticsearch is the search index software underlying yente. Version 9 of Elasticsearch was released in April 2025, and version 8 will be end-of-life in January 2027. yente 5.4 and earlier are compatible with both Elastic server 8 and 9; yente 5.5 and later only support Elastic server 9. See the [official documentation for more information](https://www.elastic.co/docs/reference/elasticsearch/clients/python#_compatibility).
 
-When **upgrading from Elasticsearch 8 to 9** in the single-node setup that is used by default in the docker-compose based deployment outlined in [our documentation on deploying yente](index.md), we have observed no issues using the following path:
+If you are still on Elastic server 8, you need to upgrade your Elasticsearch cluster to 9 before upgrading yente. In the single-node setup that is used by default in the docker-compose based deployment outlined in [our documentation on deploying yente](index.md), we have observed no issues using the following path:
 
-1. Upgrade Elasticsearch to the latest version in the 8.x series in `docker-compose.yml` (at the time of writing, that's `8.19.13`, check [Docker Hub](https://hub.docker.com/_/elasticsearch) for the latest)
+1. Upgrade Elasticsearch to the latest version in the 8.x series (at the time of writing, that's `8.19.16`, check [Docker Hub](https://hub.docker.com/_/elasticsearch) for the latest)
 2. Restart Elasticsearch and verify everything works as expected (`docker compose up -d index`)
 3. Upgrade Elasticsearch to the latest version in the 9.x series in `docker-compose.yml`
 4. Restart Elasticsearch and verify everything works as expected.

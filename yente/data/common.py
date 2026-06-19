@@ -1,11 +1,11 @@
 from datetime import datetime
 from typing import Any, Dict, List, Union, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from nomenklatura.matching.types import (
     MatchingResult,
     FeatureDocs,
     AlgorithmDocs,
-    FtResult,
+    FeatureResult,
 )
 
 from yente import settings
@@ -31,9 +31,20 @@ class EntityResponse(BaseModel):
     last_seen: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
     last_change: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
 
+    # Entities come out of ES with these already as ISO strings. Responses
+    # are built via model_construct to skip re-validation, so pydantic has
+    # a str where it expected a datetime — emit it as-is instead of warning.
+    # A real datetime (should one ever appear) is still normalised to ISO.
+    # The exact wire format is pinned by assert_iso_seconds_no_tz in tests.
+    @field_serializer("first_seen", "last_seen", "last_change")
+    def _serialize_datetime(self, value: Any) -> Any:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return value
+
     @classmethod
     def from_entity(cls, entity: Entity) -> "EntityResponse":
-        return cls.model_validate(entity.to_dict())
+        return cls.model_construct(**entity.to_dict())
 
 
 EntityResponse.model_rebuild()
@@ -41,11 +52,10 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    explanations: Dict[str, FtResult] = Field(
+    explanations: Dict[str, FeatureResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
     match: bool = Field(description="Whether the score is above the match threshold.")
-    token: Optional[str] = None
 
     @classmethod
     def from_entity_result(
@@ -55,7 +65,7 @@ class ScoredEntityResponse(EntityResponse):
         data["score"] = result.score
         data["explanations"] = result.explanations
         data["match"] = result.score >= threshold
-        return cls.model_validate(data)
+        return cls.model_construct(**data)
 
 
 class StatusResponse(BaseModel):

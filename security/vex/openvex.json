@@ -1,0 +1,8 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/opensanctions/yente/blob/main/security/vex/openvex.json",
+  "author": "OpenSanctions",
+  "timestamp": "2026-05-22T00:00:00Z",
+  "version": 1,
+  "statements": []
+}

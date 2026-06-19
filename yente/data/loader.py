@@ -3,11 +3,19 @@ import httpx
 import orjson
 import asyncio
 import aiofiles
+from hashlib import sha1
 from pathlib import Path
 from itertools import count
-from typing import Any, AsyncGenerator, Optional
+from typing import (
+    Any,
+    AsyncGenerator,
+    AsyncIterable,
+    AsyncIterator,
+    Optional,
+)
 
 from yente import settings
+from yente.exc import ChecksumError
 from yente.logs import get_logger
 from yente.data.util import get_url_local_path, httpx_session
 
@@ -61,14 +69,18 @@ async def load_json_url(url: str, auth_token: Optional[str] = None) -> Any:
 
 async def fetch_url_to_path(
     url: str, path: Path, auth_token: Optional[str] = None
-) -> None:
+) -> str:
+    """Download url to path, returning the SHA1 hex digest of the downloaded bytes."""
+    digest = sha1()
     async with httpx_session(auth_token=auth_token) as client:
         async with client.stream("GET", url) as resp:
             # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
             raise_for_status_with_custom_error(resp)
             async with aiofiles.open(path, "wb") as outfh:
                 async for chunk in resp.aiter_bytes():
+                    digest.update(chunk)
                     await outfh.write(chunk)
+    return digest.hexdigest()
 
 
 async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
@@ -77,44 +89,100 @@ async def read_path_lines(path: Path) -> AsyncGenerator[Any, None]:
             yield orjson.loads(line)
 
 
-async def stream_http_lines(
-    url: str, auth_token: Optional[str] = None
-) -> AsyncGenerator[Any, None]:
-    for retry in count():
-        try:
-            async with httpx_session(auth_token=auth_token) as client:
-                async with client.stream("GET", url) as resp:
-                    # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
-                    raise_for_status_with_custom_error(resp)
-                    async for line in resp.aiter_lines():
-                        yield orjson.loads(line)
-                    return
-        except httpx.TransportError as exc:
-            if retry > 3:
-                raise
-            await asyncio.sleep(1.0)
-            log.error("Streaming index HTTP error: %s, retrying..." % exc)
+class HashingResponseStream:
+    def __init__(self, stream: httpx.Response) -> None:
+        self.stream = stream
+        self.digest = sha1()
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        async for chunk in self.stream.aiter_bytes():
+            self.digest.update(chunk)
+            yield chunk
+
+    def hexdigest(self) -> str:
+        return self.digest.hexdigest()
+
+
+async def split_json_lines(chunks: AsyncIterable[bytes]) -> AsyncGenerator[Any, None]:
+    """Split byte chunks on newlines and yield each non-empty line as parsed JSON."""
+    buf = b""
+    async for chunk in chunks:
+        buf += chunk
+        while b"\n" in buf:
+            raw_line, buf = buf.split(b"\n", 1)
+            if raw_line.strip():
+                yield orjson.loads(raw_line)
+    if buf.strip():
+        yield orjson.loads(buf)
+
+
+class HttpJsonLinesStream:
+    """Stream JSON lines from a URL; ``checksum`` holds the SHA1 hex digest once fully consumed."""
+
+    def __init__(self, url: str, auth_token: Optional[str] = None) -> None:
+        self.url = url
+        self.auth_token = auth_token
+        self._checksum: Optional[str] = None
+
+    def __aiter__(self) -> AsyncIterator[Any]:
+        return self._stream()
+
+    @property
+    def checksum(self) -> str:
+        if self._checksum is not None:
+            return self._checksum
+
+        msg = "HttpJsonLinesStream checksum is not available until iteration completes"
+        raise RuntimeError(msg)
+
+    async def _stream(self) -> AsyncGenerator[Any, None]:
+        for retry in count():
+            try:
+                async with httpx_session(auth_token=self.auth_token) as client:
+                    async with client.stream("GET", self.url) as resp:
+                        # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+                        raise_for_status_with_custom_error(resp)
+                        hashed_stream = HashingResponseStream(resp)
+                        async for line in split_json_lines(hashed_stream):
+                            yield line
+                self._checksum = hashed_stream.hexdigest()
+                return
+            except httpx.TransportError as exc:
+                if retry > 3:
+                    raise
+                await asyncio.sleep(1.0)
+                log.error("Streaming index HTTP error: %s, retrying..." % exc)
 
 
 async def load_json_lines(
-    url: str, base_name: str, auth_token: Optional[str] = None
+    url: str,
+    base_name: str,
+    auth_token: Optional[str] = None,
+    expected_checksum: Optional[str] = None,
 ) -> AsyncGenerator[Any, None]:
     path = get_url_local_path(url)
     if path is not None:
         log.info("Reading local data", url=url, path=path.as_posix())
         async for line in read_path_lines(path):
             yield line
+        return
 
-    elif not settings.STREAM_LOAD:
+    actual_checksum: str
+    if not settings.STREAM_LOAD:
         path = settings.DATA_PATH.joinpath(base_name)
         log.info("Fetching data", url=url, path=path.as_posix())
         try:
-            await fetch_url_to_path(url, path, auth_token=auth_token)
+            actual_checksum = await fetch_url_to_path(url, path, auth_token=auth_token)
             async for line in read_path_lines(path):
                 yield line
         finally:
             path.unlink(missing_ok=True)
     else:
         log.info("Streaming data", url=url)
-        async for line in stream_http_lines(url, auth_token=auth_token):
+        stream = HttpJsonLinesStream(url, auth_token=auth_token)
+        async for line in stream:
             yield line
+        actual_checksum = stream.checksum
+
+    if expected_checksum is not None and actual_checksum != expected_checksum:
+        raise ChecksumError(actual=actual_checksum, expected=expected_checksum, url=url)

@@ -24,7 +24,7 @@ def random_cron() -> str:
     return f"{random_minute} * * * *"
 
 
-VERSION = "5.3.0"
+VERSION = "5.4.0"
 AUTHOR = "OpenSanctions"
 HOME_PAGE = "https://www.opensanctions.org/"
 EMAIL = "info@opensanctions.org"
@@ -123,6 +123,9 @@ AUTO_REINDEX = as_bool(env_str("YENTE_AUTO_REINDEX", "true"))
 
 # Fetch the entire bulk data file before indexing into the search index:
 STREAM_LOAD = as_bool(env_str("YENTE_STREAM_LOAD", "true"))
+
+# Verify the SHA1 checksum of fetched entity data against the catalog:
+VERIFY_CHECKSUM = as_bool(env_str("YENTE_VERIFY_CHECKSUM", "true"))
 # this would be cached here:
 DATA_PATH = Path(env_str("YENTE_DATA_PATH", "/tmp"))
 
@@ -157,6 +160,11 @@ MAX_BATCH = int(env_str("YENTE_MAX_BATCH", "100"))
 MAX_RESULTS = 9999
 MAX_OFFSET = MAX_RESULTS - MAX_PAGE
 
+# Maximum length of an incoming request URL (path + query string), in bytes.
+# Sits below httptools' 65 536-byte wrap-around so we reject with 414 before
+# the parser silently truncates.
+MAX_URL_LENGTH = env_int("YENTE_MAX_URL_LENGTH", 60000)
+
 # How many results to return per /match query by default:
 MATCH_PAGE = env_int("YENTE_MATCH_PAGE", 5)
 
@@ -165,6 +173,10 @@ MAX_MATCHES = env_int("YENTE_MAX_MATCHES", 500)
 
 # How many candidates to retrieve as a multiplier of the /match limit:
 MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
+
+# How many candidates to retrieve & score at most
+# Used so that limit * MATCH_CANDIDATES doesn't get out of hand for high values of limit
+MAX_MATCH_CANDIDATES = env_int("YENTE_MAX_MATCH_CANDIDATES", 500)
 
 # Whether to run expensive levenshtein queries inside ElasticSearch:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
@@ -219,3 +231,18 @@ LOG_LEVEL = logging.DEBUG if DEBUG else logging.INFO
 
 # Used to pad out first_seen, last_seen on static collections
 RUN_DT = utc_now()
+
+# ReDoc API documentation bundle used by API documentation page served at `/`.
+# URL is versioned so the path is stable and the SRI hash doesn't need updating
+# unless you deliberately upgrade. To upgrade:
+#   1. Hosted in assets.opensanctions.org to address security / privacy concerns
+#   2. Update the URL and recompute the hash:
+#      curl -sL <new_url> | openssl dgst -sha384 -binary | openssl base64 -A
+REDOC_JS_URL = env_str(
+    "YENTE_REDOC_JS_URL",
+    "https://assets.opensanctions.org/scripts/redoc-2.5.2.standalone.js",
+)
+REDOC_JS_SRI = env_str(
+    "YENTE_REDOC_JS_SRI",
+    "sha384-70P5pmIdaQdVbxvjhrcTDv1uKcKqalZ3OHi7S2J+uzDl0PW8dO6L+pHOpm9EEjGJ",
+)

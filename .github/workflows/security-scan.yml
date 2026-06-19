@@ -1,0 +1,58 @@
+name: security-scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'security/vex/**'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  grype-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install grype
+        uses: anchore/scan-action/download-grype@v7
+
+      - name: Scan latest published image
+        id: scan
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          grype "ghcr.io/opensanctions/yente:latest" \
+            --vex security/vex/openvex.json \
+            --fail-on high \
+            -o table \
+            | tee scan-output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update tracking issue
+        if: steps.scan.outputs.exitcode != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ISSUE_TITLE="VEX triage: un-suppressed scanner findings"
+          EXISTING=$(gh issue list \
+            --search "\"${ISSUE_TITLE}\" in:title" \
+            --state open \
+            --json number \
+            -q '.[0].number // empty')
+          BODY=$(printf 'Weekly grype scan of `ghcr.io/opensanctions/yente:latest` reported findings not suppressed by `security/vex/openvex.json`. Triage each: decide `not_affected` (+ justification), `affected` (+ planned response), or `under_investigation`. Update the VEX file and re-run the workflow.\n\n```\n%s\n```\n\nWorkflow run: %s/%s/actions/runs/%s' \
+            "$(cat scan-output.txt)" \
+            "${GITHUB_SERVER_URL}" \
+            "${GITHUB_REPOSITORY}" \
+            "${GITHUB_RUN_ID}")
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body "$BODY"
+          fi

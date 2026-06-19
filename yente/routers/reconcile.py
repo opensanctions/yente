@@ -33,6 +33,8 @@ from yente.data.freebase import (
     FreebaseManifestSuggest,
     FreebaseManifestSuggestType,
     FreebaseProperty,
+    FreebaseReconBatch,
+    FreebaseReconQuery,
     FreebaseRenderMethod,
     FreebaseScoredEntity,
     FreebaseType,
@@ -40,6 +42,7 @@ from yente.data.freebase import (
     FreebasePropertySuggestResponse,
     FreebaseTypeSuggestResponse,
     FreebaseManifest,
+    ReconPropertyValue,
 )
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import (
@@ -198,17 +201,13 @@ async def reconcile_queries(
     changed_since: Optional[str],
 ) -> Dict[str, FreebaseEntityResult]:
     # multiple requests in one query
-    try:
-        queries: Dict[str, Dict[str, Any]] = json.loads(data)
-    except (TypeError, ValueError):
-        raise HTTPException(400, detail="Cannot decode query")
-
-    if len(queries) > settings.MAX_BATCH:
+    queries = FreebaseReconBatch.model_validate_json(data)
+    if len(queries.root) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
 
     tasks: List[Coroutine[Any, Any, Tuple[str, FreebaseEntityResult]]] = []
-    for k, q in queries.items():
+    for k, q in queries.root.items():
         task = reconcile_query(provider, k, dataset, q, algorithm, changed_since)
         tasks.append(task)
     results: List[Tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
@@ -219,32 +218,29 @@ async def reconcile_query(
     provider: SearchProvider,
     name: str,
     dataset: Dataset,
-    query: Dict[str, Any],
+    query: FreebaseReconQuery,
     algorithm: str,
     changed_since: Optional[str],
 ) -> Tuple[str, FreebaseEntityResult]:
     """Reconcile operation for a single query."""
-    # default to the same candidate limit as in /match
-    limit = settings.MATCH_PAGE * settings.MATCH_CANDIDATES
-    try:
-        limit_str = query.get("limit")
-        if limit_str is not None:
-            limit = int(limit_str)
-    except (TypeError, ValueError):
-        pass
-    # limit to the ES max of 10000 (settings.MAX_RESULTS)
-    limit, offset = limit_window(limit, 0)
+    schema = settings.BASE_SCHEMA
+    if query.type is not None:
+        if isinstance(query.type, str):
+            schema = query.type
+        elif isinstance(query.type, list) and len(query.type) > 0:
+            # TODO: should this do something clever?
+            schema = query.type[0]
+    properties: Dict[str, List[ReconPropertyValue]] = {}
+    if query.query is not None:
+        properties["name"] = [query.query]
 
-    schema = query.get("type", settings.BASE_SCHEMA)
-    properties: Dict[str, List[str]] = {"alias": [query.get("query", "")]}
-
-    for p in query.get("properties", []):
-        prop = model.get_qname(p.get("pid"))
+    for p in query.properties:
+        prop = model.get_qname(p.pid)
         if prop is None:
             continue
         if prop.name not in properties:
             properties[prop.name] = []
-        properties[prop.name].append(p.get("v"))
+        properties[prop.name].append(p.v)
 
     example = EntityExample(id=None, schema=schema, properties=dict(properties))
     if example.id is None:
@@ -254,13 +250,24 @@ async def reconcile_query(
         example.id = f"query.{str(uuid.uuid4())}"
     try:
         proxy = Entity.from_example(example)
-        query = entity_query(dataset, proxy, changed_since=changed_since)
+        es_query = entity_query(dataset, proxy, changed_since=changed_since)
     except Exception as exc:
         raise HTTPException(400, detail=str(exc))
-    resp = await search_entities(provider, query, limit=limit, offset=offset)
+
+    candidates = query.limit * settings.MATCH_CANDIDATES
+    # We want at least 20 candidates to score to have good results even for limit = 1
+    candidates = max(20, min(settings.MAX_RESULTS, candidates))
+    # We want to retrieve at most MAX_MATCH_CANDIDATES, other wise we will be
+    # very slow or OOM for high values of limit.
+    # One day we might drop the max for limit, see https://github.com/opensanctions/yente/issues/927
+    candidates = min(candidates, settings.MAX_MATCH_CANDIDATES)
+
+    candidates, offset = limit_window(candidates, 0)
+    resp = await search_entities(provider, es_query, limit=candidates, offset=offset)
     algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
-    total, scoreds = await score_results(algorithm_, proxy, entities, limit=limit)
+
+    total, scoreds = await score_results(algorithm_, proxy, entities, limit=query.limit)
     results = [FreebaseScoredEntity.from_scored(s) for s in scoreds]
     log.info(
         f"/reconcile/{dataset.name}",

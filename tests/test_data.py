@@ -1,18 +1,56 @@
 import pytest
 from pathlib import Path
 from followthemoney import model
+from followthemoney.names import entity_names
 from rigour.names import NamePartTag
 
+from yente import settings
 from yente.data import get_catalog
+from yente.data.dataset import Dataset
 from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
 from yente.data.util import get_url_local_path
-from yente.data.util import entity_names, expand_dates
+from yente.data.util import expand_dates
 from yente.exc import YenteConfigError
 from .conftest import patch_catalog_response
 
 
+def _resource_dataset_spec(checksum: str) -> dict:
+    return {
+        "name": "test_dataset",
+        "title": "Test Dataset",
+        "resource_name": "entities.ftm.json",
+        "resources": [
+            {
+                "name": "entities.ftm.json",
+                "url": "https://example.com/entities.ftm.json",
+                "checksum": checksum,
+                "mime_type": "application/json+ftm",
+            }
+        ],
+    }
+
+
+def test_dataset_captures_checksum_when_verify_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "VERIFY_CHECKSUM", True)
+    dataset = Dataset(_resource_dataset_spec("abc123"))
+    assert dataset.model.entities_url == "https://example.com/entities.ftm.json"
+    assert dataset.model.entities_checksum == "abc123"
+
+
+def test_dataset_skips_checksum_when_verify_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "VERIFY_CHECKSUM", False)
+    dataset = Dataset(_resource_dataset_spec("abc123"))
+    assert dataset.model.entities_url == "https://example.com/entities.ftm.json"
+    assert dataset.model.entities_checksum is None
+
+
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("zala_test_dataset")
 async def test_manifest():
     catalog = await get_catalog()
     assert len(catalog.datasets), catalog.datasets
@@ -20,9 +58,6 @@ async def test_manifest():
 
 @pytest.mark.asyncio
 async def test_manifest_with_auth_token():
-    # Clear any cached catalog instance
-    Catalog.instance = None
-
     catalog_response_data = {"datasets": []}
 
     with patch_catalog_response(catalog_response_data) as (
@@ -51,9 +86,6 @@ async def test_manifest_with_auth_token():
 
 @pytest.mark.asyncio
 async def test_manifest_with_auth_token_env_expansion(monkeypatch):
-    # Clear any cached catalog instance
-    Catalog.instance = None
-
     monkeypatch.setenv("TEST_CATALOG_AUTH_TOKEN", "secretenv")
 
     catalog_response_data = {"datasets": []}
@@ -83,12 +115,13 @@ async def test_manifest_with_auth_token_env_expansion(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 async def test_local_dataset():
     catalog = await get_catalog()
     ds = catalog.require("parteispenden")
     assert ds.model.load
     assert ds.model.entities_url is not None
-    assert "donations.ijson" in ds.model.entities_url
+    assert "entities.ftm.json" in ds.model.entities_url
     lines = list()
     async for line in load_json_lines(ds.model.entities_url, "test"):
         lines.append(line)
@@ -96,11 +129,9 @@ async def test_local_dataset():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("parteispenden_test_dataset")
 async def test_catalog_and_local_dataset():
     """Test that a datasets and catalog datasets are both loaded into the internal catalog."""
-    # Clear any cached catalog instance
-    Catalog.instance = None
-
     catalog_response_data = {"datasets": [{"name": "eu_fsf", "title": "EU FSF"}]}
 
     with patch_catalog_response(catalog_response_data):

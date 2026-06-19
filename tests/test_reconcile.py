@@ -1,11 +1,13 @@
 import json
+import pytest
 from normality import ascii_text
 
 from .conftest import client
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_metadata():
-    resp = client.get("/reconcile/default")
+    resp = client.get("/reconcile/zala")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     url = "https://www.opensanctions.org"
@@ -15,71 +17,82 @@ def test_reconcile_metadata():
     assert "extend" in data, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_post_query():
-    queries = {"mutti": {"query": "Yevgeny Popov"}}
-    resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
+    queries = {"mutti": {"query": "Alexander ZAKHAROV"}}
+    resp = client.post("/reconcile/zala", data={"queries": json.dumps(queries)})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     res = data["mutti"]["result"]
-    assert res[0]["id"] == "Q18634850", res
+    assert res[0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw", res
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_post_extend():
-    query = {"ids": ["Q7747"], "properties": [{"id": "name"}, {"id": "birthDate"}]}
-    resp = client.post("/reconcile/default", data={"extend": json.dumps(query)})
+    query = {
+        "ids": ["NK-aU5ybkbRFJucf8YMwsJvDw"],
+        "properties": [{"id": "name"}, {"id": "birthDate"}],
+    }
+    resp = client.post("/reconcile/zala", data={"extend": json.dumps(query)})
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert len(data["meta"]) == 2
     assert data["meta"][0]["id"] == "name", data["meta"]
-    assert "Q7747" in data["rows"], data
-    assert "name" in data["rows"]["Q7747"], data
-    names = data["rows"]["Q7747"]["name"]
+    assert "NK-aU5ybkbRFJucf8YMwsJvDw" in data["rows"], data
+    assert "name" in data["rows"]["NK-aU5ybkbRFJucf8YMwsJvDw"], data
+    names = data["rows"]["NK-aU5ybkbRFJucf8YMwsJvDw"]["name"]
     assert len(names) > 0, names
-    assert "putin" in "".join([n["str"] for n in names]).lower(), names
+    assert "zakharov" in "".join([n["str"] for n in names]).lower(), names
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_invalid():
     queries = {"mutti": {"type": "Banana"}}
-    resp = client.post("/reconcile/default", data={"queries": json.dumps(queries)})
+    resp = client.post("/reconcile/zala", data={"queries": json.dumps(queries)})
     assert resp.status_code == 400, resp.text
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_entity_no_prefix():
-    resp = client.get("/reconcile/default/suggest/entity")
+    resp = client.get("/reconcile/zala/suggest/entity")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
     assert len(data["result"]) == 0, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_entity_prefix():
-    resp = client.get("/reconcile/default/suggest/entity?prefix=vladimir%20put")
+    resp = client.get("/reconcile/zala/suggest/entity?prefix=alexander%20zak")
     assert resp.status_code == 200, resp.text
     res = resp.json()["result"]
     assert len(res) > 0, res
-    assert "Q7747" == res[0]["id"], res
+    assert "NK-aU5ybkbRFJucf8YMwsJvDw" == res[0]["id"], res
     name = ascii_text(res[0]["name"])
     assert name is not None, res
-    assert "vladimir" in name.lower(), name
+    assert "aleksandr" in name.lower(), name
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_entity_prefix_dummy():
-    resp = client.get("/reconcile/default/suggest/entity?prefix=banana%20man")
+    resp = client.get("/reconcile/zala/suggest/entity?prefix=banana%20man")
     assert resp.status_code == 200, resp.text
     res = resp.json()["result"]
     assert len(res) == 0, res
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_property_no_prefix():
-    resp = client.get("/reconcile/default/suggest/property")
+    resp = client.get("/reconcile/zala/suggest/property")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
     assert len(data["result"]) == 0, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_property_prefix():
-    resp = client.get("/reconcile/default/suggest/property?prefix=country")
+    resp = client.get("/reconcile/zala/suggest/property?prefix=country")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
@@ -90,8 +103,9 @@ def test_reconcile_suggest_property_prefix():
     assert "Thing:country" in types, types
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_property_prefix_dummy():
-    resp = client.get("/reconcile/default/suggest/property?prefix=banana")
+    resp = client.get("/reconcile/zala/suggest/property?prefix=banana")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
@@ -99,16 +113,18 @@ def test_reconcile_suggest_property_prefix_dummy():
     assert len(res) == 0, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_type_no_prefix():
-    resp = client.get("/reconcile/default/suggest/type")
+    resp = client.get("/reconcile/zala/suggest/type")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
     assert len(data["result"]) == 0, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_type_prefix():
-    resp = client.get("/reconcile/default/suggest/type?prefix=organ")
+    resp = client.get("/reconcile/zala/suggest/type?prefix=organ")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
@@ -117,8 +133,9 @@ def test_reconcile_suggest_type_prefix():
     assert res[0]["id"] == "Organization", data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_suggest_type_prefix_dummy():
-    resp = client.get("/reconcile/default/suggest/type?prefix=banana")
+    resp = client.get("/reconcile/zala/suggest/type?prefix=banana")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "result" in data
@@ -126,8 +143,9 @@ def test_reconcile_suggest_type_prefix_dummy():
     assert len(res) == 0, data
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_extend_properties():
-    resp = client.get("/reconcile/default/extend/property?limit=5&type=LegalEntity")
+    resp = client.get("/reconcile/zala/extend/property?limit=5&type=LegalEntity")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert "type" in data
@@ -140,6 +158,7 @@ def test_reconcile_extend_properties():
     assert "country" in ids
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_reconcile_extend_properties_invalid_type():
-    resp = client.get("/reconcile/default/extend/property?limit=5&type=Banana")
+    resp = client.get("/reconcile/zala/extend/property?limit=5&type=Banana")
     assert resp.status_code == 400, resp.text

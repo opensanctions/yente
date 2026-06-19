@@ -1,6 +1,6 @@
-from datetime import datetime
 import structlog
 from fastapi import Request
+from rigour.time import utc_now
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from typing import Any, Callable, Awaitable, Optional
@@ -26,7 +26,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        start_time = datetime.now()
+        start_time = utc_now()
 
         http_request_info: dict[str, Any] = {
             "requestMethod": request.method,
@@ -51,7 +51,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
         http_request_info["status"] = response.status_code
         # Google Cloud LogEntry.HttpRequest specifies this is as a string like "0.5s",
         # but that doesn't actually work - who knows why.
-        latency = datetime.now() - start_time
+        latency = utc_now() - start_time
         http_request_info["latency"] = {
             "seconds": int(latency.total_seconds()),
             "nanos": int(latency.microseconds * 1000),

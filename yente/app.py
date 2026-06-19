@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
+from followthemoney.exc import InvalidData
 
 from yente import settings
 from yente.exc import YenteError
@@ -17,17 +18,27 @@ from yente.data import refresh_catalog
 from yente.data.entity import Entity
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
-from yente.provider import close_provider
-from yente.middleware import RequestLogMiddleware, TraceContextMiddleware
+from yente.data.metrics import update_metrics
+from yente.provider import with_provider, close_provider
+from yente.middleware import (
+    MaxURLLengthMiddleware,
+    RequestLogMiddleware,
+    TraceContextMiddleware,
+)
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]
 
 
-async def cron_task() -> None:
+async def refresh_catalog_cron_task() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
+
+
+async def update_metrics_task() -> None:
+    async with with_provider() as provider:
+        await update_metrics(provider)
 
 
 async def warm_up() -> None:
@@ -36,6 +47,7 @@ async def warm_up() -> None:
     await refresh_catalog()
     if settings.AUTO_REINDEX:
         update_index_threaded()
+    await update_metrics_task()
 
     log.debug("Warming up matcher algorithms...")
     # This is the pragmatic and easy way to warm up the matcher algorithms. If anyone feels the call to
@@ -73,7 +85,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         crontab=settings.CRONTAB,
         auto_reindex=settings.AUTO_REINDEX,
     )
-    settings.CRON = aiocron.crontab(settings.CRONTAB, func=cron_task)
+    settings.CRON = aiocron.crontab(settings.CRONTAB, func=refresh_catalog_cron_task)
+    # Local handle keeps the cron alive for the lifetime of the lifespan context.
+    _metrics_cron = aiocron.crontab("* * * * *", func=update_metrics_task)
     yield
     await close_provider()
 
@@ -87,6 +101,11 @@ async def json_exception_middleware(
         log.exception("Exception during request: %s" % type(exc))
         response = JSONResponse(status_code=500, content={"status": "error"})
     return response
+
+
+async def ftm_error_handler(req: Request, exc: InvalidData) -> Response:
+    body = {"detail": str(exc), "errors": exc.errors}
+    return JSONResponse(status_code=400, content=body)
 
 
 async def yente_error_handler(req: Request, exc: YenteError) -> Response:
@@ -104,6 +123,7 @@ async def validation_error_handler(req: Request, exc: ValidationError) -> Respon
 HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
+    InvalidData: ftm_error_handler,
 }
 
 
@@ -133,6 +153,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=500)
+    app.add_middleware(MaxURLLengthMiddleware)
     app.include_router(match.router)
     app.include_router(search.router)
     app.include_router(reconcile.router)

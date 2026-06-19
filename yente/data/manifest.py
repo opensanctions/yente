@@ -4,7 +4,6 @@ from typing import List, Optional, Dict, Any, cast
 from followthemoney.dataset import DataCatalog
 from pydantic import BaseModel, field_validator
 
-from yente import settings
 from yente.data.dataset import Dataset
 from yente.data.loader import load_yaml_url
 from yente.exc import YenteConfigError
@@ -68,9 +67,9 @@ class Manifest(BaseModel):
     datasets: List[Dict[str, Any]] = []
 
     @classmethod
-    async def load(cls) -> "Manifest":
-        """Load a manifest from the YAML file specified in the settings."""
-        data = await load_yaml_url(settings.MANIFEST)
+    async def load(cls, manifest_path: str) -> "Manifest":
+        """Load a manifest from the given path or URL."""
+        data = await load_yaml_url(manifest_path)
         return cls.model_validate(data)
 
     async def fetch_datasets(self) -> List[Dict[str, Any]]:
@@ -87,12 +86,9 @@ class Manifest(BaseModel):
 class Catalog(DataCatalog[Dataset]):
     """A collection of datasets, loaded from a manifest."""
 
-    instance: Optional["Catalog"] = None
-
     @classmethod
-    async def load(cls, manifest: Optional[Manifest] = None) -> "Catalog":
+    async def load(cls, manifest: Manifest) -> "Catalog":
         catalog = cls(Dataset, {})
-        manifest = manifest or await Manifest.load()
 
         # Populate the internal catalog from all datasets/catalogs specified in the manifest.
         for dataset_spec in await manifest.fetch_datasets():

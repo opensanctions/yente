@@ -1,8 +1,10 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Set
-from followthemoney.exc import FollowTheMoneyException
+from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional, Set
 from followthemoney import registry
+from followthemoney.exc import FollowTheMoneyException
+from followthemoney.names import entity_names
+from rigour.names import Name
 
 from yente import settings
 from yente.data.manifest import Catalog
@@ -25,6 +27,7 @@ from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
+    NAME_VARIANTS_FIELD,
     make_entity_mapping,
     INDEX_SETTINGS,
 )
@@ -35,13 +38,43 @@ from yente.search.versions import (
     build_index_name,
     get_system_version,
 )
-from yente.data.util import expand_dates
-from yente.data.util import index_symbol, is_matchable_symbol
-from yente.data.util import entity_names
+from yente.data.util import entity_weak_names, expand_dates, index_symbols
+from yente.data.metrics import update_dataset_version_metric
 
 
 log = get_logger(__name__)
 lock = threading.Lock()
+
+
+def build_entity_action(
+    index: str,
+    op_code: str,
+    entity_data: Dict[str, Any],
+    datasets: Set[str],
+    dataset: Dataset,
+) -> Optional[Dict[str, Any]]:
+    """Build a single bulk action dict from a raw entity op, or None on error."""
+    if op_code == "DEL":
+        return {
+            "_op_type": "delete",
+            "_index": index,
+            "_id": entity_data["id"],
+        }
+    try:
+        entity = Entity.from_dict(entity_data)
+        entity.datasets = entity.datasets.intersection(datasets)
+        if not len(entity.datasets):
+            entity.datasets.add(dataset.name)
+        if dataset.ns is not None:
+            entity = dataset.ns.apply(entity)
+        return {
+            "_index": index,
+            "_id": entity.id,
+            "_source": build_indexable_entity_doc(entity),
+        }
+    except FollowTheMoneyException as exc:
+        log.error("Invalid entity: %s" % exc, data=entity_data)
+        return None
 
 
 async def iter_entity_docs(
@@ -57,35 +90,21 @@ async def iter_entity_docs(
         op_code = data["op"]
         idx += 1
         ops[op_code] += 1
-        if op_code == "DEL":
-            yield {
-                "_op_type": "delete",
-                "_index": index,
-                "_id": data["entity"]["id"],
-            }
-            continue
-
-        try:
-            entity = Entity.from_dict(data["entity"])
-            entity.datasets = entity.datasets.intersection(datasets)
-            if not len(entity.datasets):
-                entity.datasets.add(dataset.name)
-            if dataset.ns is not None:
-                entity = dataset.ns.apply(entity)
-
-            yield {
-                "_index": index,
-                "_id": entity.id,
-                "_source": build_indexable_entity_doc(entity),
-            }
-        except FollowTheMoneyException as exc:
-            log.error("Invalid entity: %s" % exc, data=data)
+        action = build_entity_action(index, op_code, data["entity"], datasets, dataset)
+        if action is not None:
+            yield action
     log.info(
         "Indexed %d entities" % idx,
         added=ops["ADD"],
         modified=ops["MOD"],
         deleted=ops["DEL"],
     )
+
+
+def build_name_variants(name: Name) -> Set[str]:
+    # "vladimir putin" -> "valdimirputin"
+    # Normal Elastic fuzzy matching doesn't catch this because fuzzyness is per-token
+    return set(["".join([p.comparable for p in name.parts])])
 
 
 def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
@@ -100,27 +119,27 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     name_parts: Set[str] = set()
     name_phonemes: Set[str] = set()
     name_symbols: Set[str] = set()
-    for name in entity_names(entity):
-        for symbol in name.symbols:
-            if is_matchable_symbol(symbol):
-                name_symbols.add(index_symbol(symbol))
+    name_variants: Set[str] = set()
+    for name in entity_names(entity, infer_initials=False):
+        name_variants.update(build_name_variants(name))
+
+        name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
-            name_parts.add(part.form)
             name_parts.add(part.comparable)
             phoneme = part.metaphone
             if phoneme is not None and len(phoneme) > 2:
                 name_phonemes.add(phoneme)
 
+    for weak in entity_weak_names(entity):
+        name_parts.add(weak)
+
     doc[NAME_PART_FIELD] = list(name_parts)
-    # doc[NAME_KEY_FIELD] = list(name_keys)
     doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
+    doc[NAME_VARIANTS_FIELD] = list(name_variants)
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
-
-    # TODO(Leon Handreke): Is name_parts needed here? All the fields get a copy_to text anyways in the mapper
-    doc["text"] = entity.pop("indexText") + list(name_parts)
-
+    doc["text"] = entity.pop("indexText")
     return doc
 
 
@@ -183,9 +202,9 @@ async def index_entities(
     )
 
     if is_partial_reindex:
-        assert (
-            updater.base_version is not None
-        ), "Expected base version to be set for partial reindex"
+        assert updater.base_version is not None, (
+            "Expected base version to be set for partial reindex"
+        )
         base_index = build_index_name(dataset.name, updater.base_version)
         await provider.clone_index(base_index, next_index)
     else:
@@ -254,6 +273,17 @@ async def index_entities(
             )
         raise exc
 
+    # Always overwrite metadata: a fresh index has none, and a cloned index
+    # inherits the source's _meta (mappings can't be overridden in a clone request).
+    #
+    # Dates in ES documents would normally be stored as timestamps, but index
+    # metadata is just an opaque blob — ES doesn't parse or process it. For
+    # consistency we store values here exactly as we got them from the catalog.
+    index_metadata: Dict[str, Any] = {}
+    if dataset.model.last_export is not None:
+        index_metadata["last_export"] = dataset.model.last_export.isoformat()
+    await provider.set_index_metadata(next_index, index_metadata)
+
     await provider.refresh(index=next_index)
     dataset_prefix = build_index_name_prefix(dataset.name)
     # FIXME: we're not actually deleting old indexes here any more!
@@ -271,6 +301,10 @@ async def index_entities(
         message=f"Alias {alias} prefixed {dataset_prefix} now points to {next_index}",
     )
     log.info("Index is now aliased to: %s" % alias, index=next_index)
+    # Also refreshed periodically by update_metrics in a cron — calling it
+    # here just makes the gauge reflect a fresh reindex without waiting for
+    # the next cron tick.
+    await update_dataset_version_metric(dataset.name, next_index, provider)
 
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:

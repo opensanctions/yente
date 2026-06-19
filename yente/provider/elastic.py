@@ -28,8 +28,8 @@ class ElasticSearchProvider(SearchProvider):
         )
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
-            kwargs["sniffer_timeout"] = 60
-            kwargs["sniff_on_connection_fail"] = True
+            kwargs["min_delay_between_sniffing"] = 60
+            kwargs["sniff_on_node_failure"] = True
         if settings.ES_CLOUD_ID:
             log.info("Connecting to Elastic Cloud ID", cloud_id=settings.ES_CLOUD_ID)
             kwargs["cloud_id"] = settings.ES_CLOUD_ID
@@ -41,6 +41,7 @@ class ElasticSearchProvider(SearchProvider):
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
+            es: Optional[AsyncElasticsearch] = None
             try:
                 es = AsyncElasticsearch(**kwargs)
                 es_ = es.options(request_timeout=15)
@@ -48,6 +49,8 @@ class ElasticSearchProvider(SearchProvider):
                 return ElasticSearchProvider(es)
             except (TransportError, ConnectionError) as exc:
                 log.error("Cannot connect to ElasticSearch: %r" % exc)
+                if es is not None:
+                    await es.close()
                 await asyncio.sleep(retry**2)
 
         raise RuntimeError("Could not connect to ElasticSearch.")
@@ -119,9 +122,7 @@ class ElasticSearchProvider(SearchProvider):
                 await self.client().indices.clone(
                     index=base_version,
                     target=target_version,
-                    body={
-                        "settings": {"index": {"blocks": {"read_only": False}}},
-                    },
+                    settings={"index": {"blocks": {"read_only": False}}},
                 )
             except Exception:
                 # On failure, clean up our failed clone and re-raise
@@ -164,6 +165,23 @@ class ElasticSearchProvider(SearchProvider):
             pass
         except (ApiError, TransportError) as te:
             raise YenteIndexError(f"Could not delete index: {te}") from te
+
+    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+        try:
+            await self.client().indices.put_mapping(index=index, meta=metadata)
+        except (ApiError, TransportError) as te:
+            raise YenteIndexError(f"Could not set index metadata: {te}") from te
+
+    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+        try:
+            response = await self.client().indices.get_mapping(index=index)
+        except (NotFoundError, ApiError, TransportError) as exc:
+            raise YenteIndexError(f"Could not get index metadata: {exc}") from exc
+        body = response.body if hasattr(response, "body") else response
+        index_block = body.get(index, {})
+        mappings = index_block.get("mappings", {})
+        meta = mappings.get("_meta", {})
+        return cast(Dict[str, Any], meta)
 
     async def exists_index_alias(self, alias: str, index: str) -> bool:
         """Check if an index exists and is linked into the given alias."""
@@ -237,13 +255,7 @@ class ElasticSearchProvider(SearchProvider):
                 query=json.dumps(query),
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
-        except (
-            KeyboardInterrupt,
-            OSError,
-            Exception,
-            asyncio.TimeoutError,
-            asyncio.CancelledError,
-        ) as exc:
+        except (OSError, Exception, asyncio.TimeoutError) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
@@ -273,4 +285,11 @@ class ElasticSearchProvider(SearchProvider):
                 stats_only=True,
             )
         except BulkIndexError as exc:
-            raise YenteIndexError(f"Could not index entities: {exc}") from exc
+            sample = exc.errors[:3] if exc.errors else []
+            log.warning(
+                f"Bulk index failed: {len(exc.errors)} document(s) rejected",
+                errors=sample,
+            )
+            raise YenteIndexError(
+                f"Could not index entities: {exc} (see log for sample errors)"
+            ) from exc

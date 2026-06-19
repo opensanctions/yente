@@ -1,6 +1,16 @@
-from .conftest import client
+import pytest
+
+from .conftest import (
+    FIXTURES_PATH,
+    build_index_alias_name_for_fixture,
+    client,
+    patch_catalog_response,
+    patch_yente_catalog,
+)
 
 from yente import settings
+from yente.data.manifest import Manifest
+from yente.search.indexer import update_index
 
 
 def test_healthz():
@@ -9,6 +19,7 @@ def test_healthz():
     assert res.json().get("status") == "ok", res
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_readyz():
     res = client.get("/readyz")
     assert res.status_code == 200, res
@@ -21,12 +32,13 @@ def test_statusz():
     assert res.json().get("status") in ("ok", "indexing"), res
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_manifest():
     res = client.get("/manifest")
     assert res.status_code == 200, res
     data = res.json()
     assert "datasets" in data
-    assert len(data["datasets"]) > 5
+    assert len(data["datasets"]) == 1
 
 
 def test_algorithms(monkeypatch):
@@ -58,16 +70,73 @@ def test_algorithms_hidden(monkeypatch):
     assert "logic-v1" not in visible_algorithms
 
 
-def test_catalog():
-    res = client.get("/catalog")
-    assert res.status_code == 200, res
+@pytest.mark.asyncio
+async def test_catalog(monkeypatch):
+    monkeypatch.setattr(
+        settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("mocked_eu_fsf")
+    )
+    # Mocked HTTP response for the remote catalog. Includes:
+    #   - eu_fsf: scoped/loaded below, so it gets indexed and shows up as `current`.
+    #   - us_ofac_sdn: present in the catalog but NOT the loaded scope — covers
+    #     the "non-loaded dataset in catalog" case (index_current=False).
+    catalog_response = {
+        "datasets": [
+            {
+                "name": "eu_fsf",
+                "title": "EU FSF",
+                "version": "20240101000000-aaa",
+                "entities_url": (
+                    FIXTURES_PATH / "dataset" / "parteispenden" / "entities.ftm.json"
+                ).as_uri(),
+            },
+            {
+                "name": "us_ofac_sdn",
+                "title": "US OFAC SDN",
+                "version": "20240101000000-bbb",
+            },
+        ]
+    }
+    # parteispenden is declared as a local dataset alongside the (mocked) remote
+    # catalog to exercise the "catalog + local dataset" mix yente supports.
+    manifest = Manifest.model_validate(
+        {
+            "catalogs": [
+                {
+                    "url": "https://catalog.example.com/index.json",
+                    "scope": "eu_fsf",
+                }
+            ],
+            "datasets": [
+                {
+                    "name": "parteispenden",
+                    "title": "German political party donations",
+                    "path": str(
+                        FIXTURES_PATH
+                        / "dataset"
+                        / "parteispenden"
+                        / "entities.ftm.json"
+                    ),
+                    "version": "100",
+                }
+            ],
+        }
+    )
+
+    with patch_catalog_response(catalog_response):
+        async with patch_yente_catalog(manifest):
+            await update_index()
+            res = client.get("/catalog")
+
+    assert res.status_code == 200
     data = res.json()
     assert "current" in data
     assert "eu_fsf" in data["current"]
     assert "datasets" in data
     datasets = {d["name"]: d for d in data["datasets"]}
+    # us_ofac_sdn is in the catalog but not the loaded scope.
     assert datasets["us_ofac_sdn"]["index_current"] is False
     assert datasets["eu_fsf"]["index_current"] is True
+    # parteispenden is the local-dataset half of the mix.
     donations = datasets["parteispenden"]
     assert donations["load"] is True
     assert donations["index_current"] is True
