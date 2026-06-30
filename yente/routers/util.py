@@ -8,6 +8,7 @@ from nomenklatura.matching import (
     LogicV1,
     NameMatcher,
     NameQualifiedMatcher,
+    OFACMatcher,
     RegressionV1,
 )
 
@@ -17,6 +18,7 @@ from yente.data.dataset import Dataset
 
 ENABLED_ALGORITHMS: List[Type[ScoringAlgorithm]] = [
     LogicV2,
+    OFACMatcher,
     NameMatcher,
     NameQualifiedMatcher,
     LogicV1,
