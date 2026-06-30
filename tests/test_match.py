@@ -215,26 +215,37 @@ def test_id_pass_through():
 
 @pytest.mark.usefixtures("zala_test_dataset")
 def test_match_name_without_spaces():
-    # A name query with spaces omitted is a single token to the query
-    # analyzer, so ES fuzziness can't bridge the gap to the separate indexed tokens. We
-    # solve this at index time by also indexing compound tokens for adjacent name parts,
-    # and this test verifies that.
-    # The test also shows a limitation of our approach: the zala dataset only contains
-    # the full name "Alexander Vyacheslavovich Zakharov", so we can't match "alexanderzakharov"
-    # (for now)
+    # A name with spaces omitted ("alexandervyacheslavovichzakharov") is a single token to
+    # the query analyzer, so the per-token names match can't bridge the gap to the
+    # separate indexed tokens. We solve this with the character n-gram sub-field on the
+    # names field, which lets the space-less token still match the indexed name via shared
+    # n-grams, and this test verifies that.
+    #
+    # The bogus "foo bar" name is just there to keep the query from being treated as a
+    # single-word ("short") query, for which we always fall back to n-gram matching
+    # regardless of the fuzzy setting. That way we can show the n-gram path is what makes
+    # the space-less match work, by checking it disappears when fuzzy matching is off.
     query = {
         "queries": {
             "a": {
                 "schema": "Person",
-                "properties": {"name": ["alexandervyacheslavovichzakharov"]},
+                "properties": {"name": ["alexandervyacheslavovichzakharov", "foo bar"]},
             }
         }
     }
-    resp = client.post("/match/zala", json=query)
-    assert resp.status_code == 200, resp.text
-    res = resp.json()["responses"]["a"]
-    assert len(res["results"]) > 0
-    assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
+
+    with mock.patch("yente.settings.MATCH_FUZZY", False):
+        resp = client.post("/match/zala", json=query)
+        assert resp.status_code == 200, resp.text
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) == 0
+
+    with mock.patch("yente.settings.MATCH_FUZZY", True):
+        resp = client.post("/match/zala", json=query)
+        assert resp.status_code == 200, resp.text
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) > 0
+        assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
