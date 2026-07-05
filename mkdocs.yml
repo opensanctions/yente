@@ -3,7 +3,7 @@ repo_url: https://github.com/opensanctions/yente
 
 theme:
   name: material
-  logo: https://assets.opensanctions.org/images/ura/logo_white.png
+  logo: https://assets.opensanctions.org/images/nura/logo-icon-white.svg
   favicon: https://assets.opensanctions.org/images/nura/favicon-32.png
   palette:
     primary: custom
