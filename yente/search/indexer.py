@@ -4,7 +4,6 @@ from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional, Set
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.names import entity_names
-from rigour.names import Name
 
 from yente import settings
 from yente.data.manifest import Catalog
@@ -27,7 +26,6 @@ from yente.search.mapping import (
     NAME_PART_FIELD,
     NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
-    NAME_VARIANTS_FIELD,
     make_entity_mapping,
     INDEX_SETTINGS,
 )
@@ -101,12 +99,6 @@ async def iter_entity_docs(
     )
 
 
-def build_name_variants(name: Name) -> Set[str]:
-    # "vladimir putin" -> "valdimirputin"
-    # Normal Elastic fuzzy matching doesn't catch this because fuzzyness is per-token
-    return set(["".join([p.comparable for p in name.parts])])
-
-
 def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     doc = entity.to_dict(matchable=True)
     entity_id = doc.pop("id")
@@ -119,10 +111,7 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     name_parts: Set[str] = set()
     name_phonemes: Set[str] = set()
     name_symbols: Set[str] = set()
-    name_variants: Set[str] = set()
     for name in entity_names(entity, infer_initials=False):
-        name_variants.update(build_name_variants(name))
-
         name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
             name_parts.add(part.comparable)
@@ -136,7 +125,6 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     doc[NAME_PART_FIELD] = list(name_parts)
     doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
-    doc[NAME_VARIANTS_FIELD] = list(name_variants)
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
     doc["text"] = entity.pop("indexText")
