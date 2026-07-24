@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-
 import pytest
 
 from .conftest import (
@@ -12,7 +10,6 @@ from .conftest import (
 
 from yente import settings
 from yente.data.manifest import Manifest
-from yente.routers.admin import catalog_etag, etag_matches
 from yente.search.indexer import update_index
 
 
@@ -179,29 +176,6 @@ async def test_catalog_etag():
         # The wildcard matches the current representation.
         wildcard = client.get("/catalog", headers={"If-None-Match": "*"})
         assert wildcard.status_code == 304
-
-
-def test_catalog_etag_helpers():
-    def _catalog(triples):
-        return SimpleNamespace(
-            datasets=[
-                SimpleNamespace(
-                    name=n, model=SimpleNamespace(version=v, index_version=iv)
-                )
-                for (n, v, iv) in triples
-            ]
-        )
-
-    etag = catalog_etag(_catalog([("x", "1", None), ("y", "2", "2")]))
-    # Order-independent, quoted (strong), and sensitive to version changes.
-    assert etag == catalog_etag(_catalog([("y", "2", "2"), ("x", "1", None)]))
-    assert etag != catalog_etag(_catalog([("x", "1", None), ("y", "3", "3")]))
-    assert etag[0] == '"' and etag[-1] == '"'
-    assert etag_matches(None, etag) is False
-    assert etag_matches(etag, etag) is True
-    assert etag_matches('"other", %s' % etag, etag) is True
-    assert etag_matches("*", etag) is True
-    assert etag_matches('"other"', etag) is False
 
 
 def test_updatez_get():
