@@ -37,7 +37,10 @@ def catalog_etag(catalog: Catalog) -> str:
         "%s:%s:%s" % (ds.name, ds.model.version, ds.model.index_version)
         for ds in catalog.datasets
     ]
-    digest = hashlib.sha1("\n".join(sorted(parts)).encode("utf-8")).hexdigest()
+    # Only a cache validator, not a security primitive.
+    digest = hashlib.sha1(
+        "\n".join(sorted(parts)).encode("utf-8"), usedforsecurity=False
+    ).hexdigest()
     return '"%s"' % digest
 
 
