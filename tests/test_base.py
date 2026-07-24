@@ -172,7 +172,7 @@ async def test_catalog_etag():
             assert res.status_code == 200, res.text
             etag = res.headers.get("etag")
             assert etag is not None
-            assert res.headers.get("cache-control") == "public, max-age=60"
+            assert res.headers.get("cache-control") == "public, max-age=300"
 
             # A matching validator yields a bodiless 304 that still carries it.
             not_modified = client.get("/catalog", headers={"If-None-Match": etag})

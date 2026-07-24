@@ -20,11 +20,6 @@ from yente.search.status import sync_dataset_versions
 log = get_logger(__name__)
 router = APIRouter()
 
-# The /catalog response is fully determined by the loaded datasets and their
-# versions, which only change when data is (re-)indexed (every few hours at
-# most). Allow clients and intermediary caches to revalidate cheaply.
-CATALOG_CACHE_CONTROL = "public, max-age=60"
-
 
 def catalog_etag(catalog: Catalog) -> str:
     """Return a strong ETag for the catalog response.
@@ -151,7 +146,7 @@ async def catalog(
     catalog = await get_catalog()
     await sync_dataset_versions(provider, catalog)
     etag = catalog_etag(catalog)
-    headers = {"ETag": etag, "Cache-Control": CATALOG_CACHE_CONTROL}
+    headers = {"ETag": etag, "Cache-Control": "public, max-age=300"}
     if etag_matches(request.headers.get("if-none-match"), etag):
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
     response.headers.update(headers)
