@@ -1,5 +1,6 @@
-from typing import List
-from fastapi import APIRouter, Depends, Query
+import hashlib
+from typing import Any, List, Optional
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import FileResponse, HTMLResponse
@@ -10,6 +11,7 @@ from yente.logs import get_logger
 from yente.data import get_catalog
 from yente.data.common import ErrorResponse, StatusResponse
 from yente.data.common import DataCatalogModel, AlgorithmResponse, Algorithm
+from yente.data.manifest import Catalog
 from yente.provider import SearchProvider, get_provider
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index, update_index_threaded
@@ -17,6 +19,37 @@ from yente.search.status import sync_dataset_versions
 
 log = get_logger(__name__)
 router = APIRouter()
+
+# The /catalog response is fully determined by the loaded datasets and their
+# versions, which only change when data is (re-)indexed (every few hours at
+# most). Allow clients and intermediary caches to revalidate cheaply.
+CATALOG_CACHE_CONTROL = "public, max-age=60"
+
+
+def catalog_etag(catalog: Catalog) -> str:
+    """Return a strong ETag for the catalog response.
+
+    The response body is fully determined by each dataset's name, version and
+    currently-indexed version, so a hash over those triples changes exactly
+    when the response would. This avoids serialising the body just to compare.
+    """
+    parts = [
+        "%s:%s:%s" % (ds.name, ds.model.version, ds.model.index_version)
+        for ds in catalog.datasets
+    ]
+    digest = hashlib.sha1("\n".join(sorted(parts)).encode("utf-8")).hexdigest()
+    return '"%s"' % digest
+
+
+def if_none_match(header: Optional[str], etag: str) -> bool:
+    """Check whether an ``If-None-Match`` header matches the given ETag.
+
+    Supports the ``*`` wildcard and a comma-separated list of ETags.
+    """
+    if header is None:
+        return False
+    candidates = [tag.strip() for tag in header.split(",")]
+    return "*" in candidates or etag in candidates
 
 
 @router.get(
@@ -95,6 +128,7 @@ async def readyz(
     summary="Data catalog",
     tags=["Data access"],
     response_model=DataCatalogModel,
+    responses={304: {"description": "The catalog has not changed."}},
 )
 @router.get(
     "/manifest",
@@ -102,15 +136,26 @@ async def readyz(
     include_in_schema=False,
 )
 async def catalog(
+    request: Request,
+    response: Response,
     provider: SearchProvider = Depends(get_provider),
-) -> DataCatalogModel:
+) -> Any:
     """Return the service manifest, which includes a list of all indexed datasets.
 
     The manifest is the configuration file of the yente service. It specifies what
     data sources are included, and how often they should be loaded.
+
+    The response carries an `ETag` derived from the loaded dataset versions;
+    clients can send it back in an `If-None-Match` header to revalidate and
+    receive a bodiless `304 Not Modified` when nothing has changed.
     """
     catalog = await get_catalog()
     await sync_dataset_versions(provider, catalog)
+    etag = catalog_etag(catalog)
+    headers = {"ETag": etag, "Cache-Control": CATALOG_CACHE_CONTROL}
+    if if_none_match(request.headers.get("if-none-match"), etag):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
+    response.headers.update(headers)
     model = DataCatalogModel(datasets=[], current=[], outdated=[])
     for dataset in catalog.datasets:
         if dataset.model.load and dataset.model.index_current:
