@@ -144,10 +144,6 @@ async def catalog(
 
     The manifest is the configuration file of the yente service. It specifies what
     data sources are included, and how often they should be loaded.
-
-    The response carries an `ETag` derived from the loaded dataset versions;
-    clients can send it back in an `If-None-Match` header to revalidate and
-    receive a bodiless `304 Not Modified` when nothing has changed.
     """
     catalog = await get_catalog()
     await sync_dataset_versions(provider, catalog)
