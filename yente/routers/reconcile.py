@@ -1,7 +1,7 @@
 import json
 import asyncio
 from urllib.parse import urljoin
-from typing import Any, Union
+from typing import Any
 from collections.abc import Coroutine
 import uuid
 from fastapi import APIRouter, Query, Form, Depends
@@ -158,7 +158,7 @@ async def reconcile(
     "/reconcile/{dataset}",
     summary="Reconciliation queries",
     tags=["Reconciliation"],
-    response_model=Union[dict[str, FreebaseEntityResult], FreebaseExtendResponse],
+    response_model=dict[str, FreebaseEntityResult] | FreebaseExtendResponse,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
@@ -204,7 +204,7 @@ async def reconcile_queries(
     # multiple requests in one query
     queries = FreebaseReconBatch.model_validate_json(data)
     if len(queries.root) > settings.MAX_BATCH:
-        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        msg = f"Too many queries in one batch (limit: {settings.MAX_BATCH})"
         raise HTTPException(400, detail=msg)
 
     tasks: list[Coroutine[Any, Any, tuple[str, FreebaseEntityResult]]] = []
@@ -290,7 +290,7 @@ async def reconcile_extend(
     query = FreebaseExtendQuery.model_validate(extendq)
 
     if len(query.ids) > settings.MAX_BATCH:
-        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        msg = f"Too many queries in one batch (limit: {settings.MAX_BATCH})"
         raise HTTPException(400, detail=msg)
 
     try:

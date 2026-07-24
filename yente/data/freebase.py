@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Any, Union
+from typing import Any
 from pydantic import BaseModel, Field, RootModel
 from pydantic.networks import AnyHttpUrl
 from followthemoney import model
@@ -200,7 +200,7 @@ class FreebaseEntityResult(BaseModel):
     result: list[FreebaseScoredEntity]
 
 
-ReconPropertyValue = Union[str, list[str]]
+ReconPropertyValue = str | list[str]
 
 
 class FreebaseReconPropertyFilter(BaseModel):

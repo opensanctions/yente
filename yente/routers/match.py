@@ -235,7 +235,7 @@ async def match(
             )
 
     if len(match.queries) > settings.MAX_BATCH:
-        msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
+        msg = f"Too many queries in one batch (limit: {settings.MAX_BATCH})"
         raise HTTPException(400, detail=msg)
 
     # We're using a higher limit for candidate generation, because we want to

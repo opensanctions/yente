@@ -41,7 +41,7 @@ async def test_example():
         limit=LIMIT,
     )
 
-    print("\n\nSCORED RESULTS [%d]:" % total)
+    print(f"\n\nSCORED RESULTS [{total}]:")
     for res in scored:
         print(res.id, res.caption, res.schema_, res.score)
 

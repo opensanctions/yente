@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Union
+from typing import Any
 from collections.abc import Iterable
 
 from followthemoney.property import Property
@@ -19,7 +19,7 @@ from yente.search.search import result_entities, result_total
 
 log = get_logger(__name__)
 
-Value = Union[str, EntityResponse]
+Value = str | EntityResponse
 Entities = dict[str, Entity]
 Inverted = dict[str, set[tuple[Property, str]]]
 

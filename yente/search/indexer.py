@@ -85,7 +85,7 @@ async def iter_entity_docs(
     ops: dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
     async for data in updater.load():
         if idx % 1000 == 0 and idx > 0:
-            log.info("Index: %d entities..." % idx, index=index)
+            log.info(f"Index: {idx} entities...", index=index)
         op_code = data["op"]
         idx += 1
         ops[op_code] += 1
@@ -93,7 +93,7 @@ async def iter_entity_docs(
         if action is not None:
             yield action
     log.info(
-        "Indexed %d entities" % idx,
+        f"Indexed {idx} entities",
         added=ops["ADD"],
         modified=ops["MOD"],
         deleted=ops["DEL"],

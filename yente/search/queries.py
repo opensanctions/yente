@@ -2,7 +2,7 @@ import enum
 from pprint import pprint  # noqa
 from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any
 from collections.abc import Generator, Iterable
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
@@ -22,7 +22,7 @@ log = get_logger(__name__)
 Clause = dict[str, Any]
 FilterSpec = tuple[str, str | bool]
 Filters = list[FilterSpec]
-Sort = Union[str, dict[str, dict[str, str]]]
+Sort = str | dict[str, dict[str, str]]
 
 DEFAULT_SORTS: list[Sort] = [
     {"_score": {"order": "desc"}},
