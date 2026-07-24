@@ -3,8 +3,11 @@ repos:
   rev: v6.0.0
   hooks:
     - id: check-yaml
+      args: ['--allow-multiple-documents']
     - id: end-of-file-fixer
+      exclude: '^tests/fixtures/'
     - id: trailing-whitespace
+      exclude: '^tests/fixtures/'
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.15.1
   hooks:
