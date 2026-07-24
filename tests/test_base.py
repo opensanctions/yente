@@ -1,11 +1,9 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 
 from .conftest import (
     FIXTURES_PATH,
-    app,
     build_index_alias_name_for_fixture,
     client,
     patch_catalog_response,
@@ -14,7 +12,6 @@ from .conftest import (
 
 from yente import settings
 from yente.data.manifest import Manifest
-from yente.provider import get_provider
 from yente.routers.admin import catalog_etag, etag_matches
 from yente.search.indexer import update_index
 
@@ -161,35 +158,27 @@ async def test_catalog_etag():
             ]
         }
     )
-    # /catalog only asks the provider for aliased index names, so a stub keeps
-    # this test free of a live Elasticsearch.
-    provider = AsyncMock()
-    provider.get_alias_indices.return_value = []
-    app.dependency_overrides[get_provider] = lambda: provider
-    try:
-        async with patch_yente_catalog(manifest):
-            res = client.get("/catalog")
-            assert res.status_code == 200, res.text
-            etag = res.headers.get("etag")
-            assert etag is not None
-            assert res.headers.get("cache-control") == "public, max-age=300"
+    async with patch_yente_catalog(manifest):
+        res = client.get("/catalog")
+        assert res.status_code == 200, res.text
+        etag = res.headers.get("etag")
+        assert etag is not None
+        assert res.headers.get("cache-control") == "public, max-age=300"
 
-            # A matching validator yields a bodiless 304 that still carries it.
-            not_modified = client.get("/catalog", headers={"If-None-Match": etag})
-            assert not_modified.status_code == 304, not_modified.text
-            assert not_modified.headers.get("etag") == etag
-            assert not_modified.content == b""
+        # A matching validator yields a bodiless 304 that still carries it.
+        not_modified = client.get("/catalog", headers={"If-None-Match": etag})
+        assert not_modified.status_code == 304, not_modified.text
+        assert not_modified.headers.get("etag") == etag
+        assert not_modified.content == b""
 
-            # A stale validator still returns the full body.
-            stale = client.get("/catalog", headers={"If-None-Match": '"stale"'})
-            assert stale.status_code == 200
-            assert stale.headers.get("etag") == etag
+        # A stale validator still returns the full body.
+        stale = client.get("/catalog", headers={"If-None-Match": '"stale"'})
+        assert stale.status_code == 200
+        assert stale.headers.get("etag") == etag
 
-            # The wildcard matches the current representation.
-            wildcard = client.get("/catalog", headers={"If-None-Match": "*"})
-            assert wildcard.status_code == 304
-    finally:
-        app.dependency_overrides.pop(get_provider, None)
+        # The wildcard matches the current representation.
+        wildcard = client.get("/catalog", headers={"If-None-Match": "*"})
+        assert wildcard.status_code == 304
 
 
 def test_catalog_etag_helpers():
