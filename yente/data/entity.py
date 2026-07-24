@@ -1,4 +1,4 @@
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from followthemoney import Schema, registry, model, ValueEntity
 from followthemoney.exc import InvalidData
 from followthemoney.helpers import combine_names
@@ -17,7 +17,7 @@ log = get_logger(__name__)
 class Entity(ValueEntity):
     """Entity for sanctions list entries and adjacent objects."""
 
-    def __init__(self, schema: Schema, data: Dict[str, Any], cleaned: bool = True):
+    def __init__(self, schema: Schema, data: dict[str, Any], cleaned: bool = True):
         super().__init__(schema, data, cleaned=cleaned)
         if self._caption is None:
             self._caption = self._pick_caption()
@@ -75,7 +75,7 @@ class Entity(ValueEntity):
         topics = self.get("topics", quiet=True)
         return len(registry.topic.RISKS.intersection(topics)) > 0
 
-    def to_dict(self, matchable: bool = False) -> Dict[str, Any]:
+    def to_dict(self, matchable: bool = False) -> dict[str, Any]:
         data = super().to_dict()
         # Will be written to the index as well as returned to the client
         data["target"] = self.target

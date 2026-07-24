@@ -14,7 +14,7 @@
 import re
 import pytest_asyncio
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -210,7 +210,7 @@ REQUIRED_ENTITY_KEYS = {
 }
 
 
-def assert_entity_shape(data: Dict[str, Any]) -> None:
+def assert_entity_shape(data: dict[str, Any]) -> None:
     missing = REQUIRED_ENTITY_KEYS - data.keys()
     assert not missing, (missing, sorted(data.keys()))
     assert isinstance(data["id"], str) and data["id"], data["id"]

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Union
 from pydantic import BaseModel, Field, field_serializer
 from nomenklatura.matching.types import (
     MatchingResult,
@@ -12,7 +12,7 @@ from yente import settings
 from yente.data.dataset import YenteDatasetModel
 from yente.data.entity import Entity
 
-EntityProperties = Dict[str, List[Union[str, "EntityResponse"]]]
+EntityProperties = dict[str, list[Union[str, "EntityResponse"]]]
 
 
 class ErrorResponse(BaseModel):
@@ -24,12 +24,12 @@ class EntityResponse(BaseModel):
     caption: str = Field(..., examples=["John Doe"])
     schema_: str = Field(..., examples=["LegalEntity"], alias="schema")
     properties: EntityProperties = Field(..., examples=[{"name": ["John Doe"]}])
-    datasets: List[str] = Field([], examples=[["us_ofac_sdn"]])
-    referents: List[str] = Field([], examples=[["ofac-1234"]])
+    datasets: list[str] = Field([], examples=[["us_ofac_sdn"]])
+    referents: list[str] = Field([], examples=[["ofac-1234"]])
     target: bool = Field(False)
-    first_seen: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
-    last_seen: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
-    last_change: Optional[datetime] = Field(None, examples=[settings.RUN_DT])
+    first_seen: datetime | None = Field(None, examples=[settings.RUN_DT])
+    last_seen: datetime | None = Field(None, examples=[settings.RUN_DT])
+    last_change: datetime | None = Field(None, examples=[settings.RUN_DT])
 
     # Entities come out of ES with these already as ISO strings. Responses
     # are built via model_construct to skip re-validation, so pydantic has
@@ -52,7 +52,7 @@ EntityResponse.model_rebuild()
 
 class ScoredEntityResponse(EntityResponse):
     score: float = 0.99
-    explanations: Dict[str, FeatureResult] = Field(
+    explanations: dict[str, FeatureResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
     match: bool = Field(description="Whether the score is above the match threshold.")
@@ -80,7 +80,7 @@ class SearchFacetItem(BaseModel):
 
 class SearchFacet(BaseModel):
     label: str = Field(..., examples=["Countries"])
-    values: List[SearchFacetItem]
+    values: list[SearchFacetItem]
 
 
 class TotalSpec(BaseModel):
@@ -95,12 +95,12 @@ class ResultsResponse(BaseModel):
 
 
 class SearchResponse(ResultsResponse):
-    results: List[EntityResponse]
-    facets: Dict[str, SearchFacet]
+    results: list[EntityResponse]
+    facets: dict[str, SearchFacet]
 
 
 class AdjacentResultsResponse(ResultsResponse):
-    results: List[Union[str, EntityResponse]] = Field(
+    results: list[str | EntityResponse] = Field(
         [],
         examples=[
             [
@@ -125,49 +125,49 @@ class AdjacentResultsResponse(ResultsResponse):
 
 class EntityAdjacentResponse(BaseModel):
     entity: EntityResponse
-    adjacent: Dict[str, AdjacentResultsResponse]
+    adjacent: dict[str, AdjacentResultsResponse]
 
 
 class EntityExample(BaseModel):
-    id: Optional[str] = Field(None, examples=["my-entity-id"])
+    id: str | None = Field(None, examples=["my-entity-id"])
     schema_: str = Field(..., examples=["Person"], alias="schema")
-    properties: Dict[str, Union[str, List[Any]]] = Field(
+    properties: dict[str, str | list[Any]] = Field(
         ..., examples=[{"name": ["John Doe"]}]
     )
 
 
 class EntityMatchQuery(BaseModel):
-    weights: Dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
-    config: Dict[str, Union[str, int, float, bool, None]] = Field(
+    weights: dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
+    config: dict[str, str | int | float | bool | None] = Field(
         default_factory=dict,
         description="Algorithm-specific configuration parameters.",
         examples=[{"nm_number_mismatch": 0.4}],
     )
-    queries: Dict[str, EntityExample]
+    queries: dict[str, EntityExample]
 
 
 class EntityMatches(BaseModel):
     status: int = Field(200, examples=[200])
-    results: List[ScoredEntityResponse]
+    results: list[ScoredEntityResponse]
     total: TotalSpec
     query: EntityExample
 
 
 class EntityMatchResponse(BaseModel):
-    responses: Dict[str, EntityMatches]
+    responses: dict[str, EntityMatches]
     limit: int = Field(..., examples=[5])
 
 
 class DataCatalogModel(BaseModel):
-    datasets: List[YenteDatasetModel]
-    current: List[str]
-    outdated: List[str]
+    datasets: list[YenteDatasetModel]
+    current: list[str]
+    outdated: list[str]
     index_stale: bool = False
 
 
 class Algorithm(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     features: FeatureDocs = Field(
         deprecated=True, description="Deprecated, use `docs` instead"
     )
@@ -175,6 +175,6 @@ class Algorithm(BaseModel):
 
 
 class AlgorithmResponse(BaseModel):
-    algorithms: List[Algorithm]
+    algorithms: list[Algorithm]
     default: str
     best: str

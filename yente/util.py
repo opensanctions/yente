@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple
+from typing import Any
 from pydantic import AnyHttpUrl
 from pydantic.type_adapter import TypeAdapter
 
@@ -14,7 +14,7 @@ def typed_url(url: Any) -> AnyHttpUrl:
     return TypeAdapter(AnyHttpUrl).validate_python(url)
 
 
-def match_prefix(prefix: str, *labels: Optional[str]) -> bool:
+def match_prefix(prefix: str, *labels: str | None) -> bool:
     prefix = prefix.lower().strip()
     if not len(prefix):
         return False
@@ -27,7 +27,7 @@ def match_prefix(prefix: str, *labels: Optional[str]) -> bool:
     return False
 
 
-def limit_window(limit: int, offset: int) -> Tuple[int, int]:
+def limit_window(limit: int, offset: int) -> tuple[int, int]:
     """ElasticSearch can only return results from within a window of the first 10,000
     scored results. This means that offset + limit may never exceed 10,000 - so here's
     a bunch of bounding magic to enforce that."""

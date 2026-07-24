@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from typing import Dict, Optional, Any
+from datetime import datetime, UTC
+from typing import Any
 from pydantic import Field, FilePath, computed_field, field_validator
 from rigour.time import datetime_iso
 from followthemoney.dataset import DataResource, Dataset as FollowTheMoneyDataset
@@ -15,20 +15,20 @@ log = get_logger(__name__)
 
 
 class YenteDatasetModel(DatasetModel):
-    load: Optional[bool] = None
-    entities_url: Optional[str] = None
-    entities_checksum: Optional[str] = Field(None, exclude=True)
-    path: Optional[FilePath] = Field(None, exclude=True)
-    auth_token: Optional[str] = Field(None, exclude=True)
-    delta_url: Optional[Url] = None
+    load: bool | None = None
+    entities_url: str | None = None
+    entities_checksum: str | None = Field(None, exclude=True)
+    path: FilePath | None = Field(None, exclude=True)
+    auth_token: str | None = Field(None, exclude=True)
+    delta_url: Url | None = None
     namespace: bool = False
-    resource_name: Optional[str] = Field(None, exclude=True)
-    resource_type: Optional[str] = Field(None, exclude=True)
-    index_version: Optional[str] = None
+    resource_name: str | None = Field(None, exclude=True)
+    resource_type: str | None = Field(None, exclude=True)
+    index_version: str | None = None
 
     @field_validator("entities_url", mode="before")
     @classmethod
-    def expand_entities_url(cls, value: Optional[str]) -> Optional[str]:
+    def expand_entities_url(cls, value: str | None) -> str | None:
         if value is None:
             return None
         entities_path = get_url_local_path(value)
@@ -43,7 +43,7 @@ class YenteDatasetModel(DatasetModel):
 
 
 class Dataset(FollowTheMoneyDataset):
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: dict[str, Any]):
         super().__init__(data)
         self.model: YenteDatasetModel = YenteDatasetModel.model_validate(data)
 
@@ -66,19 +66,19 @@ class Dataset(FollowTheMoneyDataset):
                             )
 
         if self.model.version is None:
-            ts: Optional[str] = data.get("last_export", datetime_iso(settings.RUN_DT))
+            ts: str | None = data.get("last_export", datetime_iso(settings.RUN_DT))
             if self.model.entities_url is not None:
                 path = get_url_local_path(self.model.entities_url)
                 if path is not None and path.exists():
                     mtime = path.stat().st_mtime
-                    mdt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+                    mdt = datetime.fromtimestamp(mtime, tz=UTC)
                     ts = datetime_iso(mdt)
             if ts is not None:
                 self.model.version = iso_to_version(ts) or "static"
 
         self.ns = Namespace(self.name) if self.model.namespace else None
 
-    def _get_entities_resource(self, data: Dict[str, Any]) -> Optional[DataResource]:
+    def _get_entities_resource(self, data: dict[str, Any]) -> DataResource | None:
         """Return entities resource identified by catalog options."""
         resource_name = self.model.resource_name
         resource_type = self.model.resource_type
@@ -91,7 +91,7 @@ class Dataset(FollowTheMoneyDataset):
                 return resource
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = super().to_dict()
         if "children" not in data:
             data["children"] = [c.name for c in self.children]

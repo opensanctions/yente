@@ -1,6 +1,7 @@
 import asyncio
 import threading
-from typing import Any, AsyncGenerator, AsyncIterable, Dict, List, Optional, Set
+from typing import Any
+from collections.abc import AsyncGenerator, AsyncIterable
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.names import entity_names
@@ -47,10 +48,10 @@ lock = threading.Lock()
 def build_entity_action(
     index: str,
     op_code: str,
-    entity_data: Dict[str, Any],
-    datasets: Set[str],
+    entity_data: dict[str, Any],
+    datasets: set[str],
     dataset: Dataset,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Build a single bulk action dict from a raw entity op, or None on error."""
     if op_code == "DEL":
         return {
@@ -71,17 +72,17 @@ def build_entity_action(
             "_source": build_indexable_entity_doc(entity),
         }
     except FollowTheMoneyException as exc:
-        log.error("Invalid entity: %s" % exc, data=entity_data)
+        log.error(f"Invalid entity: {exc}", data=entity_data)
         return None
 
 
 async def iter_entity_docs(
     updater: DatasetUpdater, index: str
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     dataset = updater.dataset
     datasets = set(dataset.dataset_names)
     idx = 0
-    ops: Dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
+    ops: dict[str, int] = {"ADD": 0, "DEL": 0, "MOD": 0}
     async for data in updater.load():
         if idx % 1000 == 0 and idx > 0:
             log.info("Index: %d entities..." % idx, index=index)
@@ -99,7 +100,7 @@ async def iter_entity_docs(
     )
 
 
-def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
+def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     doc = entity.to_dict(matchable=True)
     entity_id = doc.pop("id")
     doc["entity_id"] = entity_id
@@ -108,9 +109,9 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
     # large (i.e. important) entities.
     doc["entity_values_count"] = sum([len(v) for v in doc["properties"].values()])
 
-    name_parts: Set[str] = set()
-    name_phonemes: Set[str] = set()
-    name_symbols: Set[str] = set()
+    name_parts: set[str] = set()
+    name_phonemes: set[str] = set()
+    name_symbols: set[str] = set()
     for name in entity_names(entity, infer_initials=False):
         name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
@@ -133,7 +134,7 @@ def build_indexable_entity_doc(entity: Entity) -> Dict[str, Any]:
 
 async def get_index_version(provider: SearchProvider, dataset: Dataset) -> str | None:
     """Return the currently indexed version of a given dataset."""
-    versions: List[str] = []
+    versions: list[str] = []
     for index in await provider.get_alias_indices(settings.ENTITY_INDEX):
         try:
             index_info = parse_index_name(index)
@@ -207,8 +208,8 @@ async def index_entities(
 
         # Little wrapper to refresh the lock every now and then
         async def refresh_lock_iterator(
-            it: AsyncIterable[Dict[str, Any]],
-        ) -> AsyncIterable[Dict[str, Any]]:
+            it: AsyncIterable[dict[str, Any]],
+        ) -> AsyncIterable[dict[str, Any]]:
             idx = 0
             async for item in it:
                 idx += 1
@@ -235,7 +236,7 @@ async def index_entities(
     except Exception as exc:
         detail = getattr(exc, "detail", str(exc))
         log.exception(
-            "Indexing error: %s" % detail,
+            f"Indexing error: {detail}",
             dataset=dataset.name,
             index=next_index,
         )
@@ -267,7 +268,7 @@ async def index_entities(
     # Dates in ES documents would normally be stored as timestamps, but index
     # metadata is just an opaque blob — ES doesn't parse or process it. For
     # consistency we store values here exactly as we got them from the catalog.
-    index_metadata: Dict[str, Any] = {}
+    index_metadata: dict[str, Any] = {}
     if dataset.model.last_export is not None:
         index_metadata["last_export"] = dataset.model.last_export.isoformat()
     await provider.set_index_metadata(next_index, index_metadata)
@@ -288,7 +289,7 @@ async def index_entities(
         dataset_version=updater.target_version,
         message=f"Alias {alias} prefixed {dataset_prefix} now points to {next_index}",
     )
-    log.info("Index is now aliased to: %s" % alias, index=next_index)
+    log.info(f"Index is now aliased to: {alias}", index=next_index)
     # Also refreshed periodically by update_metrics in a cron — calling it
     # here just makes the gauge reflect a fresh reindex without waiting for
     # the next cron tick.
@@ -308,7 +309,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         try:
             index_info = parse_index_name(index)
         except ValueError as exc:
-            log.warn("Invalid index name: %s, deleting." % exc, index=index)
+            log.warn(f"Invalid index name: {exc}, deleting.", index=index)
             await audit_log.log_audit_message(
                 provider,
                 AuditLogEventType.CLEANUP_INDEX_DELETED,
@@ -378,7 +379,7 @@ def update_index_threaded(force: bool = False) -> None:
         try:
             await update_index(force=force)
         except (Exception, KeyboardInterrupt) as exc:
-            log.exception("Index update error: %s" % exc)
+            log.exception(f"Index update error: {exc}")
 
     thread = threading.Thread(
         target=asyncio.run,

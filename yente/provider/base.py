@@ -1,11 +1,12 @@
-from typing import Any, AsyncIterable, Dict, Iterable, List, Optional, Union
+from typing import Any
+from collections.abc import AsyncIterable, Iterable
 
 
-class SearchProvider(object):
+class SearchProvider:
     async def close(self) -> None:
         raise NotImplementedError
 
-    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+    async def set_index_metadata(self, index: str, metadata: dict[str, Any]) -> None:
         """Replace the index-level metadata dict with `metadata`.
 
         Note: this is a full replace, not a merge — any keys previously present
@@ -14,7 +15,7 @@ class SearchProvider(object):
         """
         raise NotImplementedError
 
-    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+    async def get_index_metadata(self, index: str) -> dict[str, Any]:
         """Return the index-level metadata dict, or an empty dict if none is set."""
         raise NotImplementedError
 
@@ -22,11 +23,11 @@ class SearchProvider(object):
         """Refresh the index to make changes visible."""
         raise NotImplementedError
 
-    async def get_all_indices(self) -> List[str]:
+    async def get_all_indices(self) -> list[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
         raise NotImplementedError
 
-    async def get_alias_indices(self, alias: str) -> List[str]:
+    async def get_alias_indices(self, alias: str) -> list[str]:
         """Get a list of indices that are aliased to the entity query alias."""
         raise NotImplementedError
 
@@ -40,7 +41,7 @@ class SearchProvider(object):
         raise NotImplementedError
 
     async def create_index(
-        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+        self, index: str, mappings: dict[str, Any], settings: dict[str, Any]
     ) -> None:
         """Create a new index if it doesn't exist yet."""
         raise NotImplementedError
@@ -59,17 +60,17 @@ class SearchProvider(object):
     async def search(
         self,
         index: str,
-        query: Dict[str, Any],
-        size: Optional[int] = None,
-        from_: Optional[int] = None,
-        sort: Optional[List[Any]] = None,
-        aggregations: Optional[Dict[str, Any]] = None,
+        query: dict[str, Any],
+        size: int | None = None,
+        from_: int | None = None,
+        sort: list[Any] | None = None,
+        aggregations: dict[str, Any] | None = None,
         rank_precise: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search for entities in the index."""
         raise NotImplementedError
 
-    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+    async def get_document(self, index: str, doc_id: str) -> dict[str, Any] | None:
         """Get a document by ID using the GET API.
 
         Returns the document if found, None if not found.
@@ -77,7 +78,7 @@ class SearchProvider(object):
         raise NotImplementedError
 
     async def bulk_index(
-        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+        self, actions: Iterable[dict[str, Any]] | AsyncIterable[dict[str, Any]]
     ) -> None:
         """Perform an iterable of bulk actions to the search index."""
         raise NotImplementedError

@@ -1,5 +1,4 @@
 import hashlib
-from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
@@ -29,17 +28,17 @@ def catalog_etag(catalog: Catalog) -> str:
     when the response would. This avoids serialising the body just to compare.
     """
     parts = [
-        "%s:%s:%s" % (ds.name, ds.model.version, ds.model.index_version)
+        f"{ds.name}:{ds.model.version}:{ds.model.index_version}"
         for ds in catalog.datasets
     ]
     # Only a cache validator, not a security primitive.
     digest = hashlib.sha1(
         "\n".join(sorted(parts)).encode("utf-8"), usedforsecurity=False
     ).hexdigest()
-    return '"%s"' % digest
+    return f'"{digest}"'
 
 
-def etag_matches(header: Optional[str], etag: str) -> bool:
+def etag_matches(header: str | None, etag: str) -> bool:
     """Check whether an ``If-None-Match`` header matches the given ETag.
 
     Supports the ``*`` wildcard and a comma-separated list of ETags.
@@ -137,7 +136,7 @@ async def catalog(
     request: Request,
     response: Response,
     provider: SearchProvider = Depends(get_provider),
-) -> Union[Response, DataCatalogModel]:
+) -> Response | DataCatalogModel:
     """Return the service manifest, which includes a list of all indexed datasets.
 
     The manifest is the configuration file of the yente service. It specifies what
@@ -173,7 +172,7 @@ async def algorithms() -> AlgorithmResponse:
 
     See also the [scoring documentation](https://www.opensanctions.org/docs/api/scoring/).
     """
-    algorithms: List[Algorithm] = []
+    algorithms: list[Algorithm] = []
     for algo in ENABLED_ALGORITHMS:
         if algo.NAME in settings.HIDDEN_ALGORITHMS:
             continue

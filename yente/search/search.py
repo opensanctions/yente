@@ -1,5 +1,5 @@
-from typing import Generator, Set, Tuple
-from typing import Any, Dict, List, Optional
+from collections.abc import Generator
+from typing import Any
 from followthemoney import model, registry, Schema
 from followthemoney.dataset import DataCatalog
 
@@ -12,25 +12,25 @@ from yente.provider import SearchProvider
 from yente.util import EntityRedirect, limit_window
 
 log = get_logger(__name__)
-AggType = Dict[str, Dict[str, List[Dict[str, Any]]]]
+AggType = dict[str, dict[str, list[dict[str, Any]]]]
 
 
-def result_entity(data: Dict[str, Any]) -> Optional[Entity]:
-    source: Optional[Dict[str, Any]] = data.get("_source")
+def result_entity(data: dict[str, Any]) -> Entity | None:
+    source: dict[str, Any] | None = data.get("_source")
     if source is None or source.get("schema") is None:
         return None
     source["id"] = data.get("_id")
     return Entity.from_dict(source)
 
 
-def result_total(result: Dict[str, Any]) -> TotalSpec:
-    total: Dict[str, Any] = result.get("hits", {}).get("total")
+def result_total(result: dict[str, Any]) -> TotalSpec:
+    total: dict[str, Any] = result.get("hits", {}).get("total")
     return TotalSpec(value=total["value"], relation=total["relation"])
 
 
 def result_entities(
-    response: Dict[str, Any],
-) -> Generator[Tuple[Entity, float], None, None]:
+    response: dict[str, Any],
+) -> Generator[tuple[Entity, float], None, None]:
     hits = response.get("hits", {})
     for hit in hits.get("hits", []):
         entity = result_entity(hit)
@@ -40,18 +40,18 @@ def result_entities(
 
 
 def result_facets(
-    response: Dict[str, Any], catalog: DataCatalog[Dataset]
-) -> Dict[str, SearchFacet]:
-    facets: Dict[str, SearchFacet] = {}
+    response: dict[str, Any], catalog: DataCatalog[Dataset]
+) -> dict[str, SearchFacet]:
+    facets: dict[str, SearchFacet] = {}
     aggs: AggType = response.get("aggregations", {})
     for field, agg in aggs.items():
         facet = SearchFacet(label=field, values=[])
-        buckets: List[Dict[str, Any]] = agg.get("buckets", [])
+        buckets: list[dict[str, Any]] = agg.get("buckets", [])
         for bucket in buckets:
-            key: Optional[str] = bucket.get("key")
+            key: str | None = bucket.get("key")
             if key is not None:
                 key = str(key)
-            count: Optional[int] = bucket.get("doc_count")
+            count: int | None = bucket.get("doc_count")
             if key is None or count is None:
                 continue
             value = SearchFacetItem(name=key, label=key, count=count)
@@ -76,7 +76,7 @@ def result_facets(
     return facets
 
 
-def upscore_large_entities(query: Dict[str, Any]) -> Dict[str, Any]:
+def upscore_large_entities(query: dict[str, Any]) -> dict[str, Any]:
     """Wrap query to up-score important entities."""
 
     return {
@@ -104,12 +104,12 @@ def upscore_large_entities(query: Dict[str, Any]) -> Dict[str, Any]:
 
 async def search_entities(
     provider: SearchProvider,
-    query: Dict[str, Any],
+    query: dict[str, Any],
     limit: int = 5,
     offset: int = 0,
-    aggregations: Optional[Dict[str, Any]] = None,
-    sort: List[Any] = [],
-) -> Dict[str, Any]:
+    aggregations: dict[str, Any] | None = None,
+    sort: list[Any] = [],
+) -> dict[str, Any]:
     limit, offset = limit_window(limit, offset)
 
     return await provider.search(
@@ -123,7 +123,7 @@ async def search_entities(
     )
 
 
-async def get_entity(provider: SearchProvider, entity_id: str) -> Optional[Entity]:
+async def get_entity(provider: SearchProvider, entity_id: str) -> Entity | None:
     query = {
         "bool": {
             "should": [
@@ -150,7 +150,7 @@ async def get_entity(provider: SearchProvider, entity_id: str) -> Optional[Entit
 
 async def get_matchable_schemata(
     provider: SearchProvider, dataset: Dataset
-) -> Set[Schema]:
+) -> set[Schema]:
     """Get the set of schema used in this dataset that are matchable or
     a parent schema to a matchable schema."""
     filter_ = {"terms": {"datasets": dataset.dataset_names}}
@@ -162,7 +162,7 @@ async def get_matchable_schemata(
         aggregations={facet: {"terms": {"field": "schema", "size": 1000}}},
     )
     aggs: AggType = response.get("aggregations", {})
-    schemata: Set[Schema] = set()
+    schemata: set[Schema] = set()
     for bucket in aggs.get(facet, {}).get("buckets", []):
         schema = model.get(bucket["key"])
         if schema is not None and schema.matchable:

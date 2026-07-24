@@ -17,7 +17,7 @@ Re-run this script whenever you want to refresh the fixture from a newer dataset
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -130,7 +130,7 @@ def main() -> None:
     # Derive timestamps from the entity data for the index metadata.
     updated_at = max(
         (e["last_seen"] for e in entities if e.get("last_seen")),
-        default=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+        default=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S"),
     )
     last_change = max(
         (e["last_change"] for e in entities if e.get("last_change")),

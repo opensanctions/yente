@@ -3,7 +3,7 @@ import csv
 import asyncio
 import subprocess
 import sys
-from typing import List, Dict, Type, Union, Any
+from typing import Any
 from pathlib import Path
 from rich.console import Console
 from rich.table import Table
@@ -62,10 +62,10 @@ class PersonRecord:
         }
 
 
-def read_person_csv(file_path: str) -> List[PersonRecord]:
+def read_person_csv(file_path: str) -> list[PersonRecord]:
     """Read PersonRecord objects from a CSV file."""
     persons = []
-    with open(file_path, "r", newline="", encoding="utf-8") as csvfile:
+    with open(file_path, newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             person = PersonRecord(
@@ -84,7 +84,7 @@ def read_person_csv(file_path: str) -> List[PersonRecord]:
 
 def person_to_entity_example(person: PersonRecord) -> EntityExample:
     """Convert a PersonRecord to an EntityExample for matching."""
-    properties: Dict[str, Union[str, List[Any]]] = {
+    properties: dict[str, str | list[Any]] = {
         "name": [person.full_name],
         "birthDate": [person.date_of_birth],
         "nationality": [person.nationality],
@@ -112,10 +112,10 @@ def person_to_entity_example(person: PersonRecord) -> EntityExample:
 
 async def benchmark_person(
     person: PersonRecord,
-    algorithms: List[Type[ScoringAlgorithm]],
+    algorithms: list[type[ScoringAlgorithm]],
     dataset: Dataset,
     provider: SearchProvider,
-) -> Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]]:
+) -> dict[type[ScoringAlgorithm], list[ScoredEntityResponse]]:
     """Benchmark a person against multiple algorithms.
 
     Args:
@@ -140,7 +140,7 @@ async def benchmark_person(
     candidates = list(result_entities(response))
 
     # Score results with each algorithm
-    results: Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]] = {}
+    results: dict[type[ScoringAlgorithm], list[ScoredEntityResponse]] = {}
 
     for algorithm in algorithms:
         # Use default scoring config
@@ -165,16 +165,16 @@ async def benchmark_person(
 
 
 def calculate_algorithm_statistics(
-    results: List[
-        tuple[PersonRecord, Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]]]
+    results: list[
+        tuple[PersonRecord, dict[type[ScoringAlgorithm], list[ScoredEntityResponse]]]
     ],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calculate statistics for each algorithm across all persons."""
     assert results, "No results to calculate statistics from"
 
     # Get all algorithms from the first result
     algorithms = list(results[0][1].keys())
-    stats: Dict[str, Any] = {"total_persons": len(results)}
+    stats: dict[str, Any] = {"total_persons": len(results)}
 
     for algorithm in algorithms:
         top_scores = []
@@ -234,8 +234,8 @@ def calculate_algorithm_statistics(
 
 async def benchmark_async(
     person_file: Path, matchers: tuple[str, ...], dataset_name: str
-) -> List[
-    tuple[PersonRecord, Dict[Type[ScoringAlgorithm], List[ScoredEntityResponse]]]
+) -> list[
+    tuple[PersonRecord, dict[type[ScoringAlgorithm], list[ScoredEntityResponse]]]
 ]:
     """Benchmark candidate generation with specified algorithms."""
     # Read the person file into an iterable called person of PersonRecord
@@ -342,7 +342,7 @@ def benchmark(
     console = Console()
 
     # Store results for each combination of person file and git tree
-    results_matrix: Dict[str, Dict[str, Dict[str, float]]] = {}
+    results_matrix: dict[str, dict[str, dict[str, float]]] = {}
 
     # Process each person file
     for file_path in person_file:
@@ -407,7 +407,7 @@ def benchmark(
 
 
 def visualize_results_matrix(
-    results_matrix: Dict[str, Dict[str, Dict[str, float]]],
+    results_matrix: dict[str, dict[str, dict[str, float]]],
     matcher: str,
     dataset: str,
     console: Console,

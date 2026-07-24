@@ -5,15 +5,9 @@ import asyncio
 import logging
 from typing import (
     Any,
-    AsyncIterable,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Union,
     cast,
 )
+from collections.abc import AsyncIterable, Callable, Iterable
 from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
 from opensearchpy.helpers import async_streaming_bulk
 from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
@@ -60,7 +54,7 @@ class OpenSearchProvider(SearchProvider):
     @classmethod
     async def create(cls) -> "OpenSearchProvider":
         """Get elasticsearch connection."""
-        kwargs: Dict[str, Any] = dict(
+        kwargs: dict[str, Any] = dict(
             timeout=60,
             retry_on_timeout=True,
             max_retries=10,
@@ -89,7 +83,7 @@ class OpenSearchProvider(SearchProvider):
         if settings.INDEX_CA_CERT:
             kwargs["ca_certs"] = settings.INDEX_CA_CERT
         for retry in range(2, 9):
-            es: Optional[AsyncOpenSearch] = None
+            es: AsyncOpenSearch | None = None
             try:
                 es = AsyncOpenSearch(**kwargs)
                 # Cluster health is not supported for Serverless
@@ -97,7 +91,7 @@ class OpenSearchProvider(SearchProvider):
                     await es.cluster.health(wait_for_status="yellow", timeout=5)
                 return OpenSearchProvider(es, service_type)
             except (TransportError, ConnectionError) as exc:
-                log.error("Cannot connect to OpenSearch: %r" % exc)
+                log.error(f"Cannot connect to OpenSearch: {exc!r}")
                 if es is not None:
                     await es.close()
                 await asyncio.sleep(retry**2)
@@ -128,13 +122,13 @@ class OpenSearchProvider(SearchProvider):
             raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
 
     @traced
-    async def get_all_indices(self) -> List[str]:
+    async def get_all_indices(self) -> list[str]:
         """Get a list of all indices in the ElasticSearch cluster."""
         indices: Any = await self.client.cat.indices(format="json")
         return [index.get("index") for index in indices]
 
     @traced
-    async def get_alias_indices(self, alias: str) -> List[str]:
+    async def get_alias_indices(self, alias: str) -> list[str]:
         """Get a list of indices that are aliased to the entity query alias."""
         try:
             resp = await self.client.indices.get_alias(name=alias)
@@ -197,7 +191,7 @@ class OpenSearchProvider(SearchProvider):
 
     @traced
     async def create_index(
-        self, index: str, mappings: Dict[str, Any], settings: Dict[str, Any]
+        self, index: str, mappings: dict[str, Any], settings: dict[str, Any]
     ) -> None:
         """Create a new index with the given name, mappings, and settings."""
         log.info("Create index", index=index)
@@ -213,14 +207,14 @@ class OpenSearchProvider(SearchProvider):
             raise YenteIndexError(f"Could not create index: {exc}") from exc
 
     @traced
-    async def set_index_metadata(self, index: str, metadata: Dict[str, Any]) -> None:
+    async def set_index_metadata(self, index: str, metadata: dict[str, Any]) -> None:
         try:
             await self.client.indices.put_mapping(index=index, body={"_meta": metadata})
         except TransportError as te:
             raise YenteIndexError(f"Could not set index metadata: {te}") from te
 
     @traced
-    async def get_index_metadata(self, index: str) -> Dict[str, Any]:
+    async def get_index_metadata(self, index: str) -> dict[str, Any]:
         try:
             response = await self.client.indices.get_mapping(index=index)
         except (NotFoundError, TransportError) as exc:
@@ -228,7 +222,7 @@ class OpenSearchProvider(SearchProvider):
         index_block = response.get(index, {})
         mappings = index_block.get("mappings", {})
         meta = mappings.get("_meta", {})
-        return cast(Dict[str, Any], meta)
+        return cast(dict[str, Any], meta)
 
     @traced
     async def delete_index(self, index: str) -> None:
@@ -266,13 +260,13 @@ class OpenSearchProvider(SearchProvider):
     async def search(
         self,
         index: str,
-        query: Dict[str, Any],
-        size: Optional[int] = None,
-        from_: Optional[int] = None,
-        sort: Optional[List[Any]] = None,
-        aggregations: Optional[Dict[str, Any]] = None,
+        query: dict[str, Any],
+        size: int | None = None,
+        from_: int | None = None,
+        sort: list[Any] | None = None,
+        aggregations: dict[str, Any] | None = None,
         rank_precise: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search for entities in the index."""
 
         # This deals with a case in ElasticSearch where the scoring is off when two
@@ -282,7 +276,7 @@ class OpenSearchProvider(SearchProvider):
         search_type = "dfs_query_then_fetch" if rank_precise else None
 
         try:
-            body: Dict[str, Any] = {"query": query}
+            body: dict[str, Any] = {"query": query}
             if aggregations is not None:
                 body["aggregations"] = aggregations
             if sort is not None:
@@ -294,7 +288,7 @@ class OpenSearchProvider(SearchProvider):
                 body=body,
                 search_type=search_type,
             )
-            return cast(Dict[str, Any], response)
+            return cast(dict[str, Any], response)
         except TransportError as exc:
             if "index_not_found_exception" in exc.error:
                 msg = (
@@ -311,19 +305,19 @@ class OpenSearchProvider(SearchProvider):
                 query=json.dumps(query),
             )
             raise YenteIndexError(f"Could not search index: {exc}") from exc
-        except (OSError, Exception, asyncio.TimeoutError) as exc:
+        except (TimeoutError, OSError, Exception) as exc:
             msg = f"Error during search: {str(exc)}"
             raise YenteIndexError(msg, status=500) from exc
 
     @traced
-    async def get_document(self, index: str, doc_id: str) -> Optional[Dict[str, Any]]:
+    async def get_document(self, index: str, doc_id: str) -> dict[str, Any] | None:
         """Get a document by ID using the GET API.
 
         Returns the document if found, None if not found.
         """
         try:
             response = await self.client.get(index=index, id=doc_id)
-            return cast(Dict[str, Any], response)
+            return cast(dict[str, Any], response)
         except NotFoundError:
             return None
         except Exception as exc:
@@ -331,7 +325,7 @@ class OpenSearchProvider(SearchProvider):
 
     @traced
     async def bulk_index(
-        self, actions: Union[Iterable[Dict[str, Any]], AsyncIterable[Dict[str, Any]]]
+        self, actions: Iterable[dict[str, Any]] | AsyncIterable[dict[str, Any]]
     ) -> None:
         """Perform an iterable of bulk actions to the search index."""
         # The logic in async_streaming_bulk is quite confusing and not well-documented. I tried

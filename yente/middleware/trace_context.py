@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from typing import Any, Tuple, List
+from typing import Any
 import secrets
 import structlog
 from structlog.contextvars import get_contextvars
@@ -65,11 +65,11 @@ class TraceParent:
 
 @dataclass
 class TraceState:
-    tracestate: List[Tuple[str, str]]
+    tracestate: list[tuple[str, str]]
 
     @classmethod
     def create(cls, parent: TraceParent, prev_state: str = "") -> "TraceState":
-        spans_out: List[Tuple[str, str]] = []
+        spans_out: list[tuple[str, str]] = []
         for span in prev_state.split(","):
             parts = span.split("=")
             if len(parts) != 2:

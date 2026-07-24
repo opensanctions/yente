@@ -1,14 +1,14 @@
 import pytest
 from hashlib import sha1
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 from yente import settings
 from yente.data.loader import load_json_lines, split_json_lines
 from yente.exc import ChecksumError
 
 
-async def _aiter(chunks: List[bytes]):
+async def _aiter(chunks: list[bytes]):
     for chunk in chunks:
         yield chunk
 
@@ -50,7 +50,7 @@ async def test_split_json_lines_skips_empty_lines() -> None:
 
 @pytest.mark.asyncio
 async def test_split_json_lines_empty_input() -> None:
-    chunks: List[bytes] = []
+    chunks: list[bytes] = []
     out = [x async for x in split_json_lines(_aiter(chunks))]
     assert out == []
 

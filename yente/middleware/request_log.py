@@ -3,7 +3,8 @@ from fastapi import Request
 from rigour.time import utc_now
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Any, Callable, Awaitable, Optional
+from typing import Any
+from collections.abc import Callable, Awaitable
 
 from yente.logs import get_logger
 
@@ -11,7 +12,7 @@ from yente.logs import get_logger
 log = get_logger(__name__)
 
 
-def get_client_ip(request: Request) -> Optional[str]:
+def get_client_ip(request: Request) -> str | None:
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         client_ip = forwarded_for.split(",")[0].strip()

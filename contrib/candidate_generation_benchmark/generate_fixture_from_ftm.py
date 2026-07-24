@@ -2,7 +2,6 @@ import orjson
 import random
 import csv
 import sys
-from typing import Dict, Optional
 import click
 
 # curl "https://data.opensanctions.org/datasets/20250820/un_sc_sanctions/entities.ftm.json" \
@@ -108,7 +107,7 @@ treatment_mapping = {
 }
 
 
-def parse_ftm_entity(line: str) -> Optional[Dict[str, str]]:
+def parse_ftm_entity(line: str) -> dict[str, str] | None:
     """
     Parse a single FTM entity line and extract person information.
     Returns None if the entity is not a Person.
@@ -159,7 +158,7 @@ def parse_ftm_entity(line: str) -> Optional[Dict[str, str]]:
     }
 
 
-def apply_treatment(person_data: Dict[str, str]) -> Dict[str, str]:
+def apply_treatment(person_data: dict[str, str]) -> dict[str, str]:
     """
     Apply treatment to a person record.
     In 30% of cases, do nothing. In the rest, randomly choose a name field

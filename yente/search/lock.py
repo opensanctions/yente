@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 import uuid
 from yente import logs, settings
 from yente.exc import YenteIndexError
@@ -57,14 +57,14 @@ def from_millis_timestamp(millis: int) -> datetime:
     return datetime.fromtimestamp(millis / 1000)
 
 
-def lock_is_active(hit: Dict[str, Any]) -> bool:
+def lock_is_active(hit: dict[str, Any]) -> bool:
     return (
         datetime.now() - from_millis_timestamp(hit["_source"]["acquired_at"])
         < LOCK_EXPIRATION_TIME
     )
 
 
-async def acquire_lock(provider: SearchProvider) -> Optional[LockSession]:
+async def acquire_lock(provider: SearchProvider) -> LockSession | None:
     """Acquire the global lock for the entire settings.INDEX_NAME prefix.
 
     Returns a LockSession if the lock was acquired, None if it was not.

@@ -1,4 +1,3 @@
-from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Path, Query, Response, HTTPException
 from fastapi.responses import RedirectResponse
 from followthemoney import model
@@ -29,7 +28,7 @@ log = get_logger(__name__)
 router = APIRouter()
 
 
-class Facet(str, enum.Enum):
+class Facet(enum.StrEnum):
     DATASETS = "datasets"
     SCHEMA = "schema"
     COUNTRIES = "countries"
@@ -57,32 +56,32 @@ async def search(
     schema: str = Query(
         settings.BASE_SCHEMA, title="Types of entities that can match the search"
     ),
-    include_dataset: List[str] = Query(
+    include_dataset: list[str] = Query(
         [],
         title="Restrict the search scope to datasets (that are in the given scope) to search entities within.",
         description="Limit the results to entities that are part of at least one of the given datasets.",
     ),
-    exclude_dataset: List[str] = Query(
+    exclude_dataset: list[str] = Query(
         [],
         title="Remove specific datasets (that are in the given scope) from the search scope.",
     ),
-    exclude_schema: List[str] = Query(
+    exclude_schema: list[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
-    changed_since: Optional[str] = Query(
+    changed_since: str | None = Query(
         None,
         pattern=TS_PATTERN,
         title="Search entities that were updated since the given date",
     ),
-    countries: List[str] = Query([], title="Filter by country codes"),
-    topics: List[str] = Query(
+    countries: list[str] = Query([], title="Filter by country codes"),
+    topics: list[str] = Query(
         [], title="Filter by entity topics (e.g. sanction, role.pep)"
     ),
-    datasets: List[str] = Query(
+    datasets: list[str] = Query(
         [],
         title="Filter by dataset names, for faceting use (respects operator choice).",
     ),
-    filter: List[str] = Query(
+    filter: list[str] = Query(
         [],
         title="Filter by entity properties (e.g. programId, birthDate)",
         description="Use the syntax `field:value` to filter on a specific field. Properties are indexed as fields named `properties.birthDate:1985`.",
@@ -93,8 +92,8 @@ async def search(
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
-    sort: List[str] = Query([], title="Sorting criteria"),
-    target: Optional[bool] = Query(
+    sort: list[str] = Query([], title="Sorting criteria"),
+    target: bool | None = Query(
         None,
         title="Include only targeted entities",
         description="Please specify a list of topics of concern, instead.",
@@ -102,7 +101,7 @@ async def search(
     ),
     fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
     simple: bool = Query(False, title="Use simple syntax for user-facing query boxes"),
-    facets: List[Facet] = Query(
+    facets: list[Facet] = Query(
         DEFAULT_FACETS,
         title="Facet counts to include in response.",
     ),
@@ -135,7 +134,7 @@ async def search(
             field, value = flt.split(":", 1)
             filters.append((field, value))
         except ValueError:
-            raise HTTPException(400, detail="Invalid filter: %r" % flt)
+            raise HTTPException(400, detail=f"Invalid filter: {flt!r}")
     if target is not None:
         filters.append(("target", target))
     query = text_query(
@@ -161,7 +160,7 @@ async def search(
         aggregations=aggregations,
         sort=parse_sorts(sort),
     )
-    results: List[EntityResponse] = []
+    results: list[EntityResponse] = []
     for result, _ in result_entities(resp):
         results.append(EntityResponse.from_entity(result))
     output = SearchResponse(
@@ -201,7 +200,7 @@ async def fetch_entity(
         title="Include adjacent entities (e.g. addresses, family) in response",
     ),
     provider: SearchProvider = Depends(get_provider),
-) -> Union[RedirectResponse, EntityResponse]:
+) -> RedirectResponse | EntityResponse:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
     passport, sanction and associated entities) included. If the entity ID
@@ -243,7 +242,7 @@ async def fetch_adjacent_entities(
         examples=["Q7747"],
     ),
     provider: SearchProvider = Depends(get_provider),
-    sort: List[str] = Query([], title="Sorting criteria"),
+    sort: list[str] = Query([], title="Sorting criteria"),
     limit: int = Query(
         settings.DEFAULT_PAGE,
         title="Number of results per property to return",
@@ -252,7 +251,7 @@ async def fetch_adjacent_entities(
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
-) -> Union[RedirectResponse, EntityAdjacentResponse]:
+) -> RedirectResponse | EntityAdjacentResponse:
     """***Beta:** This endpoint is released for wider testing and is not yet recommended
     for production use. We welcome feedback. Its interface may change without announcement.
 
@@ -306,7 +305,7 @@ async def fetch_adjacent_by_prop(
         examples=["address", "ownershipOwner"],
     ),
     provider: SearchProvider = Depends(get_provider),
-    sort: List[str] = Query([], title="Sorting criteria"),
+    sort: list[str] = Query([], title="Sorting criteria"),
     limit: int = Query(
         settings.DEFAULT_PAGE,
         title="Number of results per property to return",
@@ -315,7 +314,7 @@ async def fetch_adjacent_by_prop(
     offset: int = Query(
         0, title="Start at result with given offset", le=settings.MAX_OFFSET
     ),
-) -> Union[RedirectResponse, AdjacentResultsResponse]:
+) -> RedirectResponse | AdjacentResultsResponse:
     """***Beta:** This endpoint is released for wider testing and is not yet recommended
     for production use. We welcome feedback. Its interface may change without announcement.
 

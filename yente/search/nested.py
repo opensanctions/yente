@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any, Dict, Iterable, List, Set, Tuple, Union, Optional
+from typing import Any, Union
+from collections.abc import Iterable
 
 from followthemoney.property import Property
 from followthemoney.types import registry
@@ -19,15 +20,15 @@ from yente.search.search import result_entities, result_total
 log = get_logger(__name__)
 
 Value = Union[str, EntityResponse]
-Entities = Dict[str, Entity]
-Inverted = Dict[str, Set[Tuple[Property, str]]]
+Entities = dict[str, Entity]
+Inverted = dict[str, set[tuple[Property, str]]]
 
 
 def nest_entity(
     entity: Entity,
     entities: Entities,
     inverted: Inverted,
-    path: Set[Optional[str]],
+    path: set[str | None],
     include_unretrieved_ids: bool = True,
 ) -> EntityResponse:
     """
@@ -42,7 +43,7 @@ def nest_entity(
             missing entities, False is suggested for paginated results.
 
     """
-    props: Dict[str, List[Value]] = {}
+    props: dict[str, list[Value]] = {}
     next_path = set([entity.id]).union(path)
 
     # Find other entities pointing to the one we're processing:
@@ -62,7 +63,7 @@ def nest_entity(
     for prop in entity.iterprops():
         if prop.type != registry.entity:
             continue
-        values: List[Value] = []
+        values: list[Value] = []
         for value in entity.get(prop):
             if value in path:
                 continue
@@ -83,7 +84,7 @@ def nest_entity(
     return serialized
 
 
-def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set[str]:
+def initial_outbound_ids(entity: Entity, prop: Property | None = None) -> set[str]:
     if prop is None:
         return set(entity.get_type_values(registry.entity))
     elif prop.type != registry.entity:
@@ -91,15 +92,15 @@ def initial_outbound_ids(entity: Entity, prop: Optional[Property] = None) -> Set
     return set(entity.get(prop))
 
 
-def make_outbound_query(next_entities: Iterable[str]) -> Dict[str, Any] | None:
+def make_outbound_query(next_entities: Iterable[str]) -> dict[str, Any] | None:
     if not next_entities:
         return None
     return {"ids": {"values": list(next_entities)}}
 
 
 def make_inbound_query(
-    inbound_ids: List[str], prop: Optional[Property] = None
-) -> Dict[str, Any] | None:
+    inbound_ids: list[str], prop: Property | None = None
+) -> dict[str, Any] | None:
     if not inbound_ids:
         return None
     if prop is None or prop.reverse is None:
@@ -118,11 +119,11 @@ def make_inbound_query(
 async def get_nested_entity(
     provider: SearchProvider,
     root: Entity,
-    prop: Optional[Property] = None,
-    sort: List[Any] = [],
+    prop: Property | None = None,
+    sort: list[Any] = [],
     limit: int = settings.MAX_RESULTS,
     offset: int = 0,
-) -> Tuple[EntityResponse, TotalSpec]:
+) -> tuple[EntityResponse, TotalSpec]:
     """
     Fetches adjacent entities up to one edge away from the root, nested within
     the provided entity.
@@ -140,7 +141,7 @@ async def get_nested_entity(
         raise ValueError("Root entity must have an ID for adjacency queries.")
     inverted: Inverted = {}
     inbound_ids = [root.id]
-    outbound_ids: Set[str] = initial_outbound_ids(root, prop)
+    outbound_ids: set[str] = initial_outbound_ids(root, prop)
     entities: Entities = {root.id: root}
     total = None
 
@@ -213,7 +214,7 @@ async def get_nested_entity(
 
 
 async def get_adjacent_entities(
-    provider: SearchProvider, entity: Entity, limit: int, offset: int, sort: List[Any]
+    provider: SearchProvider, entity: Entity, limit: int, offset: int, sort: list[Any]
 ) -> EntityAdjacentResponse:
     """Queries the requested page of results for each property of type Entity."""
     tasks = []

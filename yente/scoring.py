@@ -1,6 +1,6 @@
 import time
 import asyncio
-from typing import Iterable, List, Optional, Type, Tuple
+from collections.abc import Iterable
 from opentelemetry import trace, metrics
 from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
 
@@ -21,15 +21,15 @@ _compare_duration = _meter.create_histogram(
 
 
 async def score_results(
-    algorithm: Type[ScoringAlgorithm],
+    algorithm: type[ScoringAlgorithm],
     entity: Entity,
-    results: Iterable[Tuple[Entity, float]],
+    results: Iterable[tuple[Entity, float]],
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
-    limit: Optional[int] = None,
+    limit: int | None = None,
     config: ScoringConfig = ScoringConfig.defaults(),
-) -> Tuple[int, List[ScoredEntityResponse]]:
-    scored: List[ScoredEntityResponse] = []
+) -> tuple[int, list[ScoredEntityResponse]]:
+    scored: list[ScoredEntityResponse] = []
     matches = 0
     # Initialise outside the loop so it's defined when the iterable is empty.
     rank = -1

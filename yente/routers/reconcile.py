@@ -1,7 +1,8 @@
 import json
 import asyncio
 from urllib.parse import urljoin
-from typing import Any, Coroutine, Dict, List, Tuple, Optional, Union
+from typing import Any, Union
+from collections.abc import Coroutine
 import uuid
 from fastapi import APIRouter, Query, Form, Depends
 from fastapi import Request, Response
@@ -157,7 +158,7 @@ async def reconcile(
     "/reconcile/{dataset}",
     summary="Reconciliation queries",
     tags=["Reconciliation"],
-    response_model=Union[Dict[str, FreebaseEntityResult], FreebaseExtendResponse],
+    response_model=Union[dict[str, FreebaseEntityResult], FreebaseExtendResponse],
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
@@ -173,13 +174,13 @@ async def reconcile_post(
         settings.BEST_ALGORITHM,
         title=ALGO_HELP,
     ),
-    changed_since: Optional[str] = Query(
+    changed_since: str | None = Query(
         None,
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
     provider: SearchProvider = Depends(get_provider),
-) -> Union[Dict[str, FreebaseEntityResult], FreebaseExtendResponse]:
+) -> dict[str, FreebaseEntityResult] | FreebaseExtendResponse:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
     if extend is not None and len(extend.strip()):
@@ -198,19 +199,19 @@ async def reconcile_queries(
     dataset: Dataset,
     data: str,
     algorithm: str,
-    changed_since: Optional[str],
-) -> Dict[str, FreebaseEntityResult]:
+    changed_since: str | None,
+) -> dict[str, FreebaseEntityResult]:
     # multiple requests in one query
     queries = FreebaseReconBatch.model_validate_json(data)
     if len(queries.root) > settings.MAX_BATCH:
         msg = "Too many queries in one batch (limit: %d)" % settings.MAX_BATCH
         raise HTTPException(400, detail=msg)
 
-    tasks: List[Coroutine[Any, Any, Tuple[str, FreebaseEntityResult]]] = []
+    tasks: list[Coroutine[Any, Any, tuple[str, FreebaseEntityResult]]] = []
     for k, q in queries.root.items():
         task = reconcile_query(provider, k, dataset, q, algorithm, changed_since)
         tasks.append(task)
-    results: List[Tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
+    results: list[tuple[str, FreebaseEntityResult]] = await asyncio.gather(*tasks)
     return dict(results)
 
 
@@ -220,8 +221,8 @@ async def reconcile_query(
     dataset: Dataset,
     query: FreebaseReconQuery,
     algorithm: str,
-    changed_since: Optional[str],
-) -> Tuple[str, FreebaseEntityResult]:
+    changed_since: str | None,
+) -> tuple[str, FreebaseEntityResult]:
     """Reconcile operation for a single query."""
     schema = settings.BASE_SCHEMA
     if query.type is not None:
@@ -230,7 +231,7 @@ async def reconcile_query(
         elif isinstance(query.type, list) and len(query.type) > 0:
             # TODO: should this do something clever?
             schema = query.type[0]
-    properties: Dict[str, List[ReconPropertyValue]] = {}
+    properties: dict[str, list[ReconPropertyValue]] = {}
     if query.query is not None:
         properties["name"] = [query.query]
 
@@ -299,12 +300,12 @@ async def reconcile_extend(
         msg = "Please specify the canonical entity ID, not a referent"
         raise HTTPException(400, detail=msg)
 
-    metas: Dict[str, FreebaseExtendResponseMeta] = {}
+    metas: dict[str, FreebaseExtendResponseMeta] = {}
     resp = FreebaseExtendResponse(meta=[], rows={e: {} for e in query.ids})
     for entity in entities:
         if entity is None:
             continue
-        row: Dict[str, List[FreebaseExtendResponseValue]] = {}
+        row: dict[str, list[FreebaseExtendResponseValue]] = {}
         for qprop in query.properties:
             prop = entity.schema.get(qprop.id)
             if prop is None:
@@ -385,7 +386,7 @@ async def reconcile_suggest_property(
     filters in OpenRefine."""
     ds = await get_dataset(dataset)
     schemata = await get_matchable_schemata(provider, ds)
-    matches: List[FreebaseProperty] = []
+    matches: list[FreebaseProperty] = []
     for prop in model.properties:
         if prop.schema not in schemata:
             continue
@@ -413,7 +414,7 @@ async def reconcile_suggest_type(
     the given text. This is used to auto-complete type selection for the
     configuration of reconciliation in OpenRefine."""
     ds = await get_dataset(dataset)
-    matches: List[FreebaseType] = []
+    matches: list[FreebaseType] = []
     for schema in await get_matchable_schemata(provider, ds):
         if match_prefix(prefix, schema.name, schema.label):
             matches.append(FreebaseType.from_schema(schema))
@@ -444,8 +445,8 @@ async def reconcile_extend_properties(
     for data extension."""
     schema = model.get(type)
     if schema is None:
-        raise HTTPException(400, detail="Invalid type: %s" % type)
-    properties: List[FreebaseExtendProperty] = []
+        raise HTTPException(400, detail=f"Invalid type: {type}")
+    properties: list[FreebaseExtendProperty] = []
     for featured in schema.featured:
         prop = schema.get(featured)
         if prop is not None:

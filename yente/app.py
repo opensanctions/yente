@@ -1,5 +1,6 @@
 import aiocron  # type: ignore
-from typing import AsyncGenerator, Dict, Type, Callable, Any, Coroutine, Union
+from typing import Any
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from pydantic import ValidationError
 from fastapi import FastAPI
@@ -98,7 +99,7 @@ async def json_exception_middleware(
     try:
         response = await call_next(request)
     except Exception as exc:
-        log.exception("Exception during request: %s" % type(exc))
+        log.exception(f"Exception during request: {type(exc)}")
         response = JSONResponse(status_code=500, content={"status": "error"})
     return response
 
@@ -120,7 +121,7 @@ async def validation_error_handler(req: Request, exc: ValidationError) -> Respon
     return JSONResponse(status_code=400, content=body)
 
 
-HANDLERS: Dict[Union[Type[Exception], int], ExceptionHandler] = {
+HANDLERS: dict[type[Exception] | int, ExceptionHandler] = {
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
     InvalidData: ftm_error_handler,

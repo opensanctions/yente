@@ -1,5 +1,4 @@
 from functools import cache
-from typing import List, Type
 from fastapi import Path, Query
 from fastapi import HTTPException
 from nomenklatura.matching.logic_v2.model import LogicV2
@@ -16,7 +15,7 @@ from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
 
-ENABLED_ALGORITHMS: List[Type[ScoringAlgorithm]] = [
+ENABLED_ALGORITHMS: list[type[ScoringAlgorithm]] = [
     LogicV2,
     OFACMatcher,
     NameMatcher,
@@ -41,7 +40,7 @@ assert all(
 
 
 @cache
-def get_algorithm_by_name(name: str) -> Type[ScoringAlgorithm]:
+def get_algorithm_by_name(name: str) -> type[ScoringAlgorithm]:
     """Return the scoring algorithm class with the given name."""
     name_clean = name.lower().strip()
     if name_clean == "best":

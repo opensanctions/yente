@@ -1,9 +1,9 @@
-from typing import Any, Dict, List
+from typing import Any
 import pytest
 from .conftest import client, assert_entity_shape
 
 
-def by_id(dicts: List[Dict[str, Any]], id_: str):
+def by_id(dicts: list[dict[str, Any]], id_: str):
     """Raises if an entity with id is not found"""
     matches = [d for d in dicts if d["id"] == id_]
     assert len(matches) == 1, (id_, dicts)

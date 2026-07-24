@@ -8,11 +8,8 @@ from pathlib import Path
 from itertools import count
 from typing import (
     Any,
-    AsyncGenerator,
-    AsyncIterable,
-    AsyncIterator,
-    Optional,
 )
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
 
 from yente import settings
 from yente.exc import ChecksumError
@@ -39,12 +36,12 @@ def raise_for_status_with_custom_error(resp: httpx.Response) -> None:
     resp.raise_for_status()
 
 
-async def load_yaml_url(url: str, auth_token: Optional[str] = None) -> Any:
+async def load_yaml_url(url: str, auth_token: str | None = None) -> Any:
     if url.lower().endswith(".json"):
         return await load_json_url(url, auth_token=auth_token)
     path = get_url_local_path(url)
     if path is not None:
-        async with aiofiles.open(path, "r") as fh:
+        async with aiofiles.open(path) as fh:
             data = await fh.read()
     else:
         async with httpx_session(auth_token=auth_token) as client:
@@ -53,7 +50,7 @@ async def load_yaml_url(url: str, auth_token: Optional[str] = None) -> Any:
     return yaml.safe_load(data)
 
 
-async def load_json_url(url: str, auth_token: Optional[str] = None) -> Any:
+async def load_json_url(url: str, auth_token: str | None = None) -> Any:
     path = get_url_local_path(url)
     if path is not None:
         async with aiofiles.open(path, "rb") as fh:
@@ -67,9 +64,7 @@ async def load_json_url(url: str, auth_token: Optional[str] = None) -> Any:
     return orjson.loads(data)
 
 
-async def fetch_url_to_path(
-    url: str, path: Path, auth_token: Optional[str] = None
-) -> str:
+async def fetch_url_to_path(url: str, path: Path, auth_token: str | None = None) -> str:
     """Download url to path, returning the SHA1 hex digest of the downloaded bytes."""
     digest = sha1()
     async with httpx_session(auth_token=auth_token) as client:
@@ -119,10 +114,10 @@ async def split_json_lines(chunks: AsyncIterable[bytes]) -> AsyncGenerator[Any, 
 class HttpJsonLinesStream:
     """Stream JSON lines from a URL; ``checksum`` holds the SHA1 hex digest once fully consumed."""
 
-    def __init__(self, url: str, auth_token: Optional[str] = None) -> None:
+    def __init__(self, url: str, auth_token: str | None = None) -> None:
         self.url = url
         self.auth_token = auth_token
-        self._checksum: Optional[str] = None
+        self._checksum: str | None = None
 
     def __aiter__(self) -> AsyncIterator[Any]:
         return self._stream()
@@ -151,14 +146,14 @@ class HttpJsonLinesStream:
                 if retry > 3:
                     raise
                 await asyncio.sleep(1.0)
-                log.error("Streaming index HTTP error: %s, retrying..." % exc)
+                log.error(f"Streaming index HTTP error: {exc}, retrying...")
 
 
 async def load_json_lines(
     url: str,
     base_name: str,
-    auth_token: Optional[str] = None,
-    expected_checksum: Optional[str] = None,
+    auth_token: str | None = None,
+    expected_checksum: str | None = None,
 ) -> AsyncGenerator[Any, None]:
     path = get_url_local_path(url)
     if path is not None:

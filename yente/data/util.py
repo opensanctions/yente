@@ -5,7 +5,8 @@ from functools import cache
 from urllib.parse import urlparse
 from prefixdate.precision import Precision
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, List, Optional, Set, Generator
+from typing import Any
+from collections.abc import AsyncGenerator, Generator
 from rigour.names import Symbol
 from rigour.time import iso_datetime
 from followthemoney import EntityProxy, Property, Schema, registry
@@ -21,9 +22,9 @@ log = get_logger(__name__)
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
 
-def extract_values(values: Any) -> List[str]:
+def extract_values(values: Any) -> list[str]:
     """Extract a list of string values from a property value, which may be a string or a list."""
-    sanitized: List[str | None] = []
+    sanitized: list[str | None] = []
     if isinstance(values, (list, tuple, set)):
         sanitized = [sanitize_text(v) for v in values]
     else:
@@ -31,7 +32,7 @@ def extract_values(values: Any) -> List[str]:
     return [v for v in sanitized if v is not None and len(v) > 0]
 
 
-def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:
+def index_symbols(symbols: set[Symbol]) -> Generator[str, None, None]:
     """Get the set of symbols to be indexed for a given name."""
     for symbol in symbols:
         if symbol.category not in NON_MATCHABLE_SYMBOLS:
@@ -39,27 +40,27 @@ def index_symbols(symbols: Set[Symbol]) -> Generator[str, None, None]:
 
 
 @cache
-def _entity_weak_props(schema: Schema) -> Set[Property]:
+def _entity_weak_props(schema: Schema) -> set[Property]:
     """Get the set of properties that are not used for matching but can be used for
     display."""
-    weak_props: Set[Property] = set()
+    weak_props: set[Property] = set()
     for prop in schema.properties.values():
         if prop.type == registry.name and not prop.matchable:
             weak_props.add(prop)
     return weak_props
 
 
-def entity_weak_names(entity: EntityProxy) -> Set[str]:
+def entity_weak_names(entity: EntityProxy) -> set[str]:
     """Get a set of weak names for an entity, which are the names that are not used for
     matching but can be used for display."""
-    weak_names: Set[str] = set()
+    weak_names: set[str] = set()
     for prop in _entity_weak_props(entity.schema):
         for value in entity.get_prop(prop):
             weak_names.add(value.casefold())
     return weak_names
 
 
-def expand_dates(dates: List[str]) -> List[str]:
+def expand_dates(dates: list[str]) -> list[str]:
     """Expand a date into less precise versions of itself."""
     expanded = set(dates)
     for date in dates:
@@ -69,7 +70,7 @@ def expand_dates(dates: List[str]) -> List[str]:
     return list(expanded)
 
 
-def iso_to_version(value: str) -> Optional[str]:
+def iso_to_version(value: str) -> str | None:
     ## Phase this out - it won't be used in new FtM metadata, is used by yente
     dt = iso_datetime(value)
     if dt is not None:
@@ -77,20 +78,20 @@ def iso_to_version(value: str) -> Optional[str]:
     return None
 
 
-def get_url_local_path(url: str) -> Optional[Path]:
+def get_url_local_path(url: str) -> Path | None:
     """Check if a given URL is local file path."""
     parsed = urlparse(url)
     scheme = parsed.scheme.lower()
     if scheme in ("file", "") and parsed.path != "":
         path = Path(parsed.path).resolve()
         if not path.exists():
-            raise RuntimeError("File not found: %s" % path)
+            raise RuntimeError(f"File not found: {path}")
         return path
     return None
 
 
 class Authenticator(httpx.Auth):
-    def __init__(self, auth_token: Optional[str] = None):
+    def __init__(self, auth_token: str | None = None):
         self.auth_token = auth_token
 
     def auth_flow(
@@ -112,7 +113,7 @@ class Authenticator(httpx.Auth):
 
 @asynccontextmanager
 async def httpx_session(
-    auth_token: Optional[str] = None,
+    auth_token: str | None = None,
 ) -> AsyncGenerator[httpx.AsyncClient, None]:
     transport = httpx.AsyncHTTPTransport(retries=3)
     proxy = settings.HTTP_PROXY if settings.HTTP_PROXY != "" else None

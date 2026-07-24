@@ -2,7 +2,7 @@ import random
 import logging
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from banal import as_bool
 from aiocron import Cron  # type: ignore
 from rigour.env import env_str, env_opt, env_int
@@ -59,7 +59,7 @@ Further reading:
 * [Data dictionary](https://opensanctions.org/reference/)
 """
 
-TAGS: List[Dict[str, Any]] = [
+TAGS: list[dict[str, Any]] = [
     {
         "name": "Matching",
         "description": "Endpoints for conducting a user-facing entity search or "
@@ -115,7 +115,7 @@ if DATA_TOKEN is not None:
         DeprecationWarning,
     )
 
-CRON: Optional[Cron] = None
+CRON: Cron | None = None
 CRONTAB = env_str("YENTE_CRONTAB", random_cron())
 
 # Whether to automatically reindex the data in the background of the API process:

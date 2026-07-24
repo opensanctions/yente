@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 class YenteError(Exception):
     """Base exception for all Yente errors."""
 
@@ -21,7 +18,7 @@ class YenteIndexError(YenteError):
 
     STATUS = 500
 
-    def __init__(self, detail: str, status: int = STATUS, index: Optional[str] = None):
+    def __init__(self, detail: str, status: int = STATUS, index: str | None = None):
         super().__init__(detail, status)
         self.index = index
 

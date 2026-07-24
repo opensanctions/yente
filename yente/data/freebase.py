@@ -1,5 +1,5 @@
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from enum import StrEnum
+from typing import Any, Union
 from pydantic import BaseModel, Field, RootModel
 from pydantic.networks import AnyHttpUrl
 from followthemoney import model
@@ -14,7 +14,7 @@ from yente.data.common import ScoredEntityResponse
 class FreebaseType(BaseModel):
     id: str = Field(..., examples=["Person"])
     name: str = Field(..., examples=["People"])
-    description: Optional[str] = None
+    description: str | None = None
 
     @classmethod
     def from_schema(cls, schema: Schema) -> "FreebaseType":
@@ -25,7 +25,7 @@ class FreebaseType(BaseModel):
 class FreebaseProperty(BaseModel):
     id: str = Field(..., examples=["birthDate"])
     name: str = Field(..., examples=["Date of birth"])
-    description: Optional[str] = None
+    description: str | None = None
 
     @classmethod
     def from_prop(cls, prop: Property) -> "FreebaseProperty":
@@ -35,8 +35,8 @@ class FreebaseProperty(BaseModel):
 class FreebaseEntity(BaseModel):
     id: str = Field(..., examples=["NK-A7z...."])
     name: str = Field(..., examples=["John Doe"])
-    description: Optional[str] = None
-    type: List[FreebaseType]
+    description: str | None = None
+    type: list[FreebaseType]
 
     @classmethod
     def from_proxy(cls, proxy: EntityProxy) -> "FreebaseEntity":
@@ -51,14 +51,14 @@ class FreebaseEntity(BaseModel):
 
 
 class FreebaseScoredEntity(FreebaseEntity):
-    score: Optional[float] = Field(..., examples=[0.99])
-    match: Optional[bool] = Field(..., examples=[False])
+    score: float | None = Field(..., examples=[0.99])
+    match: bool | None = Field(..., examples=[False])
 
     @classmethod
     def from_scored(cls, data: ScoredEntityResponse) -> "FreebaseScoredEntity":
         schema = model.get(data.schema_)
         if schema is None:
-            raise RuntimeError("Missing schema: %s" % data.schema_)
+            raise RuntimeError(f"Missing schema: {data.schema_}")
         return cls(
             id=data.id,
             name=data.caption,
@@ -79,15 +79,15 @@ class FreebaseSuggestResponse(FreebaseResponse):
 
 
 class FreebaseTypeSuggestResponse(FreebaseSuggestResponse):
-    result: List[FreebaseType]
+    result: list[FreebaseType]
 
 
 class FreebaseEntitySuggestResponse(FreebaseSuggestResponse):
-    result: List[FreebaseEntity]
+    result: list[FreebaseEntity]
 
 
 class FreebasePropertySuggestResponse(FreebaseSuggestResponse):
-    result: List[FreebaseProperty]
+    result: list[FreebaseProperty]
 
 
 class FreebaseExtendProperty(BaseModel):
@@ -98,10 +98,10 @@ class FreebaseExtendProperty(BaseModel):
 class FreebaseExtendPropertiesResponse(BaseModel):
     limit: int
     type: str
-    properties: List[FreebaseExtendProperty]
+    properties: list[FreebaseExtendProperty]
 
 
-class FreebaseRenderMethod(str, Enum):
+class FreebaseRenderMethod(StrEnum):
     raw = "raw"
     caption = "caption"
 
@@ -119,8 +119,8 @@ class FreebaseExtendQueryProperty(BaseModel):
 
 
 class FreebaseExtendQuery(BaseModel):
-    ids: List[str]
-    properties: List[FreebaseExtendQueryProperty]
+    ids: list[str]
+    properties: list[FreebaseExtendQueryProperty]
 
 
 class FreebaseExtendResponseMeta(BaseModel):
@@ -133,8 +133,8 @@ class FreebaseExtendResponseValue(BaseModel):
 
 
 class FreebaseExtendResponse(BaseModel):
-    meta: List[FreebaseExtendResponseMeta]
-    rows: Dict[str, Dict[str, List[FreebaseExtendResponseValue]]]
+    meta: list[FreebaseExtendResponseMeta]
+    rows: dict[str, dict[str, list[FreebaseExtendResponseValue]]]
 
 
 class FreebaseManifestView(BaseModel):
@@ -174,16 +174,16 @@ class FreebaseManifestExtendPropertySetting(BaseModel):
     type: str
     default: Any
     help_text: str
-    choices: List[FreebaseManifestExtendPropertySettingChoice] = []
+    choices: list[FreebaseManifestExtendPropertySettingChoice] = []
 
 
 class FreebaseManifestExtend(BaseModel):
     propose_properties: FreebaseManifestExtendProposeProperties
-    propose_settings: List[FreebaseManifestExtendPropertySetting]
+    propose_settings: list[FreebaseManifestExtendPropertySetting]
 
 
 class FreebaseManifest(BaseModel):
-    versions: List[str] = Field(..., examples=[["0.2"]])
+    versions: list[str] = Field(..., examples=[["0.2"]])
     name: str = Field(..., examples=[settings.TITLE])
     identifierSpace: AnyHttpUrl
     schemaSpace: AnyHttpUrl
@@ -193,11 +193,11 @@ class FreebaseManifest(BaseModel):
     preview: FreebaseManifestPreview
     suggest: FreebaseManifestSuggest
     extend: FreebaseManifestExtend
-    defaultTypes: List[FreebaseType]
+    defaultTypes: list[FreebaseType]
 
 
 class FreebaseEntityResult(BaseModel):
-    result: List[FreebaseScoredEntity]
+    result: list[FreebaseScoredEntity]
 
 
 ReconPropertyValue = Union[str, list[str]]
@@ -211,10 +211,10 @@ class FreebaseReconPropertyFilter(BaseModel):
 # https://www.w3.org/community/reports/reconciliation/CG-FINAL-specs-0.2-20230410/#structure-of-a-reconciliation-query
 # will be completely different in v1.0
 class FreebaseReconQuery(BaseModel):
-    query: Optional[str] = None
-    type: Optional[Union[str, list[str]]] = None
+    query: str | None = None
+    type: str | list[str] | None = None
     limit: int = 5
     properties: list[FreebaseReconPropertyFilter] = []
 
 
-FreebaseReconBatch = RootModel[Dict[str, FreebaseReconQuery]]
+FreebaseReconBatch = RootModel[dict[str, FreebaseReconQuery]]

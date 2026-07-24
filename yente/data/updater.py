@@ -1,5 +1,5 @@
-from typing import Optional, TypedDict, Dict, List, Any
-from typing import AsyncGenerator, Tuple
+from typing import TypedDict, Any
+from collections.abc import AsyncGenerator
 
 from yente import settings
 from yente.logs import get_logger
@@ -10,37 +10,37 @@ log = get_logger(__name__)
 
 
 class DeltaIndex(TypedDict):
-    versions: Dict[str, str]
+    versions: dict[str, str]
 
 
 class EntityOp(TypedDict):
     op: str
-    entity: Dict[str, Any]
+    entity: dict[str, Any]
 
 
-class DatasetUpdater(object):
+class DatasetUpdater:
     """A helper object for emitting entity operations to transition from one
     loaded dataset version to the next."""
 
     def __init__(
-        self, dataset: Dataset, base_version: Optional[str], force_full: bool = False
+        self, dataset: Dataset, base_version: str | None, force_full: bool = False
     ) -> None:
         self.dataset = dataset
         self.target_version = dataset.model.version or "static"
         self.base_version = base_version
         self.force_full = force_full
-        self.delta_urls: Optional[List[Tuple[str, str]]] = None
+        self.delta_urls: list[tuple[str, str]] | None = None
 
     @classmethod
     async def build(
-        cls, dataset: Dataset, base_version: Optional[str], force_full: bool = False
+        cls, dataset: Dataset, base_version: str | None, force_full: bool = False
     ) -> "DatasetUpdater":
         """Fetch the index of delta files and decide an index building strategy."""
         obj = DatasetUpdater(dataset, base_version, force_full=force_full)
         if force_full:
             return obj
         if dataset.model.delta_url is None:
-            log.debug("No delta updates available for: %r" % dataset.name)
+            log.debug(f"No delta updates available for: {dataset.name!r}")
             return obj
         if not settings.DELTA_UPDATES:
             return obj
@@ -111,7 +111,7 @@ class DatasetUpdater(object):
         if self.force_full or self.delta_urls is None:
             if self.dataset.model.entities_url is None:
                 raise RuntimeError(
-                    "No entities source defined for dataset: %s" % self.dataset.name
+                    f"No entities source defined for dataset: {self.dataset.name}"
                 )
             base_name = f"{self.dataset.name}-{self.target_version}"
             async for data in load_json_lines(

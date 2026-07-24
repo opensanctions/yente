@@ -1,6 +1,7 @@
 from collections import defaultdict
 import itertools
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any
+from collections.abc import Iterable
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry
@@ -12,7 +13,7 @@ from yente.logs import get_logger
 
 log = get_logger(__name__)
 
-MappingProperty = Dict[str, Union[List[str], str]]
+MappingProperty = dict[str, list[str] | str]
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy||strict_date_optional_time"  # noqa
 TEXT_TYPES = (registry.name, registry.address)
@@ -77,8 +78,8 @@ NAME_PHONETIC_FIELD = "name_phonetic"
 
 def make_field(
     type_: str,
-    copy_to: Optional[List[str]] = None,
-    format: Optional[str] = None,
+    copy_to: list[str] | None = None,
+    format: str | None = None,
 ) -> MappingProperty:
     spec: MappingProperty = {"type": type_}
     if type_ == "keyword":
@@ -94,7 +95,7 @@ def make_field(
 
 def make_type_field(
     type_: PropertyType,
-    copy_to: Optional[List[str]] = None,
+    copy_to: list[str] | None = None,
 ) -> MappingProperty:
     field_type = "keyword" if type_.group else "text"
     if type_ in TEXT_TYPES:
@@ -111,14 +112,14 @@ def make_disabled_field() -> MappingProperty:
     return {"enabled": "false"}
 
 
-def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str, Any]:
+def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, Any]:
     if schemata is None:
         schemata = list(model.schemata.values())
     # Collect field definitions:
     # Multiple schemata can have the same property name, but we flatten them
     # into a single field in the search index. That's why we collect a list of
     # fields for each property name first and resolve them later.
-    prop_name_to_fields: Dict[str, List[MappingProperty]] = defaultdict(list)
+    prop_name_to_fields: dict[str, list[MappingProperty]] = defaultdict(list)
     for schema_name in schemata:
         schema = model.get(schema_name)
         assert schema is not None, schema_name
@@ -138,7 +139,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
             )
 
     # Resolve list of field definitions to a single definition per field name
-    prop_mapping: Dict[str, MappingProperty] = {}
+    prop_mapping: dict[str, MappingProperty] = {}
     for prop_name, fields in prop_name_to_fields.items():
         merged_copy_to = list(
             set(itertools.chain.from_iterable([f["copy_to"] for f in fields]))
@@ -157,7 +158,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
 
         prop_mapping[prop_name] = selected_field
 
-    mapping: Dict[str, Any] = {
+    mapping: dict[str, Any] = {
         "schema": make_keyword(),
         "caption": make_field("keyword"),
         "entity_id": make_field("keyword"),
@@ -180,7 +181,7 @@ def make_entity_mapping(schemata: Optional[Iterable[Schema]] = None) -> Dict[str
         if t.group is None:
             continue
         if t.group in mapping:
-            raise RuntimeError("Double mapping field: %s" % t.group)
+            raise RuntimeError(f"Double mapping field: {t.group}")
         mapping[t.group] = make_type_field(t)
 
     # Weaker length normalization for names. Merged entities have a lot of names,

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import StrEnum
-from datetime import datetime, timezone
-from typing import Optional, List
+from datetime import datetime, UTC
 from yente import logs, settings
 from yente.provider.base import SearchProvider
 
@@ -18,7 +17,7 @@ def get_audit_log_index_name() -> str:
 def millis_timestamp_to_datetime(timestamp: int) -> datetime:
     # A timestamp doesn't have a timezone, but we want the returned datetime to
     # display as UTC.
-    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(timestamp / 1000, tz=UTC)
 
 
 def datetime_to_millis_timestamp(dt: datetime) -> int:
@@ -68,8 +67,8 @@ async def log_audit_message(
     event_type: AuditLogEventType,
     *,
     index: str,
-    dataset: Optional[str] = None,
-    dataset_version: Optional[str] = None,
+    dataset: str | None = None,
+    dataset_version: str | None = None,
     message: str,
 ) -> str:
     """Log an audit message and return the document ID.
@@ -113,7 +112,7 @@ class AuditLogMessage:
     message: str
 
 
-async def get_all_audit_log_messages(provider: SearchProvider) -> List[AuditLogMessage]:
+async def get_all_audit_log_messages(provider: SearchProvider) -> list[AuditLogMessage]:
     """Query all audit logs from the search provider, ordered by timestamp descending."""
     result = await provider.search(
         get_audit_log_index_name(),

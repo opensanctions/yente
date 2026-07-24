@@ -2,7 +2,8 @@ import enum
 from pprint import pprint  # noqa
 from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
-from typing import Any, Dict, Generator, Iterable, List, Set, Tuple, Union, Optional
+from typing import Any, Union
+from collections.abc import Generator, Iterable
 from followthemoney.schema import Schema
 from followthemoney.proxy import EntityProxy
 from followthemoney.types import registry
@@ -18,12 +19,12 @@ from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
 from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD, NAME_NGRAMS_FIELD
 
 log = get_logger(__name__)
-Clause = Dict[str, Any]
-FilterSpec = Tuple[str, Union[str, bool]]
-Filters = List[FilterSpec]
-Sort = Union[str, Dict[str, Dict[str, str]]]
+Clause = dict[str, Any]
+FilterSpec = tuple[str, str | bool]
+Filters = list[FilterSpec]
+Sort = Union[str, dict[str, dict[str, str]]]
 
-DEFAULT_SORTS: List[Sort] = [
+DEFAULT_SORTS: list[Sort] = [
     {"_score": {"order": "desc"}},
     {"entity_id": {"order": "asc", "unmapped_type": "keyword"}},
 ]
@@ -51,7 +52,7 @@ SYMBOL_BOOSTS = {
 }
 
 
-class Operator(str, enum.Enum):
+class Operator(enum.StrEnum):
     AND = "AND"
     OR = "OR"
 
@@ -66,20 +67,20 @@ def tqs(field: str, values: Iterable[str | bool | float], boost: float = 1.0) ->
 
 def filter_query(
     scope_dataset: Dataset,
-    shoulds: List[Clause],
-    schema: Optional[Schema] = None,
+    shoulds: list[Clause],
+    schema: Schema | None = None,
     filters: Filters = [],
-    include_dataset: List[str] = [],
-    exclude_schema: List[str] = [],
-    exclude_dataset: List[str] = [],
-    changed_since: Optional[str] = None,
-    exclude_entity_ids: List[str] = [],
+    include_dataset: list[str] = [],
+    exclude_schema: list[str] = [],
+    exclude_dataset: list[str] = [],
+    changed_since: str | None = None,
+    exclude_entity_ids: list[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
-    filterqs: List[Clause] = []
-    must_not: List[Clause] = []
+    filterqs: list[Clause] = []
+    must_not: list[Clause] = []
 
-    datasets: Set[str] = set(scope_dataset.dataset_names)
+    datasets: set[str] = set(scope_dataset.dataset_names)
     if len(include_dataset):
         datasets = datasets.intersection(include_dataset)
     if len(exclude_dataset):
@@ -132,13 +133,13 @@ def filter_query(
     }
 
 
-def names_query(entity: EntityProxy) -> List[Clause]:
+def names_query(entity: EntityProxy) -> list[Clause]:
     names = entity.get_type_values(registry.name, matchable=True)
     name_objs = entity_names(entity, is_query=True)
     # Single-word names are hard to match, so we use fuzzy matching more aggressively.
     # FIXME: This could make sense for 2 part names as well?
     is_short = max((len(n.parts) for n in name_objs), default=0) < 2
-    shoulds: List[Clause] = []
+    shoulds: list[Clause] = []
     for picked_name in representative_names(names, 5):
         match = {
             NAMES_FIELD: {
@@ -162,11 +163,11 @@ def names_query(entity: EntityProxy) -> List[Clause]:
                 }
             )
 
-    seen: Set[str] = set()
+    seen: set[str] = set()
     consolidated_names = Name.consolidate_names(name_objs)
 
     for name in consolidated_names:
-        part_symbols: Dict[NamePart, Set[Symbol]] = defaultdict(set)
+        part_symbols: dict[NamePart, set[Symbol]] = defaultdict(set)
         for span in name.spans:
             for part in span.parts:
                 part_symbols[part].add(span.symbol)
@@ -179,7 +180,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             # To some degree, this is already done by the IDF component of the ES scoring algorithm
             # (which reduces the influence of frequent terms), but that doesn't work too well for e.g.
             # less common languages.
-            symbols: Set[Symbol] = part_symbols.get(part, set())
+            symbols: set[Symbol] = part_symbols.get(part, set())
             boosts = [
                 SYMBOL_BOOSTS[symbol.category]
                 for symbol in symbols
@@ -190,7 +191,7 @@ def names_query(entity: EntityProxy) -> List[Clause]:
             # We have multiple ways to query for a name part (verbatim, comparable, phonetic, symbol)
             # In the end, we dis-max them to get the one that works best, but not give an outsized important
             # to this name part just because multiple variants match.
-            query_variants: List[Clause] = []
+            query_variants: list[Clause] = []
             query_variants.append(tq(NAME_PART_FIELD, part.comparable))
 
             metaphone = part.metaphone
@@ -214,14 +215,14 @@ def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
     filters: Filters = [],
-    include_dataset: List[str] = [],
-    exclude_schema: List[str] = [],
-    exclude_dataset: List[str] = [],
-    changed_since: Optional[str] = None,
-    exclude_entity_ids: List[str] = [],
+    include_dataset: list[str] = [],
+    exclude_schema: list[str] = [],
+    exclude_dataset: list[str] = [],
+    changed_since: str | None = None,
+    exclude_entity_ids: list[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
-    shoulds: List[Clause] = names_query(entity)
+    shoulds: list[Clause] = names_query(entity)
     for prop, value in entity.itervalues():
         if prop.type == registry.name or not prop.matchable:
             continue
@@ -253,11 +254,11 @@ def text_query(
     filters: Filters = [],
     fuzzy: bool = False,
     simple: bool = False,
-    include_dataset: List[str] = [],
-    exclude_schema: List[str] = [],
-    exclude_dataset: List[str] = [],
-    changed_since: Optional[str] = None,
-    exclude_entity_ids: List[str] = [],
+    include_dataset: list[str] = [],
+    exclude_schema: list[str] = [],
+    exclude_dataset: list[str] = [],
+    changed_since: str | None = None,
+    exclude_entity_ids: list[str] = [],
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     if not len(query.strip()):
@@ -309,14 +310,14 @@ def prefix_query(
     return filter_query(dataset, [should])
 
 
-def facet_aggregations(fields: List[str] = []) -> Clause:
+def facet_aggregations(fields: list[str] = []) -> Clause:
     aggs: Clause = {}
     for field in fields:
         aggs[field] = {"terms": {"field": field, "size": 1000}}
     return aggs
 
 
-def iter_sorts(sorts: List[str]) -> Generator[Tuple[str, str], None, None]:
+def iter_sorts(sorts: list[str]) -> Generator[tuple[str, str], None, None]:
     for sort in sorts:
         order = "asc"
         if ":" in sort:
@@ -326,9 +327,9 @@ def iter_sorts(sorts: List[str]) -> Generator[Tuple[str, str], None, None]:
         yield sort, order
 
 
-def parse_sorts(sorts: List[str], defaults: List[Sort] = DEFAULT_SORTS) -> List[Any]:
+def parse_sorts(sorts: list[str], defaults: list[Sort] = DEFAULT_SORTS) -> list[Any]:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
-    objs: List[Sort] = []
+    objs: list[Sort] = []
     for sort, order in iter_sorts(sorts):
         objs.append({sort: {"order": order, "missing": "_last"}})
     objs.extend(defaults)

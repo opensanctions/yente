@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any, Coroutine, Dict, List, Optional, Tuple
+from typing import Any
+from collections.abc import Coroutine
 from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
 from nomenklatura.matching.types import ScoringConfig
 
@@ -30,17 +31,17 @@ async def _match_one_query(
     name: str,
     example: EntityExample,
     filters: Filters,
-    include_dataset: List[str],
-    exclude_schema: List[str],
-    exclude_dataset: List[str],
-    changed_since: Optional[str],
-    exclude_entity_ids: List[str],
+    include_dataset: list[str],
+    exclude_schema: list[str],
+    exclude_dataset: list[str],
+    changed_since: str | None,
+    exclude_entity_ids: list[str],
     provider: SearchProvider,
     candidates: int,
     limit: int,
     cutoff: float,
     threshold: float,
-) -> Tuple[str, EntityMatches]:
+) -> tuple[str, EntityMatches]:
     """Run a single match query and return the results. This run as one big async process per query in the batch,
     and all queries are triggered simultaneously. Previous yente versions used to do all searches concurrently
     but score sequentially - but this meant that scoring would not start before the slowest ES query returned.
@@ -59,7 +60,7 @@ async def _match_one_query(
             exclude_entity_ids=exclude_entity_ids,
         )
     except Exception as exc:
-        log.info("Cannot parse example entity: %s" % str(exc))
+        log.info(f"Cannot parse example entity: {str(exc)}")
         raise HTTPException(
             status_code=400,
             detail=f"Cannot parse example entity: {exc}",
@@ -137,26 +138,26 @@ async def match(
         title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
     ),
     algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
-    include_dataset: List[str] = Query(
+    include_dataset: list[str] = Query(
         [], title="Only include the given datasets in results"
     ),
-    exclude_schema: List[str] = Query(
+    exclude_schema: list[str] = Query(
         [], title="Remove the given types of entities from results"
     ),
-    exclude_dataset: List[str] = Query(
+    exclude_dataset: list[str] = Query(
         [], title="Remove the given datasets from results"
     ),
-    topics: List[str] = Query(
+    topics: list[str] = Query(
         [], title="Only return results that match any of the given topics"
     ),
-    changed_since: Optional[str] = Query(
+    changed_since: str | None = Query(
         None,
         pattern=TS_PATTERN,
         title="Match against entities that were updated since the given date",
     ),
     # This list applies to all queries, but really only makes sense with a single query.
     # Our API design currently doesn't support per-query options such as this one.
-    exclude_entity_ids: List[str] = Query(
+    exclude_entity_ids: list[str] = Query(
         [],
         title="A list of entities IDs to exclude from matching",
         description="The entity IDs supplied here do not have to be canonical. Supplying any of the referents of a merged entity will exclude that entity. This parameter may be useful for example to exclude false-positive matches that have been decided upon by a human.",
@@ -251,7 +252,7 @@ async def match(
     # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
     candidates, _ = limit_window(candidates, 0)
 
-    tasks: List[Coroutine[Any, Any, Tuple[str, EntityMatches]]] = []
+    tasks: list[Coroutine[Any, Any, tuple[str, EntityMatches]]] = []
     for name, example in match.queries.items():
         if example is None:
             continue
@@ -276,7 +277,7 @@ async def match(
         )
         tasks.append(coroutine)
     task_results = await asyncio.gather(*tasks)
-    responses: Dict[str, EntityMatches] = {}
+    responses: dict[str, EntityMatches] = {}
     for name, matches in task_results:
         responses[name] = matches
 

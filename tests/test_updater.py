@@ -3,7 +3,7 @@ import json
 import pytest
 import yente.data
 from .conftest import FIXTURES_PATH
-from typing import List, Any
+from typing import Any
 
 from yente.data import get_catalog
 from yente.data.manifest import Catalog, Manifest
@@ -13,7 +13,7 @@ from yente.search.versions import get_system_version, parse_index_name, build_in
 
 
 @pytest.fixture
-def non_mocked_hosts() -> List[str]:
+def non_mocked_hosts() -> list[str]:
     return ["localhost"]
 
 
@@ -73,7 +73,7 @@ async def test_updater(httpx_mock: Any) -> None:
     dataset.model.delta_url = url
     delta_index_path = FIXTURES_PATH / "dataset/t2/delta.json"
 
-    with open(delta_index_path, "r") as f:
+    with open(delta_index_path) as f:
         index = json.load(f)
         for version, delta_url in index["versions"].items():
             if version == base_version:

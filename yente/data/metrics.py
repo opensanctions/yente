@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from opentelemetry import metrics
 
@@ -40,7 +40,7 @@ async def update_dataset_version_metric(
         )
         return
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     timestamp_s = int(dt.timestamp())
     _indexed_dataset_version_time.set(timestamp_s, {"dataset": dataset_name})
 
@@ -54,7 +54,7 @@ async def update_metrics(provider: SearchProvider) -> None:
         try:
             index_info = parse_index_name(aliased_index)
         except ValueError:
-            log.warn("Invalid index name: %s" % aliased_index)
+            log.warn(f"Invalid index name: {aliased_index}")
             continue
         await update_dataset_version_metric(
             index_info.dataset_name, aliased_index, provider
