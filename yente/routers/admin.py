@@ -83,7 +83,7 @@ async def redoc_html() -> HTMLResponse:
             f'src="{settings.REDOC_JS_URL}"',
             f'src="{settings.REDOC_JS_URL}" integrity="{settings.REDOC_JS_SRI}"'
             ' crossorigin="anonymous"'
-            ' onerror="document.getElementById(\'redoc-error\').style.display=\'block\'"',
+            " onerror=\"document.getElementById('redoc-error').style.display='block'\"",
         )
         .replace("<redoc ", f"{fallback}\n    <redoc ")
     )

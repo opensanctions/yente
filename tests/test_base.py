@@ -147,7 +147,10 @@ async def test_catalog_etag():
                     "name": "parteispenden",
                     "title": "German political party donations",
                     "path": str(
-                        FIXTURES_PATH / "dataset" / "parteispenden" / "entities.ftm.json"
+                        FIXTURES_PATH
+                        / "dataset"
+                        / "parteispenden"
+                        / "entities.ftm.json"
                     ),
                     "version": "100",
                     "load": True,

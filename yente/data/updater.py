@@ -110,7 +110,9 @@ class DatasetUpdater(object):
         """Generate entity change operations, including payload data."""
         if self.force_full or self.delta_urls is None:
             if self.dataset.model.entities_url is None:
-                raise RuntimeError("No entities source defined for dataset: %s" % self.dataset.name)
+                raise RuntimeError(
+                    "No entities source defined for dataset: %s" % self.dataset.name
+                )
             base_name = f"{self.dataset.name}-{self.target_version}"
             async for data in load_json_lines(
                 self.dataset.model.entities_url,

@@ -29,7 +29,7 @@ async def test_split_json_lines_multiple_records_in_one_chunk() -> None:
 
 @pytest.mark.asyncio
 async def test_split_json_lines_record_split_across_chunks() -> None:
-    chunks = [b'{"a":', b"1", b'}\n']
+    chunks = [b'{"a":', b"1", b"}\n"]
     out = [x async for x in split_json_lines(_aiter(chunks))]
     assert out == [{"a": 1}]
 
