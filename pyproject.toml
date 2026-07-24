@@ -84,6 +84,23 @@ docs = [
 [tool.uv]
 default-groups = ["dev", "docs"]
 
+[tool.ruff.lint]
+# Pin the individual pyupgrade rules the codebase satisfies rather than the
+# whole `UP` category, so a ruff upgrade can't pull in new sub-rules that fail
+# CI unannounced.
+extend-select = [
+    "UP004",  # class C(object): -> class C:
+    "UP006",  # List[int] -> list[int]
+    "UP007",  # Union[int, str] -> int | str
+    "UP015",  # open(f, "r") -> open(f)
+    "UP017",  # datetime.timezone.utc -> datetime.UTC
+    "UP031",  # "got %s" % x -> f"got {x}"
+    "UP035",  # from typing import List (deprecated import)
+    "UP041",  # except asyncio.TimeoutError -> except TimeoutError
+    "UP042",  # class C(str, Enum) -> class C(StrEnum)
+    "UP045",  # Optional[int] -> int | None
+]
+
 [tool.hatch.build.targets.sdist]
 only-include = ["yente", "LICENSE", "README.md"]
 
