@@ -1,5 +1,5 @@
 import hashlib
-from typing import Any, List, Optional
+from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi import HTTPException
 from fastapi.openapi.docs import get_redoc_html
@@ -139,7 +139,7 @@ async def catalog(
     request: Request,
     response: Response,
     provider: SearchProvider = Depends(get_provider),
-) -> Any:
+) -> Union[Response, DataCatalogModel]:
     """Return the service manifest, which includes a list of all indexed datasets.
 
     The manifest is the configuration file of the yente service. It specifies what
