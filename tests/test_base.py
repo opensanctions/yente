@@ -15,7 +15,7 @@ from .conftest import (
 from yente import settings
 from yente.data.manifest import Manifest
 from yente.provider import get_provider
-from yente.routers.admin import catalog_etag, if_none_match
+from yente.routers.admin import catalog_etag, etag_matches
 from yente.search.indexer import update_index
 
 
@@ -208,11 +208,11 @@ def test_catalog_etag_helpers():
     assert etag == catalog_etag(_catalog([("y", "2", "2"), ("x", "1", None)]))
     assert etag != catalog_etag(_catalog([("x", "1", None), ("y", "3", "3")]))
     assert etag[0] == '"' and etag[-1] == '"'
-    assert if_none_match(None, etag) is False
-    assert if_none_match(etag, etag) is True
-    assert if_none_match('"other", %s' % etag, etag) is True
-    assert if_none_match("*", etag) is True
-    assert if_none_match('"other"', etag) is False
+    assert etag_matches(None, etag) is False
+    assert etag_matches(etag, etag) is True
+    assert etag_matches('"other", %s' % etag, etag) is True
+    assert etag_matches("*", etag) is True
+    assert etag_matches('"other"', etag) is False
 
 
 def test_updatez_get():

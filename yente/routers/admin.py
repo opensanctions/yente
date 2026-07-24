@@ -41,7 +41,7 @@ def catalog_etag(catalog: Catalog) -> str:
     return '"%s"' % digest
 
 
-def if_none_match(header: Optional[str], etag: str) -> bool:
+def etag_matches(header: Optional[str], etag: str) -> bool:
     """Check whether an ``If-None-Match`` header matches the given ETag.
 
     Supports the ``*`` wildcard and a comma-separated list of ETags.
@@ -153,7 +153,7 @@ async def catalog(
     await sync_dataset_versions(provider, catalog)
     etag = catalog_etag(catalog)
     headers = {"ETag": etag, "Cache-Control": CATALOG_CACHE_CONTROL}
-    if if_none_match(request.headers.get("if-none-match"), etag):
+    if etag_matches(request.headers.get("if-none-match"), etag):
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
     response.headers.update(headers)
     model = DataCatalogModel(datasets=[], current=[], outdated=[])
