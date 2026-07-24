@@ -11,6 +11,24 @@ permissions:
   artifact-metadata: write
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y -qq libicu-dev
+          pip install -U pip pyicu prek
+          pip install --group dev -e .
+      - name: Run pre-commit hooks
+        run: prek run --all-files --show-diff-on-failure
+
   test-elasticsearch:
     runs-on: ubuntu-latest
     services:
