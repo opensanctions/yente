@@ -9,7 +9,6 @@ from nomenklatura.matching.types import (
 )
 from pydantic import BaseModel, Field, field_serializer
 
-from yente import settings
 from yente.data.dataset import YenteDatasetModel
 from yente.data.entity import Entity
 
@@ -28,9 +27,11 @@ class EntityResponse(BaseModel):
     datasets: list[str] = Field([], examples=[["us_ofac_sdn"]])
     referents: list[str] = Field([], examples=[["ofac-1234"]])
     target: bool = Field(False)
-    first_seen: datetime | None = Field(None, examples=[settings.RUN_DT])
-    last_seen: datetime | None = Field(None, examples=[settings.RUN_DT])
-    last_change: datetime | None = Field(None, examples=[settings.RUN_DT])
+    first_seen: datetime | None = Field(None, examples=[datetime(2026, 1, 1, 12, 0, 0)])
+    last_seen: datetime | None = Field(None, examples=[datetime(2026, 1, 1, 12, 0, 0)])
+    last_change: datetime | None = Field(
+        None, examples=[datetime(2026, 1, 1, 12, 0, 0)]
+    )
 
     # Entities come out of ES with these already as ISO strings. Responses
     # are built via model_construct to skip re-validation, so pydantic has
