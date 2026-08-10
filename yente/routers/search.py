@@ -1,28 +1,39 @@
-from fastapi import APIRouter, Depends, Path, Query, Response, HTTPException
+import enum
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from fastapi.responses import RedirectResponse
 from followthemoney import model
 from followthemoney.types import registry
-import enum
 
 from yente import settings
-from yente.logs import get_logger
+from yente.data import get_catalog
 from yente.data.common import (
     AdjacentResultsResponse,
     EntityAdjacentResponse,
+    EntityResponse,
     ErrorResponse,
+    SearchResponse,
 )
-from yente.data.common import EntityResponse, SearchResponse
+from yente.logs import get_logger
 from yente.provider import SearchProvider, get_provider
-from yente.search.queries import parse_sorts, text_query
-from yente.search.queries import facet_aggregations
-from yente.search.queries import Filters, Operator
-from yente.search.search import get_entity, search_entities, upscore_large_entities
-from yente.search.search import result_entities, result_facets, result_total
-from yente.search.nested import get_nested_entity, get_adjacent_entities
-from yente.data import get_catalog
-from yente.util import limit_window, EntityRedirect
-from yente.routers.util import get_dataset
-from yente.routers.util import PATH_DATASET, TS_PATTERN
+from yente.routers.util import PATH_DATASET, TS_PATTERN, get_dataset
+from yente.search.nested import get_adjacent_entities, get_nested_entity
+from yente.search.queries import (
+    Filters,
+    Operator,
+    facet_aggregations,
+    parse_sorts,
+    text_query,
+)
+from yente.search.search import (
+    get_entity,
+    result_entities,
+    result_facets,
+    result_total,
+    search_entities,
+    upscore_large_entities,
+)
+from yente.util import EntityRedirect, limit_window
 
 log = get_logger(__name__)
 router = APIRouter()

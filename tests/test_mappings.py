@@ -1,10 +1,9 @@
 import pytest
 
 from yente import settings
-from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 from yente.data.entity import Entity
 from yente.search.indexer import build_indexable_entity_doc
-
+from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 
 INDEX_MAPPINGS = make_entity_mapping()
 

@@ -3,6 +3,12 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 
+from tests.conftest import (
+    ZALA_MANIFEST,
+    build_index_alias_name_for_fixture,
+    metric_reader,
+    patch_yente_catalog,
+)
 from yente import settings
 from yente.data import get_catalog
 from yente.data.manifest import Manifest
@@ -11,14 +17,6 @@ from yente.provider import SearchProvider
 from yente.search.indexer import update_index
 from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 from yente.search.versions import build_index_name
-
-from tests.conftest import (
-    ZALA_MANIFEST,
-    build_index_alias_name_for_fixture,
-    metric_reader,
-    patch_yente_catalog,
-)
-
 
 INITIAL_LAST_EXPORT_ISO = "2026-05-15T12:34:56+00:00"
 UPDATED_LAST_EXPORT_ISO = "2026-06-10T08:00:00+00:00"

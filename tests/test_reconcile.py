@@ -1,4 +1,5 @@
 import json
+
 import pytest
 from normality import ascii_text
 

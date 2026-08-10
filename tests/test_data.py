@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 from followthemoney import model
 from followthemoney.names import entity_names
 from rigour.names import NamePartTag
@@ -7,11 +8,11 @@ from rigour.names import NamePartTag
 from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
-from yente.data.manifest import Catalog, Manifest
 from yente.data.loader import load_json_lines
-from yente.data.util import get_url_local_path
-from yente.data.util import expand_dates
+from yente.data.manifest import Catalog, Manifest
+from yente.data.util import expand_dates, get_url_local_path
 from yente.exc import YenteConfigError
+
 from .conftest import patch_catalog_response
 
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 from pydantic import AnyHttpUrl
 from pydantic.type_adapter import TypeAdapter
 

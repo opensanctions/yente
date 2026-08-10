@@ -1,65 +1,67 @@
-import json
 import asyncio
-from urllib.parse import urljoin
-from typing import Any
-from collections.abc import Coroutine
+import json
 import uuid
-from fastapi import APIRouter, Query, Form, Depends
-from fastapi import Request, Response
-from fastapi import HTTPException
+from collections.abc import Coroutine
+from typing import Any
+from urllib.parse import urljoin
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from followthemoney import model
 from followthemoney.types import registry
 
-
 from yente import settings
-from yente.data.common import ErrorResponse, EntityExample
-from yente.logs import get_logger
-from yente.data.entity import Entity
+from yente.data.common import EntityExample, ErrorResponse
 from yente.data.dataset import Dataset
+from yente.data.entity import Entity
 from yente.data.freebase import (
     FreebaseEntity,
     FreebaseEntityResult,
+    FreebaseEntitySuggestResponse,
     FreebaseExtendPropertiesResponse,
     FreebaseExtendProperty,
     FreebaseExtendQuery,
     FreebaseExtendResponse,
     FreebaseExtendResponseMeta,
     FreebaseExtendResponseValue,
+    FreebaseManifest,
     FreebaseManifestExtend,
     FreebaseManifestExtendPropertySetting,
     FreebaseManifestExtendPropertySettingChoice,
     FreebaseManifestExtendProposeProperties,
-    FreebaseManifestView,
     FreebaseManifestPreview,
     FreebaseManifestSuggest,
     FreebaseManifestSuggestType,
+    FreebaseManifestView,
     FreebaseProperty,
+    FreebasePropertySuggestResponse,
     FreebaseReconBatch,
     FreebaseReconQuery,
     FreebaseRenderMethod,
     FreebaseScoredEntity,
     FreebaseType,
-    FreebaseEntitySuggestResponse,
-    FreebasePropertySuggestResponse,
     FreebaseTypeSuggestResponse,
-    FreebaseManifest,
     ReconPropertyValue,
 )
+from yente.logs import get_logger
+from yente.provider import SearchProvider, get_provider
+from yente.routers.util import (
+    ALGO_HELP,
+    PATH_DATASET,
+    QUERY_PREFIX,
+    TS_PATTERN,
+    get_algorithm_by_name,
+    get_dataset,
+)
+from yente.scoring import score_results
 from yente.search.queries import entity_query, prefix_query
 from yente.search.search import (
     get_entity,
-    search_entities,
+    get_matchable_schemata,
     result_entities,
     result_total,
+    search_entities,
 )
-from yente.search.search import get_matchable_schemata
-from yente.provider import SearchProvider, get_provider
-from yente.scoring import score_results
-from yente.util import EntityRedirect, match_prefix, limit_window, typed_url
-from yente.routers.util import PATH_DATASET, QUERY_PREFIX
-from yente.routers.util import TS_PATTERN, ALGO_HELP
-from yente.routers.util import get_algorithm_by_name, get_dataset
-
+from yente.util import EntityRedirect, limit_window, match_prefix, typed_url
 
 log = get_logger(__name__)
 router = APIRouter()

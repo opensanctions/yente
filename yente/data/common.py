@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Any, Union
-from pydantic import BaseModel, Field, field_serializer
+
 from nomenklatura.matching.types import (
-    MatchingResult,
-    FeatureDocs,
     AlgorithmDocs,
+    FeatureDocs,
     FeatureResult,
+    MatchingResult,
 )
+from pydantic import BaseModel, Field, field_serializer
 
 from yente import settings
 from yente.data.dataset import YenteDatasetModel

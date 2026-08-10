@@ -1,5 +1,5 @@
-from typing import Any
 from collections.abc import AsyncIterable, Iterable
+from typing import Any
 
 
 class SearchProvider:

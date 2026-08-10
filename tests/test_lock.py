@@ -1,14 +1,15 @@
-import pytest
-from unittest.mock import patch
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
+import pytest
+
+from yente.provider import SearchProvider
 from yente.search.lock import (
     acquire_lock,
-    release_lock,
-    refresh_lock,
     get_lock_index_name,
+    refresh_lock,
+    release_lock,
 )
-from yente.provider import SearchProvider
 
 TEST_INDEX_NAME = "test-index"
 TEST_DATASET = "test-dataset"

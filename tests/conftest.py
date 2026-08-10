@@ -12,29 +12,28 @@
 # unit-testy (one thing under test), reduces fixture sprawl, and avoids
 # cross-test coupling. See test_catalog in tests/test_base.py for an example.
 import re
-import pytest_asyncio
-from datetime import datetime
-from typing import Any
-from uuid import uuid4
-from pathlib import Path
-from unittest.mock import Mock, patch
 from contextlib import asynccontextmanager, contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+from unittest.mock import Mock, patch
+from uuid import uuid4
+
+import orjson
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from followthemoney import model
 from followthemoney.dataset.util import dataset_name_check
-import orjson
-
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
+import yente.data
 from yente import settings
 from yente.app import create_app
-from yente.search.indexer import update_index
-from yente.provider import with_provider, close_provider
 from yente.data.manifest import Catalog, Manifest
-import yente.data
-
+from yente.provider import close_provider, with_provider
+from yente.search.indexer import update_index
 
 # In-memory OpenTelemetry metric reader so tests can assert on gauge values.
 # MeterProvider can only be set once globally, so we wire it up at module import.

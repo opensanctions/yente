@@ -1,6 +1,8 @@
 from typing import Any
+
 import pytest
-from .conftest import client, assert_entity_shape
+
+from .conftest import assert_entity_shape, client
 
 
 def by_id(dicts: list[dict[str, Any]], id_: str):

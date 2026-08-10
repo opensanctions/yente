@@ -1,19 +1,25 @@
 import asyncio
 import threading
-from typing import Any
 from collections.abc import AsyncGenerator, AsyncIterable
+from typing import Any
+
 from followthemoney import registry
 from followthemoney.exc import FollowTheMoneyException
 from followthemoney.names import entity_names
 
 from yente import settings
+from yente.data import get_catalog
+from yente.data.dataset import Dataset
+from yente.data.entity import Entity
 from yente.data.manifest import Catalog
+from yente.data.metrics import update_dataset_version_metric
+from yente.data.updater import DatasetUpdater
+from yente.data.util import entity_weak_names, expand_dates, index_symbols
 from yente.exc import YenteIndexError
 from yente.logs import get_logger
-from yente.data.entity import Entity
-from yente.data.dataset import Dataset
-from yente.data import get_catalog
-from yente.data.updater import DatasetUpdater
+from yente.provider import SearchProvider, with_provider
+from yente.search import audit_log
+from yente.search.audit_log import AuditLogEventType, get_audit_log_index_name
 from yente.search.lock import (
     LockSession,
     acquire_lock,
@@ -21,25 +27,19 @@ from yente.search.lock import (
     refresh_lock,
     release_lock,
 )
-from yente.search import audit_log
-from yente.search.audit_log import get_audit_log_index_name, AuditLogEventType
 from yente.search.mapping import (
+    INDEX_SETTINGS,
     NAME_PART_FIELD,
     NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
     make_entity_mapping,
-    INDEX_SETTINGS,
 )
-from yente.provider import SearchProvider, with_provider
 from yente.search.versions import (
-    build_index_name_prefix,
-    parse_index_name,
     build_index_name,
+    build_index_name_prefix,
     get_system_version,
+    parse_index_name,
 )
-from yente.data.util import entity_weak_names, expand_dates, index_symbols
-from yente.data.metrics import update_dataset_version_metric
-
 
 log = get_logger(__name__)
 lock = threading.Lock()

@@ -1,24 +1,34 @@
 import asyncio
-from typing import Any
 from collections.abc import Coroutine
-from fastapi import APIRouter, Depends, Query, Request, Response, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
+from yente.data.common import (
+    EntityExample,
+    EntityMatches,
+    EntityMatchQuery,
+    EntityMatchResponse,
+    ErrorResponse,
+    TotalSpec,
+)
 from yente.data.dataset import Dataset
-from yente.logs import get_logger
-from yente.data.common import ErrorResponse
-from yente.data.common import EntityMatchQuery, EntityMatchResponse, EntityExample
-from yente.data.common import EntityMatches, TotalSpec
-from yente.provider import SearchProvider, get_provider
-from yente.search.queries import entity_query, Filters, Operator
-from yente.search.queries import DEFAULT_SORTS
-from yente.search.search import search_entities, result_entities
 from yente.data.entity import Entity
-from yente.util import limit_window
+from yente.logs import get_logger
+from yente.provider import SearchProvider, get_provider
+from yente.routers.util import (
+    ALGO_HELP,
+    PATH_DATASET,
+    TS_PATTERN,
+    get_algorithm_by_name,
+    get_dataset,
+)
 from yente.scoring import score_results
-from yente.routers.util import get_dataset, get_algorithm_by_name
-from yente.routers.util import PATH_DATASET, TS_PATTERN, ALGO_HELP
+from yente.search.queries import DEFAULT_SORTS, Filters, Operator, entity_query
+from yente.search.search import result_entities, search_entities
+from yente.util import limit_window
 
 log = get_logger(__name__)
 router = APIRouter()

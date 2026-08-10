@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from functools import cache
-from normality import slugify
+
 import followthemoney
+from normality import slugify
 
 from yente import settings
 

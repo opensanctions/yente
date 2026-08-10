@@ -1,10 +1,10 @@
-from typing import TypedDict, Any
 from collections.abc import AsyncGenerator
+from typing import Any, TypedDict
 
 from yente import settings
-from yente.logs import get_logger
 from yente.data.dataset import Dataset
-from yente.data.loader import load_json_url, load_json_lines
+from yente.data.loader import load_json_lines, load_json_url
+from yente.logs import get_logger
 
 log = get_logger(__name__)
 

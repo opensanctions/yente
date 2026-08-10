@@ -1,8 +1,9 @@
-import orjson
-import random
 import csv
+import random
 import sys
+
 import click
+import orjson
 
 # curl "https://data.opensanctions.org/datasets/20250820/un_sc_sanctions/entities.ftm.json" \
 # | python contrib/candidate_generation_benchmark/generate_fixture_from_ftm.py \

@@ -1,15 +1,17 @@
-import re
 import json
-import pytest
-import yente.data
-from .conftest import FIXTURES_PATH
+import re
 from typing import Any
 
+import pytest
+
+import yente.data
 from yente.data import get_catalog
 from yente.data.manifest import Catalog, Manifest
 from yente.data.updater import DatasetUpdater
 from yente.exc import ChecksumError
-from yente.search.versions import get_system_version, parse_index_name, build_index_name
+from yente.search.versions import build_index_name, get_system_version, parse_index_name
+
+from .conftest import FIXTURES_PATH
 
 
 @pytest.fixture

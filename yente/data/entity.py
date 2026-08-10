@@ -1,5 +1,6 @@
-from typing import Any, TYPE_CHECKING
-from followthemoney import Schema, registry, model, ValueEntity
+from typing import TYPE_CHECKING, Any
+
+from followthemoney import Schema, ValueEntity, model, registry
 from followthemoney.exc import InvalidData
 from followthemoney.helpers import combine_names
 from rigour.names import pick_name

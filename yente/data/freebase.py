@@ -1,11 +1,12 @@
 from enum import StrEnum
 from typing import Any
-from pydantic import BaseModel, Field, RootModel
-from pydantic.networks import AnyHttpUrl
+
 from followthemoney import model
+from followthemoney.property import Property
 from followthemoney.proxy import EntityProxy
 from followthemoney.schema import Schema
-from followthemoney.property import Property
+from pydantic import BaseModel, Field, RootModel
+from pydantic.networks import AnyHttpUrl
 
 from yente import settings
 from yente.data.common import ScoredEntityResponse

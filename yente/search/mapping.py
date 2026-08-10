@@ -1,7 +1,8 @@
-from collections import defaultdict
 import itertools
-from typing import Any
+from collections import defaultdict
 from collections.abc import Iterable
+from typing import Any
+
 from followthemoney import model
 from followthemoney.schema import Schema
 from followthemoney.types import registry

@@ -12,7 +12,6 @@ from typing import Any
 import click
 import httpx
 import orjson
-
 from treatments import apply_treatment
 
 log = logging.getLogger(__name__)

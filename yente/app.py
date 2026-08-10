@@ -1,31 +1,31 @@
-import aiocron  # type: ignore
-from typing import Any
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from contextlib import asynccontextmanager
-from pydantic import ValidationError
-from fastapi import FastAPI
-from fastapi import Request, Response
+from typing import Any
+
+import aiocron  # type: ignore
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
 from fastapi.responses import JSONResponse
 from followthemoney.exc import InvalidData
+from pydantic import ValidationError
+from starlette.middleware.base import RequestResponseEndpoint
 
 from yente import settings
-from yente.exc import YenteError
-from yente.logs import get_logger
-from yente.routers import reconcile, search, match, admin
 from yente.data import refresh_catalog
 from yente.data.entity import Entity
-from yente.routers.util import ENABLED_ALGORITHMS
-from yente.search.indexer import update_index_threaded
 from yente.data.metrics import update_metrics
-from yente.provider import with_provider, close_provider
+from yente.exc import YenteError
+from yente.logs import get_logger
 from yente.middleware import (
     MaxURLLengthMiddleware,
     RequestLogMiddleware,
     TraceContextMiddleware,
 )
+from yente.provider import close_provider, with_provider
+from yente.routers import admin, match, reconcile, search
+from yente.routers.util import ENABLED_ALGORITHMS
+from yente.search.indexer import update_index_threaded
 
 log = get_logger("yente")
 ExceptionHandler = Callable[[Request, Any], Coroutine[Any, Any, Response]]

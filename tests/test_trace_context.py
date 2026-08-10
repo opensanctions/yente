@@ -1,5 +1,6 @@
-from .conftest import client
 import re
+
+from .conftest import client
 
 
 def test_trace_context() -> None:

@@ -1,13 +1,14 @@
 from collections.abc import Generator
 from typing import Any
-from followthemoney import model, registry, Schema
+
+from followthemoney import Schema, model, registry
 from followthemoney.dataset import DataCatalog
 
 from yente import settings
-from yente.logs import get_logger
+from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
-from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
+from yente.logs import get_logger
 from yente.provider import SearchProvider
 from yente.util import EntityRedirect, limit_window
 

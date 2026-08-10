@@ -1,6 +1,7 @@
 import os
-import requests
 from pprint import pprint
+
+import requests
 
 # The OpenSanctions service API. This endpoint will only do sanctions checks.
 URL = "https://api.opensanctions.org/match/sanctions"

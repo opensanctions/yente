@@ -1,36 +1,36 @@
-import click
-import csv
 import asyncio
+import csv
+import statistics
 import subprocess
 import sys
-from typing import Any
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import click
+import orjson
+from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
 from rich.console import Console
-from rich.table import Table
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
+    TextColumn,
 )
-import statistics
-from dataclasses import dataclass
-import orjson
+from rich.table import Table
 
-from yente.data.dataset import Dataset
-from yente.provider.base import SearchProvider
-from yente.routers.util import ENABLED_ALGORITHMS, get_algorithm_by_name
-from yente.data.entity import Entity
-from yente.data.common import EntityExample, ScoredEntityResponse
-from yente.search.queries import entity_query
-from yente.search.search import search_entities, result_entities
-from yente.scoring import score_results
-from yente.routers.util import get_dataset
-from yente.provider import get_provider
-from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
 from yente import settings
+from yente.data.common import EntityExample, ScoredEntityResponse
+from yente.data.dataset import Dataset
+from yente.data.entity import Entity
 from yente.logs import get_logger
+from yente.provider import get_provider
+from yente.provider.base import SearchProvider
+from yente.routers.util import ENABLED_ALGORITHMS, get_algorithm_by_name, get_dataset
+from yente.scoring import score_results
+from yente.search.queries import entity_query
+from yente.search.search import result_entities, search_entities
 
 log = get_logger(__name__)
 

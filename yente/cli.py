@@ -1,20 +1,20 @@
-import click
 import asyncio
 import csv
 import sys
-from uvicorn import Config, Server
+
+import click
 from rich.console import Console
 from rich.table import Table
+from uvicorn import Config, Server
 
 from yente import settings
 from yente.app import create_app
 from yente.logs import configure_logging, get_logger
-from yente.search.indexer import update_index
 from yente.provider import with_provider
 from yente.search.audit_log import (
     get_all_audit_log_messages,
 )
-
+from yente.search.indexer import update_index
 
 log = get_logger("yente")
 

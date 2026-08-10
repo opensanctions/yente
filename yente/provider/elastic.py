@@ -1,18 +1,24 @@
-import json
 import asyncio
+import json
 import warnings
-from typing import Any, cast
 from collections.abc import AsyncIterable, Iterable
-from elasticsearch import AsyncElasticsearch, ElasticsearchWarning
-from elasticsearch.helpers import async_bulk, BulkIndexError
-from elasticsearch import ApiError, NotFoundError
-from elasticsearch import TransportError, ConnectionError
+from typing import Any, cast
+
+from elasticsearch import (
+    ApiError,
+    AsyncElasticsearch,
+    ConnectionError,
+    ElasticsearchWarning,
+    NotFoundError,
+    TransportError,
+)
+from elasticsearch.helpers import BulkIndexError, async_bulk
 
 from yente import settings
 from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
-from yente.provider.base import SearchProvider
 from yente.middleware.trace_context import get_trace_context
+from yente.provider.base import SearchProvider
 
 log = get_logger(__name__)
 warnings.filterwarnings("ignore", category=ElasticsearchWarning)

@@ -1,16 +1,17 @@
-import httpx
 import warnings
-from pathlib import Path
-from functools import cache
-from urllib.parse import urlparse
-from prefixdate.precision import Precision
-from contextlib import asynccontextmanager
-from typing import Any
 from collections.abc import AsyncGenerator, Generator
-from rigour.names import Symbol
-from rigour.time import iso_datetime
+from contextlib import asynccontextmanager
+from functools import cache
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+import httpx
 from followthemoney import EntityProxy, Property, Schema, registry
 from followthemoney.util import sanitize_text
+from prefixdate.precision import Precision
+from rigour.names import Symbol
+from rigour.time import iso_datetime
 
 from yente import settings
 from yente.logs import get_logger

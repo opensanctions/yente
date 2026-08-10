@@ -1,13 +1,14 @@
-import time
 import asyncio
+import time
 from collections.abc import Iterable
-from opentelemetry import trace, metrics
+
 from nomenklatura.matching.types import ScoringAlgorithm, ScoringConfig
+from opentelemetry import metrics, trace
 
 from yente import settings
-from yente.logs import get_logger
-from yente.data.entity import Entity
 from yente.data.common import ScoredEntityResponse
+from yente.data.entity import Entity
+from yente.logs import get_logger
 
 log = get_logger(__name__)
 

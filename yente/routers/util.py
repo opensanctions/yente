@@ -1,15 +1,15 @@
 from functools import cache
-from fastapi import Path, Query
-from fastapi import HTTPException
-from nomenklatura.matching.logic_v2.model import LogicV2
+
+from fastapi import HTTPException, Path, Query
 from nomenklatura.matching import (
-    ScoringAlgorithm,
     LogicV1,
     NameMatcher,
     NameQualifiedMatcher,
     OFACMatcher,
     RegressionV1,
+    ScoringAlgorithm,
 )
+from nomenklatura.matching.logic_v2.model import LogicV2
 
 from yente import settings
 from yente.data import get_catalog

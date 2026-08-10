@@ -1,15 +1,24 @@
-import sys
 import logging
-import structlog
+import sys
 from logging import Filter, LogRecord
 from typing import Any
-from structlog.dev import ConsoleRenderer, set_exc_info
+
+import structlog
 from structlog.contextvars import merge_contextvars
-from structlog.processors import UnicodeDecoder, TimeStamper
-from structlog.processors import format_exc_info, add_log_level
-from structlog.processors import JSONRenderer
-from structlog.stdlib import ProcessorFormatter, add_logger_name
-from structlog.stdlib import BoundLogger, LoggerFactory
+from structlog.dev import ConsoleRenderer, set_exc_info
+from structlog.processors import (
+    JSONRenderer,
+    TimeStamper,
+    UnicodeDecoder,
+    add_log_level,
+    format_exc_info,
+)
+from structlog.stdlib import (
+    BoundLogger,
+    LoggerFactory,
+    ProcessorFormatter,
+    add_logger_name,
+)
 from structlog.stdlib import get_logger as get_raw_logger
 
 from yente import settings

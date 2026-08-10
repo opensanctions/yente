@@ -1,20 +1,21 @@
-import yaml
-import httpx
-import orjson
 import asyncio
-import aiofiles
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
 from hashlib import sha1
-from pathlib import Path
 from itertools import count
+from pathlib import Path
 from typing import (
     Any,
 )
-from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator
+
+import aiofiles
+import httpx
+import orjson
+import yaml
 
 from yente import settings
+from yente.data.util import get_url_local_path, httpx_session
 from yente.exc import ChecksumError
 from yente.logs import get_logger
-from yente.data.util import get_url_local_path, httpx_session
 
 log = get_logger(__name__)
 

@@ -1,5 +1,9 @@
 import pytest
 
+from yente import settings
+from yente.data.manifest import Manifest
+from yente.search.indexer import update_index
+
 from .conftest import (
     FIXTURES_PATH,
     build_index_alias_name_for_fixture,
@@ -7,10 +11,6 @@ from .conftest import (
     patch_catalog_response,
     patch_yente_catalog,
 )
-
-from yente import settings
-from yente.data.manifest import Manifest
-from yente.search.indexer import update_index
 
 
 def test_healthz():

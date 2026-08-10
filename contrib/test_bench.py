@@ -1,13 +1,14 @@
 import asyncio
 from pprint import pprint
+
 from nomenklatura.matching import get_algorithm
 
-from yente.data.entity import Entity
 from yente.data.common import EntityExample
-from yente.search.queries import entity_query
-from yente.search.search import search_entities, result_entities
-from yente.scoring import score_results
+from yente.data.entity import Entity
 from yente.routers.util import get_dataset
+from yente.scoring import score_results
+from yente.search.queries import entity_query
+from yente.search.search import result_entities, search_entities
 
 LIMIT = 10
 EXAMPLE = {

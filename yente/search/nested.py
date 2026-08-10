@@ -1,19 +1,19 @@
 import asyncio
-from typing import Any
 from collections.abc import Iterable
+from typing import Any
 
 from followthemoney.property import Property
 from followthemoney.types import registry
 
 from yente import settings
-from yente.logs import get_logger
-from yente.data.entity import Entity
 from yente.data.common import (
     AdjacentResultsResponse,
     EntityAdjacentResponse,
     EntityResponse,
     TotalSpec,
 )
+from yente.data.entity import Entity
+from yente.logs import get_logger
 from yente.provider import SearchProvider
 from yente.search.search import result_entities, result_total
 

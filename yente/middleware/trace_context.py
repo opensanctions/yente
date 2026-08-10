@@ -1,9 +1,10 @@
+import secrets
 from dataclasses import dataclass
+from typing import Any
+
+import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from typing import Any
-import secrets
-import structlog
 from structlog.contextvars import get_contextvars
 
 VENDOR_CODE = (

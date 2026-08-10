@@ -6,8 +6,8 @@ operation when seeded from the entity ID.
 """
 
 import random
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 
 def switch_random_character(s: str, rng: random.Random) -> str:

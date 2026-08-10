@@ -1,11 +1,12 @@
-import os
-import time
-import random
 import logging
-import requests
-from urllib.parse import urljoin
-from requests import JSONDecodeError
+import os
+import random
+import time
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urljoin
+
+import requests
+from requests import JSONDecodeError
 
 log = logging.getLogger("load_test")
 session = requests.Session()

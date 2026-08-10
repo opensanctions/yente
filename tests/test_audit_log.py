@@ -1,10 +1,11 @@
 import pytest
+
+from yente.provider import SearchProvider
 from yente.search.audit_log import (
-    get_audit_log_index_name,
     AuditLogEventType,
+    get_audit_log_index_name,
     log_audit_message,
 )
-from yente.provider import SearchProvider
 
 TEST_INDEX_NAME = "test-index"
 TEST_DATASET = "test-dataset"

@@ -1,7 +1,8 @@
-import pytest
 from unittest import mock
 
-from .conftest import client, assert_entity_shape
+import pytest
+
+from .conftest import assert_entity_shape, client
 
 QUERY_ZAKHAROV = {
     "schema": "Person",

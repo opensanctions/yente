@@ -1,10 +1,11 @@
 import json
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
+
 from .conftest import client
 
 EXAMPLE = {

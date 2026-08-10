@@ -1,5 +1,9 @@
 import pytest
 
+from yente import settings
+from yente.data.manifest import Manifest
+from yente.search.indexer import update_index
+
 from .conftest import (
     ZALA_MANIFEST,
     assert_entity_shape,
@@ -7,10 +11,6 @@ from .conftest import (
     client,
     patch_yente_catalog,
 )
-
-from yente import settings
-from yente.data.manifest import Manifest
-from yente.search.indexer import update_index
 
 
 @pytest.mark.usefixtures("zala_test_dataset")

@@ -1,16 +1,17 @@
-from enum import StrEnum
+import asyncio
 import functools
 import json
-import asyncio
 import logging
+from collections.abc import AsyncIterable, Callable, Iterable
+from enum import StrEnum
 from typing import (
     Any,
     cast,
 )
-from collections.abc import AsyncIterable, Callable, Iterable
-from opensearchpy import AsyncOpenSearch, AsyncHttpConnection, AWSV4SignerAsyncAuth
+
+from opensearchpy import AsyncHttpConnection, AsyncOpenSearch, AWSV4SignerAsyncAuth
+from opensearchpy.exceptions import ConnectionError, NotFoundError, TransportError
 from opensearchpy.helpers import async_streaming_bulk
-from opensearchpy.exceptions import NotFoundError, TransportError, ConnectionError
 from opentelemetry import trace
 
 from yente import settings

@@ -1,11 +1,11 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
-import uuid
+
 from yente import logs, settings
 from yente.exc import YenteIndexError
 from yente.provider.base import SearchProvider
-
 
 LOCK_EXPIRATION_TIME = timedelta(minutes=10)
 # We use a single lock document for everything, this could be expanded to support more granular lockin in the future.

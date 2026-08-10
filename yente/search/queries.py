@@ -1,22 +1,28 @@
 import enum
-from pprint import pprint  # noqa
-from rigour.names import Name, NamePart, Symbol, representative_names
 from collections import defaultdict
-from typing import Any
 from collections.abc import Generator, Iterable
-from followthemoney.schema import Schema
+from pprint import pprint  # noqa
+from typing import Any
+
 from followthemoney.proxy import EntityProxy
+from followthemoney.schema import Schema
 from followthemoney.types import registry
 
 # We're re-using the same entity analyzer so the LRU cache is shared:
 from nomenklatura.matching.logic_v2.names.analysis import entity_names
+from rigour.names import Name, NamePart, Symbol, representative_names
 
 from yente import settings
-from yente.logs import get_logger
 from yente.data.dataset import Dataset
 from yente.data.util import entity_weak_names, index_symbols
-from yente.search.mapping import NAME_SYMBOLS_FIELD, NAMES_FIELD
-from yente.search.mapping import NAME_PART_FIELD, NAME_PHONETIC_FIELD, NAME_NGRAMS_FIELD
+from yente.logs import get_logger
+from yente.search.mapping import (
+    NAME_NGRAMS_FIELD,
+    NAME_PART_FIELD,
+    NAME_PHONETIC_FIELD,
+    NAME_SYMBOLS_FIELD,
+    NAMES_FIELD,
+)
 
 log = get_logger(__name__)
 Clause = dict[str, Any]

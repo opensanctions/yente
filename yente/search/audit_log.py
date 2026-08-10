@@ -1,9 +1,9 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
-from datetime import datetime, UTC
+
 from yente import logs, settings
 from yente.provider.base import SearchProvider
-
 
 # Query the audit log using `yente audit-log` in the CLI
 

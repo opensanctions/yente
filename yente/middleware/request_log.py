@@ -1,13 +1,13 @@
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 import structlog
 from fastapi import Request
 from rigour.time import utc_now
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Any
-from collections.abc import Callable, Awaitable
 
 from yente.logs import get_logger
-
 
 log = get_logger(__name__)
 

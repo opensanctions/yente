@@ -1,7 +1,8 @@
-import pytest
 from hashlib import sha1
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from yente import settings
 from yente.data.loader import load_json_lines, split_json_lines
