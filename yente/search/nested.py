@@ -44,7 +44,7 @@ def nest_entity(
 
     """
     props: dict[str, list[Value]] = {}
-    next_path = set([entity.id]).union(path)
+    next_path = {entity.id}.union(path)
 
     # Find other entities pointing to the one we're processing:
     if entity.id is not None:
@@ -120,7 +120,7 @@ async def get_nested_entity(
     provider: SearchProvider,
     root: Entity,
     prop: Property | None = None,
-    sort: list[Any] = [],
+    sort: list[Any] | None = None,
     limit: int = settings.MAX_RESULTS,
     offset: int = 0,
 ) -> tuple[EntityResponse, TotalSpec]:

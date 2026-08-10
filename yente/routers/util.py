@@ -1,6 +1,7 @@
 from functools import cache
+from typing import Annotated
 
-from fastapi import HTTPException, Path, Query
+from fastapi import Depends, HTTPException, Path, Query
 from nomenklatura.matching import (
     LogicV1,
     NameMatcher,
@@ -14,6 +15,9 @@ from nomenklatura.matching.logic_v2.model import LogicV2
 from yente import settings
 from yente.data import get_catalog
 from yente.data.dataset import Dataset
+from yente.provider import SearchProvider, get_provider
+
+ProviderDep = Annotated[SearchProvider, Depends(get_provider)]
 
 ENABLED_ALGORITHMS: list[type[ScoringAlgorithm]] = [
     LogicV2,
@@ -24,11 +28,14 @@ ENABLED_ALGORITHMS: list[type[ScoringAlgorithm]] = [
     RegressionV1,
 ]
 
-PATH_DATASET = Path(
-    description="Data source or collection name to scope the query to.",
-    examples=["default"],
-)
-QUERY_PREFIX = Query("", min_length=0, description="Search prefix")
+DatasetPath = Annotated[
+    str,
+    Path(
+        description="Data source or collection name to scope the query to.",
+        examples=["default"],
+    ),
+]
+PrefixQuery = Annotated[str, Query(min_length=0, description="Search prefix")]
 TS_PATTERN = r"^\d{4}-\d{2}-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?$"
 ALGO_LIST = ", ".join([a.NAME for a in ENABLED_ALGORITHMS])
 ALGO_HELP = f'Scoring algorithm to use, currently "best" is defined as {settings.BEST_ALGORITHM}, options: {ALGO_LIST}'

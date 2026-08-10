@@ -109,7 +109,7 @@ async def search_entities(
     limit: int = 5,
     offset: int = 0,
     aggregations: dict[str, Any] | None = None,
-    sort: list[Any] = [],
+    sort: list[Any] | None = None,
 ) -> dict[str, Any]:
     limit, offset = limit_window(limit, offset)
 

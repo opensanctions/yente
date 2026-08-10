@@ -4,7 +4,7 @@
 import hashlib
 import statistics
 import subprocess
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -104,7 +104,7 @@ def main(input_json: str | None, dataset: str, output: str | None) -> None:
         loader=FileSystemLoader(TEMPLATES_DIR), keep_trailing_newline=True
     )
     md_rendered = env.get_template("report.md.j2").render(
-        date=date.today().isoformat(),
+        date=datetime.now(UTC).date().isoformat(),
         query_scope=query_scope,
         threshold=threshold,
         indexed_dataset=indexed_dataset,

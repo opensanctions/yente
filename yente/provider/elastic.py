@@ -28,11 +28,11 @@ class ElasticSearchProvider(SearchProvider):
     @classmethod
     async def create(cls) -> "ElasticSearchProvider":
         """Get elasticsearch connection."""
-        kwargs: dict[str, Any] = dict(
-            request_timeout=30,
-            retry_on_timeout=True,
-            max_retries=10,
-        )
+        kwargs: dict[str, Any] = {
+            "request_timeout": 30,
+            "retry_on_timeout": True,
+            "max_retries": 10,
+        }
         if settings.INDEX_SNIFF:
             kwargs["sniff_on_start"] = True
             kwargs["min_delay_between_sniffing"] = 60
@@ -71,10 +71,10 @@ class ElasticSearchProvider(SearchProvider):
         if trace_context := get_trace_context():
             arg_headers = kwargs.get("headers", {})
             headers = arg_headers | (
-                dict(
-                    traceparent=trace_context.traceparent.as_header(),
-                    tracestate=trace_context.tracestate.as_header(),
-                )
+                {
+                    "traceparent": trace_context.traceparent.as_header(),
+                    "tracestate": trace_context.tracestate.as_header(),
+                }
             )
             kwargs.update(headers=headers)
         return self._client.options(**kwargs)
@@ -194,7 +194,7 @@ class ElasticSearchProvider(SearchProvider):
         """Check if an index exists and is linked into the given alias."""
         try:
             exists = await self.client().indices.exists_alias(name=alias, index=index)
-            return True if exists.body else False
+            return bool(exists.body)
         except NotFoundError:
             return False
         except (ApiError, TransportError) as te:
@@ -255,7 +255,7 @@ class ElasticSearchProvider(SearchProvider):
                 )
                 raise IndexNotReadyError(msg) from ae
             if ae.error == "search_phase_execution_exception":
-                raise YenteIndexError(f"Search error: {str(ae)}", status=400) from ae
+                raise YenteIndexError(f"Search error: {ae!s}", status=400) from ae
             log.warning(
                 f"API error {ae.status_code}: {ae.message}",
                 index=index,
@@ -263,7 +263,7 @@ class ElasticSearchProvider(SearchProvider):
             )
             raise YenteIndexError(f"Could not search index: {ae}") from ae
         except (TimeoutError, OSError, Exception) as exc:
-            msg = f"Error during search: {str(exc)}"
+            msg = f"Error during search: {exc!s}"
             raise YenteIndexError(msg, status=500) from exc
 
     async def get_document(self, index: str, doc_id: str) -> dict[str, Any] | None:

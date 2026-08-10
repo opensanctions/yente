@@ -68,14 +68,16 @@ async def load_json_url(url: str, auth_token: str | None = None) -> Any:
 async def fetch_url_to_path(url: str, path: Path, auth_token: str | None = None) -> str:
     """Download url to path, returning the SHA1 hex digest of the downloaded bytes."""
     digest = sha1()
-    async with httpx_session(auth_token=auth_token) as client:
-        async with client.stream("GET", url) as resp:
-            # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
-            raise_for_status_with_custom_error(resp)
-            async with aiofiles.open(path, "wb") as outfh:
-                async for chunk in resp.aiter_bytes():
-                    digest.update(chunk)
-                    await outfh.write(chunk)
+    async with (
+        httpx_session(auth_token=auth_token) as client,
+        client.stream("GET", url) as resp,
+    ):
+        # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+        raise_for_status_with_custom_error(resp)
+        async with aiofiles.open(path, "wb") as outfh:
+            async for chunk in resp.aiter_bytes():
+                digest.update(chunk)
+                await outfh.write(chunk)
     return digest.hexdigest()
 
 
@@ -134,13 +136,15 @@ class HttpJsonLinesStream:
     async def _stream(self) -> AsyncGenerator[Any, None]:
         for retry in count():
             try:
-                async with httpx_session(auth_token=self.auth_token) as client:
-                    async with client.stream("GET", self.url) as resp:
-                        # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
-                        raise_for_status_with_custom_error(resp)
-                        hashed_stream = HashingResponseStream(resp)
-                        async for line in split_json_lines(hashed_stream):
-                            yield line
+                async with (
+                    httpx_session(auth_token=self.auth_token) as client,
+                    client.stream("GET", self.url) as resp,
+                ):
+                    # We want to provide a custom error message for unauthorized for delivery.opensanctions.com
+                    raise_for_status_with_custom_error(resp)
+                    hashed_stream = HashingResponseStream(resp)
+                    async for line in split_json_lines(hashed_stream):
+                        yield line
                 self._checksum = hashed_stream.hexdigest()
                 return
             except httpx.TransportError as exc:

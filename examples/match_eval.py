@@ -69,7 +69,7 @@ if not response.ok:
     sys.exit(1)
 
 responses = response.json().get("responses")
-for key, results in responses.items():
+for results in responses.values():
     print(results["query"])
     for res in results["results"]:
         print(" ->", res["schema"], res["caption"], res["score"], res["match"])

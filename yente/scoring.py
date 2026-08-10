@@ -28,8 +28,10 @@ async def score_results(
     threshold: float = settings.SCORE_THRESHOLD,
     cutoff: float = 0.0,
     limit: int | None = None,
-    config: ScoringConfig = ScoringConfig.defaults(),
+    config: ScoringConfig | None = None,
 ) -> tuple[int, list[ScoredEntityResponse]]:
+    if config is None:
+        config = ScoringConfig.defaults()
     scored: list[ScoredEntityResponse] = []
     matches = 0
     # Initialise outside the loop so it's defined when the iterable is empty.

@@ -2,10 +2,10 @@ import asyncio
 import json
 import uuid
 from collections.abc import Coroutine
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import urljoin
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Form, HTTPException, Query, Request, Response
 from followthemoney import model
 from followthemoney.types import registry
 
@@ -43,12 +43,13 @@ from yente.data.freebase import (
     ReconPropertyValue,
 )
 from yente.logs import get_logger
-from yente.provider import SearchProvider, get_provider
+from yente.provider import SearchProvider
 from yente.routers.util import (
     ALGO_HELP,
-    PATH_DATASET,
-    QUERY_PREFIX,
     TS_PATTERN,
+    DatasetPath,
+    PrefixQuery,
+    ProviderDep,
     get_algorithm_by_name,
     get_dataset,
 )
@@ -79,8 +80,8 @@ router = APIRouter()
 )
 async def reconcile(
     request: Request,
-    dataset: str = PATH_DATASET,
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
 ) -> FreebaseManifest:
     """Reconciliation API, emulates Google Refine API. This endpoint can be used
     to bulk match entities against the system using an end-user application like
@@ -169,19 +170,22 @@ async def reconcile(
 )
 async def reconcile_post(
     response: Response,
-    dataset: str = PATH_DATASET,
-    queries: str = Form(None, description="JSON-encoded reconciliation queries"),
-    extend: str = Form(None, description="JSON-encoded reconciliation queries"),
-    algorithm: str = Query(
-        settings.BEST_ALGORITHM,
-        title=ALGO_HELP,
-    ),
-    changed_since: str | None = Query(
-        None,
-        pattern=TS_PATTERN,
-        title="Match against entities that were updated since the given date",
-    ),
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    queries: Annotated[
+        str | None, Form(description="JSON-encoded reconciliation queries")
+    ] = None,
+    extend: Annotated[
+        str | None, Form(description="JSON-encoded reconciliation queries")
+    ] = None,
+    algorithm: Annotated[str, Query(title=ALGO_HELP)] = settings.BEST_ALGORITHM,
+    changed_since: Annotated[
+        str | None,
+        Query(
+            pattern=TS_PATTERN,
+            title="Match against entities that were updated since the given date",
+        ),
+    ] = None,
 ) -> dict[str, FreebaseEntityResult] | FreebaseExtendResponse:
     """Reconciliation API, emulates Google Refine API. This endpoint is used by
     clients for matching, refer to the discovery endpoint for details."""
@@ -189,6 +193,9 @@ async def reconcile_post(
         extend_resp = await reconcile_extend(provider, extend)
         response.headers["x-batch-size"] = str(len(extend_resp.rows))
         return extend_resp
+
+    if queries is None:
+        raise HTTPException(400, detail="No queries or extend request provided.")
 
     ds = await get_dataset(dataset)
     resp = await reconcile_queries(provider, ds, queries, algorithm, changed_since)
@@ -250,11 +257,12 @@ async def reconcile_query(
         # FIXME: `name` is not required to be a valid ID, but we just need it
         # for making the entity hashable, anyway. The prefix is meant to avoid
         # collisions with the result candidates.
-        example.id = f"query.{str(uuid.uuid4())}"
+        example.id = f"query.{uuid.uuid4()!s}"
     try:
         proxy = Entity.from_example(example)
         es_query = entity_query(dataset, proxy, changed_since=changed_since)
-    except Exception as exc:
+    # Any failure to build a query from the example is the client's fault.
+    except Exception as exc:  # noqa: BLE001
         raise HTTPException(400, detail=str(exc))
 
     candidates = query.limit * settings.MATCH_CANDIDATES
@@ -339,14 +347,13 @@ async def reconcile_extend(
     include_in_schema=False,
 )
 async def reconcile_suggest_entity(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-    limit: int = Query(
-        settings.DEFAULT_PAGE,
-        description="Number of suggestions to return",
-        le=settings.MAX_PAGE,
-    ),
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    prefix: PrefixQuery = "",
+    limit: Annotated[
+        int,
+        Query(description="Number of suggestions to return", le=settings.MAX_PAGE),
+    ] = settings.DEFAULT_PAGE,
 ) -> FreebaseEntitySuggestResponse:
     """Suggest an entity based on a text query. This is functionally very
     similar to the basic search API, but returns data in the structure assumed
@@ -379,9 +386,9 @@ async def reconcile_suggest_entity(
     include_in_schema=False,
 )
 async def reconcile_suggest_property(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    prefix: PrefixQuery = "",
 ) -> FreebasePropertySuggestResponse:
     """Given a search prefix, return all the type/schema properties which match
     the given text. This is used to auto-complete property selection for detail
@@ -408,9 +415,9 @@ async def reconcile_suggest_property(
     include_in_schema=False,
 )
 async def reconcile_suggest_type(
-    dataset: str = PATH_DATASET,
-    prefix: str = QUERY_PREFIX,
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    prefix: PrefixQuery = "",
 ) -> FreebaseTypeSuggestResponse:
     """Given a search prefix, return all the types (i.e. schema) which match
     the given text. This is used to auto-complete type selection for the
@@ -432,16 +439,15 @@ async def reconcile_suggest_type(
     include_in_schema=False,
 )
 async def reconcile_extend_properties(
-    dataset: str = PATH_DATASET,
-    type: str = Query(
-        settings.BASE_SCHEMA,
-        min_length=0,
-        description="Type of the entity for which properties should be proposed.",
-    ),
-    limit: int = Query(
-        0,
-        description="Number of suggestions to return.",
-    ),
+    dataset: DatasetPath,
+    type: Annotated[
+        str,
+        Query(
+            min_length=0,
+            description="Type of the entity for which properties should be proposed.",
+        ),
+    ] = settings.BASE_SCHEMA,
+    limit: Annotated[int, Query(description="Number of suggestions to return.")] = 0,
 ) -> FreebaseExtendPropertiesResponse:
     """Given a type (schema), suggest a set of properties that could be retrieved
     for data extension."""

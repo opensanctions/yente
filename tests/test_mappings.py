@@ -96,7 +96,7 @@ def test_colliding_prop_names():
     # Yo dawg, I heard you like properties
     prop_mapping = mapping["properties"]["properties"]["properties"]
     # CallForTenders:authority is an entity, Identification:authority is a string
-    assert set(prop_mapping["authority"]["copy_to"]) == set(["text", "entities"])
+    assert set(prop_mapping["authority"]["copy_to"]) == {"text", "entities"}
     assert prop_mapping["authority"]["type"] == "keyword"
 
 
@@ -165,4 +165,4 @@ def test_name_phonetic_indexed(search_provider):
     doc = build_indexable_entity_doc(entity)
 
     # Ensure that the "V." doesn't end up in the phonetics, it's too short.
-    assert set(doc["name_phonetic"]) == set(["FLTMR", "PTN"])
+    assert set(doc["name_phonetic"]) == {"FLTMR", "PTN"}

@@ -27,7 +27,7 @@ async def test_updater(httpx_mock: Any) -> None:
     """
     # Point the entities to our local fixture of 7 entities
     url_pat = re.compile(
-        "https:\/\/data\.opensanctions\.org\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
+        r"https:\/\/data\.opensanctions\.org\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
     )
     httpx_mock.add_response(
         200,
@@ -75,18 +75,17 @@ async def test_updater(httpx_mock: Any) -> None:
     dataset.model.delta_url = url
     delta_index_path = FIXTURES_PATH / "dataset/t2/delta.json"
 
-    with open(delta_index_path) as f:
-        index = json.load(f)
-        for version, delta_url in index["versions"].items():
-            if version == base_version:
-                continue
-            httpx_mock.add_response(
-                200,
-                url=delta_url,
-                content=(
-                    FIXTURES_PATH / f"dataset/t2/{version}/entities.delta.json"
-                ).read_bytes(),
-            )
+    index = json.loads(delta_index_path.read_bytes())
+    for version, delta_url in index["versions"].items():
+        if version == base_version:
+            continue
+        httpx_mock.add_response(
+            200,
+            url=delta_url,
+            content=(
+                FIXTURES_PATH / f"dataset/t2/{version}/entities.delta.json"
+            ).read_bytes(),
+        )
 
     # Point the index to our fixture containing the new versions
     httpx_mock.add_response(
@@ -118,7 +117,7 @@ async def test_updater_checksum_mismatch(httpx_mock: Any) -> None:
     streamed content hashes to anything else, load() must raise ChecksumError.
     """
     url_pat = re.compile(
-        "https:\/\/data\.opensanctions\.org\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
+        r"https:\/\/data\.opensanctions\.org\/datasets\/[\w-]+\/sanctions\/entities\.ftm\.json"
     )
     mismatched = (FIXTURES_PATH / "dataset/t1/entities.ftm.json").read_bytes() + b"\n"
     httpx_mock.add_response(200, url=url_pat, content=mismatched)

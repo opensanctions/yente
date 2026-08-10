@@ -31,6 +31,6 @@ async def refresh_catalog() -> None:
         manifest = await Manifest.load(settings.MANIFEST)
         _catalog = await Catalog.load(manifest)
     except httpx.HTTPError as exc:
-        log.exception(f"Metadata fetch error ({exc.request.url}): {exc}")
-    except (Exception, KeyboardInterrupt) as exc:
-        log.exception(f"Metadata fetch error: {exc}")
+        log.exception(f"Metadata fetch error ({exc.request.url})")
+    except (Exception, KeyboardInterrupt):
+        log.exception("Metadata fetch error")

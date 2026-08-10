@@ -55,13 +55,13 @@ class OpenSearchProvider(SearchProvider):
     @classmethod
     async def create(cls) -> "OpenSearchProvider":
         """Get elasticsearch connection."""
-        kwargs: dict[str, Any] = dict(
-            timeout=60,
-            retry_on_timeout=True,
-            max_retries=10,
-            hosts=[settings.INDEX_URL],
-            connection_class=AsyncHttpConnection,
-        )
+        kwargs: dict[str, Any] = {
+            "timeout": 60,
+            "retry_on_timeout": True,
+            "max_retries": 10,
+            "hosts": [settings.INDEX_URL],
+            "connection_class": AsyncHttpConnection,
+        }
         service_type = OpenSearchServiceType.ES
 
         if settings.INDEX_SNIFF:
@@ -298,7 +298,7 @@ class OpenSearchProvider(SearchProvider):
                 )
                 raise IndexNotReadyError(msg) from exc
             if "search_phase_execution_exception" in exc.error:
-                raise YenteIndexError(f"Search error: {str(exc)}", status=400) from exc
+                raise YenteIndexError(f"Search error: {exc!s}", status=400) from exc
 
             log.warning(
                 f"API error {exc.status_code}: {exc.error}",
@@ -307,7 +307,7 @@ class OpenSearchProvider(SearchProvider):
             )
             raise YenteIndexError(f"Could not search index: {exc}") from exc
         except (TimeoutError, OSError, Exception) as exc:
-            msg = f"Error during search: {str(exc)}"
+            msg = f"Error during search: {exc!s}"
             raise YenteIndexError(msg, status=500) from exc
 
     @traced

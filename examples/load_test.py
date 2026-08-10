@@ -19,7 +19,7 @@ if API_KEY:
 
 QUERIES = ["vladimir putin", "hamas", "ukraine", "petr~2 aven", "bla/blubb"]
 
-ENTITY_IDS = set(["Q7747", "Q19077", "Q154797"])
+ENTITY_IDS = {"Q7747", "Q19077", "Q154797"}
 
 EXAMPLE_1 = {
     "schema": "Person",
@@ -130,9 +130,7 @@ def pool_target(num):
 
 
 def load_test():
-    queue = []
-    for i in range(0, 100000):
-        queue.append(i)
+    queue = list(range(100000))
 
     with ThreadPoolExecutor(max_workers=10) as pool:
         for res in pool.map(pool_target, queue):

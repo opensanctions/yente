@@ -15,11 +15,11 @@ async def sync_dataset_versions(provider: SearchProvider, catalog: Catalog) -> N
         try:
             index_info = parse_index_name(aliased_index)
         except ValueError:
-            log.warn(f"Invalid index name: {aliased_index}")
+            log.warning(f"Invalid index name: {aliased_index}")
             continue
         dataset = catalog.get(index_info.dataset_name)
         if dataset is None:
-            log.warn(f"Dataset has index but no metadata: {index_info.dataset_name}")
+            log.warning(f"Dataset has index but no metadata: {index_info.dataset_name}")
             continue
         if index_info.dataset_version != dataset.model.version:
             log.info(
