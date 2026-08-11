@@ -76,7 +76,7 @@ def test_entity_nested():
     res = client.get(f"/entities/{pmt['id']}")
     assert res.status_code == 200
     data = res.json()
-    data["schema"] == "Payment"
+    assert data["schema"] == "Payment"
     props = data["properties"]
     assert len(props["payer"]) == 1
     assert props["payer"][0]["id"] == "281d01c426ce39ddf80aa0e46574843c1ba8bfc9"
@@ -128,7 +128,7 @@ def test_adjacent():
     res = client.get(f"/entities/{pmt['id']}/adjacent")
     assert res.status_code == 200
     data = res.json()
-    data["entity"]["schema"] == "Payment"
+    assert data["entity"]["schema"] == "Payment"
     adj = data["adjacent"]
     # We have adjacent payer and beneficiary entities (not just IDs)
     assert len(adj["payer"]["results"]) == 1
@@ -139,7 +139,7 @@ def test_adjacent():
         b["id"] for b in adj["beneficiary"]["results"]
     ]
     # We don't traverse beyond the first Thing
-    payer["properties"].keys() == {"addressEntity", "country", "name"}
+    assert payer["properties"].keys() == {"addressEntity", "country", "name"}
     assert len(payer["properties"]["addressEntity"]) == 2
     for addr in payer["properties"]["addressEntity"]:
         assert isinstance(addr, str)
@@ -170,7 +170,7 @@ def test_adjacent_limit():
     # other side of interstitial entities isn't paginated
     assert len(beneficiaries) == 2
     # they're all nested
-    len([b for b in beneficiaries if b["schema"] == "Organization"]) == 2
+    assert len([b for b in beneficiaries if b["schema"] == "Organization"]) == 2
     fake_org = by_id(beneficiaries, "fake-org")
     assert fake_org["properties"]["name"] == ["Fake"]
 
@@ -178,7 +178,7 @@ def test_adjacent_limit():
     res = client.get(f"/entities/{pmt['id']}/adjacent?limit=1")
     assert res.status_code == 200
     data = res.json()
-    data["entity"]["schema"] == "Payment"
+    assert data["entity"]["schema"] == "Payment"
     adj = data["adjacent"]
     # results are limited
     assert len(adj["payer"]["results"]) == 1
@@ -278,7 +278,7 @@ def test_adjacent_prop_limit():
     # other side of interstitial entities isn't paginated
     assert len(beneficiaries) == 2
     # they're all nested
-    len([b for b in beneficiaries if b["schema"] == "Organization"]) == 2
+    assert len([b for b in beneficiaries if b["schema"] == "Organization"]) == 2
     fake_org = by_id(beneficiaries, "fake-org")
     assert fake_org["properties"]["name"] == ["Fake"]
 

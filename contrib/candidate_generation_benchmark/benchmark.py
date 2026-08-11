@@ -147,7 +147,7 @@ async def benchmark_person(
         config = ScoringConfig.defaults()
 
         # Score the candidates
-        total, scored = await score_results(
+        _total, scored = await score_results(
             algorithm,
             entity,
             candidates,
@@ -277,7 +277,6 @@ async def benchmark_async(
 @click.group()
 def cli() -> None:
     """Benchmark candidate generation with specified algorithms."""
-    pass
 
 
 @cli.command()
@@ -397,10 +396,11 @@ def benchmark(
             except subprocess.CalledProcessError as e:
                 console.print(f"[red]Error running subprocess: {e}[/red]")
                 console.print(f"[red]stderr: {e.stderr}[/red]")
-                exit(1)
-            except Exception as e:
+                sys.exit(1)
+            # Any parsing problem is reported to the operator and ends the run.
+            except Exception as e:  # noqa: BLE001
                 console.print(f"[red]Error parsing results: {e}[/red]")
-                exit(1)
+                sys.exit(1)
 
     # Visualize the results matrix
     visualize_results_matrix(results_matrix, matcher, dataset, console)
@@ -418,7 +418,7 @@ def visualize_results_matrix(
         return
 
     # Get all git trees from the results
-    all_trees = list(results_matrix.values())[0].keys()
+    all_trees = next(iter(results_matrix.values())).keys()
 
     # Create table
     table = Table(

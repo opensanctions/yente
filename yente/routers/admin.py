@@ -1,6 +1,7 @@
 import hashlib
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.responses import FileResponse, HTMLResponse
 from normality import squash_spaces
@@ -16,8 +17,7 @@ from yente.data.common import (
 )
 from yente.data.manifest import Catalog
 from yente.logs import get_logger
-from yente.provider import SearchProvider, get_provider
-from yente.routers.util import ENABLED_ALGORITHMS
+from yente.routers.util import ENABLED_ALGORITHMS, ProviderDep
 from yente.search.indexer import update_index, update_index_threaded
 from yente.search.status import sync_dataset_versions
 
@@ -115,7 +115,7 @@ async def healthz() -> StatusResponse:
     responses={503: {"model": ErrorResponse, "description": "Index is not ready"}},
 )
 async def readyz(
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
 ) -> StatusResponse:
     """Search index health check. This is used to know if the service has completed
     its index building."""
@@ -140,7 +140,7 @@ async def readyz(
 async def catalog(
     request: Request,
     response: Response,
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
 ) -> Response | DataCatalogModel:
     """Return the service manifest, which includes a list of all indexed datasets.
 
@@ -160,7 +160,7 @@ async def catalog(
             model.current.append(dataset.name)
         elif dataset.model.index_version is not None:
             model.outdated.append(dataset.name)
-        dataset.model.children = set([c.name for c in dataset.children])
+        dataset.model.children = {c.name for c in dataset.children}
         model.datasets.append(dataset.model)
     model.index_stale = len(model.outdated) > 0
     return model
@@ -203,8 +203,8 @@ async def algorithms() -> AlgorithmResponse:
     responses={403: {"model": ErrorResponse, "description": "Authorization error."}},
 )
 async def force_update(
-    token: str = Query("", title="Update token for authentication"),
-    sync: bool = Query(False, title="Wait until indexing is complete"),
+    token: Annotated[str, Query(title="Update token for authentication")] = "",
+    sync: Annotated[bool, Query(title="Wait until indexing is complete")] = False,
 ) -> StatusResponse:
     """Force the index to be re-generated. Works only if the update token is provided
     (serves as an API key, and can be set in the container environment)."""

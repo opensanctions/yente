@@ -29,7 +29,7 @@ class MaxURLLengthMiddleware:
             query_string = scope.get("query_string", b"")
             url_len = len(raw_path) + len(query_string) + (1 if query_string else 0)
             if url_len > settings.MAX_URL_LENGTH:
-                log.warn(
+                log.warning(
                     "Request URI too long",
                     url_length=url_len,
                     limit=settings.MAX_URL_LENGTH,

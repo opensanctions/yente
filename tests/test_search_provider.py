@@ -142,11 +142,13 @@ async def test_clone_index_failure_restores_read_only(search_provider: SearchPro
 
     # Patch clone at the class level so it affects all instances
     # (important for ElasticSearchProvider where client() creates new objects)
-    with patch.object(
-        type(indices_client), "clone", new_callable=AsyncMock, side_effect=error
+    with (
+        patch.object(
+            type(indices_client), "clone", new_callable=AsyncMock, side_effect=error
+        ),
+        pytest.raises(YenteIndexError),
     ):
-        with pytest.raises(YenteIndexError):
-            await search_provider.clone_index(source, target)
+        await search_provider.clone_index(source, target)
 
     # Verify the source index is NOT read-only
     resp = await indices_client.get_settings(index=source)

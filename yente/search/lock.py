@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from yente import logs, settings
@@ -54,12 +54,12 @@ def to_millis_timestamp(dt: datetime) -> int:
 
 
 def from_millis_timestamp(millis: int) -> datetime:
-    return datetime.fromtimestamp(millis / 1000)
+    return datetime.fromtimestamp(millis / 1000, UTC)
 
 
 def lock_is_active(hit: dict[str, Any]) -> bool:
     return (
-        datetime.now() - from_millis_timestamp(hit["_source"]["acquired_at"])
+        datetime.now(UTC) - from_millis_timestamp(hit["_source"]["acquired_at"])
         < LOCK_EXPIRATION_TIME
     )
 
@@ -94,7 +94,7 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
                     # create is important here, otherwise we won't get the exception on conflict
                     "_op_type": "create",
                     "_source": {
-                        "acquired_at": to_millis_timestamp(datetime.now()),
+                        "acquired_at": to_millis_timestamp(datetime.now(UTC)),
                         "lock_session_id": lock_session.id,
                     },
                 }
@@ -110,7 +110,6 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
         log.debug(
             f"Lock already exists, next we check if it's expired before trying to overwrite. Response: {e}"
         )
-        pass
 
     # Second phase: get the lock, check if it's expired, overwrite if it is..
     try:
@@ -133,7 +132,6 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
             log.debug(
                 f"Found expired lock session {found_lock_session_id}, probably another process failed to clean it up, acquiring lock"
             )
-            pass
 
         update_op = {
             "_op_type": "update",
@@ -141,7 +139,7 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
             "_id": LOCK_DOC_ID,
             # doc (instead of _source)is used for the partial update
             "doc": {
-                "acquired_at": to_millis_timestamp(datetime.now()),
+                "acquired_at": to_millis_timestamp(datetime.now(UTC)),
                 "lock_session_id": lock_session.id,
             },
             # Uses seq_no and primary_term to prevent race conditions.
@@ -248,7 +246,7 @@ async def refresh_lock(provider: SearchProvider, lock_session: LockSession) -> b
             "_index": get_lock_index_name(),
             "_id": LOCK_DOC_ID,
             # doc (instead of _source)is used for the partial update
-            "doc": {"acquired_at": to_millis_timestamp(datetime.now())},
+            "doc": {"acquired_at": to_millis_timestamp(datetime.now(UTC))},
             # We already verified that we're the ones holding this lock, so we don't expect to have to
             # use the optimistic concurrency control here. But just in case, it doesn't hurt either.
             "if_seq_no": hit["_seq_no"],

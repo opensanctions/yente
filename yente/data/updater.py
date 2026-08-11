@@ -102,9 +102,9 @@ class DatasetUpdater:
             return False
         if self.delta_urls is not None and len(self.delta_urls) == 0:
             return False
-        if self.base_version is not None and self.target_version <= self.base_version:
-            return False
-        return True
+        if self.base_version is None:
+            return True
+        return self.target_version > self.base_version
 
     async def load(self) -> AsyncGenerator[EntityOp, None]:
         """Generate entity change operations, including payload data."""

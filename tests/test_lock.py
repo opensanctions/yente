@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -55,7 +55,7 @@ async def test_lock_not_expired(search_provider: SearchProvider):
     assert lock_session is not None
 
     # Get the original lock time for reference
-    original_time = datetime.now()
+    original_time = datetime.now(UTC)
 
     # Mock time to simulate 1 minute has passed
     with patch("yente.search.lock.datetime") as mock_datetime:
@@ -89,7 +89,7 @@ async def test_refresh_expired_lock(search_provider: SearchProvider):
     # Clean slate: delete any old lock index
     await search_provider.delete_index(get_lock_index_name())
 
-    original_time = datetime.now()
+    original_time = datetime.now(UTC)
 
     # Acquire initial lock
     lock_session = await acquire_lock(search_provider)

@@ -1,6 +1,7 @@
 import enum
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
+from fastapi import APIRouter, HTTPException, Path, Query, Response
 from fastapi.responses import RedirectResponse
 from followthemoney import model
 from followthemoney.types import registry
@@ -15,11 +16,10 @@ from yente.data.common import (
     SearchResponse,
 )
 from yente.logs import get_logger
-from yente.provider import SearchProvider, get_provider
-from yente.routers.util import PATH_DATASET, TS_PATTERN, get_dataset
+from yente.routers.util import TS_PATTERN, DatasetPath, ProviderDep, get_dataset
 from yente.search.nested import get_adjacent_entities, get_nested_entity
 from yente.search.queries import (
-    Filters,
+    FilterSpec,
     Operator,
     facet_aggregations,
     parse_sorts,
@@ -48,7 +48,7 @@ class Facet(enum.StrEnum):
     GENDERS = "genders"
 
 
-DEFAULT_FACETS = [Facet.COUNTRIES, Facet.TOPICS, Facet.DATASETS]
+DEFAULT_FACETS = (Facet.COUNTRIES, Facet.TOPICS, Facet.DATASETS)
 
 
 @router.get(
@@ -62,66 +62,84 @@ DEFAULT_FACETS = [Facet.COUNTRIES, Facet.TOPICS, Facet.DATASETS]
     },
 )
 async def search(
-    q: str = Query("", title="Query text"),
-    dataset: str = PATH_DATASET,
-    schema: str = Query(
-        settings.BASE_SCHEMA, title="Types of entities that can match the search"
-    ),
-    include_dataset: list[str] = Query(
-        [],
-        title="Restrict the search scope to datasets (that are in the given scope) to search entities within.",
-        description="Limit the results to entities that are part of at least one of the given datasets.",
-    ),
-    exclude_dataset: list[str] = Query(
-        [],
-        title="Remove specific datasets (that are in the given scope) from the search scope.",
-    ),
-    exclude_schema: list[str] = Query(
-        [], title="Remove the given types of entities from results"
-    ),
-    changed_since: str | None = Query(
-        None,
-        pattern=TS_PATTERN,
-        title="Search entities that were updated since the given date",
-    ),
-    countries: list[str] = Query([], title="Filter by country codes"),
-    topics: list[str] = Query(
-        [], title="Filter by entity topics (e.g. sanction, role.pep)"
-    ),
-    datasets: list[str] = Query(
-        [],
-        title="Filter by dataset names, for faceting use (respects operator choice).",
-    ),
-    filter: list[str] = Query(
-        [],
-        title="Filter by entity properties (e.g. programId, birthDate)",
-        description="Use the syntax `field:value` to filter on a specific field. Properties are indexed as fields named `properties.birthDate:1985`.",
-    ),
-    limit: int = Query(
-        settings.DEFAULT_PAGE, title="Number of results to return", le=settings.MAX_PAGE
-    ),
-    offset: int = Query(
-        0, title="Start at result with given offset", le=settings.MAX_OFFSET
-    ),
-    sort: list[str] = Query([], title="Sorting criteria"),
-    target: bool | None = Query(
-        None,
-        title="Include only targeted entities",
-        description="Please specify a list of topics of concern, instead.",
-        deprecated=True,
-    ),
-    fuzzy: bool = Query(False, title="Allow fuzzy query syntax"),
-    simple: bool = Query(False, title="Use simple syntax for user-facing query boxes"),
-    facets: list[Facet] = Query(
-        DEFAULT_FACETS,
-        title="Facet counts to include in response.",
-    ),
-    filter_op: Operator = Query(
-        "OR",
-        title="Define behaviour of multiple filters on one field",
-        description="Logic to use when combining multiple filters on the same field (topics, countries, datasets). Please specify AND for new integrations (to override a legacy default) and when building a faceted user interface.",
-    ),
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    q: Annotated[str, Query(title="Query text")] = "",
+    schema: Annotated[
+        str, Query(title="Types of entities that can match the search")
+    ] = settings.BASE_SCHEMA,
+    include_dataset: Annotated[
+        tuple[str, ...],
+        Query(
+            title="Restrict the search scope to datasets (that are in the given scope) to search entities within.",
+            description="Limit the results to entities that are part of at least one of the given datasets.",
+        ),
+    ] = (),
+    exclude_dataset: Annotated[
+        tuple[str, ...],
+        Query(
+            title="Remove specific datasets (that are in the given scope) from the search scope.",
+        ),
+    ] = (),
+    exclude_schema: Annotated[
+        tuple[str, ...],
+        Query(title="Remove the given types of entities from results"),
+    ] = (),
+    changed_since: Annotated[
+        str | None,
+        Query(
+            pattern=TS_PATTERN,
+            title="Search entities that were updated since the given date",
+        ),
+    ] = None,
+    countries: Annotated[tuple[str, ...], Query(title="Filter by country codes")] = (),
+    topics: Annotated[
+        tuple[str, ...],
+        Query(title="Filter by entity topics (e.g. sanction, role.pep)"),
+    ] = (),
+    datasets: Annotated[
+        tuple[str, ...],
+        Query(
+            title="Filter by dataset names, for faceting use (respects operator choice).",
+        ),
+    ] = (),
+    filter: Annotated[
+        tuple[str, ...],
+        Query(
+            title="Filter by entity properties (e.g. programId, birthDate)",
+            description="Use the syntax `field:value` to filter on a specific field. Properties are indexed as fields named `properties.birthDate:1985`.",
+        ),
+    ] = (),
+    limit: Annotated[
+        int, Query(title="Number of results to return", le=settings.MAX_PAGE)
+    ] = settings.DEFAULT_PAGE,
+    offset: Annotated[
+        int, Query(title="Start at result with given offset", le=settings.MAX_OFFSET)
+    ] = 0,
+    sort: Annotated[tuple[str, ...], Query(title="Sorting criteria")] = (),
+    target: Annotated[
+        bool | None,
+        Query(
+            title="Include only targeted entities",
+            description="Please specify a list of topics of concern, instead.",
+            deprecated=True,
+        ),
+    ] = None,
+    fuzzy: Annotated[bool, Query(title="Allow fuzzy query syntax")] = False,
+    simple: Annotated[
+        bool, Query(title="Use simple syntax for user-facing query boxes")
+    ] = False,
+    facets: Annotated[
+        tuple[Facet, ...],
+        Query(title="Facet counts to include in response."),
+    ] = DEFAULT_FACETS,
+    filter_op: Annotated[
+        Operator,
+        Query(
+            title="Define behaviour of multiple filters on one field",
+            description="Logic to use when combining multiple filters on the same field (topics, countries, datasets). Please specify AND for new integrations (to override a legacy default) and when building a faceted user interface.",
+        ),
+    ] = Operator.OR,
 ) -> SearchResponse:
     """Search endpoint for matching entities based on a simple piece of text, e.g.
     a name. This can be used to implement a simple, user-facing search. For proper
@@ -137,7 +155,7 @@ async def search(
     if schema_obj is None:
         raise HTTPException(400, detail="Invalid schema")
 
-    filters: Filters = [("countries", c) for c in countries]
+    filters: list[FilterSpec] = [("countries", c) for c in countries]
     filters.extend([("topics", t) for t in topics])
     filters.extend([("datasets", d) for d in datasets])
     for flt in filter:
@@ -203,14 +221,14 @@ async def search(
 )
 async def fetch_entity(
     response: Response,
-    entity_id: str = Path(
-        description="ID of the entity to retrieve", examples=["Q7747"]
-    ),
-    nested: bool = Query(
-        True,
-        title="Include adjacent entities (e.g. addresses, family) in response",
-    ),
-    provider: SearchProvider = Depends(get_provider),
+    provider: ProviderDep,
+    entity_id: Annotated[
+        str, Path(description="ID of the entity to retrieve", examples=["Q7747"])
+    ],
+    nested: Annotated[
+        bool,
+        Query(title="Include adjacent entities (e.g. addresses, family) in response"),
+    ] = True,
 ) -> RedirectResponse | EntityResponse:
     """Retrieve a single entity by its ID. The entity will be returned in
     full, with data from all datasets and with nested entities (adjacent
@@ -248,20 +266,22 @@ async def fetch_entity(
 )
 async def fetch_adjacent_entities(
     response: Response,
-    entity_id: str = Path(
-        description="ID of the entity whose graph context was requested",
-        examples=["Q7747"],
-    ),
-    provider: SearchProvider = Depends(get_provider),
-    sort: list[str] = Query([], title="Sorting criteria"),
-    limit: int = Query(
-        settings.DEFAULT_PAGE,
-        title="Number of results per property to return",
-        le=settings.MAX_PAGE,
-    ),
-    offset: int = Query(
-        0, title="Start at result with given offset", le=settings.MAX_OFFSET
-    ),
+    provider: ProviderDep,
+    entity_id: Annotated[
+        str,
+        Path(
+            description="ID of the entity whose graph context was requested",
+            examples=["Q7747"],
+        ),
+    ],
+    sort: Annotated[tuple[str, ...], Query(title="Sorting criteria")] = (),
+    limit: Annotated[
+        int,
+        Query(title="Number of results per property to return", le=settings.MAX_PAGE),
+    ] = settings.DEFAULT_PAGE,
+    offset: Annotated[
+        int, Query(title="Start at result with given offset", le=settings.MAX_OFFSET)
+    ] = 0,
 ) -> RedirectResponse | EntityAdjacentResponse:
     """***Beta:** This endpoint is released for wider testing and is not yet recommended
     for production use. We welcome feedback. Its interface may change without announcement.
@@ -307,24 +327,29 @@ async def fetch_adjacent_entities(
 )
 async def fetch_adjacent_by_prop(
     response: Response,
-    entity_id: str = Path(
-        description="ID of the entity hose graph context was requested",
-        examples=["Q7747"],
-    ),
-    property_name: str = Path(
-        description="Name of the property to fetch adjacent entities for",
-        examples=["address", "ownershipOwner"],
-    ),
-    provider: SearchProvider = Depends(get_provider),
-    sort: list[str] = Query([], title="Sorting criteria"),
-    limit: int = Query(
-        settings.DEFAULT_PAGE,
-        title="Number of results per property to return",
-        le=settings.MAX_PAGE,
-    ),
-    offset: int = Query(
-        0, title="Start at result with given offset", le=settings.MAX_OFFSET
-    ),
+    provider: ProviderDep,
+    entity_id: Annotated[
+        str,
+        Path(
+            description="ID of the entity hose graph context was requested",
+            examples=["Q7747"],
+        ),
+    ],
+    property_name: Annotated[
+        str,
+        Path(
+            description="Name of the property to fetch adjacent entities for",
+            examples=["address", "ownershipOwner"],
+        ),
+    ],
+    sort: Annotated[tuple[str, ...], Query(title="Sorting criteria")] = (),
+    limit: Annotated[
+        int,
+        Query(title="Number of results per property to return", le=settings.MAX_PAGE),
+    ] = settings.DEFAULT_PAGE,
+    offset: Annotated[
+        int, Query(title="Start at result with given offset", le=settings.MAX_OFFSET)
+    ] = 0,
 ) -> RedirectResponse | AdjacentResultsResponse:
     """***Beta:** This endpoint is released for wider testing and is not yet recommended
     for production use. We welcome feedback. Its interface may change without announcement.

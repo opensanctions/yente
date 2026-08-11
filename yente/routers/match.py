@@ -1,8 +1,8 @@
 import asyncio
-from collections.abc import Coroutine
-from typing import Any
+from collections.abc import Coroutine, Sequence
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
@@ -17,16 +17,23 @@ from yente.data.common import (
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
 from yente.logs import get_logger
-from yente.provider import SearchProvider, get_provider
+from yente.provider import SearchProvider
 from yente.routers.util import (
     ALGO_HELP,
-    PATH_DATASET,
     TS_PATTERN,
+    DatasetPath,
+    ProviderDep,
     get_algorithm_by_name,
     get_dataset,
 )
 from yente.scoring import score_results
-from yente.search.queries import DEFAULT_SORTS, Filters, Operator, entity_query
+from yente.search.queries import (
+    DEFAULT_SORTS,
+    Filters,
+    FilterSpec,
+    Operator,
+    entity_query,
+)
 from yente.search.search import result_entities, search_entities
 from yente.util import limit_window
 
@@ -41,11 +48,11 @@ async def _match_one_query(
     name: str,
     example: EntityExample,
     filters: Filters,
-    include_dataset: list[str],
-    exclude_schema: list[str],
-    exclude_dataset: list[str],
+    include_dataset: Sequence[str],
+    exclude_schema: Sequence[str],
+    exclude_dataset: Sequence[str],
     changed_since: str | None,
-    exclude_entity_ids: list[str],
+    exclude_entity_ids: Sequence[str],
     provider: SearchProvider,
     candidates: int,
     limit: int,
@@ -69,8 +76,9 @@ async def _match_one_query(
             changed_since=changed_since,
             exclude_entity_ids=exclude_entity_ids,
         )
-    except Exception as exc:
-        log.info(f"Cannot parse example entity: {str(exc)}")
+    # Any failure to build a query from the example is the client's fault.
+    except Exception as exc:  # noqa: BLE001
+        log.info(f"Cannot parse example entity: {exc!s}")
         raise HTTPException(
             status_code=400,
             detail=f"Cannot parse example entity: {exc}",
@@ -132,48 +140,56 @@ async def match(
     request: Request,
     response: Response,
     match: EntityMatchQuery,
-    dataset: str = PATH_DATASET,
-    limit: int = Query(
-        settings.MATCH_PAGE,
-        title="Number of results to return",
-        le=settings.MAX_MATCHES,
-    ),
-    threshold: float = Query(
-        default=settings.SCORE_THRESHOLD,
-        title="Score threshold for results to be considered matches",
-    ),
-    cutoff: float = Query(
-        deprecated=True,
-        default=settings.SCORE_THRESHOLD,
-        title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
-    ),
-    algorithm: str = Query(settings.DEFAULT_ALGORITHM, title=ALGO_HELP),
-    include_dataset: list[str] = Query(
-        [], title="Only include the given datasets in results"
-    ),
-    exclude_schema: list[str] = Query(
-        [], title="Remove the given types of entities from results"
-    ),
-    exclude_dataset: list[str] = Query(
-        [], title="Remove the given datasets from results"
-    ),
-    topics: list[str] = Query(
-        [], title="Only return results that match any of the given topics"
-    ),
-    changed_since: str | None = Query(
-        None,
-        pattern=TS_PATTERN,
-        title="Match against entities that were updated since the given date",
-    ),
+    provider: ProviderDep,
+    dataset: DatasetPath,
+    limit: Annotated[
+        int, Query(title="Number of results to return", le=settings.MAX_MATCHES)
+    ] = settings.MATCH_PAGE,
+    threshold: Annotated[
+        float,
+        Query(title="Score threshold for results to be considered matches"),
+    ] = settings.SCORE_THRESHOLD,
+    cutoff: Annotated[
+        float,
+        Query(
+            deprecated=True,
+            title="Deprecated, use `threshold` instead. Lower bound of score for results to be returned at all",
+        ),
+    ] = settings.SCORE_THRESHOLD,
+    algorithm: Annotated[str, Query(title=ALGO_HELP)] = settings.DEFAULT_ALGORITHM,
+    include_dataset: Annotated[
+        tuple[str, ...],
+        Query(title="Only include the given datasets in results"),
+    ] = (),
+    exclude_schema: Annotated[
+        tuple[str, ...],
+        Query(title="Remove the given types of entities from results"),
+    ] = (),
+    exclude_dataset: Annotated[
+        tuple[str, ...],
+        Query(title="Remove the given datasets from results"),
+    ] = (),
+    topics: Annotated[
+        tuple[str, ...],
+        Query(title="Only return results that match any of the given topics"),
+    ] = (),
+    changed_since: Annotated[
+        str | None,
+        Query(
+            pattern=TS_PATTERN,
+            title="Match against entities that were updated since the given date",
+        ),
+    ] = None,
     # This list applies to all queries, but really only makes sense with a single query.
     # Our API design currently doesn't support per-query options such as this one.
-    exclude_entity_ids: list[str] = Query(
-        [],
-        title="A list of entities IDs to exclude from matching",
-        description="The entity IDs supplied here do not have to be canonical. Supplying any of the referents of a merged entity will exclude that entity. This parameter may be useful for example to exclude false-positive matches that have been decided upon by a human.",
-        max_length=50,
-    ),
-    provider: SearchProvider = Depends(get_provider),
+    exclude_entity_ids: Annotated[
+        tuple[str, ...],
+        Query(
+            title="A list of entities IDs to exclude from matching",
+            description="The entity IDs supplied here do not have to be canonical. Supplying any of the referents of a merged entity will exclude that entity. This parameter may be useful for example to exclude false-positive matches that have been decided upon by a human.",
+            max_length=50,
+        ),
+    ] = (),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting a batch of entities, each
@@ -234,10 +250,10 @@ async def match(
     # TODO: Remove this once get rid of cutoff. For now, make sure that the cutoff
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
-    filters: Filters = [("topics", t) for t in topics]
+    filters: list[FilterSpec] = [("topics", t) for t in topics]
     algorithm_type = get_algorithm_by_name(algorithm)
 
-    for config_key in match.config.keys():
+    for config_key in match.config:
         if config_key not in algorithm_type.CONFIG:
             raise HTTPException(
                 400,

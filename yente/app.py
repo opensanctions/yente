@@ -98,8 +98,8 @@ async def json_exception_middleware(
 ) -> Response:
     try:
         response = await call_next(request)
-    except Exception as exc:
-        log.exception(f"Exception during request: {type(exc)}")
+    except Exception:
+        log.exception("Exception during request")
         response = JSONResponse(status_code=500, content={"status": "error"})
     return response
 
@@ -116,7 +116,7 @@ async def yente_error_handler(req: Request, exc: YenteError) -> Response:
 
 
 async def validation_error_handler(req: Request, exc: ValidationError) -> Response:
-    log.warn(f"Validation error: {exc}")
+    log.warning(f"Validation error: {exc}")
     body = {"detail": exc.title, "errors": exc.errors()}
     return JSONResponse(status_code=400, content=body)
 

@@ -10,7 +10,7 @@ from yente.provider.opensearch import OpenSearchProvider
 
 log = get_logger(__name__)
 
-__all__ = ["with_provider", "get_provider", "close_provider", "SearchProvider"]
+__all__ = ["SearchProvider", "close_provider", "get_provider", "with_provider"]
 
 PROVIDERS: dict[int, SearchProvider] = {}
 
@@ -44,7 +44,8 @@ async def close_provider() -> None:
     for provider in providers:
         try:
             await provider.close()
-        except Exception as exc:
+        # Cleanup must continue for the other providers, whatever this one raises.
+        except Exception as exc:  # noqa: BLE001
             log.warning("Failed to close search provider: %r", exc)
 
 

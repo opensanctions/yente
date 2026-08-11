@@ -41,8 +41,8 @@ class TraceParent:
         parts = traceparent.split("-")
         try:
             version, trace_id, parent_id, trace_flags = parts[:4]
-        except Exception:
-            raise ValueError(f"Invalid traceparent: {traceparent}")
+        except ValueError as exc:
+            raise ValueError(f"Invalid traceparent: {traceparent}") from exc
         if int(version, 16) == 255:
             raise ValueError(f"Unsupported version: {version}")
         for i in trace_id:
@@ -107,13 +107,13 @@ class TraceContextMiddleware(BaseHTTPMiddleware):
         parent_header = request.headers.get("traceparent")
         try:
             traceparent = TraceParent.from_header(parent_header)
-        except Exception:
+        except ValueError:
             traceparent = TraceParent.create()
 
         state = request.headers.get("tracestate", "")
         try:
             tracestate = TraceState.create(traceparent, state)
-        except Exception:
+        except ValueError:
             tracestate = TraceState.create(traceparent, "")
         context = TraceContext(traceparent, tracestate)
 

@@ -1,6 +1,6 @@
 import enum
 from collections import defaultdict
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from pprint import pprint  # noqa
 from typing import Any
 
@@ -27,7 +27,7 @@ from yente.search.mapping import (
 log = get_logger(__name__)
 Clause = dict[str, Any]
 FilterSpec = tuple[str, str | bool]
-Filters = list[FilterSpec]
+Filters = Sequence[FilterSpec]
 Sort = str | dict[str, dict[str, str]]
 
 DEFAULT_SORTS: list[Sort] = [
@@ -75,12 +75,12 @@ def filter_query(
     scope_dataset: Dataset,
     shoulds: list[Clause],
     schema: Schema | None = None,
-    filters: Filters = [],
-    include_dataset: list[str] = [],
-    exclude_schema: list[str] = [],
-    exclude_dataset: list[str] = [],
+    filters: Filters = (),
+    include_dataset: Sequence[str] = (),
+    exclude_schema: Sequence[str] = (),
+    exclude_dataset: Sequence[str] = (),
     changed_since: str | None = None,
-    exclude_entity_ids: list[str] = [],
+    exclude_entity_ids: Sequence[str] = (),
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     filterqs: list[Clause] = []
@@ -220,12 +220,12 @@ def names_query(entity: EntityProxy) -> list[Clause]:
 def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
-    filters: Filters = [],
-    include_dataset: list[str] = [],
-    exclude_schema: list[str] = [],
-    exclude_dataset: list[str] = [],
+    filters: Filters = (),
+    include_dataset: Sequence[str] = (),
+    exclude_schema: Sequence[str] = (),
+    exclude_dataset: Sequence[str] = (),
     changed_since: str | None = None,
-    exclude_entity_ids: list[str] = [],
+    exclude_entity_ids: Sequence[str] = (),
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     shoulds: list[Clause] = names_query(entity)
@@ -257,14 +257,14 @@ def text_query(
     dataset: Dataset,
     schema: Schema,
     query: str,
-    filters: Filters = [],
+    filters: Filters = (),
     fuzzy: bool = False,
     simple: bool = False,
-    include_dataset: list[str] = [],
-    exclude_schema: list[str] = [],
-    exclude_dataset: list[str] = [],
+    include_dataset: Sequence[str] = (),
+    exclude_schema: Sequence[str] = (),
+    exclude_dataset: Sequence[str] = (),
     changed_since: str | None = None,
-    exclude_entity_ids: list[str] = [],
+    exclude_entity_ids: Sequence[str] = (),
     filter_op: Operator = Operator.AND,
 ) -> Clause:
     if not len(query.strip()):
@@ -316,14 +316,14 @@ def prefix_query(
     return filter_query(dataset, [should])
 
 
-def facet_aggregations(fields: list[str] = []) -> Clause:
+def facet_aggregations(fields: Sequence[str] = ()) -> Clause:
     aggs: Clause = {}
     for field in fields:
         aggs[field] = {"terms": {"field": field, "size": 1000}}
     return aggs
 
 
-def iter_sorts(sorts: list[str]) -> Generator[tuple[str, str], None, None]:
+def iter_sorts(sorts: Sequence[str]) -> Generator[tuple[str, str], None, None]:
     for sort in sorts:
         order = "asc"
         if ":" in sort:
@@ -333,7 +333,9 @@ def iter_sorts(sorts: list[str]) -> Generator[tuple[str, str], None, None]:
         yield sort, order
 
 
-def parse_sorts(sorts: list[str], defaults: list[Sort] = DEFAULT_SORTS) -> list[Any]:
+def parse_sorts(
+    sorts: Sequence[str], defaults: Sequence[Sort] = DEFAULT_SORTS
+) -> list[Any]:
     """Accept sorts of the form: <field>:<order>, e.g. first_seen:desc."""
     objs: list[Sort] = []
     for sort, order in iter_sorts(sorts):

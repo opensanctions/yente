@@ -54,7 +54,7 @@ async def update_metrics(provider: SearchProvider) -> None:
         try:
             index_info = parse_index_name(aliased_index)
         except ValueError:
-            log.warn(f"Invalid index name: {aliased_index}")
+            log.warning(f"Invalid index name: {aliased_index}")
             continue
         await update_dataset_version_metric(
             index_info.dataset_name, aliased_index, provider

@@ -123,7 +123,7 @@ async def test_local_dataset():
     assert ds.model.load
     assert ds.model.entities_url is not None
     assert "entities.ftm.json" in ds.model.entities_url
-    lines = list()
+    lines = []
     async for line in load_json_lines(ds.model.entities_url, "test"):
         lines.append(line)
     assert len(lines) > 10, lines
@@ -163,20 +163,19 @@ async def test_catalog_and_local_dataset():
 @pytest.mark.asyncio
 async def test_catalog_with_invalid_scope():
     catalog_response_data = {"datasets": [{"name": "eu_fsf", "title": "EU FSF"}]}
-    with patch_catalog_response(catalog_response_data):
-        with pytest.raises(YenteConfigError):
-            await Catalog.load(
-                manifest=Manifest.model_validate(
-                    {
-                        "catalogs": [
-                            {
-                                "url": "https://data.opensanctions.org/datasets/latest/index.json",
-                                "scope": "invalid",
-                            }
-                        ],
-                    }
-                )
+    with patch_catalog_response(catalog_response_data), pytest.raises(YenteConfigError):
+        await Catalog.load(
+            manifest=Manifest.model_validate(
+                {
+                    "catalogs": [
+                        {
+                            "url": "https://data.opensanctions.org/datasets/latest/index.json",
+                            "scope": "invalid",
+                        }
+                    ],
+                }
             )
+        )
 
 
 def test_get_url_local_path():

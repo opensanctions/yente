@@ -79,7 +79,7 @@ async def log_audit_message(
 
     """
 
-    timestamp = datetime_to_millis_timestamp(datetime.now())
+    timestamp = datetime_to_millis_timestamp(datetime.now(UTC))
     doc_id = f"{index}-{event_type}-{timestamp}"
 
     await provider.bulk_index(

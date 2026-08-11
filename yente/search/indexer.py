@@ -251,16 +251,16 @@ async def index_entities(
 
         aliases = await provider.get_alias_indices(alias)
         if next_index not in aliases:
-            log.warn("Deleting partial index", index=next_index)
+            log.warning("Deleting partial index", index=next_index)
             await provider.delete_index(next_index)
         if updater.is_incremental and not force:
             # This is tricky: try again with a full reindex if the incremental
             # indexing failed
-            log.warn("Retrying with full reindex", dataset=dataset.name)
+            log.warning("Retrying with full reindex", dataset=dataset.name)
             return await index_entities(
                 provider, dataset, force=True, lock_session=lock_session
             )
-        raise exc
+        raise
 
     # Always overwrite metadata: a fresh index has none, and a cloned index
     # inherits the source's _meta (mappings can't be overridden in a clone request).
@@ -309,7 +309,7 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         try:
             index_info = parse_index_name(index)
         except ValueError as exc:
-            log.warn(f"Invalid index name: {exc}, deleting.", index=index)
+            log.warning(f"Invalid index name: {exc}, deleting.", index=index)
             await audit_log.log_audit_message(
                 provider,
                 AuditLogEventType.CLEANUP_INDEX_DELETED,
@@ -378,8 +378,8 @@ def update_index_threaded(force: bool = False) -> None:
     async def update_in_thread() -> None:
         try:
             await update_index(force=force)
-        except (Exception, KeyboardInterrupt) as exc:
-            log.exception(f"Index update error: {exc}")
+        except (Exception, KeyboardInterrupt):
+            log.exception("Index update error")
 
     thread = threading.Thread(
         target=asyncio.run,
