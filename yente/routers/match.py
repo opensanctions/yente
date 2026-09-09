@@ -192,14 +192,14 @@ async def match(
     ] = (),
 ) -> EntityMatchResponse:
     """Match entities based on a complex set of criteria, like name, date of birth
-    and nationality of a person. This works by submitting a batch of entities, each
-    formatted like those returned by the API.
+    and nationality of a person. This works by submitting an entity formatted like
+    those returned by the API.
 
     Tutorials:
     * [Using the matching API](https://www.opensanctions.org/docs/api/matching/)
     * [Configuring the scoring system](https://www.opensanctions.org/docs/api/scoring/)
 
-    For example, the following would be valid query examples:
+    For example, the following would be a valid query:
 
     ```json
     "queries": {
@@ -210,33 +210,25 @@ async def match(
                 "birthDate": ["1975-04-21"],
                 "nationality": ["us"]
             }
-        },
-        "entity2": {
-            "schema": "Company",
-            "properties": {
-                "name": ["Brilliant Amazing Limited"],
-                "jurisdiction": ["hk"],
-                "registrationNumber": ["84BA99810"]
-            }
         }
     }
     ```
-    The values for `entity1`, `entity2` can be chosen freely to correlate results
-    on the client side when the request is returned. The responses will be given
-    for each submitted example like this:
+    The value for `entity1` can be chosen freely to correlate the result on the
+    client side when the request is returned. The response will be given for the
+    submitted example like this:
 
     ```json
     "responses": {
         "entity1": {
             "query": {},
             "results": [...]
-        },
-        "entity2": {
-            "query": {},
-            "results": [...]
         }
     }
     ```
+
+    More than one query can be submitted in a single request, but we recommend
+    sending one query per request: each request runs on a single CPU core, so
+    separate requests can be spread across instances.
 
     The precision of the results will be dependent on the amount of detail submitted
     with each example. The following properties are most helpful for particular types:
