@@ -39,6 +39,35 @@ def test_entity_fetch():
     assert sanc["schema"] == "Sanction"
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_entity_nested_family():
+    """Deep nesting across a Family edge: the root person, the Family entities
+    naming them as a relative, and the person on the other side of each."""
+    res = client.get("/entities/NK-aU5ybkbRFJucf8YMwsJvDw")
+    assert res.status_code == 200
+    data = res.json()
+    props = data["properties"]
+
+    families = props["familyRelative"]
+    assert len(families) == 4
+    fam = by_id(families, "ofac-6d023267c742427bc92220ad97daca2e17b136ff")
+    assert fam["schema"] == "Family"
+    assert fam["properties"]["relationship"] == ["Family member of"]
+    # The interstitial still refers to the root, but doesn't nest it.
+    assert fam["properties"]["relative"] == ["NK-aU5ybkbRFJucf8YMwsJvDw"]
+
+    assert len(fam["properties"]["person"]) == 1
+    relative = fam["properties"]["person"][0]
+    assert relative["schema"] == "Person"
+    assert relative["caption"] == "Nikita Aleksandrovich Zakharov"
+    assert_entity_shape(relative)
+
+    # No path leads back to the root.
+    for fam in families:
+        for person in fam["properties"]["person"]:
+            assert person["id"] != data["id"]
+
+
 @pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_entity_not_nested():
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9?nested=false")
