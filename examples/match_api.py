@@ -26,9 +26,9 @@ EXAMPLE_2 = {
     },
 }
 
-# We put both of these queries into a matching batch, giving each of them an
-# ID that we can recognize it by later:
-BATCH = {"queries": {"q1": EXAMPLE_1, "q2": EXAMPLE_2}}
+# We give each of these queries an ID that we can recognize it by later:
+QUERY_1 = {"queries": {"q1": EXAMPLE_1}}
+QUERY_2 = {"queries": {"q2": EXAMPLE_2}}
 
 # Configure an API key for the service. This is required for the hosted API.
 headers = {"Authorization": f"Apikey {API_KEY}"}
@@ -37,16 +37,18 @@ headers = {"Authorization": f"Apikey {API_KEY}"}
 # of entities and can be turned off for a performance boost.
 params = {"algorithm": "best", "fuzzy": "false"}
 
-# Send the batch off to the API and raise an exception for a non-OK response code.
-response = requests.post(URL, json=BATCH, headers=headers, params=params)
-response.raise_for_status()
-
-responses = response.json().get("responses")
+# Send each query in its own request and raise an exception for a non-OK response
+# code. More than one query can go in a single request, but sending them separately
+# lets them be spread across instances.
+response_1 = requests.post(URL, json=QUERY_1, headers=headers, params=params)
+response_1.raise_for_status()
+response_2 = requests.post(URL, json=QUERY_2, headers=headers, params=params)
+response_2.raise_for_status()
 
 # The responses will include a set of results for each entity, and a parsed version of
 # the original query:
-example_1_response = responses.get("q1")
-example_2_response = responses.get("q2")
+example_1_response = response_1.json().get("responses").get("q1")
+example_2_response = response_2.json().get("responses").get("q2")
 
 # You can use the returned query to debug if the API correctly parsed and interpreted
 # the queries you provided. If any of the fields or values are missing, it's an
