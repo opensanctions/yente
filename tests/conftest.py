@@ -52,7 +52,6 @@ async def patch_yente_catalog(manifest: Manifest):
 
 
 run_id = uuid4().hex
-settings.TESTING = True
 FIXTURES_PATH = Path(__file__).parent / "fixtures"
 VERSIONS_PATH = FIXTURES_PATH / "versions.json"
 

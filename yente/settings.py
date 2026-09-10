@@ -96,9 +96,6 @@ TAGS: list[dict[str, Any]] = [
     },
 ]
 
-# Check if we're running in the context of unit tests:
-TESTING = False
-
 # Turn on debug logging and other development features:
 DEBUG = as_bool(env_str("YENTE_DEBUG", "false"))
 
