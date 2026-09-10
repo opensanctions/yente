@@ -44,7 +44,7 @@ def test_entity_nested_family():
     """Deep nesting across a Family edge: the root person, the Family entities
     naming them as a relative, and the person on the other side of each."""
     res = client.get("/entities/NK-aU5ybkbRFJucf8YMwsJvDw")
-    assert res.status_code == 200
+    assert res.status_code == 200, res.text
     data = res.json()
     props = data["properties"]
 
