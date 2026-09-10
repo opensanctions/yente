@@ -203,7 +203,7 @@ async def match(
 
     ```json
     "queries": {
-        "entity1": {
+        "q": {
             "schema": "Person",
             "properties": {
                 "name": ["John Doe"],
@@ -213,22 +213,21 @@ async def match(
         }
     }
     ```
-    The value for `entity1` can be chosen freely to correlate the result on the
+    The value for `q` can be chosen freely to correlate the result on the
     client side when the request is returned. The response will be given for the
     submitted example like this:
 
     ```json
     "responses": {
-        "entity1": {
+        "q": {
             "query": {},
             "results": [...]
         }
     }
     ```
 
-    More than one query can be submitted in a single request, but we recommend
-    sending one query per request: each request runs on a single CPU core, so
-    separate requests can be spread across instances.
+    While more than one query can theoretically be submitted per request,
+    batching is discouraged for performance and scalability reasons.
 
     The precision of the results will be dependent on the amount of detail submitted
     with each example. The following properties are most helpful for particular types:
