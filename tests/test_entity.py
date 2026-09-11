@@ -50,6 +50,7 @@ def test_entity_nested_family():
 
     families = props["familyRelative"]
     assert len(families) == 4
+    assert isinstance(families[0], dict)
     fam = by_id(families, "ofac-6d023267c742427bc92220ad97daca2e17b136ff")
     assert fam["schema"] == "Family"
     assert fam["properties"]["relationship"] == ["Family member of"]
