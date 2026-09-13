@@ -101,6 +101,13 @@ async def test_mappings_copy_to(search_provider):
         await search_provider.delete_index(temp_index)
 
 
+def test_name_part_variants_mapping():
+    mapping = make_entity_mapping()["properties"]
+    assert mapping["name_part_variants"] == {"type": "keyword", "doc_values": False}
+    assert mapping["name_joined"] == {"type": "keyword"}
+    assert "name_part_variants" in make_entity_mapping()["_source"]["excludes"]
+
+
 def test_colliding_prop_names():
     """Test that we can handle multiple properties with the same property name."""
     mapping = make_entity_mapping()
