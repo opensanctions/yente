@@ -221,6 +221,7 @@ class ElasticSearchProvider(SearchProvider):
         sort: list[Any] | None = None,
         aggregations: dict[str, Any] | None = None,
         rank_precise: bool = False,
+        track_total_hits: bool = True,
     ) -> dict[str, Any]:
         """Search for entities in the index."""
 
@@ -239,6 +240,8 @@ class ElasticSearchProvider(SearchProvider):
                 sort=sort,
                 aggregations=aggregations,
                 search_type=search_type,
+                # None leaves the backend default (exact count up to 10k) in place.
+                track_total_hits=None if track_total_hits else False,
             )
             return cast(dict[str, Any], response.body)
         except TransportError as te:

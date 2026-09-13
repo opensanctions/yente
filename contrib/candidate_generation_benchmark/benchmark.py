@@ -136,7 +136,9 @@ async def benchmark_person(
 
     # Use the same limit for candidate generation as in match.py
     candidates_limit = settings.MATCH_PAGE * settings.MATCH_CANDIDATES
-    response = await search_entities(provider, query, limit=candidates_limit)
+    response = await search_entities(
+        provider, query, limit=candidates_limit, track_total_hits=False
+    )
     candidates = list(result_entities(response))
 
     # Score results with each algorithm

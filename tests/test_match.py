@@ -324,3 +324,18 @@ def test_exclude_entity_ids():
         "/match/zala", json=query, params={"exclude_entity_ids": ["ofac-45937"]}
     )
     assert len(resp.json()["responses"]["q"]["results"]) == 0
+
+
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_match_candidate_search_skips_total():
+    import yente.routers.match as match_router
+
+    with mock.patch.object(
+        match_router, "search_entities", wraps=match_router.search_entities
+    ) as spy:
+        resp = client.post("/match/zala", json={"queries": {"q": QUERY_ZAKHAROV}})
+    assert resp.status_code == 200, resp.text
+    assert spy.call_args.kwargs["track_total_hits"] is False
+    res = resp.json()["responses"]["q"]
+    assert res["total"]["value"] == len(res["results"])
+    assert len(res["results"]) > 0
