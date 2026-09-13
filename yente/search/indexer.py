@@ -29,8 +29,8 @@ from yente.search.lock import (
 )
 from yente.search.mapping import (
     INDEX_SETTINGS,
+    NAME_JOINED_FIELD,
     NAME_PART_FIELD,
-    NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
     make_entity_mapping,
 )
@@ -110,22 +110,24 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     doc["entity_values_count"] = sum([len(v) for v in doc["properties"].values()])
 
     name_parts: set[str] = set()
-    name_phonemes: set[str] = set()
     name_symbols: set[str] = set()
-    for name in entity_names(entity, infer_initials=False, consolidate=False):
+    name_joined: set[str] = set()
+    names = entity_names(
+        entity, infer_initials=False, phonetics=False, consolidate=False
+    )
+    for name in names:
         name_symbols.update(index_symbols(name.symbols))
-        for part in name.parts:
-            name_parts.add(part.comparable)
-            phoneme = part.metaphone
-            if phoneme is not None and len(phoneme) > 2:
-                name_phonemes.add(phoneme)
+        comparables = [part.comparable for part in name.parts]
+        name_parts.update(comparables)
+        if len(comparables) > 0:
+            name_joined.add("".join(comparables))
 
     for weak in entity_weak_names(entity):
         name_parts.add(weak)
 
     doc[NAME_PART_FIELD] = list(name_parts)
-    doc[NAME_PHONETIC_FIELD] = list(name_phonemes)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
+    doc[NAME_JOINED_FIELD] = list(name_joined)
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
     doc["text"] = entity.pop("indexText")
