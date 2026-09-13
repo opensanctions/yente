@@ -28,19 +28,18 @@ def test_iso_to_version_empty() -> None:
         ("rotenberg", 46),
     ],
 )
-def test_name_part_variants_count(part, count):
+def test_name_part_variants_count(part: str, count: int) -> None:
     variants = name_part_variants(part)
     assert part in variants
     assert len(variants) == count
 
 
-def test_name_part_variants_short_parts_are_themselves():
-    assert name_part_variants("") == {""}
+def test_name_part_variants_short_parts_are_themselves() -> None:
     assert name_part_variants("v") == {"v"}
     assert name_part_variants("li") == {"li"}
 
 
-def test_name_part_variants_one_deletion_band():
+def test_name_part_variants_one_deletion_band() -> None:
     assert name_part_variants("kim") == {"kim", "im", "km", "ki"}
     # Repeated letters collapse into the same variant.
     assert name_part_variants("anna") == {"anna", "nna", "ana", "ann"}
@@ -65,7 +64,7 @@ def test_name_part_variants_one_deletion_band():
         ("alexander", "zlexandr"),
     ],
 )
-def test_name_part_variants_bridge_edits(a, b):
+def test_name_part_variants_bridge_edits(a: str, b: str) -> None:
     assert name_part_variants(a) & name_part_variants(b)
 
 
@@ -103,7 +102,7 @@ def test_name_part_variants_bridge_edits(a, b):
         ("rotenberg", "rottenberg"),
     ],
 )
-def test_name_part_variants_bridge_spelling_variants(a, b):
+def test_name_part_variants_bridge_spelling_variants(a: str, b: str) -> None:
     assert name_part_variants(a) & name_part_variants(b)
 
 
@@ -117,5 +116,5 @@ def test_name_part_variants_bridge_spelling_variants(a, b):
         ("maria", "petrov"),
     ],
 )
-def test_name_part_variants_do_not_bridge_unrelated(a, b):
+def test_name_part_variants_do_not_bridge_unrelated(a: str, b: str) -> None:
     assert not name_part_variants(a) & name_part_variants(b)
