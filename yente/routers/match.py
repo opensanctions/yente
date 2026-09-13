@@ -83,8 +83,11 @@ async def _match_one_query(
             status_code=400,
             detail=f"Cannot parse example entity: {exc}",
         )
+    # The response total is the number of scored results, so the candidate
+    # query never reads hits.total; skipping the count lets the backend
+    # prune non-competitive documents early.
     search_result = await search_entities(
-        provider, query, limit=candidates, sort=DEFAULT_SORTS
+        provider, query, limit=candidates, sort=DEFAULT_SORTS, track_total_hits=False
     )
     ents = result_entities(search_result)
     algorithm_type = get_algorithm_by_name(algorithm)

@@ -110,6 +110,7 @@ async def search_entities(
     offset: int = 0,
     aggregations: dict[str, Any] | None = None,
     sort: list[Any] | None = None,
+    track_total_hits: bool = True,
 ) -> dict[str, Any]:
     limit, offset = limit_window(limit, offset)
 
@@ -121,6 +122,7 @@ async def search_entities(
         from_=offset,
         aggregations=aggregations,
         rank_precise=True,
+        track_total_hits=track_total_hits,
     )
 
 

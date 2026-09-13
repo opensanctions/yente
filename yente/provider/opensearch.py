@@ -267,6 +267,7 @@ class OpenSearchProvider(SearchProvider):
         sort: list[Any] | None = None,
         aggregations: dict[str, Any] | None = None,
         rank_precise: bool = False,
+        track_total_hits: bool = True,
     ) -> dict[str, Any]:
         """Search for entities in the index."""
 
@@ -282,6 +283,8 @@ class OpenSearchProvider(SearchProvider):
                 body["aggregations"] = aggregations
             if sort is not None:
                 body["sort"] = sort
+            if not track_total_hits:
+                body["track_total_hits"] = False
             response = await self.client.search(
                 index=index,
                 size=size,

@@ -219,3 +219,18 @@ async def test_index_metadata_clone_inherits_then_overwrites(
             await search_provider.delete_index(target)
     finally:
         await search_provider.delete_index(source)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("zala_test_dataset")
+async def test_search_track_total_hits(search_provider: SearchProvider):
+    query = {"match_all": {}}
+    counted = await search_provider.search(settings.ENTITY_INDEX, query, size=1)
+    assert counted["hits"]["total"]["value"] > 1
+    assert len(counted["hits"]["hits"]) == 1
+
+    uncounted = await search_provider.search(
+        settings.ENTITY_INDEX, query, size=1, track_total_hits=False
+    )
+    assert "total" not in uncounted["hits"]
+    assert len(uncounted["hits"]["hits"]) == 1

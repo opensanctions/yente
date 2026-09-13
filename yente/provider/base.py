@@ -66,8 +66,14 @@ class SearchProvider:
         sort: list[Any] | None = None,
         aggregations: dict[str, Any] | None = None,
         rank_precise: bool = False,
+        track_total_hits: bool = True,
     ) -> dict[str, Any]:
-        """Search for entities in the index."""
+        """Search for entities in the index.
+
+        Pass ``track_total_hits=False`` when the caller never reads
+        ``hits.total``: the backend can then stop counting matches and skip
+        non-competitive documents once the top-``size`` window is full.
+        """
         raise NotImplementedError
 
     async def get_document(self, index: str, doc_id: str) -> dict[str, Any] | None:
