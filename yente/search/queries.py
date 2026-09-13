@@ -31,11 +31,13 @@ DEFAULT_SORTS: list[Sort] = [
 
 # Boost factors for non-name property types in entity queries, reflecting their
 # relative importance in the LogicV2 scoring algorithm. Identifiers are near-
-# deterministic match signals (0.85-0.98 weight in LogicV2), dates are highly
-# discriminating, countries are modestly informative.
+# deterministic match signals (0.85-0.98 weight in LogicV2), countries are modestly
+# informative. Dates sit at the level of a single name part: a year-only birth date
+# is shared by over a thousand records, and at a higher boost those records would
+# outrank an exact two-part name match and fill the candidate window on their own.
 TYPE_BOOSTS = {
     registry.identifier: 8.0,
-    registry.date: 3.0,
+    registry.date: 1.0,
     registry.phone: 3.0,
     registry.email: 3.0,
     registry.country: 1.5,
