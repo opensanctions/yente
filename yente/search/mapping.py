@@ -161,7 +161,9 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
         NAME_PART_FIELD: make_field("keyword", copy_to=["text"]),
         NAME_SYMBOLS_FIELD: make_field("keyword"),
         NAME_JOINED_FIELD: make_keyword(),
-        NAME_VARIANTS_FIELD: make_keyword(),
+        # Only ever looked up by term; doc values would cost as much disk again as
+        # the inverted index of this field.
+        NAME_VARIANTS_FIELD: {"type": "keyword", "doc_values": False},
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
