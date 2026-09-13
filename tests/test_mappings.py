@@ -52,17 +52,15 @@ async def test_mappings_copy_to(search_provider):
         )
         assert len(search_result["hits"]["hits"]) == 1, "Failed to match on names"
 
-        # name_parts and name_phonetic are a bit of a special case, we syntesize them in the indexer
+        # name_parts and name_joined are a bit of a special case, we syntesize them in the indexer
         search_result = await search_provider.search(
             temp_index, {"bool": {"must": [{"match": {"name_parts": "Vladimir"}}]}}
         )
         assert len(search_result["hits"]["hits"]) == 1, "Failed to match on name_parts"
         search_result = await search_provider.search(
-            temp_index, {"bool": {"must": [{"match": {"name_phonetic": "FLTMR"}}]}}
+            temp_index, {"bool": {"must": [{"term": {"name_joined": "vladimirputin"}}]}}
         )
-        assert len(search_result["hits"]["hits"]) == 1, (
-            "Failed to match on name_phonetic"
-        )
+        assert len(search_result["hits"]["hits"]) == 1
 
         # Try to match on the countries field, which is a type field that is populated by copy_to from citizenship
         search_result = await search_provider.search(
@@ -149,13 +147,15 @@ def test_name_symbols_indexed_org(search_provider):
     assert "DOMAIN:BANK" in doc["name_symbols"]
 
 
-def test_name_phonetic_indexed(search_provider):
+def test_name_joined_indexed():
     entity = Entity.from_dict(
         {
             "id": "Q7747",
             "schema": "Person",
             "properties": {
                 "name": ["Vladimir V. Putin"],
+                "alias": ["Владимир Путин"],
+                "weakAlias": ["Vova"],
                 "citizenship": ["ru"],
                 "topics": ["sanction"],
             },
@@ -164,5 +164,20 @@ def test_name_phonetic_indexed(search_provider):
 
     doc = build_indexable_entity_doc(entity)
 
-    # Ensure that the "V." doesn't end up in the phonetics, it's too short.
-    assert set(doc["name_phonetic"]) == {"FLTMR", "PTN"}
+    assert set(doc["name_joined"]) == {"vladimirvputin", "vladimirputin"}
+    assert "vova" in doc["name_parts"]
+    assert "name_phonetic" not in doc
+
+
+def test_name_joined_indexed_org():
+    entity = Entity.from_dict(
+        {
+            "id": "Q1234",
+            "schema": "Company",
+            "properties": {"name": ["Al-Qaeda Trading LLC"]},
+        }
+    )
+
+    doc = build_indexable_entity_doc(entity)
+
+    assert "alqaedatradingllc" in doc["name_joined"]
