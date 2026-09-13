@@ -62,16 +62,23 @@ TYPE_BOOSTS = {
 #
 # The three per-part channels are combined with `dis_max` so a part counts once even
 # when several channels hit it. Exact and symbol hits are IDF-scored `term`s, so a rare
-# part or identity outranks a common one; the fuzzy channel sits below exact so that an
-# exact neighbour wins over an approximate one.
+# part or identity outranks a common one. A fuzzy hit is worth the constant
+# FUZZY_BOOST, about the exact score of a part shared by 25,000 records, so an exact
+# hit on any but the most common tokens ("of", "ltd", "de") outranks an approximate
+# one.
 NAME_PART_BOOST = 1.0
-FUZZY_BOOST = 0.7
+FUZZY_BOOST = 6.0
 SYMBOL_BOOST = 0.9
 JOINED_BOOST = 1.0
 WEAK_ALIAS_BOOST = 0.9
 FUZZINESS = "AUTO"
 FUZZY_PREFIX_LENGTH = 1
 FUZZY_MAX_EXPANSIONS = 200
+# The default rewrite turns a fuzzy clause into an OR of the expanded terms and sums
+# their scores per document, so a record carrying ten spellings of one name part
+# would score ten times for that part. Constant scoring makes a fuzzy hit worth
+# FUZZY_BOOST once, whichever and however many neighbours matched.
+FUZZY_REWRITE = "constant_score"
 # Below three characters AUTO allows no edits, so the fuzzy clause would only repeat
 # the exact one.
 FUZZY_MIN_LENGTH = 3
@@ -202,6 +209,7 @@ def names_query(entity: EntityProxy) -> list[Clause]:
                             "fuzziness": FUZZINESS,
                             "prefix_length": FUZZY_PREFIX_LENGTH,
                             "max_expansions": FUZZY_MAX_EXPANSIONS,
+                            "rewrite": FUZZY_REWRITE,
                             "boost": FUZZY_BOOST,
                         }
                     }
