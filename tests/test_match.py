@@ -271,6 +271,36 @@ def test_fuzzy_names():
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
+def test_fuzzy_names_first_letter():
+    # Edits at the first letter of both parts. A fuzzy clause with a fixed first
+    # letter could not retrieve this; the deletion variants are position-blind.
+    query = {
+        "queries": {
+            "a": {"schema": "Person", "properties": {"name": "Zlexander Sakharov"}}
+        }
+    }
+
+    with mock.patch("yente.settings.MATCH_FUZZY", False):
+        resp = client.post(
+            "/match/zala",
+            json=query,
+            params={"algorithm": "logic-v2", "threshold": 0.2},
+        )
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) == 0
+
+    with mock.patch("yente.settings.MATCH_FUZZY", True):
+        resp = client.post(
+            "/match/zala",
+            json=query,
+            params={"algorithm": "logic-v2", "threshold": 0.2},
+        )
+        res = resp.json()["responses"]["a"]
+        assert len(res["results"]) > 0
+        assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
+
+
+@pytest.mark.usefixtures("zala_test_dataset")
 def test_match_numeric_property_value():
     # Numeric values in a property list are coerced to strings by
     # extract_values; the request must succeed and echo the value back as a
