@@ -85,6 +85,7 @@ def test_fuzzy_channel():
                 "fuzziness": "AUTO",
                 "prefix_length": 1,
                 "max_expansions": 200,
+                "rewrite": "constant_score",
                 "boost": FUZZY_BOOST,
             }
         }
