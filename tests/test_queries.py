@@ -77,17 +77,20 @@ def test_fuzzy_channel():
     entity = make_entity("q-putin", "Person", {"name": ["Vladimir Putin"]})
     with mock.patch("yente.settings.MATCH_FUZZY", True):
         parts = part_clauses(names_query(entity))
-    fuzzy = channel(parts["putin"], "fuzzy")
+    fuzzy = channel(parts["putin"], "constant_score")
     assert fuzzy == {
-        "fuzzy": {
-            "name_parts": {
-                "value": "putin",
-                "fuzziness": "AUTO",
-                "prefix_length": 1,
-                "max_expansions": 200,
-                "rewrite": "constant_score",
-                "boost": FUZZY_BOOST,
-            }
+        "constant_score": {
+            "filter": {
+                "fuzzy": {
+                    "name_parts": {
+                        "value": "putin",
+                        "fuzziness": "AUTO",
+                        "prefix_length": 1,
+                        "max_expansions": 200,
+                    }
+                }
+            },
+            "boost": FUZZY_BOOST,
         }
     }
 
@@ -98,7 +101,7 @@ def test_fuzzy_channel_off():
         parts = part_clauses(names_query(entity))
     assert set(parts) == {"vladimir", "putin"}
     for channels in parts.values():
-        assert channel(channels, "fuzzy") is None
+        assert channel(channels, "constant_score") is None
         assert channel(channels, "term") is not None
 
 
@@ -108,7 +111,7 @@ def test_fuzzy_channel_skips_short_parts():
         parts = part_clauses(names_query(entity))
     assert set(parts) == {"li", "na"}
     for channels in parts.values():
-        assert channel(channels, "fuzzy") is None
+        assert channel(channels, "constant_score") is None
 
 
 def test_symbol_channel():

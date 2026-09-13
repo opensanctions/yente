@@ -74,11 +74,6 @@ WEAK_ALIAS_BOOST = 0.9
 FUZZINESS = "AUTO"
 FUZZY_PREFIX_LENGTH = 1
 FUZZY_MAX_EXPANSIONS = 200
-# The default rewrite turns a fuzzy clause into an OR of the expanded terms and sums
-# their scores per document, so a record carrying ten spellings of one name part
-# would score ten times for that part. Constant scoring makes a fuzzy hit worth
-# FUZZY_BOOST once, whichever and however many neighbours matched.
-FUZZY_REWRITE = "constant_score"
 # Below three characters AUTO allows no edits, so the fuzzy clause would only repeat
 # the exact one.
 FUZZY_MIN_LENGTH = 3
@@ -201,20 +196,21 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
         if settings.MATCH_FUZZY and len(comparable) >= FUZZY_MIN_LENGTH:
-            channels.append(
-                {
-                    "fuzzy": {
-                        NAME_PART_FIELD: {
-                            "value": comparable,
-                            "fuzziness": FUZZINESS,
-                            "prefix_length": FUZZY_PREFIX_LENGTH,
-                            "max_expansions": FUZZY_MAX_EXPANSIONS,
-                            "rewrite": FUZZY_REWRITE,
-                            "boost": FUZZY_BOOST,
-                        }
+            # A bare fuzzy clause is rewritten into an OR of its expansions and sums
+            # the ones a document carries, so a record with ten spellings of one part
+            # would score ten times for it. As a constant-score filter it scores once
+            # and still expands to the top FUZZY_MAX_EXPANSIONS terms only.
+            fuzzy = {
+                "fuzzy": {
+                    NAME_PART_FIELD: {
+                        "value": comparable,
+                        "fuzziness": FUZZINESS,
+                        "prefix_length": FUZZY_PREFIX_LENGTH,
+                        "max_expansions": FUZZY_MAX_EXPANSIONS,
                     }
                 }
-            )
+            }
+            channels.append({"constant_score": {"filter": fuzzy, "boost": FUZZY_BOOST}})
         symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
         if len(symbol_ids) > 0:
             symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in symbol_ids]
