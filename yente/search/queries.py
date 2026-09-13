@@ -14,9 +14,19 @@ from rigour.names import Symbol
 
 from yente import settings
 from yente.data.dataset import Dataset
-from yente.data.util import entity_weak_names, index_symbols
+from yente.data.util import (
+    VARIANT_ONE_DELETION_LENGTH,
+    entity_weak_names,
+    index_symbols,
+    name_part_variants,
+)
 from yente.logs import get_logger
-from yente.search.mapping import NAME_JOINED_FIELD, NAME_PART_FIELD, NAME_SYMBOLS_FIELD
+from yente.search.mapping import (
+    NAME_JOINED_FIELD,
+    NAME_PART_FIELD,
+    NAME_SYMBOLS_FIELD,
+    NAME_VARIANTS_FIELD,
+)
 
 log = get_logger(__name__)
 Clause = dict[str, Any]
@@ -50,9 +60,12 @@ TYPE_BOOSTS = {
 #
 #   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
 #           script allows it, diacritics and punctuation stripped) is identical.
-#   fuzzy   `fuzzy` on `name_parts`: Damerau-Levenshtein within ES `AUTO` (0 edits up
-#           to 2 chars, 1 edit at 3-5, 2 edits from 6) with the first letter fixed.
-#           Covers typos and short transliteration variants (mohammed/muhammad).
+#   fuzzy   `terms` on `name_part_variants`: the query part and the indexed part share
+#           a deletion variant (see `name_part_variants`), which is the case whenever
+#           they are within the part's Damerau-Levenshtein budget of 0 edits up to 2
+#           chars, 1 edit at 3-5, 2 edits from 6, at any position including the first
+#           letter. Covers typos and short transliteration variants (mohammed/muhammad,
+#           wagner/vagner). Also admits some pairs up to twice the budget apart.
 #   symbol  `term` on `name_symbols`: rigour tagged both parts with the same known-name
 #           identity, nickname, org class or the like. The only bridge for scripts that
 #           are not latinised (Arabic, Han) and for variants beyond two edits
@@ -62,21 +75,15 @@ TYPE_BOOSTS = {
 #
 # The three per-part channels are combined with `dis_max` so a part counts once even
 # when several channels hit it. Exact and symbol hits are IDF-scored `term`s, so a rare
-# part or identity outranks a common one. A fuzzy hit is worth the constant
-# FUZZY_BOOST, about the exact score of a part shared by 25,000 records, so an exact
-# hit on any but the most common tokens ("of", "ltd", "de") outranks an approximate
-# one.
+# part or identity outranks a common one. A `terms` hit is constant-scored by ES, so a
+# fuzzy hit is worth VARIANTS_BOOST however many variants a document shares, about the
+# exact score of a part shared by 25,000 records, so an exact hit on any but the most
+# common tokens ("of", "ltd", "de") outranks an approximate one.
 NAME_PART_BOOST = 1.0
-FUZZY_BOOST = 6.0
+VARIANTS_BOOST = 6.0
 SYMBOL_BOOST = 0.9
 JOINED_BOOST = 1.0
 WEAK_ALIAS_BOOST = 0.9
-FUZZINESS = "AUTO"
-FUZZY_PREFIX_LENGTH = 1
-FUZZY_MAX_EXPANSIONS = 200
-# Below three characters AUTO allows no edits, so the fuzzy clause would only repeat
-# the exact one.
-FUZZY_MIN_LENGTH = 3
 # Clause budget: MAX_PARTS * (2 + MAX_SYMBOLS_PER_PART) + 2 stays under the ES default
 # `indices.query.bool.max_clause_count` of 4096. Observed maxima on real queries are
 # 22 unique parts and 29 symbols on one part, so the caps are safety, not tuning.
@@ -195,22 +202,11 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     shoulds: list[Clause] = []
     for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
-        if settings.MATCH_FUZZY and len(comparable) >= FUZZY_MIN_LENGTH:
-            # A bare fuzzy clause is rewritten into an OR of its expansions and sums
-            # the ones a document carries, so a record with ten spellings of one part
-            # would score ten times for it. As a constant-score filter it scores once
-            # and still expands to the top FUZZY_MAX_EXPANSIONS terms only.
-            fuzzy = {
-                "fuzzy": {
-                    NAME_PART_FIELD: {
-                        "value": comparable,
-                        "fuzziness": FUZZINESS,
-                        "prefix_length": FUZZY_PREFIX_LENGTH,
-                        "max_expansions": FUZZY_MAX_EXPANSIONS,
-                    }
-                }
-            }
-            channels.append({"constant_score": {"filter": fuzzy, "boost": FUZZY_BOOST}})
+        if settings.MATCH_FUZZY and len(comparable) >= VARIANT_ONE_DELETION_LENGTH:
+            # Below the one-deletion band the only variant is the part itself, which
+            # the exact clause already covers.
+            variants = sorted(name_part_variants(comparable))
+            channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
         symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
         if len(symbol_ids) > 0:
             symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in symbol_ids]
