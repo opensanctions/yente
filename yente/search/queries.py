@@ -8,21 +8,15 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.schema import Schema
 from followthemoney.types import registry
 
-# We're re-using the same entity analyzer so the LRU cache is shared:
+# Same name analysis as the scorer, so the LRU cache is shared between them:
 from nomenklatura.matching.logic_v2.names.analysis import entity_names
-from rigour.names import Name, NamePart, Symbol, representative_names
+from rigour.names import Symbol
 
 from yente import settings
 from yente.data.dataset import Dataset
 from yente.data.util import entity_weak_names, index_symbols
 from yente.logs import get_logger
-from yente.search.mapping import (
-    NAME_NGRAMS_FIELD,
-    NAME_PART_FIELD,
-    NAME_PHONETIC_FIELD,
-    NAME_SYMBOLS_FIELD,
-    NAMES_FIELD,
-)
+from yente.search.mapping import NAME_JOINED_FIELD, NAME_PART_FIELD, NAME_SYMBOLS_FIELD
 
 log = get_logger(__name__)
 Clause = dict[str, Any]
@@ -37,25 +31,57 @@ DEFAULT_SORTS: list[Sort] = [
 
 # Boost factors for non-name property types in entity queries, reflecting their
 # relative importance in the LogicV2 scoring algorithm. Identifiers are near-
-# deterministic match signals (0.85-0.98 weight in LogicV2), dates are highly
-# discriminating, countries are modestly informative.
+# deterministic match signals (0.85-0.98 weight in LogicV2), countries are modestly
+# informative. Dates sit at the level of a single name part: a year-only birth date
+# is shared by over a thousand records, and at a higher boost those records would
+# outrank an exact two-part name match and fill the candidate window on their own.
 TYPE_BOOSTS = {
     registry.identifier: 8.0,
-    registry.date: 3.0,
+    registry.date: 1.0,
     registry.phone: 3.0,
     registry.email: 3.0,
     registry.country: 1.5,
 }
 
-# Boost factors for symbol categories to demote low-information name parts.
-SYMBOL_BOOSTS = {
-    Symbol.Category.NUMERIC: 1.3,
-    Symbol.Category.LOCATION: 0.8,
-    Symbol.Category.ORG_CLASS: 0.7,
-    Symbol.Category.SYMBOL: 0.3,
-    Symbol.Category.NICK: 0.8,
-    Symbol.Category.DOMAIN: 0.7,
-}
+# Name candidate retrieval reaches an indexed entity through four channels, each an
+# explicit statement of how a query name part may differ from an indexed one. Both
+# sides are analysed by the same rigour normaliser, so a term is retrievable iff both
+# produced the same string; Elasticsearch does no analysis of its own on these fields.
+#
+#   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
+#           script allows it, diacritics and punctuation stripped) is identical.
+#   fuzzy   `fuzzy` on `name_parts`: Damerau-Levenshtein within ES `AUTO` (0 edits up
+#           to 2 chars, 1 edit at 3-5, 2 edits from 6) with the first letter fixed.
+#           Covers typos and short transliteration variants (mohammed/muhammad).
+#   symbol  `term` on `name_symbols`: rigour tagged both parts with the same known-name
+#           identity, nickname, org class or the like. The only bridge for scripts that
+#           are not latinised (Arabic, Han) and for variants beyond two edits
+#           (alexander/aleksandr).
+#   joined  `terms` on `name_joined`: a query name with its spaces removed equals an
+#           indexed name with its spaces removed (alqaeda / Al Qaeda).
+#
+# The three per-part channels are combined with `dis_max` so a part counts once even
+# when several channels hit it. Exact and symbol hits are IDF-scored `term`s, so a rare
+# part or identity outranks a common one. A fuzzy hit is worth the constant
+# FUZZY_BOOST, about the exact score of a part shared by 25,000 records, so an exact
+# hit on any but the most common tokens ("of", "ltd", "de") outranks an approximate
+# one.
+NAME_PART_BOOST = 1.0
+FUZZY_BOOST = 6.0
+SYMBOL_BOOST = 0.9
+JOINED_BOOST = 1.0
+WEAK_ALIAS_BOOST = 0.9
+FUZZINESS = "AUTO"
+FUZZY_PREFIX_LENGTH = 1
+FUZZY_MAX_EXPANSIONS = 200
+# Below three characters AUTO allows no edits, so the fuzzy clause would only repeat
+# the exact one.
+FUZZY_MIN_LENGTH = 3
+# Clause budget: MAX_PARTS * (2 + MAX_SYMBOLS_PER_PART) + 2 stays under the ES default
+# `indices.query.bool.max_clause_count` of 4096. Observed maxima on real queries are
+# 22 unique parts and 29 symbols on one part, so the caps are safety, not tuning.
+MAX_PARTS = 100
+MAX_SYMBOLS_PER_PART = 30
 
 
 class Operator(enum.StrEnum):
@@ -140,79 +166,64 @@ def filter_query(
 
 
 def names_query(entity: EntityProxy) -> list[Clause]:
-    names = entity.get_type_values(registry.name, matchable=True)
-    name_objs = entity_names(entity, is_query=True)
-    # Single-word names are hard to match, so we use fuzzy matching more aggressively.
-    # FIXME: This could make sense for 2 part names as well?
-    is_short = max((len(n.parts) for n in name_objs), default=0) < 2
-    shoulds: list[Clause] = []
-    for picked_name in representative_names(names, 5):
-        match = {
-            NAMES_FIELD: {
-                "query": picked_name,
-                "operator": "AND",
-                "boost": 3.0,
-            }
-        }
-        shoulds.append({"match": match})
+    """Build the name clauses of a /match candidate query.
 
-        if settings.MATCH_FUZZY or is_short:
-            shoulds.append(
-                {
-                    "match": {
-                        NAME_NGRAMS_FIELD: {
-                            "query": picked_name,
-                            "minimum_should_match": "70%",
-                            "boost": 1.5,
-                        }
-                    }
-                }
-            )
-
-    seen: set[str] = set()
-    consolidated_names = Name.consolidate_names(name_objs)
-
-    for name in consolidated_names:
-        part_symbols: dict[NamePart, set[Symbol]] = defaultdict(set)
+    One `dis_max` per unique comparable name part (exact, fuzzy and symbol channels),
+    one `terms` clause over the space-less forms of all names, and one `term` per weak
+    alias. A document scores each query part at most once, however many of its aliases
+    carry it, and the sum over parts ranks documents by how many query parts they cover.
+    """
+    # Primary names come before aliases so that a query truncated by MAX_PARTS keeps
+    # the parts of its primary names whole.
+    primary = set(entity.get("name", quiet=True))
+    names = sorted(
+        entity_names(entity, is_query=True),
+        key=lambda n: (n.original not in primary, n.form),
+    )
+    part_symbols: dict[str, set[Symbol]] = {}
+    joined: set[str] = set()
+    for name in names:
+        comparables = [part.comparable for part in name.parts]
+        for comparable in comparables:
+            part_symbols.setdefault(comparable, set())
         for span in name.spans:
             for part in span.parts:
-                part_symbols[part].add(span.symbol)
-        for part in name.parts:
-            if part.comparable in seen:
-                continue
-            seen.add(part.comparable)
+                part_symbols[part.comparable].add(span.symbol)
+        if len(comparables) > 0:
+            joined.add("".join(comparables))
 
-            # The idea here is to rank down the contribution to the score of less interesting name parts
-            # To some degree, this is already done by the IDF component of the ES scoring algorithm
-            # (which reduces the influence of frequent terms), but that doesn't work too well for e.g.
-            # less common languages.
-            symbols: set[Symbol] = part_symbols.get(part, set())
-            boosts = [
-                SYMBOL_BOOSTS[symbol.category]
-                for symbol in symbols
-                if symbol.category in SYMBOL_BOOSTS
-            ]
-            boost = max(boosts, default=1.0)
+    shoulds: list[Clause] = []
+    for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
+        channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
+        if settings.MATCH_FUZZY and len(comparable) >= FUZZY_MIN_LENGTH:
+            # A bare fuzzy clause is rewritten into an OR of its expansions and sums
+            # the ones a document carries, so a record with ten spellings of one part
+            # would score ten times for it. As a constant-score filter it scores once
+            # and still expands to the top FUZZY_MAX_EXPANSIONS terms only.
+            fuzzy = {
+                "fuzzy": {
+                    NAME_PART_FIELD: {
+                        "value": comparable,
+                        "fuzziness": FUZZINESS,
+                        "prefix_length": FUZZY_PREFIX_LENGTH,
+                        "max_expansions": FUZZY_MAX_EXPANSIONS,
+                    }
+                }
+            }
+            channels.append({"constant_score": {"filter": fuzzy, "boost": FUZZY_BOOST}})
+        symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
+        if len(symbol_ids) > 0:
+            symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in symbol_ids]
+            channels.append(
+                {"dis_max": {"queries": symbol_terms, "boost": SYMBOL_BOOST}}
+            )
+        shoulds.append({"dis_max": {"queries": channels, "tie_breaker": 0.0}})
 
-            # We have multiple ways to query for a name part (verbatim, comparable, phonetic, symbol)
-            # In the end, we dis-max them to get the one that works best, but not give an outsized important
-            # to this name part just because multiple variants match.
-            query_variants: list[Clause] = []
-            query_variants.append(tq(NAME_PART_FIELD, part.comparable))
+    if len(joined) > 0:
+        shoulds.append(tqs(NAME_JOINED_FIELD, sorted(joined), JOINED_BOOST))
 
-            metaphone = part.metaphone
-            if metaphone is not None and len(metaphone) > 2:
-                query_variants.append(tq(NAME_PHONETIC_FIELD, metaphone, boost * 0.5))
-
-            for sym_id in index_symbols(symbols):
-                query_variants.append(tq(NAME_SYMBOLS_FIELD, sym_id, boost * 0.7))
-
-            query = {"dis_max": {"queries": query_variants, "tie_breaker": 0.2}}
-            shoulds.append(query)
-
-    # Always query for weak aliases too
     for weak in entity_weak_names(entity):
-        shoulds.append(tq(NAME_PART_FIELD, weak, 0.9))
+        shoulds.append(tq(NAME_PART_FIELD, weak, WEAK_ALIAS_BOOST))
 
     return shoulds
 
