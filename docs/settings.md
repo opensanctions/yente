@@ -35,6 +35,6 @@ Yente features various configuration options related to data refresh and re-inde
 | `YENTE_MATCH_PAGE` | `5` | How many results to return per `/match` query by default. |
 | `YENTE_MAX_MATCHES` | `500` | How many results to return per `/match` query at most. |
 | `YENTE_MATCH_CANDIDATES` | `10` | How many candidates to retrieve from the search as a multiplier of the `/match` limit. Note that increasing this parameter will also increase query cost, as each of these candidates scored after retrieval from the index.|
-| `YENTE_MATCH_FUZZY` | `true` | Whether to run expensive Levenshtein queries inside ElasticSearch. |
+| `YENTE_MATCH_FUZZY` | `true` | Whether `/match` candidate retrieval adds an edit-distance (Levenshtein) clause per query name part, so that typos and minor spelling variants are still retrieved. Exact, known-name symbol and space-less name matching are always on. |
 | `YENTE_DELTA_UPDATES` | `true` | When set to `false` Yente will download the entire dataset when refreshing the index. |
 | `YENTE_STREAM_LOAD`   | `true`   | If set to `false`, will download the full data before indexing it. This can improve the stability of the indexer, especially when the network connection is a bit sketchy, but requires some local disk cache space.   |

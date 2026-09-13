@@ -176,7 +176,7 @@ MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 # Used so that limit * MATCH_CANDIDATES doesn't get out of hand for high values of limit
 MAX_MATCH_CANDIDATES = env_int("YENTE_MAX_MATCH_CANDIDATES", 500)
 
-# Whether to use n-gram sub-field matching for fuzzy candidate retrieval:
+# Whether /match candidate retrieval adds an edit-distance clause per name part:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 
 # Default scoring threshold for /match results:
