@@ -22,6 +22,11 @@ log = get_logger(__name__)
 # A set of symbol categories that we don't want to match on and therefore don't want to index.
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
+# Deletion budget of a name part by its length, the same bands as Elasticsearch
+# fuzziness `AUTO`: no edits up to 2 characters, one from 3, two from 6.
+VARIANT_ONE_DELETION_LENGTH = 3
+VARIANT_TWO_DELETIONS_LENGTH = 6
+
 
 def extract_values(values: Any) -> list[str]:
     """Extract a list of string values from a property value, which may be a string or a list."""
@@ -38,6 +43,32 @@ def index_symbols(symbols: set[Symbol]) -> Generator[str, None, None]:
     for symbol in symbols:
         if symbol.category not in NON_MATCHABLE_SYMBOLS:
             yield f"{symbol.category.value}:{symbol.id}"
+
+
+def name_part_variants(part: str) -> set[str]:
+    """Generate the deletion variants of a comparable name part.
+
+    Returns the part itself and every string obtained by deleting up to k of its
+    characters, where k depends on the length of the part (VARIANT_*_LENGTH). Two
+    parts within k Damerau-Levenshtein edits always share a variant: a substitution
+    is bridged by deleting the differing character on both sides, an insertion or
+    deletion by deleting it on the longer side, and a transposition by deleting one
+    of the swapped characters on both sides. Indexing the variants of every indexed
+    part and querying with the variants of every query part turns the edit-distance
+    channel into exact term lookups. The index and query sides must both use this
+    function, otherwise the shared variants are not the same strings.
+    """
+    variants = {part}
+    if len(part) < VARIANT_ONE_DELETION_LENGTH:
+        return variants
+    for i in range(len(part)):
+        variants.add(part[:i] + part[i + 1 :])
+    if len(part) < VARIANT_TWO_DELETIONS_LENGTH:
+        return variants
+    for i in range(len(part)):
+        for j in range(i + 1, len(part)):
+            variants.add(part[:i] + part[i + 1 : j] + part[j + 1 :])
+    return variants
 
 
 @cache
