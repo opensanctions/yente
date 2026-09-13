@@ -176,7 +176,8 @@ MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 # Used so that limit * MATCH_CANDIDATES doesn't get out of hand for high values of limit
 MAX_MATCH_CANDIDATES = env_int("YENTE_MAX_MATCH_CANDIDATES", 500)
 
-# Whether /match candidate retrieval adds an edit-distance clause per name part:
+# Whether /match candidate retrieval adds an edit-distance channel per name part,
+# matched through precomputed deletion variants of the indexed name parts:
 MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
 
 # Default scoring threshold for /match results:
@@ -207,7 +208,7 @@ ENTITY_INDEX = f"{INDEX_NAME}-entities"
 # Bump this when the index format changes and a full reindex is required.
 # Be careful to make the query code compatible with the old index format, otherwise
 # yente will be unable to serve requests after the upgrade until the first reindex completes.
-INDEX_VERSION = "019"
+INDEX_VERSION = "020"
 # Bump this evn var when you want to trigger a full reindex.
 INDEX_REBUILD_ID = env_str("YENTE_INDEX_REBUILD_ID", "a")
 
