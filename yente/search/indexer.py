@@ -112,7 +112,7 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     name_parts: set[str] = set()
     name_phonemes: set[str] = set()
     name_symbols: set[str] = set()
-    for name in entity_names(entity, infer_initials=False):
+    for name in entity_names(entity, infer_initials=False, consolidate=False):
         name_symbols.update(index_symbols(name.symbols))
         for part in name.parts:
             name_parts.add(part.comparable)
