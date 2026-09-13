@@ -14,12 +14,7 @@ from rigour.names import Symbol
 
 from yente import settings
 from yente.data.dataset import Dataset
-from yente.data.util import (
-    VARIANT_ONE_DELETION_LENGTH,
-    entity_weak_names,
-    index_symbols,
-    name_part_variants,
-)
+from yente.data.util import entity_weak_names, index_symbols, name_part_variants
 from yente.logs import get_logger
 from yente.search.mapping import (
     NAME_JOINED_FIELD,
@@ -202,10 +197,8 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     shoulds: list[Clause] = []
     for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
-        if settings.MATCH_FUZZY and len(comparable) >= VARIANT_ONE_DELETION_LENGTH:
-            # Below the one-deletion band the only variant is the part itself, which
-            # the exact clause already covers.
-            variants = sorted(name_part_variants(comparable))
+        variants = sorted(name_part_variants(comparable))
+        if settings.MATCH_FUZZY and len(variants) > 1:
             channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
         symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
         if len(symbol_ids) > 0:
