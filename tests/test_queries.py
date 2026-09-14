@@ -83,8 +83,7 @@ def test_one_clause_per_unique_part():
 
 def test_fuzzy_channel():
     entity = make_entity("q-putin", "Person", {"name": ["Vladimir Putin"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        parts = part_clauses(names_query(entity))
+    parts = part_clauses(names_query(entity))
     variants = variants_channel(parts["putin"])
     assert variants == {
         "terms": {
@@ -104,20 +103,9 @@ def test_fuzzy_channel():
     assert channel(parts["vladimir"], "constant_score") is None
 
 
-def test_fuzzy_channel_off():
-    entity = make_entity("q-putin-nofuzzy", "Person", {"name": ["Vladimir Putin"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", False):
-        parts = part_clauses(names_query(entity))
-    assert set(parts) == {"vladimir", "putin"}
-    for channels in parts.values():
-        assert variants_channel(channels) is None
-        assert channel(channels, "term") is not None
-
-
 def test_fuzzy_channel_skips_short_parts():
     entity = make_entity("q-li", "Person", {"name": ["Li Na Kim"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        parts = part_clauses(names_query(entity))
+    parts = part_clauses(names_query(entity))
     assert set(parts) == {"li", "na", "kim"}
     assert variants_channel(parts["li"]) is None
     assert variants_channel(parts["na"]) is None

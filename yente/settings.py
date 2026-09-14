@@ -176,9 +176,11 @@ MATCH_CANDIDATES = env_int("YENTE_MATCH_CANDIDATES", 10)
 # Used so that limit * MATCH_CANDIDATES doesn't get out of hand for high values of limit
 MAX_MATCH_CANDIDATES = env_int("YENTE_MAX_MATCH_CANDIDATES", 500)
 
-# Whether /match candidate retrieval adds an edit-distance channel per name part,
-# matched through precomputed deletion variants of the indexed name parts:
-MATCH_FUZZY = as_bool(env_str("YENTE_MATCH_FUZZY", "true"))
+if env_opt("YENTE_MATCH_FUZZY") is not None:
+    warnings.warn(
+        "YENTE_MATCH_FUZZY has no effect: /match always retrieves edit-distance "
+        "name variants through precomputed index terms."
+    )
 
 # Default scoring threshold for /match results:
 SCORE_THRESHOLD = 0.70
