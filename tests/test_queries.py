@@ -4,12 +4,13 @@ from typing import Any
 from unittest import mock
 
 from yente.data.entity import Entity
+from yente.data.util import name_part_variants
 from yente.search.queries import (
-    FUZZY_BOOST,
     JOINED_BOOST,
     MAX_PARTS,
     MAX_SYMBOLS_PER_PART,
     SYMBOL_BOOST,
+    VARIANTS_BOOST,
     WEAK_ALIAS_BOOST,
     names_query,
 )
@@ -51,6 +52,13 @@ def channel(channels: list[dict[str, Any]], kind: str) -> dict[str, Any] | None:
     return None
 
 
+def variants_channel(channels: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for clause in channels:
+        if "terms" in clause and "name_part_variants" in clause["terms"]:
+            return clause
+    return None
+
+
 def test_one_clause_per_unique_part():
     entity = make_entity("q-many", "Person", {"name": MANY_NAMES})
     shoulds = names_query(entity)
@@ -75,43 +83,35 @@ def test_one_clause_per_unique_part():
 
 def test_fuzzy_channel():
     entity = make_entity("q-putin", "Person", {"name": ["Vladimir Putin"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        parts = part_clauses(names_query(entity))
-    fuzzy = channel(parts["putin"], "constant_score")
-    assert fuzzy == {
-        "constant_score": {
-            "filter": {
-                "fuzzy": {
-                    "name_parts": {
-                        "value": "putin",
-                        "fuzziness": "AUTO",
-                        "prefix_length": 1,
-                        "max_expansions": 200,
-                    }
-                }
-            },
-            "boost": FUZZY_BOOST,
+    parts = part_clauses(names_query(entity))
+    variants = variants_channel(parts["putin"])
+    assert variants == {
+        "terms": {
+            "name_part_variants": ["ptin", "puin", "puti", "putin", "putn", "utin"],
+            "boost": VARIANTS_BOOST,
         }
     }
-
-
-def test_fuzzy_channel_off():
-    entity = make_entity("q-putin-nofuzzy", "Person", {"name": ["Vladimir Putin"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", False):
-        parts = part_clauses(names_query(entity))
-    assert set(parts) == {"vladimir", "putin"}
-    for channels in parts.values():
-        assert channel(channels, "constant_score") is None
-        assert channel(channels, "term") is not None
+    assert channel(parts["putin"], "term") == {
+        "term": {"name_parts": {"value": "putin", "boost": 1.0}}
+    }
+    variants = variants_channel(parts["vladimir"])
+    assert variants is not None
+    assert set(variants["terms"]["name_part_variants"]) == name_part_variants(
+        "vladimir"
+    )
+    assert channel(parts["vladimir"], "fuzzy") is None
+    assert channel(parts["vladimir"], "constant_score") is None
 
 
 def test_fuzzy_channel_skips_short_parts():
-    entity = make_entity("q-li", "Person", {"name": ["Li Na"]})
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        parts = part_clauses(names_query(entity))
-    assert set(parts) == {"li", "na"}
-    for channels in parts.values():
-        assert channel(channels, "constant_score") is None
+    entity = make_entity("q-li", "Person", {"name": ["Li Na Kim"]})
+    parts = part_clauses(names_query(entity))
+    assert set(parts) == {"li", "na", "kim"}
+    assert variants_channel(parts["li"]) is None
+    assert variants_channel(parts["na"]) is None
+    kim = variants_channel(parts["kim"])
+    assert kim is not None
+    assert kim["terms"]["name_part_variants"] == ["im", "ki", "kim", "km"]
 
 
 def test_symbol_channel():
@@ -150,7 +150,7 @@ def test_joined_clause():
         "q-joined", "Person", {"name": ["Vladimir Putin"], "alias": ["Vova Putin"]}
     )
     shoulds = names_query(entity)
-    joined = [c for c in shoulds if "terms" in c]
+    joined = [c for c in shoulds if "terms" in c and "name_joined" in c["terms"]]
     assert joined == [
         {
             "terms": {

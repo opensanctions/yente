@@ -218,7 +218,7 @@ def test_id_pass_through():
 def test_match_name_without_spaces():
     # A name with its spaces omitted is a single token to the name analysis, so no
     # per-part clause can reach the indexed name. The indexed space-less form of each
-    # name (name_joined) bridges that exactly, independent of the fuzzy setting.
+    # name (name_joined) bridges that exactly.
     query = {
         "queries": {
             "a": {
@@ -228,13 +228,11 @@ def test_match_name_without_spaces():
         }
     }
 
-    for fuzzy in (False, True):
-        with mock.patch("yente.settings.MATCH_FUZZY", fuzzy):
-            resp = client.post("/match/zala", json=query)
-            assert resp.status_code == 200, resp.text
-            res = resp.json()["responses"]["a"]
-            assert len(res["results"]) > 0
-            assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
+    resp = client.post("/match/zala", json=query)
+    assert resp.status_code == 200, resp.text
+    res = resp.json()["responses"]["a"]
+    assert len(res["results"]) > 0
+    assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
@@ -246,28 +244,36 @@ def test_fuzzy_names():
         }
     }
 
-    with mock.patch("yente.settings.MATCH_FUZZY", False):
-        # We need to set a lower threshold to get logic-v2 to score it high enough.
-        # That's okay, we care about testing the fuzzy retrieval from the index,
-        # not the details of the scoring algorithm.
-        resp = client.post(
-            "/match/zala", json=query, params={"algorithm": "best", "threshold": 0.2}
-        )
-        data = resp.json()
-        res = data["responses"]["a"]
-        assert len(res["results"]) == 0, res
+    # The result scores low, so the threshold is lowered: this tests retrieval from
+    # the index, not the scoring.
+    resp = client.post(
+        "/match/zala",
+        params={"threshold": 0.2, "algorithm": "logic-v2"},
+        json=query,
+    )
+    res = resp.json()["responses"]["a"]
+    assert len(res["results"]) > 0
+    assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
 
-    with mock.patch("yente.settings.MATCH_FUZZY", True):
-        # The result scores quite low, so we need to set a lower threshold to get a result
-        resp = client.post(
-            "/match/zala",
-            params={"threshold": 0.2, "algorithm": "logic-v2"},
-            json=query,
-        )
-        data = resp.json()
-        res = data["responses"]["a"]
-        assert len(res["results"]) > 0, res
-        assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw", res["results"][0]
+
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_fuzzy_names_first_letter():
+    # Edits at the first letter of both parts. A fuzzy clause with a fixed first
+    # letter could not retrieve this; the deletion variants are position-blind.
+    query = {
+        "queries": {
+            "a": {"schema": "Person", "properties": {"name": "Zlexander Sakharov"}}
+        }
+    }
+
+    resp = client.post(
+        "/match/zala",
+        json=query,
+        params={"algorithm": "logic-v2", "threshold": 0.2},
+    )
+    res = resp.json()["responses"]["a"]
+    assert len(res["results"]) > 0
+    assert res["results"][0]["id"] == "NK-aU5ybkbRFJucf8YMwsJvDw"
 
 
 @pytest.mark.usefixtures("zala_test_dataset")
