@@ -12,7 +12,6 @@ from followthemoney.types import registry
 from nomenklatura.matching.logic_v2.names.analysis import entity_names
 from rigour.names import Symbol
 
-from yente import settings
 from yente.data.dataset import Dataset
 from yente.data.util import entity_weak_names, index_symbols, name_part_variants
 from yente.logs import get_logger
@@ -198,7 +197,7 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
         variants = sorted(name_part_variants(comparable))
-        if settings.MATCH_FUZZY and len(variants) > 1:
+        if len(variants) > 1:
             channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
         symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
         if len(symbol_ids) > 0:
