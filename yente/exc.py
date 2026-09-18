@@ -1,9 +1,11 @@
 class YenteError(Exception):
     """Base exception for all Yente errors."""
 
-    def __init__(self, detail: str, status: int = 500):
+    STATUS = 500
+
+    def __init__(self, detail: str, status: int | None = None):
         self.detail = detail
-        self.status = status
+        self.status = self.STATUS if status is None else status
 
 
 class YenteConfigError(YenteError):
@@ -18,7 +20,9 @@ class YenteIndexError(YenteError):
 
     STATUS = 500
 
-    def __init__(self, detail: str, status: int = STATUS, index: str | None = None):
+    def __init__(
+        self, detail: str, status: int | None = None, index: str | None = None
+    ):
         super().__init__(detail, status)
         self.index = index
 

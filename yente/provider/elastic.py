@@ -207,7 +207,7 @@ class ElasticSearchProvider(SearchProvider):
             )
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
-            raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
+            raise IndexNotReadyError(f"Index {index} does not exist.") from nfe
         except (ApiError, TransportError) as te:
             log.error(f"Search status failure: {te}")
             return False
@@ -258,7 +258,15 @@ class ElasticSearchProvider(SearchProvider):
                 )
                 raise IndexNotReadyError(msg) from ae
             if ae.error == "search_phase_execution_exception":
-                raise YenteIndexError(f"Search error: {ae!s}", status=400) from ae
+                # The index raises this both for a query it could not run and for
+                # a query it could not run on every shard, and only the status
+                # tells the two apart: 400 for a query it cannot run, 429 when it
+                # had no room to run it, 5xx when a shard was lost. Reporting
+                # those as 400 tells the caller a retriable search was a bad
+                # request, so it gives up on it. A missing index never arrives
+                # here; it is raised as index_not_found_exception above.
+                status = ae.status_code if ae.status_code >= 400 else 500
+                raise YenteIndexError(f"Search error: {ae!s}", status=status) from ae
             log.warning(
                 f"API error {ae.status_code}: {ae.message}",
                 index=index,
