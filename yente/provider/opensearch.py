@@ -252,7 +252,7 @@ class OpenSearchProvider(SearchProvider):
             health = await self.client.cluster.health(index=index, timeout=5)
             return health.get("status") in ("yellow", "green")
         except NotFoundError as nfe:
-            raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
+            raise IndexNotReadyError(f"Index {index} does not exist.") from nfe
         except TransportError as te:
             log.error(f"Search status failure: {te}")
             return False
@@ -301,7 +301,17 @@ class OpenSearchProvider(SearchProvider):
                 )
                 raise IndexNotReadyError(msg) from exc
             if "search_phase_execution_exception" in exc.error:
-                raise YenteIndexError(f"Search error: {exc!s}", status=400) from exc
+                # The index raises this both for a query it could not run and for
+                # a query it could not run on every shard, and only the status
+                # tells the two apart: 400 for a query it cannot run, 429 when it
+                # had no room to run it, 5xx when a shard was lost. Reporting
+                # those as 400 tells the caller a retriable search was a bad
+                # request, so it gives up on it. A missing index never arrives
+                # here; it is raised as index_not_found_exception above.
+                # status_code is 'N/A' on an error that never reached the index.
+                code = exc.status_code
+                status = code if isinstance(code, int) and code >= 400 else 500
+                raise YenteIndexError(f"Search error: {exc!s}", status=status) from exc
 
             log.warning(
                 f"API error {exc.status_code}: {exc.error}",
