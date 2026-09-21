@@ -242,6 +242,10 @@ class ElasticSearchProvider(SearchProvider):
                 search_type=search_type,
                 # None leaves the backend default (exact count up to 10k) in place.
                 track_total_hits=None if track_total_hits else False,
+                # With several scope indices behind one alias, a lost shard would
+                # otherwise answer 200 with a whole scope missing, which for a
+                # screening lookup reads as a name that is not on the list.
+                allow_partial_search_results=False,
             )
             return cast(dict[str, Any], response.body)
         except TransportError as te:

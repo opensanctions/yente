@@ -324,6 +324,29 @@ async def test_opensearch_search_carries_through_an_index_error(given, expected)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "provider_searching_with,response",
+    [
+        # The elasticsearch client wraps the response body; opensearch-py does not.
+        (elastic_provider_searching_with, MagicMock(body={})),
+        (opensearch_provider_searching_with, {}),
+    ],
+)
+async def test_search_disallows_partial_results(provider_searching_with, response):
+    """A lost shard fails the search instead of answering 200 without its hits.
+
+    The index defaults to answering with whatever the remaining shards found.
+    With several scope indices behind one alias, that is a whole scope missing
+    from a response that looks complete.
+    """
+    search = AsyncMock(return_value=response)
+
+    await provider_searching_with(search).search(index="idx", query={"match_all": {}})
+
+    assert search.call_args.kwargs["allow_partial_search_results"] is False
+
+
+@pytest.mark.asyncio
 async def test_elastic_check_health_reports_a_missing_index_as_not_ready():
     """The readiness check answers 503 for an index the ingestion has not built yet.
 
