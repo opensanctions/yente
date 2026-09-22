@@ -39,6 +39,14 @@ def test_name_part_variants_short_parts_are_themselves() -> None:
     assert name_part_variants("li") == {"li"}
 
 
+@pytest.mark.parametrize("length,count", [(64, 2081), (65, 1), (384, 1)])
+def test_name_part_variants_long_parts(length: int, count: int) -> None:
+    part = "".join(chr(0x4E00 + i) for i in range(length))
+    variants = name_part_variants(part)
+    assert part in variants
+    assert len(variants) == count
+
+
 def test_name_part_variants_one_deletion_band() -> None:
     assert name_part_variants("kim") == {"kim", "im", "km", "ki"}
     # Repeated letters collapse into the same variant.

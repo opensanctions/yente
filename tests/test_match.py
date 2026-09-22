@@ -1,3 +1,5 @@
+import itertools
+import string
 from unittest import mock
 
 import pytest
@@ -83,6 +85,29 @@ def test_match_no_schema():
     }
     resp = client.post("/match/zala", json=query)
     assert resp.status_code == 400, resp.text
+
+
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_match_name_clause_limit():
+    names = [
+        "token" + "".join(t)
+        for t in itertools.islice(
+            itertools.product(string.ascii_lowercase, repeat=3), 900
+        )
+    ]
+    query = {
+        "queries": {
+            "large": {
+                "schema": "Person",
+                "properties": {"name": names},
+            }
+        }
+    }
+    with mock.patch("yente.routers.match.search_entities") as search:
+        resp = client.post("/match/zala", json=query)
+        search.assert_not_called()
+    assert resp.status_code == 400, resp.text
+    assert "requires 901 clauses; maximum is 900" in resp.json()["detail"]
 
 
 @pytest.mark.usefixtures("zala_test_dataset")

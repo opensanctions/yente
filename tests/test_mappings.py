@@ -108,6 +108,23 @@ def test_name_part_variants_mapping():
     assert "name_part_variants" in make_entity_mapping()["_source"]["excludes"]
 
 
+@pytest.mark.parametrize("length", [64, 65, 384])
+def test_long_name_part_variants_indexed(length):
+    part = ("abcdefgh" * 48)[:length]
+    entity = Entity.from_dict(
+        {
+            "id": f"long-part-{length}",
+            "schema": "Person",
+            "properties": {"name": [part]},
+        }
+    )
+    doc = build_indexable_entity_doc(entity)
+    assert set(doc["name_parts"]) == {part}
+    assert set(doc["name_part_variants"]) == name_part_variants(part)
+    if length > 64:
+        assert doc["name_part_variants"] == [part]
+
+
 def test_colliding_prop_names():
     """Test that we can handle multiple properties with the same property name."""
     mapping = make_entity_mapping()

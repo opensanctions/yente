@@ -26,6 +26,7 @@ NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 # fuzziness `AUTO`: no edits up to 2 characters, one from 3, two from 6.
 VARIANT_ONE_DELETION_LENGTH = 3
 VARIANT_TWO_DELETIONS_LENGTH = 6
+VARIANT_MAX_LENGTH = 64
 
 
 def extract_values(values: Any) -> list[str]:
@@ -48,18 +49,12 @@ def index_symbols(symbols: set[Symbol]) -> Generator[str, None, None]:
 def name_part_variants(part: str) -> set[str]:
     """Generate the deletion variants of a comparable name part.
 
-    Returns the part itself and every string obtained by deleting up to k of its
-    characters, where k depends on the length of the part (VARIANT_*_LENGTH). Two
-    parts within k Damerau-Levenshtein edits always share a variant: a substitution
-    is bridged by deleting the differing character on both sides, an insertion or
-    deletion by deleting it on the longer side, and a transposition by deleting one
-    of the swapped characters on both sides. Indexing the variants of every indexed
-    part and querying with the variants of every query part turns the edit-distance
-    channel into exact term lookups. The index and query sides must both use this
-    function, otherwise the shared variants are not the same strings.
+    Use the same keys when indexing and querying to retrieve misspelled names.
+    Parts of 3–5 characters allow one deletion, 6–64 allow two. Outside those
+    bands, return only the original part to avoid quadratic expansion of long tokens.
     """
     variants = {part}
-    if len(part) < VARIANT_ONE_DELETION_LENGTH:
+    if len(part) < VARIANT_ONE_DELETION_LENGTH or len(part) > VARIANT_MAX_LENGTH:
         return variants
     for i in range(len(part)):
         variants.add(part[:i] + part[i + 1 :])
