@@ -19,7 +19,7 @@ where the time of a match request goes without an HTTP server in the way.
 ```bash
 python contrib/perf_bench/perf_bench.py run
 python contrib/perf_bench/perf_bench.py run --tag many-names --repeat 5
-python contrib/perf_bench/perf_bench.py run --no-fuzzy --output /tmp/nofuzzy.json
+python contrib/perf_bench/perf_bench.py run --output /tmp/baseline.json
 python contrib/perf_bench/perf_bench.py run --batch 5
 python contrib/perf_bench/perf_bench.py run --tag dense --profile text
 python contrib/perf_bench/perf_bench.py run --profile html --profile-out /tmp/profile.html
@@ -65,7 +65,7 @@ above 1.0 is the cost of concurrent CPU-bound scoring on one event loop.
 ## Comparing runs
 
 `--output` writes raw per-repeat timings with metadata (git sha, yente version,
-index names, fuzzy flag, candidate count). Run once per git tree or index build
+index names, candidate count). Run once per git tree or index build
 and diff the summaries; the JSON is small enough to compare with `jq`.
 
 ## Query set
