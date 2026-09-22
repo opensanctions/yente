@@ -70,6 +70,7 @@ dev = [
     "prek",
     "types-PyYAML",
     "markdown-it-py",
+    "pyinstrument",
 ]
 docs = [
     "pillow",
