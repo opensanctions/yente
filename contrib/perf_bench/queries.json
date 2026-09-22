@@ -1,0 +1,1820 @@
+[
+  {
+    "id": "sparse-ali",
+    "tags": [
+      "sparse",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Ali"
+      }
+    }
+  },
+  {
+    "id": "sparse-hamas",
+    "tags": [
+      "sparse",
+      "org"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "name": "Hamas"
+      }
+    }
+  },
+  {
+    "id": "sparse-wagner",
+    "tags": [
+      "sparse",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Wagner"
+      }
+    }
+  },
+  {
+    "id": "sparse-putin",
+    "tags": [
+      "sparse",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Putin"
+      }
+    }
+  },
+  {
+    "id": "sparse-ivan-petrov",
+    "tags": [
+      "sparse",
+      "person",
+      "negative"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Ivan Petrov"
+      }
+    }
+  },
+  {
+    "id": "sparse-rosneft",
+    "tags": [
+      "sparse",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft"
+      }
+    }
+  },
+  {
+    "id": "sparse-gazprom",
+    "tags": [
+      "sparse",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Gazprom"
+      }
+    }
+  },
+  {
+    "id": "sparse-legalentity-bank",
+    "tags": [
+      "sparse",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "name": "Bank"
+      }
+    }
+  },
+  {
+    "id": "names-zakharov-7",
+    "tags": [
+      "many-names",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Alexander Vyacheslavovich ZAKHAROV",
+          "Aleksandr Vyacheslavovich Zakharov",
+          "Александр Вячеславович Захаров",
+          "Александр ЗАХАРОВ",
+          "Захаров Александр Вячеславович",
+          "Zakharov Aleksandr Vyacheslavovich",
+          "Aleksandr Vjačeslavovič Zacharov"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-ermakov-20",
+    "tags": [
+      "many-names",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "ERMAKOV Valery Nikolaevich",
+          "Ermacov Valeryi Nycolaevych",
+          "Ermakov Valerij Nikolaevich",
+          "Ermakov Valerij Nikolaevič",
+          "Ermakov Valerijj Nikolaevich",
+          "Ermakov Valeriy Nikolaevich",
+          "Ermakov Valery Nykolaevych",
+          "Ermakov Valeryi Nykolaevych",
+          "Ermakov Valeryy Nikolaevich",
+          "Ermakov Valeryy Nykolaevych",
+          "Ermakov Valerȳĭ Nȳkolaevȳch",
+          "Iermakov Valerii Mykolaiovych",
+          "Jermakov Valerij Mikolajovich",
+          "Jermakov Valerij Mikolajovič",
+          "Jermakov Valerij Mykolajovyč",
+          "Yermakov Valerii Mykolaiovych",
+          "Yermakov Valerij Mykolajovych",
+          "Yermakov Valeriy Mykolayovych",
+          "Êrmakov Valerìj Mikolajovič",
+          "ЕРМАКОВ Валерий Николаевич"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-putin-10",
+    "tags": [
+      "many-names",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Vladimir Vladimirovich Putin",
+          "Vladimir Putin",
+          "Владимир Владимирович Путин",
+          "Путін Володимир Володимирович",
+          "Vladimir Vladimirovič Putin",
+          "Vladimir Vladimirovich POUTINE",
+          "Wladimir Wladimirowitsch Putin",
+          "Vladimir Vladimirovici Putin",
+          "Władimir Putin",
+          "Vladimír Putin"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-rotenberg-5",
+    "tags": [
+      "many-names",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Arkady Romanovich Rotenberg",
+          "Arkadii Romanovych Rotenberh",
+          "ROTENBERG, Arkadii Romanovich",
+          "Arkadij Romanovich Rotenberg",
+          "Аркадий Романович Ротенберг"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-deripaska-6",
+    "tags": [
+      "many-names",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Oleg Vladimirovich Deripaska",
+          "DERIPASKA, Oleg Vladimirovich",
+          "Дерипаска Олег Владимирович",
+          "Дерипаска Олег Володимирович",
+          "Oleg DERIPASKA",
+          "Deripaska Oleg"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-kim-12",
+    "tags": [
+      "many-names",
+      "person",
+      "positive",
+      "scripts"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Kim Jong-un",
+          "Kim Jong Un",
+          "Kim Jong-Un",
+          "Kim Cong un",
+          "Kim Dzsongun",
+          "Kims Čonins",
+          "Ким Чен Ын",
+          "Кім Чен Ин",
+          "김정은",
+          "金正恩",
+          "كم جونغ أون",
+          "คิม จ็อง-อึน"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-rosneft-15",
+    "tags": [
+      "many-names",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Rosneft",
+          "Rosneft Oil Company",
+          "OJSC Rosneft Oil Company",
+          "PJSC Rosneft",
+          "Rosneft PJSC",
+          "Open Joint-Stock Company Rosneft Oil Company",
+          "Public Joint Stock Company Rosneft Oil Company",
+          "Публичное акционерное общество 'Нефтегазовая компания' 'Роснефть'",
+          "НК Роснефть",
+          "ОТКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО НЕФТЯНАЯ КОМПАНИЯ \"РОСНЕФТЬ\"",
+          "ПАО НК Роснефть",
+          "Публічне акціонерне товариство «Нафтова компанія «Роснефть»",
+          "Rosneft Oil Co",
+          "AO Rosneft",
+          "Rosneft Oil Company PJSC"
+        ]
+      }
+    }
+  },
+  {
+    "id": "names-stroygaz-40",
+    "tags": [
+      "many-names",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Stroygazmontazh",
+          "Stroigazmontazh",
+          "Stroygazmontaj",
+          "Strojgazmontaž",
+          "Stroygasmontage",
+          "Stroigazmontage",
+          "Stroygazmontazh LLC",
+          "OOO Stroygazmontazh",
+          "LLC Stroygazmontazh",
+          "Stroygazmontazh Corporation",
+          "AO Stroygazmontazh",
+          "Стройгазмонтаж",
+          "ООО Стройгазмонтаж",
+          "АО Стройгазмонтаж",
+          "Стройгазмонтаж (груп СГМ)",
+          "Stroigazmontazh LLC (SGM Group)",
+          "Stroygazmontazh (SGM Group)",
+          "SGM Group",
+          "S.G.M. Group",
+          "Limited Liability Company Stroygazmontazh",
+          "Stroygazmontazh Ltd",
+          "Stroigazmontazh Ltd",
+          "Stroygazmontaj Ltd",
+          "Strojgazmontaž Ltd",
+          "Stroygasmontage Ltd",
+          "Stroigazmontage Ltd",
+          "Stroygazmontazh LLC Ltd",
+          "OOO Stroygazmontazh Ltd",
+          "LLC Stroygazmontazh Ltd",
+          "Stroygazmontazh Corporation Ltd",
+          "AO Stroygazmontazh Ltd",
+          "Стройгазмонтаж Ltd",
+          "ООО Стройгазмонтаж Ltd",
+          "АО Стройгазмонтаж Ltd",
+          "Стройгазмонтаж (груп СГМ) Ltd",
+          "Stroigazmontazh LLC (SGM Group) Ltd",
+          "Stroygazmontazh (SGM Group) Ltd",
+          "SGM Group Ltd",
+          "S.G.M. Group Ltd",
+          "Limited Liability Company Stroygazmontazh Ltd"
+        ]
+      }
+    }
+  },
+  {
+    "id": "script-cyrillic-putin",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Владимир Владимирович Путин"
+      }
+    }
+  },
+  {
+    "id": "script-arabic-rotenberg",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "اركادى روتنبرج"
+      }
+    }
+  },
+  {
+    "id": "script-chinese-huawei",
+    "tags": [
+      "scripts",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "华为投资控股有限公司"
+      }
+    }
+  },
+  {
+    "id": "script-korean-kim",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "김정은"
+      }
+    }
+  },
+  {
+    "id": "script-greek-putin",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Βλαντίμιρ Πούτιν"
+      }
+    }
+  },
+  {
+    "id": "script-hebrew-putin",
+    "tags": [
+      "scripts",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "ולדימיר פוטין"
+      }
+    }
+  },
+  {
+    "id": "script-japanese-rotenberg",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "アルカディ・ローテンベルグ"
+      }
+    }
+  },
+  {
+    "id": "script-mixed-deripaska",
+    "tags": [
+      "scripts",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Oleg Deripaska",
+          "Олег Дерипаска",
+          "اوليج ديريباسكا",
+          "奥列格·德里帕斯卡"
+        ]
+      }
+    }
+  },
+  {
+    "id": "date-putin-full",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Putin",
+        "birthDate": "1952-10-07"
+      }
+    }
+  },
+  {
+    "id": "date-putin-year",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Putin",
+        "birthDate": "1952"
+      }
+    }
+  },
+  {
+    "id": "date-kim-multi",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Kim Jong Un",
+        "birthDate": [
+          "1982-01-08",
+          "1983-01-08",
+          "1984-01-08"
+        ]
+      }
+    }
+  },
+  {
+    "id": "date-deripaska-close-wrong",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Oleg Deripaska",
+        "birthDate": "1968-01-03"
+      }
+    }
+  },
+  {
+    "id": "date-rotenberg-full",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Arkady Rotenberg",
+        "birthDate": "1951-12-15",
+        "nationality": "ru"
+      }
+    }
+  },
+  {
+    "id": "date-rosneft-incorp",
+    "tags": [
+      "dates",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft",
+        "incorporationDate": "1995-12-07"
+      }
+    }
+  },
+  {
+    "id": "date-huawei-incorp",
+    "tags": [
+      "dates",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Huawei Technologies Co., Ltd.",
+        "incorporationDate": "1987-09-15",
+        "jurisdiction": "cn"
+      }
+    }
+  },
+  {
+    "id": "date-john-smith",
+    "tags": [
+      "dates",
+      "person",
+      "negative"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "John Smith",
+        "birthDate": "1975-04-21",
+        "nationality": "us"
+      }
+    }
+  },
+  {
+    "id": "id-rotenberg-inn",
+    "tags": [
+      "identifiers",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Arkady Rotenberg",
+        "innCode": "780619032880"
+      }
+    }
+  },
+  {
+    "id": "id-tupikin-5",
+    "tags": [
+      "identifiers",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Nikolai Tupikin",
+        "idNumber": [
+          "773402066160",
+          "4503851519"
+        ],
+        "taxNumber": "773402066160",
+        "innCode": "773402066160",
+        "registrationNumber": "319774600345330"
+      }
+    }
+  },
+  {
+    "id": "id-rosneft-10",
+    "tags": [
+      "identifiers",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft",
+        "registrationNumber": "1027700043502",
+        "innCode": "7706107510",
+        "ogrnCode": "1027700043502",
+        "kppCode": "770601001",
+        "leiCode": "253400JT3MQWNDKMJE44",
+        "taxNumber": "7706107510",
+        "idNumber": "00044428",
+        "vatCode": "7706107510",
+        "okpoCode": "00044428",
+        "dunsCode": "531298725"
+      }
+    }
+  },
+  {
+    "id": "id-only-lei",
+    "tags": [
+      "identifiers",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "leiCode": "253400JT3MQWNDKMJE44"
+      }
+    }
+  },
+  {
+    "id": "id-only-numbers",
+    "tags": [
+      "identifiers",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "registrationNumber": [
+          "1027700043502",
+          "1087746887678",
+          "1077762942212"
+        ]
+      }
+    }
+  },
+  {
+    "id": "id-huawei-lei-reg",
+    "tags": [
+      "identifiers",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Huawei",
+        "leiCode": "300300G4NLFHF8PDPY52",
+        "registrationNumber": "914403001922038216"
+      }
+    }
+  },
+  {
+    "id": "id-stroygaz-numbers",
+    "tags": [
+      "identifiers",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Stroygazmontazh",
+        "innCode": [
+          "7729588440",
+          "9729299794"
+        ],
+        "ogrnCode": [
+          "1207700324941",
+          "1077762942212"
+        ],
+        "kppCode": "772901001"
+      }
+    }
+  },
+  {
+    "id": "id-random-negative",
+    "tags": [
+      "identifiers",
+      "person",
+      "negative"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Peter Johansson",
+        "idNumber": [
+          "991234567",
+          "AB1234567",
+          "X-45-778899"
+        ],
+        "passportNumber": "N01234567"
+      }
+    }
+  },
+  {
+    "id": "addr-rosneft-one",
+    "tags": [
+      "addresses",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft",
+        "address": "26/1 Sofiyskaya Embankment, Moscow, Russia, 115035"
+      }
+    }
+  },
+  {
+    "id": "addr-putin-five",
+    "tags": [
+      "addresses",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Putin",
+        "address": [
+          "Kremlin, Moscow",
+          "Kremlin Moscow Russia",
+          "Bocharov Ruchey, Sochi",
+          "Novo-Ogaryevo Moscow Region Russia",
+          "Moscow, Russia"
+        ]
+      }
+    }
+  },
+  {
+    "id": "addr-only",
+    "tags": [
+      "addresses",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": "26/1 Sofiyskaya Embankment, Moscow, Russia, 115035"
+      }
+    }
+  },
+  {
+    "id": "addr-cyrillic-stroygaz",
+    "tags": [
+      "addresses",
+      "company",
+      "positive",
+      "scripts"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Стройгазмонтаж",
+        "address": "ПР-КТ ВЕРНАДСКОГО Д.53, Г.МОСКВА, 119415"
+      }
+    }
+  },
+  {
+    "id": "addr-huawei",
+    "tags": [
+      "addresses",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Huawei Technologies",
+        "address": "Huawei Base, Bantian, Longgang District, Shenzhen, Guangdong, China"
+      }
+    }
+  },
+  {
+    "id": "addr-wagner",
+    "tags": [
+      "addresses",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "PMC Wagner",
+        "address": "15 Zolnaya Street, Saint Petersburg, 195213, Russia"
+      }
+    }
+  },
+  {
+    "id": "addr-tupikin",
+    "tags": [
+      "addresses",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Nikolai Aleksandrovich Tupikin",
+        "address": "Raspletina, Dom 17, Korpus 2, Kv. 7, Moscow, 123060"
+      }
+    }
+  },
+  {
+    "id": "addr-negative",
+    "tags": [
+      "addresses",
+      "person",
+      "negative"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Laura Bianchi",
+        "address": "Via Roma 12, 20121 Milano, Italy"
+      }
+    }
+  },
+  {
+    "id": "co-stroygaz-jurisdiction",
+    "tags": [
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Stroygazmontazh",
+        "jurisdiction": "Russia"
+      }
+    }
+  },
+  {
+    "id": "co-sberbank-capital-aliases",
+    "tags": [
+      "company",
+      "positive",
+      "many-names"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Sberbank Capital",
+          "LLC Sberbank Capital",
+          "Sberbank Capital LLC",
+          "OOO Sberbank Kapital",
+          "Sberbank Kapital OOO",
+          "Limited Liability Company Sberbank Capital",
+          "Сбербанк Капитал",
+          "ООО Сбербанк Капитал",
+          "Sberbank Capital Limited Liability Company",
+          "Obshchestvo s Ogranichennoi Otvetstvennostyu Sberbank Kapital",
+          "Товариство з обмеженою відповідальністю Сбербанк Капітал",
+          "SBERBANK CAPITAL",
+          "Sberbank-Capital",
+          "Sberbank Capital Ltd",
+          "Sber Capital"
+        ]
+      }
+    }
+  },
+  {
+    "id": "co-org-hamas",
+    "tags": [
+      "company",
+      "org",
+      "positive"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "name": "Harakat Al-Muqawama al-Islamiya",
+        "country": "ps"
+      }
+    }
+  },
+  {
+    "id": "co-legalentity-gazprom",
+    "tags": [
+      "company",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "name": "Gazprom Neft",
+        "country": "ru"
+      }
+    }
+  },
+  {
+    "id": "co-bank-rossiya",
+    "tags": [
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Joint Stock Company Bank Rossiya",
+        "jurisdiction": "ru"
+      }
+    }
+  },
+  {
+    "id": "co-factory-numeric",
+    "tags": [
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Factory No. 5",
+        "jurisdiction": "ru"
+      }
+    }
+  },
+  {
+    "id": "co-xpcc",
+    "tags": [
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Xinjiang Production and Construction Corps",
+        "jurisdiction": "cn"
+      }
+    }
+  },
+  {
+    "id": "co-acme-negative",
+    "tags": [
+      "company",
+      "negative"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Acme Trading LLC",
+        "jurisdiction": "us"
+      }
+    }
+  },
+  {
+    "id": "vessel-full",
+    "tags": [
+      "other-schema",
+      "vessel",
+      "positive"
+    ],
+    "query": {
+      "schema": "Vessel",
+      "properties": {
+        "name": "BALTIC JASMINE",
+        "imoNumber": "IMO9181156",
+        "mmsi": "209882000",
+        "flag": "cy"
+      }
+    }
+  },
+  {
+    "id": "vessel-name-only",
+    "tags": [
+      "other-schema",
+      "vessel",
+      "positive"
+    ],
+    "query": {
+      "schema": "Vessel",
+      "properties": {
+        "name": "VASILIY GOLOVNIN"
+      }
+    }
+  },
+  {
+    "id": "vessel-imo-only",
+    "tags": [
+      "other-schema",
+      "vessel",
+      "positive",
+      "identifiers"
+    ],
+    "query": {
+      "schema": "Vessel",
+      "properties": {
+        "imoNumber": "8723426"
+      }
+    }
+  },
+  {
+    "id": "vessel-negative",
+    "tags": [
+      "other-schema",
+      "vessel",
+      "negative"
+    ],
+    "query": {
+      "schema": "Vessel",
+      "properties": {
+        "name": "OCEAN PRIDE",
+        "imoNumber": "IMO9999999"
+      }
+    }
+  },
+  {
+    "id": "airplane-full",
+    "tags": [
+      "other-schema",
+      "airplane",
+      "positive"
+    ],
+    "query": {
+      "schema": "Airplane",
+      "properties": {
+        "name": "YV3033",
+        "registrationNumber": "YV3033",
+        "serialNumber": "208B5140"
+      }
+    }
+  },
+  {
+    "id": "airplane-name-only",
+    "tags": [
+      "other-schema",
+      "airplane",
+      "positive"
+    ],
+    "query": {
+      "schema": "Airplane",
+      "properties": {
+        "name": "MSN 550"
+      }
+    }
+  },
+  {
+    "id": "crypto-wallet",
+    "tags": [
+      "other-schema",
+      "crypto",
+      "positive"
+    ],
+    "query": {
+      "schema": "CryptoWallet",
+      "properties": {
+        "publicKey": "bc1qqvpjgaurtnhc8smkmdtwhx9c8207m0prsyxyjx"
+      }
+    }
+  },
+  {
+    "id": "security-isin",
+    "tags": [
+      "other-schema",
+      "security",
+      "positive"
+    ],
+    "query": {
+      "schema": "Security",
+      "properties": {
+        "name": "China Mobile Ltd",
+        "isin": "US16941M1099"
+      }
+    }
+  },
+  {
+    "id": "dense-putin",
+    "tags": [
+      "dense",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Vladimir Vladimirovich Putin",
+          "Vladimir Putin",
+          "Владимир Владимирович Путин"
+        ],
+        "alias": [
+          "Vladimir Vladimirovich POUTINE",
+          "Владимир Путин"
+        ],
+        "birthDate": "1952-10-07",
+        "birthPlace": [
+          "Leningrad, Russia",
+          "Saint Petersburg"
+        ],
+        "nationality": "ru",
+        "gender": "male",
+        "taxNumber": "711813038431",
+        "address": [
+          "Kremlin, Moscow",
+          "Bocharov Ruchey, Sochi"
+        ],
+        "website": "http://putin.kremlin.ru/",
+        "position": "President of the Russian Federation"
+      }
+    }
+  },
+  {
+    "id": "dense-rotenberg",
+    "tags": [
+      "dense",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Arkady Romanovich Rotenberg",
+          "Arkadii Romanovych Rotenberh",
+          "ROTENBERG, Arkadii Romanovich",
+          "Arkadij Romanovich Rotenberg",
+          "Аркадий Романович Ротенберг"
+        ],
+        "birthDate": "1951-12-15",
+        "birthPlace": "Saint Petersburg, Russia",
+        "nationality": "ru",
+        "gender": "male",
+        "innCode": "780619032880",
+        "taxNumber": "780619032880",
+        "address": "Russia",
+        "country": "ru",
+        "position": "Founder of Stroygazmontazh (S.G.M. group)"
+      }
+    }
+  },
+  {
+    "id": "dense-deripaska",
+    "tags": [
+      "dense",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Oleg Vladimirovich Deripaska",
+          "DERIPASKA, Oleg Vladimirovich",
+          "Дерипаска Олег Владимирович",
+          "Дерипаска Олег Володимирович",
+          "Oleg DERIPASKA",
+          "Deripaska Oleg"
+        ],
+        "birthDate": "1968-01-02",
+        "birthPlace": [
+          "Dzerzhinsk, Russia",
+          "Dzerzhinsk"
+        ],
+        "nationality": [
+          "ru",
+          "cy"
+        ],
+        "gender": "male",
+        "country": [
+          "ru",
+          "gb"
+        ],
+        "position": "Shareholder at EN+ GROUP",
+        "address": "Moscow, Russia"
+      }
+    }
+  },
+  {
+    "id": "dense-tupikin",
+    "tags": [
+      "dense",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Nikolai Aleksandrovich Tupikin",
+          "Николай Александрович Тупикин",
+          "TUPIKIN Nikolai Aleksandrovich"
+        ],
+        "alias": [
+          "Nikolay Tupikin",
+          "Tupikin Mykola Oleksandrovych"
+        ],
+        "birthDate": "1977-06-06",
+        "birthPlace": "Moscow, Russia",
+        "nationality": "ru",
+        "gender": "male",
+        "idNumber": [
+          "773402066160",
+          "4503851519"
+        ],
+        "innCode": "773402066160",
+        "address": [
+          "Raspletina, Dom 17, Korpus 2, Kv. 7, Moscow, 123060",
+          "MOSCOW, 123060"
+        ],
+        "phone": [
+          "+74991967100",
+          "+79104626802"
+        ],
+        "email": [
+          "nikolay.tupikin@gmail.com",
+          "natupikin@mail.ru"
+        ]
+      }
+    }
+  },
+  {
+    "id": "dense-rosneft",
+    "tags": [
+      "dense",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Rosneft",
+          "Rosneft Oil Company",
+          "OJSC Rosneft Oil Company",
+          "PJSC Rosneft",
+          "Rosneft PJSC",
+          "Open Joint-Stock Company Rosneft Oil Company"
+        ],
+        "alias": [
+          "Rosneft",
+          "PJSC Rosneft"
+        ],
+        "jurisdiction": "ru",
+        "country": "ru",
+        "incorporationDate": "1995-12-07",
+        "registrationNumber": "1027700043502",
+        "innCode": "7706107510",
+        "ogrnCode": "1027700043502",
+        "leiCode": "253400JT3MQWNDKMJE44",
+        "address": [
+          "26/1 Sofiyskaya Embankment, Moscow, Russia, 115035",
+          "Moskva, Russia"
+        ],
+        "phone": "+74995178899",
+        "email": "postman@rosneft.ru",
+        "website": "https://www.rosneft.ru/",
+        "ticker": "ROSN"
+      }
+    }
+  },
+  {
+    "id": "dense-huawei",
+    "tags": [
+      "dense",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Huawei Technologies Co., Ltd.",
+          "Huawei Technologies Co Ltd",
+          "HUAWEI TECHNOLOGIES CO., LTD."
+        ],
+        "alias": [
+          "Huawei",
+          "Shenzhen Huawei Technologies"
+        ],
+        "jurisdiction": "cn",
+        "country": [
+          "cn",
+          "hk"
+        ],
+        "incorporationDate": "1987-09-15",
+        "registrationNumber": "914403001922038216",
+        "leiCode": "300300G4NLFHF8PDPY52",
+        "swiftBic": "HWTCCNBS",
+        "address": [
+          "Huawei Base, Bantian, Longgang District, Shenzhen, Guangdong, China",
+          "Huawei Headquarter Office Building, Bantian, Longgang District, 518129 Shenzhen"
+        ],
+        "phone": "+8675528780808",
+        "website": "https://www.huawei.com/"
+      }
+    }
+  },
+  {
+    "id": "dense-stroygaz",
+    "tags": [
+      "dense",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": [
+          "Stroygazmontazh",
+          "Stroigazmontazh",
+          "Stroygazmontaj",
+          "Strojgazmontaž",
+          "Stroygasmontage",
+          "Stroigazmontage",
+          "Stroygazmontazh LLC",
+          "OOO Stroygazmontazh"
+        ],
+        "jurisdiction": "ru",
+        "country": "ru",
+        "incorporationDate": [
+          "2007-11-26",
+          "2020-09-04"
+        ],
+        "registrationNumber": [
+          "1077762942212",
+          "1207700324941"
+        ],
+        "innCode": [
+          "7729588440",
+          "9729299794"
+        ],
+        "ogrnCode": [
+          "1207700324941",
+          "1077762942212"
+        ],
+        "kppCode": "772901001",
+        "address": [
+          "Prospect Vernadskogo 53, Moscow, Russia, 119415",
+          "ПР-КТ ВЕРНАДСКОГО Д.53, Г.МОСКВА, 119415"
+        ],
+        "email": "info@ooosgm.ru",
+        "website": "http://www.ooosgm.ru/",
+        "phone": "+74957820606"
+      }
+    }
+  },
+  {
+    "id": "dense-negative-person",
+    "tags": [
+      "dense",
+      "person",
+      "negative"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Thomas Anders Lindqvist",
+          "Lindqvist Thomas",
+          "Tomas Lindkvist"
+        ],
+        "birthDate": "1979-03-14",
+        "birthPlace": "Uppsala, Sweden",
+        "nationality": "se",
+        "gender": "male",
+        "idNumber": "790314-1234",
+        "passportNumber": "SE9812345",
+        "address": [
+          "Storgatan 12, 753 31 Uppsala, Sweden"
+        ],
+        "email": "thomas.lindqvist@example.se",
+        "phone": "+46701234567",
+        "website": "https://lindqvist.example.se"
+      }
+    }
+  },
+  {
+    "id": "neg-john-smith",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "John Smith"
+      }
+    }
+  },
+  {
+    "id": "neg-maria-garcia",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Maria Garcia"
+      }
+    }
+  },
+  {
+    "id": "neg-mohammed-ali",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Mohammed Ali"
+      }
+    }
+  },
+  {
+    "id": "neg-wei-zhang",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Wei Zhang"
+      }
+    }
+  },
+  {
+    "id": "neg-ivan-ivanov",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Ivan Ivanov",
+        "nationality": "ru"
+      }
+    }
+  },
+  {
+    "id": "neg-anna-mueller",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Anna Müller",
+        "birthDate": "1988-06-30",
+        "nationality": "de"
+      }
+    }
+  },
+  {
+    "id": "neg-jose-da-silva",
+    "tags": [
+      "negatives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "José Carlos da Silva",
+        "nationality": "br"
+      }
+    }
+  },
+  {
+    "id": "neg-global-trading",
+    "tags": [
+      "negatives",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Global Trading Ltd",
+        "jurisdiction": "gb"
+      }
+    }
+  },
+  {
+    "id": "pos-putin",
+    "tags": [
+      "positives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Vladimirovich Putin",
+        "birthDate": "1952-10-07",
+        "nationality": "ru"
+      }
+    }
+  },
+  {
+    "id": "pos-rotenberg",
+    "tags": [
+      "positives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "Arkadiii Romanovich Rotenberg",
+          "Ротенберг Аркадий"
+        ],
+        "birthDate": "1951"
+      }
+    }
+  },
+  {
+    "id": "pos-deripaska",
+    "tags": [
+      "positives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Oleg Vladimirovich Deripaska",
+        "birthDate": "1968-01-02"
+      }
+    }
+  },
+  {
+    "id": "pos-rosneft",
+    "tags": [
+      "positives",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft Oil Company",
+        "jurisdiction": "ru"
+      }
+    }
+  },
+  {
+    "id": "pos-sberbank-capital",
+    "tags": [
+      "positives",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "LLC Sberbank Capital",
+        "jurisdiction": "ru",
+        "innCode": "7736581290"
+      }
+    }
+  },
+  {
+    "id": "pos-wagner",
+    "tags": [
+      "positives",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Private Military Company Wagner",
+        "country": "ru"
+      }
+    }
+  },
+  {
+    "id": "pos-xpcc",
+    "tags": [
+      "positives",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "新疆生产建设兵团",
+        "jurisdiction": "cn"
+      }
+    }
+  },
+  {
+    "id": "pos-kim",
+    "tags": [
+      "positives",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Kim Jong Un",
+        "birthDate": "1984-01-08",
+        "nationality": "kp"
+      }
+    }
+  },
+  {
+    "id": "long-name-string",
+    "tags": [
+      "long",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Vladimir Vladimirovich Putin Vladimir Putin Владимир Владимирович Путин Путін Володимир Володимирович Vladimir Vladimirovič Putin Vladimir Vladimirovich POUTINE Wladimir Wladimirowitsch Putin Vladimir Vladimirovici Putin Władimir Putin Vladimír Putin Arkady Romanovich Rotenberg Arkadii Romanovych Rotenberh ROTENBERG, Arkadii Romanovich Arkadij Romanovich Rotenberg Аркадий Романович Ротенберг Oleg Vladimirovich Deripaska DERIPASKA, Oleg Vladimirovich Дерипаска Олег Владимирович Дерипаска Олег Володимирович Oleg DERIPASKA Deripaska Oleg"
+      }
+    }
+  },
+  {
+    "id": "long-address",
+    "tags": [
+      "long",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Rosneft",
+        "address": "Building 1, Block 2, Office 3401, 26/1 Sofiyskaya Embankment, Yakimanka District, Central Administrative Okrug, Moscow, Moscow Oblast, 115035, Russian Federation, near Bolshoy Moskvoretsky Bridge, opposite the Kremlin"
+      }
+    }
+  },
+  {
+    "id": "degenerate-punctuation",
+    "tags": [
+      "long",
+      "degenerate",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": ".-'()"
+      }
+    }
+  },
+  {
+    "id": "degenerate-diacritics",
+    "tags": [
+      "long",
+      "degenerate",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Ærø Øystein Ångström"
+      }
+    }
+  },
+  {
+    "id": "degenerate-numeric-name",
+    "tags": [
+      "long",
+      "degenerate",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "12345"
+      }
+    }
+  },
+  {
+    "id": "degenerate-empty-values",
+    "tags": [
+      "long",
+      "degenerate",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": [
+          "",
+          " ",
+          "Putin"
+        ],
+        "birthDate": [
+          ""
+        ],
+        "nationality": [
+          ""
+        ]
+      }
+    }
+  },
+  {
+    "id": "degenerate-single-char",
+    "tags": [
+      "long",
+      "degenerate",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "A"
+      }
+    }
+  },
+  {
+    "id": "degenerate-repeated-words",
+    "tags": [
+      "long",
+      "degenerate",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Bank Bank Bank Bank Bank Bank Bank Bank"
+      }
+    }
+  },
+  {
+    "id": "sparse-hezbollah",
+    "tags": [
+      "sparse",
+      "org"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "name": "Hezbollah"
+      }
+    }
+  },
+  {
+    "id": "date-rotenberg-year",
+    "tags": [
+      "dates",
+      "person",
+      "positive"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "name": "Arkady Rotenberg",
+        "birthDate": "1951"
+      }
+    }
+  },
+  {
+    "id": "id-passport-only",
+    "tags": [
+      "identifiers",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "passportNumber": "N01234567"
+      }
+    }
+  },
+  {
+    "id": "addr-sberbank-five",
+    "tags": [
+      "addresses",
+      "company",
+      "positive"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "name": "Sberbank Capital",
+        "address": [
+          "d.19 ul. Vavilova Moscow 117997 Russia",
+          "Vavilova Ulitsa, 19, MOSCOW, MOSCOW, 117312, Russia",
+          "УЛ. ВАВИЛОВА Д.19, Г.МОСКВА, 117312",
+          "d.19 ul. Vavilova, Moscow, 117997",
+          "Lyeningradskiy pr-t, d. 37a, korp. 4, MOSCOW, 125167, Russia"
+        ]
+      }
+    }
+  }
+]
