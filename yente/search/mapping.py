@@ -1,4 +1,3 @@
-import itertools
 from collections import defaultdict
 from collections.abc import Iterable
 from typing import Any
@@ -14,19 +13,12 @@ from yente.logs import get_logger
 
 log = get_logger(__name__)
 
-MappingProperty = dict[str, list[str] | str]
+MappingProperty = dict[str, list[str] | str | bool]
 
 DATE_FORMAT = "yyyy-MM-dd'T'HH||yyyy-MM-dd'T'HH:mm||yyyy-MM-dd'T'HH:mm:ss||yyyy-MM-dd||yyyy-MM||yyyy||strict_date_optional_time"
 TEXT_TYPES = (registry.name, registry.address)
 INDEX_SETTINGS = {
     "analysis": {
-        "filter": {
-            "osa-ngram-filter": {
-                "type": "ngram",
-                "min_gram": 3,
-                "max_gram": 3,
-            }
-        },
         "normalizer": {
             "osa-normalizer": {
                 "type": "custom",
@@ -37,10 +29,6 @@ INDEX_SETTINGS = {
             "osa-analyzer": {
                 "tokenizer": "standard",
                 "filter": ["lowercase", "asciifolding"],
-            },
-            "osa-ngram-analyzer": {
-                "tokenizer": "standard",
-                "filter": ["lowercase", "asciifolding", "osa-ngram-filter"],
             },
         },
     },
@@ -71,10 +59,10 @@ INDEX_SETTINGS = {
     },
 }
 NAMES_FIELD = NameType.group or "names"
-NAME_NGRAMS_FIELD = f"{NAMES_FIELD}.ngrams"
 NAME_PART_FIELD = "name_parts"
 NAME_SYMBOLS_FIELD = "name_symbols"
-NAME_PHONETIC_FIELD = "name_phonetic"
+NAME_JOINED_FIELD = "name_joined"
+NAME_VARIANTS_FIELD = "name_part_variants"
 
 
 def make_field(
@@ -104,8 +92,11 @@ def make_type_field(
     return make_field(field_type, copy_to=copy_to)
 
 
-def make_keyword() -> MappingProperty:
-    return {"type": "keyword"}
+def make_keyword(doc_values: bool = True) -> MappingProperty:
+    spec: MappingProperty = {"type": "keyword"}
+    if not doc_values:
+        spec["doc_values"] = False
+    return spec
 
 
 def make_disabled_field() -> MappingProperty:
@@ -142,9 +133,11 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
     # Resolve list of field definitions to a single definition per field name
     prop_mapping: dict[str, MappingProperty] = {}
     for prop_name, fields in prop_name_to_fields.items():
-        merged_copy_to = list(
-            set(itertools.chain.from_iterable([f["copy_to"] for f in fields]))
-        )
+        merged_copy_to: set[str] = set()
+        for field in fields:
+            copy_to_value = field["copy_to"]
+            assert isinstance(copy_to_value, list)
+            merged_copy_to.update(copy_to_value)
         text_fields = [f for f in fields if f["type"] == "text"]
         keyword_fields = [f for f in fields if f["type"] == "keyword"]
 
@@ -155,7 +148,7 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
         # We merge the copy_to fields rather than choosing one value, just so that
         # queries work as expected in case one property maps to different copy_to than another
         # with the same field name.
-        selected_field["copy_to"] = merged_copy_to
+        selected_field["copy_to"] = list(merged_copy_to)
 
         prop_mapping[prop_name] = selected_field
 
@@ -169,9 +162,12 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
         "origin": make_disabled_field(),
         "text": make_field("text"),
         "entity_values_count": make_field("integer"),
-        NAME_PHONETIC_FIELD: make_keyword(),
         NAME_PART_FIELD: make_field("keyword", copy_to=["text"]),
         NAME_SYMBOLS_FIELD: make_field("keyword"),
+        NAME_JOINED_FIELD: make_keyword(),
+        # Only ever looked up by term; doc values would cost as much disk again as
+        # the inverted index of this field.
+        NAME_VARIANTS_FIELD: make_keyword(doc_values=False),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
@@ -188,22 +184,16 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
     # Weaker length normalization for names. Merged entities have a lot of names,
     # and we don't want to penalize them for that.
     mapping[NAMES_FIELD]["similarity"] = "weak_length_norm"
-    # Trigram sub-field for fuzzy candidate retrieval without query-time Levenshtein expansion.
-    mapping[NAMES_FIELD]["fields"] = {
-        "ngrams": {
-            "type": "text",
-            "analyzer": "osa-ngram-analyzer",
-        }
-    }
 
     # These fields will be pruned from the _source field after the document has been
     # indexed, but before the _source field is stored. We can still search on these fields,
     # even though they are not in the stored and returned _source.
     drop_fields = [t.group for t in registry.groups.values()]
     drop_fields.append("text")
-    drop_fields.append(NAME_PHONETIC_FIELD)
     drop_fields.append(NAME_PART_FIELD)
     drop_fields.append(NAME_SYMBOLS_FIELD)
+    drop_fields.append(NAME_JOINED_FIELD)
+    drop_fields.append(NAME_VARIANTS_FIELD)
     drop_fields.remove(NAMES_FIELD)
     return {
         "dynamic": "strict",
