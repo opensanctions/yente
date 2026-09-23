@@ -14,7 +14,12 @@ from yente.data.entity import Entity
 from yente.data.manifest import Catalog
 from yente.data.metrics import update_dataset_version_metric
 from yente.data.updater import DatasetUpdater
-from yente.data.util import entity_weak_names, expand_dates, index_symbols
+from yente.data.util import (
+    entity_weak_names,
+    expand_dates,
+    index_symbols,
+    name_part_variants,
+)
 from yente.exc import YenteIndexError
 from yente.logs import get_logger
 from yente.provider import SearchProvider, with_provider
@@ -32,6 +37,7 @@ from yente.search.mapping import (
     NAME_JOINED_FIELD,
     NAME_PART_FIELD,
     NAME_SYMBOLS_FIELD,
+    NAME_VARIANTS_FIELD,
     make_entity_mapping,
 )
 from yente.search.versions import (
@@ -112,13 +118,17 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     name_parts: set[str] = set()
     name_symbols: set[str] = set()
     name_joined: set[str] = set()
+    name_variants: set[str] = set()
     names = entity_names(
         entity, infer_initials=False, phonetics=False, consolidate=False
     )
     for name in names:
         name_symbols.update(index_symbols(name.symbols))
         comparables = [part.comparable for part in name.parts]
-        name_parts.update(comparables)
+        for comparable in comparables:
+            if comparable not in name_parts:
+                name_parts.add(comparable)
+                name_variants.update(name_part_variants(comparable))
         if len(comparables) > 0:
             name_joined.add("".join(comparables))
 
@@ -128,6 +138,7 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     doc[NAME_PART_FIELD] = list(name_parts)
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
     doc[NAME_JOINED_FIELD] = list(name_joined)
+    doc[NAME_VARIANTS_FIELD] = list(name_variants)
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
     doc["text"] = entity.pop("indexText")

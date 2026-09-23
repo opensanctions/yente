@@ -12,11 +12,21 @@ from followthemoney.types import registry
 from nomenklatura.matching.logic_v2.names.analysis import entity_names
 from rigour.names import Symbol
 
-from yente import settings
 from yente.data.dataset import Dataset
-from yente.data.util import entity_weak_names, index_symbols
+from yente.data.util import (
+    VARIANT_MAX_LENGTH,
+    VARIANT_ONE_DELETION_LENGTH,
+    entity_weak_names,
+    index_symbols,
+    name_part_variants,
+)
 from yente.logs import get_logger
-from yente.search.mapping import NAME_JOINED_FIELD, NAME_PART_FIELD, NAME_SYMBOLS_FIELD
+from yente.search.mapping import (
+    NAME_JOINED_FIELD,
+    NAME_PART_FIELD,
+    NAME_SYMBOLS_FIELD,
+    NAME_VARIANTS_FIELD,
+)
 
 log = get_logger(__name__)
 Clause = dict[str, Any]
@@ -50,9 +60,12 @@ TYPE_BOOSTS = {
 #
 #   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
 #           script allows it, diacritics and punctuation stripped) is identical.
-#   fuzzy   `fuzzy` on `name_parts`: Damerau-Levenshtein within ES `AUTO` (0 edits up
-#           to 2 chars, 1 edit at 3-5, 2 edits from 6) with the first letter fixed.
-#           Covers typos and short transliteration variants (mohammed/muhammad).
+#   fuzzy   `terms` on `name_part_variants`: the query part and the indexed part share
+#           a deletion variant (see `name_part_variants`), which is the case whenever
+#           they are within the part's Damerau-Levenshtein budget of 0 edits up to 2
+#           chars, 1 edit at 3-5, 2 edits at 6-64, at any position including the first
+#           letter. Covers typos and short transliteration variants (mohammed/muhammad,
+#           wagner/vagner). Also admits some pairs up to twice the budget apart.
 #   symbol  `term` on `name_symbols`: rigour tagged both parts with the same known-name
 #           identity, nickname, org class or the like. The only bridge for scripts that
 #           are not latinised (Arabic, Han) and for variants beyond two edits
@@ -62,26 +75,23 @@ TYPE_BOOSTS = {
 #
 # The three per-part channels are combined with `dis_max` so a part counts once even
 # when several channels hit it. Exact and symbol hits are IDF-scored `term`s, so a rare
-# part or identity outranks a common one. A fuzzy hit is worth the constant
-# FUZZY_BOOST, about the exact score of a part shared by 25,000 records, so an exact
-# hit on any but the most common tokens ("of", "ltd", "de") outranks an approximate
-# one.
+# part or identity outranks a common one. A `terms` hit is constant-scored by ES, so a
+# fuzzy hit is worth VARIANTS_BOOST however many variants a document shares, about the
+# exact score of a part shared by 25,000 records, so an exact hit on any but the most
+# common tokens ("of", "ltd", "de") outranks an approximate one.
 NAME_PART_BOOST = 1.0
-FUZZY_BOOST = 6.0
+VARIANTS_BOOST = 6.0
 SYMBOL_BOOST = 0.9
 JOINED_BOOST = 1.0
 WEAK_ALIAS_BOOST = 0.9
-FUZZINESS = "AUTO"
-FUZZY_PREFIX_LENGTH = 1
-FUZZY_MAX_EXPANSIONS = 200
-# Below three characters AUTO allows no edits, so the fuzzy clause would only repeat
-# the exact one.
-FUZZY_MIN_LENGTH = 3
-# Clause budget: MAX_PARTS * (2 + MAX_SYMBOLS_PER_PART) + 2 stays under the ES default
-# `indices.query.bool.max_clause_count` of 4096. Observed maxima on real queries are
-# 22 unique parts and 29 symbols on one part, so the caps are safety, not tuning.
-MAX_PARTS = 100
+# Reduce approximate retrieval as exact name evidence grows. The clause limit
+# leaves headroom below 1024 for the rest of the entity query, but does not bound
+# weak aliases, other properties or filters.
+MAX_VARIANT_PARTS = 16
+MAX_SYMBOL_PARTS = 24
+MAX_NAME_CLAUSES = 900
 MAX_SYMBOLS_PER_PART = 30
+MAX_JOINED_NAMES = 65536
 
 
 class Operator(enum.StrEnum):
@@ -168,17 +178,15 @@ def filter_query(
 def names_query(entity: EntityProxy) -> list[Clause]:
     """Build the name clauses of a /match candidate query.
 
-    One `dis_max` per unique comparable name part (exact, fuzzy and symbol channels),
-    one `terms` clause over the space-less forms of all names, and one `term` per weak
-    alias. A document scores each query part at most once, however many of its aliases
-    carry it, and the sum over parts ranks documents by how many query parts they cover.
+    Preserve exact evidence across aliases, reducing approximate retrieval for
+    large queries. Reject names that exceed the clause or joined-term limit
+    rather than silently dropping parts. Weak aliases are outside these limits.
     """
-    # Primary names come before aliases so that a query truncated by MAX_PARTS keeps
-    # the parts of its primary names whole.
+    # Keep primary names first and make ordering stable across equivalent forms.
     primary = set(entity.get("name", quiet=True))
     names = sorted(
         entity_names(entity, is_query=True),
-        key=lambda n: (n.original not in primary, n.form),
+        key=lambda n: (n.original not in primary, n.form, n.original),
     )
     part_symbols: dict[str, set[Symbol]] = {}
     joined: set[str] = set()
@@ -192,32 +200,50 @@ def names_query(entity: EntityProxy) -> list[Clause]:
         if len(comparables) > 0:
             joined.add("".join(comparables))
 
+    use_variants = len(part_symbols) <= MAX_VARIANT_PARTS
+    use_symbols = len(part_symbols) <= MAX_SYMBOL_PARTS
+    variant_parts = {
+        part
+        for part in part_symbols
+        if use_variants
+        and VARIANT_ONE_DELETION_LENGTH <= len(part) <= VARIANT_MAX_LENGTH
+    }
+    symbol_ids = {
+        part: sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
+        for part, symbols in part_symbols.items()
+        if use_symbols
+    }
+    clause_count = (
+        len(part_symbols)
+        + len(variant_parts)
+        + sum(len(ids) for ids in symbol_ids.values())
+        + bool(joined)
+    )
+    if clause_count > MAX_NAME_CLAUSES:
+        raise ValueError(
+            f"Name query requires {clause_count} clauses; maximum is {MAX_NAME_CLAUSES}"
+        )
+    if len(joined) > MAX_JOINED_NAMES:
+        raise ValueError(
+            f"Name query has {len(joined)} joined forms; maximum is {MAX_JOINED_NAMES}"
+        )
+
     shoulds: list[Clause] = []
-    for comparable, symbols in list(part_symbols.items())[:MAX_PARTS]:
+    for comparable in part_symbols:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
-        if settings.MATCH_FUZZY and len(comparable) >= FUZZY_MIN_LENGTH:
-            # A bare fuzzy clause is rewritten into an OR of its expansions and sums
-            # the ones a document carries, so a record with ten spellings of one part
-            # would score ten times for it. As a constant-score filter it scores once
-            # and still expands to the top FUZZY_MAX_EXPANSIONS terms only.
-            fuzzy = {
-                "fuzzy": {
-                    NAME_PART_FIELD: {
-                        "value": comparable,
-                        "fuzziness": FUZZINESS,
-                        "prefix_length": FUZZY_PREFIX_LENGTH,
-                        "max_expansions": FUZZY_MAX_EXPANSIONS,
-                    }
-                }
-            }
-            channels.append({"constant_score": {"filter": fuzzy, "boost": FUZZY_BOOST}})
-        symbol_ids = sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
-        if len(symbol_ids) > 0:
-            symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in symbol_ids]
+        if comparable in variant_parts:
+            variants = sorted(name_part_variants(comparable))
+            channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
+        ids = symbol_ids.get(comparable, [])
+        if len(ids) > 0:
+            symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in ids]
             channels.append(
                 {"dis_max": {"queries": symbol_terms, "boost": SYMBOL_BOOST}}
             )
-        shoulds.append({"dis_max": {"queries": channels, "tie_breaker": 0.0}})
+        if len(channels) == 1:
+            shoulds.append(channels[0])
+        else:
+            shoulds.append({"dis_max": {"queries": channels, "tie_breaker": 0.0}})
 
     if len(joined) > 0:
         shoulds.append(tqs(NAME_JOINED_FIELD, sorted(joined), JOINED_BOOST))
