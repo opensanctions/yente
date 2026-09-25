@@ -119,6 +119,11 @@ async def yente_error_handler(req: Request, exc: YenteError) -> Response:
 async def search_provider_error_handler(
     req: Request, exc: SearchProviderError
 ) -> Response:
+    # An unavailable provider can serve the same request after a delay, so the
+    # client gets a 503 and can retry. Any other provider error is not known to
+    # pass on a retry, so the client gets a 500. This includes an invalid query:
+    # by default, yente built that query, so the fault is yente's. An endpoint
+    # that passes client input into the query answers 400 for it itself.
     status = 503 if isinstance(exc, SearchProviderUnavailableError) else 500
     log.exception(f"App error {status}: {exc}")
     return JSONResponse(status_code=status, content={"detail": str(exc)})
