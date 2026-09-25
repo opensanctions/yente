@@ -1,17 +1,11 @@
 import pytest
 
-from yente.exc import YenteConfigError, YenteError
 from yente.provider.exc import (
     SearchProviderError,
     SearchProviderInvalidQueryError,
     SearchProviderUnavailableError,
     search_error,
 )
-
-
-def test_an_error_answers_with_the_status_of_its_class() -> None:
-    assert YenteError("boom").status == 500
-    assert YenteConfigError("boom").status == 500
 
 
 @pytest.mark.parametrize(

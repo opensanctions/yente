@@ -111,9 +111,8 @@ async def ftm_error_handler(req: Request, exc: InvalidData) -> Response:
 
 
 async def yente_error_handler(req: Request, exc: YenteError) -> Response:
-    if exc.status > 499:
-        log.exception(f"App error {exc.status}: {exc.detail}")
-    return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
+    log.exception(f"App error 500: {exc.detail}")
+    return JSONResponse(status_code=500, content={"detail": exc.detail})
 
 
 async def search_provider_error_handler(
