@@ -245,7 +245,9 @@ async def test_search_track_total_hits(search_provider: SearchProvider):
     assert len(uncounted["hits"]["hits"]) == 1
 
 
-def elastic_search_phase_error(status: int) -> ApiError:
+def elastic_search_phase_error(
+    status: int, error: str = "search_phase_execution_exception"
+) -> ApiError:
     """The error Elasticsearch answers a search it could not complete with.
 
     The index raises the same error whether it could not run the query at all or
@@ -259,7 +261,7 @@ def elastic_search_phase_error(status: int) -> ApiError:
         duration=0.0,
         node=None,
     )
-    return ApiError(message="search_phase_execution_exception", meta=meta, body={})
+    return ApiError(message=error, meta=meta, body={})
 
 
 def opensearch_search_phase_error(status):
@@ -336,6 +338,34 @@ async def test_opensearch_search_classifies_an_index_error_by_status(
         )
 
     assert type(raised.value) is error_class
+
+
+@pytest.mark.asyncio
+async def test_elastic_search_reports_a_missing_index_as_not_ingested():
+    search = AsyncMock(
+        side_effect=elastic_search_phase_error(404, "index_not_found_exception")
+    )
+
+    with pytest.raises(SearchProviderUnavailableError) as raised:
+        await elastic_provider_searching_with(search).search(
+            index="idx", query={"match_all": {}}
+        )
+
+    assert "initial ingestion" in str(raised.value)
+
+
+@pytest.mark.asyncio
+async def test_opensearch_search_reports_a_missing_index_as_not_ingested():
+    search = AsyncMock(
+        side_effect=OpenSearchTransportError(404, "index_not_found_exception", {})
+    )
+
+    with pytest.raises(SearchProviderUnavailableError) as raised:
+        await opensearch_provider_searching_with(search).search(
+            index="idx", query={"match_all": {}}
+        )
+
+    assert "initial ingestion" in str(raised.value)
 
 
 @pytest.mark.asyncio

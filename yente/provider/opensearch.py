@@ -328,19 +328,26 @@ class OpenSearchProvider(SearchProvider):
             # is not known to pass then, so the client gets a 500.
             if not isinstance(exc.status_code, int):
                 raise SearchProviderError(f"Could not search index: {exc!s}") from exc
-            # The index answered with an error status. The status alone picks the
-            # error, so the client gets a 503 or a 500, or a 400 on /search for an
-            # invalid query. Only an unclassified error logs the query here: the
-            # app handler logs an unavailable index, and an invalid query on
-            # /search is the client's error.
-            error = search_error(index, exc.status_code, str(exc))
-            if type(error) is SearchProviderError:
-                log.warning(
-                    f"API error {exc.status_code}: {exc.error}",
-                    index=index,
-                    query=json.dumps(query),
+            # The alias has no index behind it until the initial ingestion builds
+            # one, so the client gets a 503 and can retry.
+            if "index_not_found_exception" in exc.error:
+                msg = (
+                    f"Index {index} does not exist. This may be caused by a misconfiguration,"
+                    " or the initial ingestion of data is still ongoing."
                 )
-            raise error from exc
+                raise SearchProviderUnavailableError(msg) from exc
+            # The index raises this for a query it cannot run, and for a query it
+            # could not run on every shard, so only the status tells them apart:
+            # the client gets a 400 on /search for an invalid query, a 503 for a
+            # full queue or a lost shard, and otherwise a 500.
+            if "search_phase_execution_exception" in exc.error:
+                raise search_error(index, exc.status_code, str(exc)) from exc
+            log.warning(
+                f"API error {exc.status_code}: {exc.error}",
+                index=index,
+                query=json.dumps(query),
+            )
+            raise search_error(index, exc.status_code, str(exc)) from exc
         # The client still gets a 500 with the same body as for other provider
         # errors.
         except (TimeoutError, OSError, Exception) as exc:

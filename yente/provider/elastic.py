@@ -282,20 +282,27 @@ class ElasticSearchProvider(SearchProvider):
         # not known to pass on a retry, so the client gets a 500.
         except TransportError as te:
             raise SearchProviderError(f"Could not search index: {te.message}") from te
-        # The index answered with an error status. The status alone picks the
-        # error, so the client gets a 503 or a 500, or a 400 on /search for an
-        # invalid query. Only an unclassified error logs the query here: the
-        # app handler logs an unavailable index, and an invalid query on
-        # /search is the client's error.
         except ApiError as ae:
-            error = search_error(index, ae.status_code, str(ae))
-            if type(error) is SearchProviderError:
-                log.warning(
-                    f"API error {ae.status_code}: {ae.message}",
-                    index=index,
-                    query=json.dumps(query),
+            # The alias has no index behind it until the initial ingestion builds
+            # one, so the client gets a 503 and can retry.
+            if ae.error == "index_not_found_exception":
+                msg = (
+                    f"Index {index} does not exist. This may be caused by a misconfiguration,"
+                    " or the initial ingestion of data is still ongoing."
                 )
-            raise error from ae
+                raise SearchProviderUnavailableError(msg) from ae
+            # The index raises this for a query it cannot run, and for a query it
+            # could not run on every shard, so only the status tells them apart:
+            # the client gets a 400 on /search for an invalid query, a 503 for a
+            # full queue or a lost shard, and otherwise a 500.
+            if ae.error == "search_phase_execution_exception":
+                raise search_error(index, ae.status_code, str(ae)) from ae
+            log.warning(
+                f"API error {ae.status_code}: {ae.message}",
+                index=index,
+                query=json.dumps(query),
+            )
+            raise search_error(index, ae.status_code, str(ae)) from ae
         # The client still gets a 500 with the same body as for other provider
         # errors.
         except (TimeoutError, OSError, Exception) as exc:
