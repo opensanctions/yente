@@ -192,7 +192,9 @@ async def search(
             sort=parse_sorts(sort),
         )
     # The query syntax, sort fields and facets come from the request as given, so
-    # a query the search provider cannot run is the client's fault.
+    # a query the search provider cannot run may be the client's fault. The status
+    # does not tell that apart from a query that yente built wrong, and a client
+    # error is the more likely cause here, so the client gets a 400.
     except SearchProviderInvalidQueryError as exc:
         raise HTTPException(400, detail=str(exc)) from exc
     results: list[EntityResponse] = []
