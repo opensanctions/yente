@@ -6,9 +6,9 @@ import pytest
 
 import yente.data
 from yente.data import get_catalog
+from yente.data.loader import ChecksumError
 from yente.data.manifest import Catalog, Manifest
 from yente.data.updater import DatasetUpdater
-from yente.exc import ChecksumError
 from yente.search.versions import build_index_name, get_system_version, parse_index_name
 
 from .conftest import FIXTURES_PATH

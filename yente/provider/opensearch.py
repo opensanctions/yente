@@ -15,9 +15,13 @@ from opensearchpy.helpers import async_streaming_bulk
 from opentelemetry import trace
 
 from yente import settings
-from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.logs import get_logger
 from yente.provider.base import SearchProvider
+from yente.provider.exc import (
+    SearchProviderError,
+    SearchProviderUnavailableError,
+    search_error,
+)
 
 log = get_logger(__name__)
 logging.getLogger("opensearch").setLevel(logging.ERROR)
@@ -119,8 +123,10 @@ class OpenSearchProvider(SearchProvider):
 
         try:
             await self.client.indices.refresh(index=index)
+        # The indexer refreshes an index it has just written, before it points the
+        # alias at it. A missing index must stop that reindex, not publish the alias.
         except NotFoundError as nfe:
-            raise YenteNotFoundError(f"Index {index} does not exist.") from nfe
+            raise SearchProviderError(f"Index {index} does not exist.") from nfe
 
     @traced
     async def get_all_indices(self) -> list[str]:
@@ -134,10 +140,12 @@ class OpenSearchProvider(SearchProvider):
         try:
             resp = await self.client.indices.get_alias(name=alias)
             return list(resp.keys())
+        # The alias exists only after the first reindex. Until then, no index serves
+        # it: callers see no indexed datasets, and /catalog lists no index versions.
         except NotFoundError:
             return []
         except TransportError as te:
-            raise YenteIndexError(f"Could not get alias indices: {te}") from te
+            raise SearchProviderError(f"Could not get alias indices: {te}") from te
 
     @traced
     async def rollover_index(self, alias: str, next_index: str, prefix: str) -> None:
@@ -152,7 +160,7 @@ class OpenSearchProvider(SearchProvider):
             }
             await self.client.indices.update_aliases(body=body)
         except TransportError as te:
-            raise YenteIndexError(f"Could not rollover index: {te}") from te
+            raise SearchProviderError(f"Could not rollover index: {te}") from te
 
     @traced
     async def clone_index(self, base_version: str, target_version: str) -> None:
@@ -188,7 +196,7 @@ class OpenSearchProvider(SearchProvider):
             log.info("Cloned index", base=base_version, target=target_version)
         except TransportError as te:
             msg = f"Could not clone index {base_version} to {target_version}: {te}"
-            raise YenteIndexError(msg) from te
+            raise SearchProviderError(msg) from te
 
     @traced
     async def create_index(
@@ -203,23 +211,26 @@ class OpenSearchProvider(SearchProvider):
             }
             await self.client.indices.create(index=index, body=body)
         except TransportError as exc:
+            # Another yente instance can create the lock or audit log index at the
+            # same time, and a forced reindex writes into the index of its version
+            # that already exists. So an existing index is success.
             if "resource_already_exists_exception" in exc.error:
                 return
-            raise YenteIndexError(f"Could not create index: {exc}") from exc
+            raise SearchProviderError(f"Could not create index: {exc}") from exc
 
     @traced
     async def set_index_metadata(self, index: str, metadata: dict[str, Any]) -> None:
         try:
             await self.client.indices.put_mapping(index=index, body={"_meta": metadata})
         except TransportError as te:
-            raise YenteIndexError(f"Could not set index metadata: {te}") from te
+            raise SearchProviderError(f"Could not set index metadata: {te}") from te
 
     @traced
     async def get_index_metadata(self, index: str) -> dict[str, Any]:
         try:
             response = await self.client.indices.get_mapping(index=index)
         except (NotFoundError, TransportError) as exc:
-            raise YenteIndexError(f"Could not get index metadata: {exc}") from exc
+            raise SearchProviderError(f"Could not get index metadata: {exc}") from exc
         index_block = response.get(index, {})
         mappings = index_block.get("mappings", {})
         meta = mappings.get("_meta", {})
@@ -230,10 +241,12 @@ class OpenSearchProvider(SearchProvider):
         """Delete a given index if it exists."""
         try:
             await self.client.indices.delete(index=index)
+        # Callers delete an index to make sure it is gone, for example before a
+        # clone or during cleanup, so an index that is already gone is success.
         except NotFoundError:
             pass
         except TransportError as te:
-            raise YenteIndexError(f"Could not delete index: {te}") from te
+            raise SearchProviderError(f"Could not delete index: {te}") from te
 
     @traced
     async def exists_index_alias(self, alias: str, index: str) -> bool:
@@ -241,18 +254,25 @@ class OpenSearchProvider(SearchProvider):
         try:
             resp = await self.client.indices.exists_alias(name=alias, index=index)
             return bool(resp)
+        # A missing alias or index is a plain "no": the indexer then builds the index.
         except NotFoundError:
             return False
         except TransportError as te:
-            raise YenteIndexError(f"Could not check index alias: {te}") from te
+            raise SearchProviderError(f"Could not check index alias: {te}") from te
 
     @traced
     async def check_health(self, index: str) -> bool:
         try:
             health = await self.client.cluster.health(index=index, timeout=5)
             return health.get("status") in ("yellow", "green")
+        # /readyz answers 503 while the initial ingestion has not built the index. A
+        # 404 would tell a probe that the service is misconfigured.
         except NotFoundError as nfe:
-            raise IndexNotReadyError(f"Index {index} does not exist.") from nfe
+            raise SearchProviderUnavailableError(
+                f"Index {index} does not exist."
+            ) from nfe
+        # Any other failure also means the index cannot serve searches now, so
+        # /readyz answers 503.
         except TransportError as te:
             log.error(f"Search status failure: {te}")
             return False
@@ -297,35 +317,41 @@ class OpenSearchProvider(SearchProvider):
                 allow_partial_search_results=False,
             )
             return cast(dict[str, Any], response)
+        # The request reached no working node, even after the transport retries.
+        # The client gets a 503 and can retry.
+        except ConnectionError as exc:
+            log.warning(f"Backend connection error: {exc!s}")
+            msg = f"Could not connect to index: {exc!s}"
+            raise SearchProviderUnavailableError(msg) from exc
         except TransportError as exc:
+            # status_code is 'N/A' on an error that never reached the index. A retry
+            # is not known to pass then, so the client gets a 500.
+            if not isinstance(exc.status_code, int):
+                raise SearchProviderError(f"Could not search index: {exc!s}") from exc
+            # The alias has no index behind it until the initial ingestion builds
+            # one, so the client gets a 503 and can retry.
             if "index_not_found_exception" in exc.error:
                 msg = (
                     f"Index {index} does not exist. This may be caused by a misconfiguration,"
                     " or the initial ingestion of data is still ongoing."
                 )
-                raise IndexNotReadyError(msg) from exc
+                raise SearchProviderUnavailableError(msg) from exc
+            # The index raises this for a query it cannot run, and for a query it
+            # could not run on every shard, so only the status tells them apart:
+            # the client gets a 400 on /search for an invalid query, a 503 for a
+            # full queue or a lost shard, and otherwise a 500.
             if "search_phase_execution_exception" in exc.error:
-                # The index raises this both for a query it could not run and for
-                # a query it could not run on every shard, and only the status
-                # tells the two apart: 400 for a query it cannot run, 429 when it
-                # had no room to run it, 5xx when a shard was lost. Reporting
-                # those as 400 tells the caller a retriable search was a bad
-                # request, so it gives up on it. A missing index never arrives
-                # here; it is raised as index_not_found_exception above.
-                # status_code is 'N/A' on an error that never reached the index.
-                code = exc.status_code
-                status = code if isinstance(code, int) and code >= 400 else 500
-                raise YenteIndexError(f"Search error: {exc!s}", status=status) from exc
-
+                raise search_error(index, exc.status_code, str(exc)) from exc
             log.warning(
                 f"API error {exc.status_code}: {exc.error}",
                 index=index,
                 query=json.dumps(query),
             )
-            raise YenteIndexError(f"Could not search index: {exc}") from exc
+            raise search_error(index, exc.status_code, str(exc)) from exc
+        # The client still gets a 500 with the same body as for other provider
+        # errors.
         except (TimeoutError, OSError, Exception) as exc:
-            msg = f"Error during search: {exc!s}"
-            raise YenteIndexError(msg, status=500) from exc
+            raise SearchProviderError(f"Error during search: {exc!s}") from exc
 
     @traced
     async def get_document(self, index: str, doc_id: str) -> dict[str, Any] | None:
@@ -336,10 +362,11 @@ class OpenSearchProvider(SearchProvider):
         try:
             response = await self.client.get(index=index, id=doc_id)
             return cast(dict[str, Any], response)
+        # The lock document is missing when no yente instance holds the lock.
         except NotFoundError:
             return None
         except Exception as exc:
-            raise YenteIndexError(f"Error getting document: {exc}") from exc
+            raise SearchProviderError(f"Error getting document: {exc}") from exc
 
     @traced
     async def bulk_index(
@@ -368,7 +395,7 @@ class OpenSearchProvider(SearchProvider):
         # So what we want to do here is: Set raise_on_exception=False and raise_on_error=False.
         # This will enable the maximum retry logic for both request-level and document-level 429s,
         # and when the max retries are exceeded, the documents that failed to index will be yielded as failed.
-        # We just then just raise a YenteIndexError with the first error. We could do a dance here to collect
+        # We just then just raise a SearchProviderError with the first error. We could do a dance here to collect
         # a few more, but for now this is good enough.
         #
         # I filed https://github.com/opensearch-project/opensearch-py/issues/964 about this mess.
@@ -386,5 +413,8 @@ class OpenSearchProvider(SearchProvider):
             max_retries=5,
             initial_backoff=2,
         ):
+            # Any rejected document fails the whole call. The lock depends on this:
+            # the index rejects a create for a lock document that exists, so
+            # acquire_lock sees that another instance holds the lock.
             if not ok:
-                raise YenteIndexError(f"Could not index entity: {item!r}")
+                raise SearchProviderError(f"Could not index entity: {item!r}")
