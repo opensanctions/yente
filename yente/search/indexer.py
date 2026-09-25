@@ -35,6 +35,7 @@ from yente.search.mapping import (
     make_entity_mapping,
 )
 from yente.search.versions import (
+    IndexInfo,
     build_index_name,
     build_index_name_prefix,
     get_system_version,
@@ -298,6 +299,8 @@ async def index_entities(
 
 async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None:
     aliased = await provider.get_alias_indices(settings.ENTITY_INDEX)
+    # Maps each index to delete to the reason and, if the name parses, its info.
+    to_delete: dict[str, tuple[str, IndexInfo | None]] = {}
     for index in await provider.get_all_indices():
         if not index.startswith(settings.ENTITY_INDEX):
             continue
@@ -309,43 +312,35 @@ async def delete_old_indices(provider: SearchProvider, catalog: Catalog) -> None
         try:
             index_info = parse_index_name(index)
         except ValueError as exc:
-            log.warning(f"Invalid index name: {exc}, deleting.", index=index)
-            await audit_log.log_audit_message(
-                provider,
-                AuditLogEventType.CLEANUP_INDEX_DELETED,
-                index=index,
-                message=f"Deleting index {index} due to invalid name",
-            )
-            await provider.delete_index(index)
+            log.warning(f"Invalid index name: {exc}", index=index)
+            to_delete[index] = (f"Deleting index {index} due to invalid name", None)
             continue
 
-        if index not in aliased:
-            log.info("Deleting orphaned index", index=index)
-            await audit_log.log_audit_message(
-                provider,
-                AuditLogEventType.CLEANUP_INDEX_DELETED,
-                index=index,
-                dataset=index_info.dataset_name,
-                dataset_version=index_info.dataset_version,
-                message=f"Deleting orphaned index {index}",
-            )
-            await provider.delete_index(index)
         dataset = catalog.get(index_info.dataset_name)
-        if dataset is None or not dataset.model.load:
-            log.info(
-                "Deleting index of non-scope dataset",
-                index=index,
-                dataset=index_info.dataset_name,
-            )
-            await audit_log.log_audit_message(
-                provider,
-                AuditLogEventType.CLEANUP_INDEX_DELETED,
-                index=index,
-                dataset=index_info.dataset_name,
-                dataset_version=index_info.dataset_version,
-                message=f"Deleting index {index} due to non-scope dataset",
-            )
-            await provider.delete_index(index)
+        if index not in aliased:
+            to_delete[index] = (f"Deleting orphaned index {index}", index_info)
+        elif dataset is None or not dataset.model.load:
+            message = f"Deleting index {index} due to non-scope dataset"
+            to_delete[index] = (message, index_info)
+
+    if not to_delete:
+        return
+    # An in-flight search resolves the alias once and then reads the index in
+    # its fetch phase. Deleting the index before that phase ends fails the
+    # search with a missing search context. Waiting before the delete gives
+    # in-flight searches time to complete.
+    await asyncio.sleep(10)
+    for index, (message, info) in to_delete.items():
+        log.info(message, index=index)
+        await audit_log.log_audit_message(
+            provider,
+            AuditLogEventType.CLEANUP_INDEX_DELETED,
+            index=index,
+            dataset=info.dataset_name if info else None,
+            dataset_version=info.dataset_version if info else None,
+            message=message,
+        )
+        await provider.delete_index(index)
 
 
 async def update_index(force: bool = False) -> None:
