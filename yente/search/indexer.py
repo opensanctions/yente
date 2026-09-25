@@ -15,7 +15,6 @@ from yente.data.manifest import Catalog
 from yente.data.metrics import update_dataset_version_metric
 from yente.data.updater import DatasetUpdater
 from yente.data.util import entity_weak_names, expand_dates, index_symbols
-from yente.exc import YenteIndexError
 from yente.logs import get_logger
 from yente.provider import SearchProvider, with_provider
 from yente.search import audit_log
@@ -218,7 +217,7 @@ async def index_entities(
                 if idx % 50000 == 0:
                     lock_refreshed = await refresh_lock(provider, lock_session)
                     if not lock_refreshed:
-                        raise YenteIndexError(
+                        raise RuntimeError(
                             "Failed to refresh re-index lock, aborting re-index"
                         )
                 yield item

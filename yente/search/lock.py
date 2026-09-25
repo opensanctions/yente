@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from yente import logs, settings
-from yente.exc import YenteIndexError
 from yente.provider.base import SearchProvider
+from yente.provider.exc import SearchProviderError
 
 LOCK_EXPIRATION_TIME = timedelta(minutes=10)
 # We use a single lock document for everything, this could be expanded to support more granular lockin in the future.
@@ -103,7 +103,7 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
         # We succeeded in acquiring the lock
         log.info(f"Acquired lock {lock_session.id}")
         return lock_session
-    except YenteIndexError as e:
+    except SearchProviderError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
         # we don't get detailed error information, so the error we're catching isn't
         # guaranteed to be a conflict error. But that's the intention here.
@@ -158,7 +158,7 @@ async def acquire_lock(provider: SearchProvider) -> LockSession | None:
         log.info(f"Acquired lock {lock_session.id}")
         return lock_session
 
-    except YenteIndexError as e:
+    except SearchProviderError as e:
         # NOTE: Because it's a bulk operation (to keep the provider interface lean),
         # we don't get detailed error information, so the error we're catching isn't
         # guaranteed to be a conflict error.
@@ -190,7 +190,7 @@ async def release_lock(provider: SearchProvider, lock_session: LockSession) -> N
                 "Not releasing lock since it's not the one we were expecting to release."
             )
             return
-    except YenteIndexError as e:
+    except SearchProviderError as e:
         log.warning(
             f"Elasticsearch error when getting lock document, will still try to delete it. Response: {e}"
         )
@@ -206,7 +206,7 @@ async def release_lock(provider: SearchProvider, lock_session: LockSession) -> N
             ]
         )
         log.info(f"Released lock {lock_session.id}")
-    except YenteIndexError as e:
+    except SearchProviderError as e:
         log.error(f"Failed to release lock {lock_session.id}. Response: {e}")
 
 
@@ -257,7 +257,7 @@ async def refresh_lock(provider: SearchProvider, lock_session: LockSession) -> b
         log.info(f"Refreshed lock {lock_session.id}")
         return True
 
-    except YenteIndexError as e:
+    except SearchProviderError as e:
         # We don't expect this to ever happen, since we expected to be the ones holding the lock and
         # therefore not racing others to it. But just in case, bail out.
         log.error(

@@ -5,8 +5,7 @@ from typing import Any
 import pytest
 
 from yente import settings
-from yente.data.loader import load_json_lines, split_json_lines
-from yente.exc import ChecksumError
+from yente.data.loader import ChecksumError, load_json_lines, split_json_lines
 
 
 async def _aiter(chunks: list[bytes]):

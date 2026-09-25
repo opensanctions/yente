@@ -23,6 +23,7 @@ from yente.middleware import (
     TraceContextMiddleware,
 )
 from yente.provider import close_provider, with_provider
+from yente.provider.exc import SearchProviderError, SearchProviderUnavailableError
 from yente.routers import admin, match, reconcile, search
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
@@ -115,6 +116,14 @@ async def yente_error_handler(req: Request, exc: YenteError) -> Response:
     return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
 
 
+async def search_provider_error_handler(
+    req: Request, exc: SearchProviderError
+) -> Response:
+    status = 503 if isinstance(exc, SearchProviderUnavailableError) else 500
+    log.exception(f"App error {status}: {exc}")
+    return JSONResponse(status_code=status, content={"detail": str(exc)})
+
+
 async def validation_error_handler(req: Request, exc: ValidationError) -> Response:
     log.warning(f"Validation error: {exc}")
     body = {"detail": exc.title, "errors": exc.errors()}
@@ -124,6 +133,7 @@ async def validation_error_handler(req: Request, exc: ValidationError) -> Respon
 HANDLERS: dict[type[Exception] | int, ExceptionHandler] = {
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
+    SearchProviderError: search_provider_error_handler,
     InvalidData: ftm_error_handler,
 }
 

@@ -1,12 +1,19 @@
 import json
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from yente import settings
 from yente.app import create_app
+from yente.provider import get_provider
+from yente.provider.exc import (
+    SearchProviderError,
+    SearchProviderInvalidQueryError,
+    SearchProviderUnavailableError,
+)
 
-from .conftest import client
+from .conftest import app, client
 
 EXAMPLE = {
     "schema": "Person",
@@ -57,3 +64,26 @@ def test_max_url_length_allows_normal_query():
     # 200 if the index is populated, 503 if it isn't — either confirms the
     # request reached the search handler rather than being short-circuited.
     assert res.status_code in (200, 503), res.text
+
+
+@pytest.mark.parametrize(
+    "error,status",
+    [
+        (SearchProviderUnavailableError("index is gone"), 503),
+        # yente built the query for an entity lookup, so the query is yente's fault.
+        (SearchProviderInvalidQueryError("index is gone"), 500),
+        (SearchProviderError("index is gone"), 500),
+    ],
+)
+def test_a_search_provider_error_answers_with_its_detail(
+    error: SearchProviderError, status: int
+) -> None:
+    provider = MagicMock(search=AsyncMock(side_effect=error))
+    app.dependency_overrides[get_provider] = lambda: provider
+    try:
+        res = client.get("/entities/some-entity")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert res.status_code == status
+    assert res.json() == {"detail": "index is gone"}

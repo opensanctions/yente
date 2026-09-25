@@ -16,6 +16,7 @@ from yente.data.common import (
     SearchResponse,
 )
 from yente.logs import get_logger
+from yente.provider.exc import SearchProviderInvalidQueryError
 from yente.routers.util import TS_PATTERN, DatasetPath, ProviderDep, get_dataset
 from yente.search.nested import get_adjacent_entities, get_nested_entity
 from yente.search.queries import (
@@ -181,14 +182,19 @@ async def search(
     )
     aggregations = facet_aggregations([f.value for f in facets])
     query = upscore_large_entities(query)
-    resp = await search_entities(
-        provider,
-        query,
-        limit=limit,
-        offset=offset,
-        aggregations=aggregations,
-        sort=parse_sorts(sort),
-    )
+    try:
+        resp = await search_entities(
+            provider,
+            query,
+            limit=limit,
+            offset=offset,
+            aggregations=aggregations,
+            sort=parse_sorts(sort),
+        )
+    # The query syntax, sort fields and facets come from the request as given, so
+    # a query the search provider cannot run is the client's fault.
+    except SearchProviderInvalidQueryError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
     results: list[EntityResponse] = []
     for result, _ in result_entities(resp):
         results.append(EntityResponse.from_entity(result))
