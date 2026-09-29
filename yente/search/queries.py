@@ -8,20 +8,24 @@ from followthemoney.proxy import EntityProxy
 from followthemoney.schema import Schema
 from followthemoney.types import registry
 
-# We're re-using the same entity analyzer so the LRU cache is shared:
+# Same name analysis as the scorer, so the LRU cache is shared between them:
 from nomenklatura.matching.logic_v2.names.analysis import entity_names
-from rigour.names import Name, NamePart, Symbol, representative_names
+from rigour.names import Symbol
 
-from yente import settings
 from yente.data.dataset import Dataset
-from yente.data.util import entity_weak_names, index_symbols
+from yente.data.util import (
+    VARIANT_MAX_LENGTH,
+    VARIANT_ONE_DELETION_LENGTH,
+    entity_weak_names,
+    index_symbols,
+    name_part_variants,
+)
 from yente.logs import get_logger
 from yente.search.mapping import (
-    NAME_NGRAMS_FIELD,
+    NAME_JOINED_FIELD,
     NAME_PART_FIELD,
-    NAME_PHONETIC_FIELD,
     NAME_SYMBOLS_FIELD,
-    NAMES_FIELD,
+    NAME_VARIANTS_FIELD,
 )
 
 log = get_logger(__name__)
@@ -37,25 +41,57 @@ DEFAULT_SORTS: list[Sort] = [
 
 # Boost factors for non-name property types in entity queries, reflecting their
 # relative importance in the LogicV2 scoring algorithm. Identifiers are near-
-# deterministic match signals (0.85-0.98 weight in LogicV2), dates are highly
-# discriminating, countries are modestly informative.
+# deterministic match signals (0.85-0.98 weight in LogicV2), countries are modestly
+# informative. Dates sit at the level of a single name part: a year-only birth date
+# is shared by over a thousand records, and at a higher boost those records would
+# outrank an exact two-part name match and fill the candidate window on their own.
 TYPE_BOOSTS = {
     registry.identifier: 8.0,
-    registry.date: 3.0,
+    registry.date: 1.0,
     registry.phone: 3.0,
     registry.email: 3.0,
     registry.country: 1.5,
 }
 
-# Boost factors for symbol categories to demote low-information name parts.
-SYMBOL_BOOSTS = {
-    Symbol.Category.NUMERIC: 1.3,
-    Symbol.Category.LOCATION: 0.8,
-    Symbol.Category.ORG_CLASS: 0.7,
-    Symbol.Category.SYMBOL: 0.3,
-    Symbol.Category.NICK: 0.8,
-    Symbol.Category.DOMAIN: 0.7,
-}
+# Name candidate retrieval reaches an indexed entity through four channels, each an
+# explicit statement of how a query name part may differ from an indexed one. Both
+# sides are analysed by the same rigour normaliser, so a term is retrievable iff both
+# produced the same string; Elasticsearch does no analysis of its own on these fields.
+#
+#   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
+#           script allows it, diacritics and punctuation stripped) is identical.
+#   fuzzy   `terms` on `name_part_variants`: the query part and the indexed part share
+#           a deletion variant (see `name_part_variants`), which is the case whenever
+#           they are within the part's Damerau-Levenshtein budget of 0 edits up to 2
+#           chars, 1 edit at 3-5, 2 edits at 6-64, at any position including the first
+#           letter. Covers typos and short transliteration variants (mohammed/muhammad,
+#           wagner/vagner). Also admits some pairs up to twice the budget apart.
+#   symbol  `term` on `name_symbols`: rigour tagged both parts with the same known-name
+#           identity, nickname, org class or the like. The only bridge for scripts that
+#           are not latinised (Arabic, Han) and for variants beyond two edits
+#           (alexander/aleksandr).
+#   joined  `terms` on `name_joined`: a query name with its spaces removed equals an
+#           indexed name with its spaces removed (alqaeda / Al Qaeda).
+#
+# The three per-part channels are combined with `dis_max` so a part counts once even
+# when several channels hit it. Exact and symbol hits are IDF-scored `term`s, so a rare
+# part or identity outranks a common one. A `terms` hit is constant-scored by ES, so a
+# fuzzy hit is worth VARIANTS_BOOST however many variants a document shares, about the
+# exact score of a part shared by 25,000 records, so an exact hit on any but the most
+# common tokens ("of", "ltd", "de") outranks an approximate one.
+NAME_PART_BOOST = 1.0
+VARIANTS_BOOST = 6.0
+SYMBOL_BOOST = 0.9
+JOINED_BOOST = 1.0
+WEAK_ALIAS_BOOST = 0.9
+# Reduce approximate retrieval as exact name evidence grows. The clause limit
+# leaves headroom below 1024 for the rest of the entity query, but does not bound
+# weak aliases, other properties or filters.
+MAX_VARIANT_PARTS = 16
+MAX_SYMBOL_PARTS = 24
+MAX_NAME_CLAUSES = 900
+MAX_SYMBOLS_PER_PART = 30
+MAX_JOINED_NAMES = 65536
 
 
 class Operator(enum.StrEnum):
@@ -140,79 +176,80 @@ def filter_query(
 
 
 def names_query(entity: EntityProxy) -> list[Clause]:
-    names = entity.get_type_values(registry.name, matchable=True)
-    name_objs = entity_names(entity, is_query=True)
-    # Single-word names are hard to match, so we use fuzzy matching more aggressively.
-    # FIXME: This could make sense for 2 part names as well?
-    is_short = max((len(n.parts) for n in name_objs), default=0) < 2
-    shoulds: list[Clause] = []
-    for picked_name in representative_names(names, 5):
-        match = {
-            NAMES_FIELD: {
-                "query": picked_name,
-                "operator": "AND",
-                "boost": 3.0,
-            }
-        }
-        shoulds.append({"match": match})
+    """Build the name clauses of a /match candidate query.
 
-        if settings.MATCH_FUZZY or is_short:
-            shoulds.append(
-                {
-                    "match": {
-                        NAME_NGRAMS_FIELD: {
-                            "query": picked_name,
-                            "minimum_should_match": "70%",
-                            "boost": 1.5,
-                        }
-                    }
-                }
-            )
-
-    seen: set[str] = set()
-    consolidated_names = Name.consolidate_names(name_objs)
-
-    for name in consolidated_names:
-        part_symbols: dict[NamePart, set[Symbol]] = defaultdict(set)
+    Preserve exact evidence across aliases, reducing approximate retrieval for
+    large queries. Reject names that exceed the clause or joined-term limit
+    rather than silently dropping parts. Weak aliases are outside these limits.
+    """
+    # Keep primary names first and make ordering stable across equivalent forms.
+    primary = set(entity.get("name", quiet=True))
+    names = sorted(
+        entity_names(entity, is_query=True),
+        key=lambda n: (n.original not in primary, n.form, n.original),
+    )
+    part_symbols: dict[str, set[Symbol]] = {}
+    joined: set[str] = set()
+    for name in names:
+        comparables = [part.comparable for part in name.parts]
+        for comparable in comparables:
+            part_symbols.setdefault(comparable, set())
         for span in name.spans:
             for part in span.parts:
-                part_symbols[part].add(span.symbol)
-        for part in name.parts:
-            if part.comparable in seen:
-                continue
-            seen.add(part.comparable)
+                part_symbols[part.comparable].add(span.symbol)
+        if len(comparables) > 0:
+            joined.add("".join(comparables))
 
-            # The idea here is to rank down the contribution to the score of less interesting name parts
-            # To some degree, this is already done by the IDF component of the ES scoring algorithm
-            # (which reduces the influence of frequent terms), but that doesn't work too well for e.g.
-            # less common languages.
-            symbols: set[Symbol] = part_symbols.get(part, set())
-            boosts = [
-                SYMBOL_BOOSTS[symbol.category]
-                for symbol in symbols
-                if symbol.category in SYMBOL_BOOSTS
-            ]
-            boost = max(boosts, default=1.0)
+    use_variants = len(part_symbols) <= MAX_VARIANT_PARTS
+    use_symbols = len(part_symbols) <= MAX_SYMBOL_PARTS
+    variant_parts = {
+        part
+        for part in part_symbols
+        if use_variants
+        and VARIANT_ONE_DELETION_LENGTH <= len(part) <= VARIANT_MAX_LENGTH
+    }
+    symbol_ids = {
+        part: sorted(index_symbols(symbols))[:MAX_SYMBOLS_PER_PART]
+        for part, symbols in part_symbols.items()
+        if use_symbols
+    }
+    clause_count = (
+        len(part_symbols)
+        + len(variant_parts)
+        + sum(len(ids) for ids in symbol_ids.values())
+        + bool(joined)
+    )
+    if clause_count > MAX_NAME_CLAUSES:
+        raise ValueError(
+            f"Name query requires {clause_count} clauses; maximum is {MAX_NAME_CLAUSES}"
+        )
+    if len(joined) > MAX_JOINED_NAMES:
+        raise ValueError(
+            f"Name query has {len(joined)} joined forms; maximum is {MAX_JOINED_NAMES}"
+        )
 
-            # We have multiple ways to query for a name part (verbatim, comparable, phonetic, symbol)
-            # In the end, we dis-max them to get the one that works best, but not give an outsized important
-            # to this name part just because multiple variants match.
-            query_variants: list[Clause] = []
-            query_variants.append(tq(NAME_PART_FIELD, part.comparable))
+    shoulds: list[Clause] = []
+    for comparable in part_symbols:
+        channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
+        if comparable in variant_parts:
+            variants = sorted(name_part_variants(comparable))
+            channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
+        ids = symbol_ids.get(comparable, [])
+        if len(ids) > 0:
+            symbol_terms = [tq(NAME_SYMBOLS_FIELD, sym_id) for sym_id in ids]
+            channels.append(
+                {"dis_max": {"queries": symbol_terms, "boost": SYMBOL_BOOST}}
+            )
+        if len(channels) == 1:
+            shoulds.append(channels[0])
+        else:
+            shoulds.append({"dis_max": {"queries": channels, "tie_breaker": 0.0}})
 
-            metaphone = part.metaphone
-            if metaphone is not None and len(metaphone) > 2:
-                query_variants.append(tq(NAME_PHONETIC_FIELD, metaphone, boost * 0.5))
+    if len(joined) > 0:
+        shoulds.append(tqs(NAME_JOINED_FIELD, sorted(joined), JOINED_BOOST))
 
-            for sym_id in index_symbols(symbols):
-                query_variants.append(tq(NAME_SYMBOLS_FIELD, sym_id, boost * 0.7))
-
-            query = {"dis_max": {"queries": query_variants, "tie_breaker": 0.2}}
-            shoulds.append(query)
-
-    # Always query for weak aliases too
     for weak in entity_weak_names(entity):
-        shoulds.append(tq(NAME_PART_FIELD, weak, 0.9))
+        shoulds.append(tq(NAME_PART_FIELD, weak, WEAK_ALIAS_BOOST))
 
     return shoulds
 

@@ -99,7 +99,6 @@ class Options:
     cutoff: float
     repeat: int
     batch: int
-    fuzzy: bool
     profile: str | None
     profile_out: Path | None
     candidates: int = 0
@@ -282,7 +281,6 @@ async def run_async(
     cases: list[Case], opts: Options
 ) -> tuple[list[CaseResult], list[dict[str, Any]], dict[str, Any]]:
     settings.AUTO_REINDEX = False
-    settings.MATCH_FUZZY = opts.fuzzy
     configure_logging()
     logging.getLogger().setLevel(logging.WARNING)
     with console.status("Warming up catalog and matchers..."):
@@ -320,7 +318,6 @@ async def run_async(
         "dataset": opts.dataset,
         "algorithm": opts.algorithm,
         "algorithm_resolved": algorithm.NAME,
-        "match_fuzzy": settings.MATCH_FUZZY,
         "limit": opts.limit,
         "candidates": opts.candidates,
         "threshold": opts.threshold,
@@ -535,12 +532,6 @@ def cli() -> None:
     "--tag", "tags", multiple=True, help="Only run queries carrying any of these tags."
 )
 @click.option(
-    "--fuzzy/--no-fuzzy",
-    default=settings.MATCH_FUZZY,
-    show_default=True,
-    help="Toggle the n-gram fuzzy name clauses.",
-)
-@click.option(
     "--profile",
     type=click.Choice(["text", "html"]),
     default=None,
@@ -568,7 +559,6 @@ def run(
     repeat: int,
     batch: int,
     tags: tuple[str, ...],
-    fuzzy: bool,
     profile: str | None,
     profile_out: Path | None,
     output: Path | None,
@@ -589,7 +579,6 @@ def run(
         cutoff=min(cutoff, threshold),
         repeat=repeat,
         batch=batch,
-        fuzzy=fuzzy,
         profile=profile,
         profile_out=profile_out,
     )
@@ -597,7 +586,7 @@ def run(
     console.print(
         f"[dim]{meta['git_sha']} yente {meta['yente_version']} · {', '.join(meta['indices'])} · "
         f"algorithm={meta['algorithm_resolved']} candidates={meta['candidates']} "
-        f"fuzzy={meta['match_fuzzy']} repeat={meta['repeat']}[/dim]"
+        f"repeat={meta['repeat']}[/dim]"
     )
     print_cases(results)
     print_summary(results)
