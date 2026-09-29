@@ -19,8 +19,8 @@ from yente.logs import get_logger
 from yente.provider.base import SearchProvider
 from yente.provider.exc import (
     SearchProviderError,
+    SearchProviderInvalidQueryError,
     SearchProviderUnavailableError,
-    search_error,
 )
 
 log = get_logger(__name__)
@@ -265,14 +265,15 @@ class OpenSearchProvider(SearchProvider):
         try:
             health = await self.client.cluster.health(index=index, timeout=5)
             return health.get("status") in ("yellow", "green")
-        # /readyz answers 503 while the initial ingestion has not built the index. A
-        # 404 would tell a probe that the service is misconfigured.
+        # /readyz answers 503 (SearchProviderUnavailableError) while the initial
+        # ingestion has not built the index. A 404 would tell a probe that the service
+        # is misconfigured.
         except NotFoundError as nfe:
             raise SearchProviderUnavailableError(
                 f"Index {index} does not exist."
             ) from nfe
-        # Any other failure also means the index cannot serve searches now, so
-        # /readyz answers 503.
+        # Any other failure also means the index cannot serve searches now, so /readyz
+        # answers 503 (HTTPException in the router, from the False result).
         except TransportError as te:
             log.error(f"Search status failure: {te}")
             return False
@@ -317,39 +318,56 @@ class OpenSearchProvider(SearchProvider):
                 allow_partial_search_results=False,
             )
             return cast(dict[str, Any], response)
-        # The request reached no working node, even after the transport retries.
-        # The client gets a 503 and can retry.
+        # The request reached no working node, even after the transport retries. The
+        # client gets a 503 (SearchProviderUnavailableError) and can retry.
         except ConnectionError as exc:
             log.warning(f"Backend connection error: {exc!s}")
             msg = f"Could not connect to index: {exc!s}"
             raise SearchProviderUnavailableError(msg) from exc
         except TransportError as exc:
-            # status_code is 'N/A' on an error that never reached the index. A retry
-            # is not known to pass then, so the client gets a 500.
+            # status_code is 'N/A' on an error that never reached the index. A retry is
+            # not known to pass then, so the client gets a 500 (SearchProviderError).
             if not isinstance(exc.status_code, int):
                 raise SearchProviderError(f"Could not search index: {exc!s}") from exc
-            # The alias has no index behind it until the initial ingestion builds
-            # one, so the client gets a 503 and can retry.
+            # The alias has no index behind it until the initial ingestion builds one,
+            # so the client gets a 503 (SearchProviderUnavailableError) and can retry.
             if "index_not_found_exception" in exc.error:
                 msg = (
                     f"Index {index} does not exist. This may be caused by a misconfiguration,"
                     " or the initial ingestion of data is still ongoing."
                 )
                 raise SearchProviderUnavailableError(msg) from exc
-            # The index raises this for a query it cannot run, and for a query it
-            # could not run on every shard, so only the status tells them apart:
-            # the client gets a 400 on /search for an invalid query, a 503 for a
-            # full queue or a lost shard, and otherwise a 500.
-            if "search_phase_execution_exception" in exc.error:
-                raise search_error(index, exc.status_code, str(exc)) from exc
-            log.warning(
-                f"API error {exc.status_code}: {exc.error}",
-                index=index,
-                query=json.dumps(query),
-            )
-            raise search_error(index, exc.status_code, str(exc)) from exc
-        # The client still gets a 500 with the same body as for other provider
-        # errors.
+            # The search engine reports every failure on the shards with the one error
+            # name search_phase_execution_exception, so the name says nothing about the
+            # cause. These errors do not log the query here. On /search the query can be
+            # the client's own, and the app handler logs the other errors.
+            if "search_phase_execution_exception" not in exc.error:
+                log.warning(
+                    f"API error {exc.status_code}: {exc.error}",
+                    index=index,
+                    query=json.dumps(query),
+                )
+            msg = f"Could not search index {index}: {exc!s}"
+            # The status says what failed. For a failure on the shards, it comes from
+            # the shard failures, and a 5xx failure takes precedence:
+            # - 400: a shard cannot parse or run the query.
+            # - 404: a shard lost its search context between the query and fetch phases,
+            #   for example because its index was deleted.
+            # - 429: a shard rejected the search to shed load.
+            # - 5xx: a shard or its node failed.
+            # So the status picks what the client gets: a 503
+            # (SearchProviderUnavailableError) to retry for 404, 429 and 5xx, and a 500
+            # (SearchProviderError) for any other status. A 400 is a special case
+            # (SearchProviderInvalidQueryError): on /search, the query can come from the
+            # client, so /search answers 400. Other endpoints build the query
+            # themselves, so the client gets a 500 there.
+            if exc.status_code == 400:
+                raise SearchProviderInvalidQueryError(msg) from exc
+            if exc.status_code in (404, 429) or exc.status_code >= 500:
+                raise SearchProviderUnavailableError(msg) from exc
+            raise SearchProviderError(msg) from exc
+        # The client still gets a 500 (SearchProviderError) with the same body as for
+        # other provider errors.
         except (TimeoutError, OSError, Exception) as exc:
             raise SearchProviderError(f"Error during search: {exc!s}") from exc
 
