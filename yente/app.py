@@ -23,6 +23,7 @@ from yente.middleware import (
     TraceContextMiddleware,
 )
 from yente.provider import close_provider, with_provider
+from yente.provider.exc import SearchProviderError, SearchProviderUnavailableError
 from yente.routers import admin, match, reconcile, search
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
@@ -110,9 +111,21 @@ async def ftm_error_handler(req: Request, exc: InvalidData) -> Response:
 
 
 async def yente_error_handler(req: Request, exc: YenteError) -> Response:
-    if exc.status > 499:
-        log.exception(f"App error {exc.status}: {exc.detail}")
-    return JSONResponse(status_code=exc.status, content={"detail": exc.detail})
+    log.exception(f"App error 500: {exc.detail}")
+    return JSONResponse(status_code=500, content={"detail": exc.detail})
+
+
+async def search_provider_error_handler(
+    req: Request, exc: SearchProviderError
+) -> Response:
+    # An unavailable provider can serve the same request after a delay, so the
+    # client gets a 503 and can retry. Any other provider error is not known to
+    # pass on a retry, so the client gets a 500. This includes an invalid query:
+    # by default, yente built that query, so the fault is yente's. An endpoint
+    # that passes client input into the query answers 400 for it itself.
+    status = 503 if isinstance(exc, SearchProviderUnavailableError) else 500
+    log.exception(f"App error {status}: {exc}")
+    return JSONResponse(status_code=status, content={"detail": str(exc)})
 
 
 async def validation_error_handler(req: Request, exc: ValidationError) -> Response:
@@ -124,6 +137,7 @@ async def validation_error_handler(req: Request, exc: ValidationError) -> Respon
 HANDLERS: dict[type[Exception] | int, ExceptionHandler] = {
     ValidationError: validation_error_handler,
     YenteError: yente_error_handler,
+    SearchProviderError: search_provider_error_handler,
     InvalidData: ftm_error_handler,
 }
 
