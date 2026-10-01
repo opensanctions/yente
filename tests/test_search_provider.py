@@ -4,13 +4,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from elastic_transport import ApiResponseMeta, HttpHeaders
 from elasticsearch import ApiError, NotFoundError
+from elasticsearch import ConnectionError as ElasticConnectionError
 from opensearchpy.exceptions import NotFoundError as OpenSearchNotFoundError
 from opensearchpy.exceptions import TransportError as OpenSearchTransportError
 
 from yente import settings
-from yente.exc import IndexNotReadyError, YenteIndexError, YenteNotFoundError
 from yente.provider import SearchProvider
 from yente.provider.elastic import ElasticSearchProvider
+from yente.provider.exc import (
+    SearchProviderError,
+    SearchProviderInvalidQueryError,
+    SearchProviderUnavailableError,
+)
 from yente.provider.opensearch import OpenSearchProvider, OpenSearchServiceType
 from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 
@@ -42,7 +47,7 @@ def _make_transport_error(provider: SearchProvider) -> Exception:
 @pytest.mark.asyncio
 async def test_provider_core(search_provider: SearchProvider):
     # Not sure what to test....
-    with pytest.raises(YenteNotFoundError):
+    with pytest.raises(SearchProviderError):
         fake_index = settings.ENTITY_INDEX + "-doesnt-exist"
         await search_provider.refresh(fake_index)
         await search_provider.check_health(fake_index)
@@ -75,7 +80,7 @@ async def test_index_lifecycle(search_provider: SearchProvider):
         temp_index, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
 
-    with pytest.raises(YenteIndexError):
+    with pytest.raises(SearchProviderError):
         await search_provider.create_index(
             temp_index + "_FAIL", mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
         )
@@ -98,8 +103,8 @@ async def test_alias_management(search_provider: SearchProvider):
     await search_provider.create_index(
         index_v1, mappings=TEST_MAPPINGS, settings=TEST_SETTINGS
     )
-    # Cloning a non-existent index raises YenteIndexError
-    with pytest.raises(YenteIndexError):
+    # Cloning a non-existent index raises SearchProviderError
+    with pytest.raises(SearchProviderError):
         await search_provider.clone_index(index_fail, index_v2)
 
     # Clone index_v1 to index_v2 as setup for the test
@@ -110,8 +115,8 @@ async def test_alias_management(search_provider: SearchProvider):
     assert not await search_provider.exists_index_alias(alias, index_v2)
     assert await search_provider.get_alias_indices(alias) == []
 
-    # Rolling over to a non-existent index raises YenteIndexError.
-    with pytest.raises(YenteIndexError):
+    # Rolling over to a non-existent index raises SearchProviderError.
+    with pytest.raises(SearchProviderError):
         await search_provider.rollover_index(alias, index_fail, prefix=prefix)
     # Rolling over to v1 points the alias at v1 only.
     await search_provider.rollover_index(alias, index_v1, prefix=prefix)
@@ -150,7 +155,7 @@ async def test_clone_index_failure_restores_read_only(search_provider: SearchPro
         patch.object(
             type(indices_client), "clone", new_callable=AsyncMock, side_effect=error
         ),
-        pytest.raises(YenteIndexError),
+        pytest.raises(SearchProviderError),
     ):
         await search_provider.clone_index(source, target)
 
@@ -240,7 +245,9 @@ async def test_search_track_total_hits(search_provider: SearchProvider):
     assert len(uncounted["hits"]["hits"]) == 1
 
 
-def elastic_search_phase_error(status: int) -> ApiError:
+def elastic_search_phase_error(
+    status: int, error: str = "search_phase_execution_exception"
+) -> ApiError:
     """The error Elasticsearch answers a search it could not complete with.
 
     The index raises the same error whether it could not run the query at all or
@@ -254,7 +261,7 @@ def elastic_search_phase_error(status: int) -> ApiError:
         duration=0.0,
         node=None,
     )
-    return ApiError(message="search_phase_execution_exception", meta=meta, body={})
+    return ApiError(message=error, meta=meta, body={})
 
 
 def opensearch_search_phase_error(status):
@@ -286,41 +293,89 @@ def opensearch_provider_searching_with(search: AsyncMock) -> OpenSearchProvider:
     )
 
 
+SEARCH_ERRORS = [
+    (400, SearchProviderInvalidQueryError),
+    (404, SearchProviderUnavailableError),
+    (429, SearchProviderUnavailableError),
+    (500, SearchProviderUnavailableError),
+    (503, SearchProviderUnavailableError),
+    (403, SearchProviderError),
+]
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("status", [400, 404, 429, 500, 503])
-async def test_elastic_search_carries_through_an_index_error(status: int):
+@pytest.mark.parametrize("status,error_class", SEARCH_ERRORS)
+async def test_elastic_search_classifies_an_index_error_by_status(status, error_class):
     """A search the index could not run on every shard is left to be retried.
 
-    The index raises the same error as it does for a query it cannot run, so what
-    is read here is that the status it gave is the status the caller sees.
-    Reported as the 400 this once was, the caller reads a lost shard or a full
-    queue as a bad query and gives up on it.
+    The index raises the same error as it does for a query it cannot run, so only
+    the status tells a bad query from a lost shard or a full queue.
     """
     search = AsyncMock(side_effect=elastic_search_phase_error(status))
 
-    with pytest.raises(YenteIndexError) as raised:
+    with pytest.raises(error_class) as raised:
         await elastic_provider_searching_with(search).search(
             index="idx", query={"match_all": {}}
         )
 
-    assert raised.value.status == status
+    assert type(raised.value) is error_class
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "given,expected",
-    [(400, 400), (404, 404), (429, 429), (503, 503), ("N/A", 500)],
+    "status,error_class",
+    [*SEARCH_ERRORS, ("N/A", SearchProviderError)],
 )
-async def test_opensearch_search_carries_through_an_index_error(given, expected):
+async def test_opensearch_search_classifies_an_index_error_by_status(
+    status, error_class
+):
     """The OpenSearch client reports a status of 'N/A' when it never reached the index."""
-    search = AsyncMock(side_effect=opensearch_search_phase_error(given))
+    search = AsyncMock(side_effect=opensearch_search_phase_error(status))
 
-    with pytest.raises(YenteIndexError) as raised:
+    with pytest.raises(error_class) as raised:
         await opensearch_provider_searching_with(search).search(
             index="idx", query={"match_all": {}}
         )
 
-    assert raised.value.status == expected
+    assert type(raised.value) is error_class
+
+
+@pytest.mark.asyncio
+async def test_elastic_search_reports_a_missing_index_as_not_ingested():
+    search = AsyncMock(
+        side_effect=elastic_search_phase_error(404, "index_not_found_exception")
+    )
+
+    with pytest.raises(SearchProviderUnavailableError) as raised:
+        await elastic_provider_searching_with(search).search(
+            index="idx", query={"match_all": {}}
+        )
+
+    assert "initial ingestion" in str(raised.value)
+
+
+@pytest.mark.asyncio
+async def test_opensearch_search_reports_a_missing_index_as_not_ingested():
+    search = AsyncMock(
+        side_effect=OpenSearchTransportError(404, "index_not_found_exception", {})
+    )
+
+    with pytest.raises(SearchProviderUnavailableError) as raised:
+        await opensearch_provider_searching_with(search).search(
+            index="idx", query={"match_all": {}}
+        )
+
+    assert "initial ingestion" in str(raised.value)
+
+
+@pytest.mark.asyncio
+async def test_elastic_search_reports_a_lost_connection_as_unavailable():
+    search = AsyncMock(side_effect=ElasticConnectionError("connection refused"))
+
+    with pytest.raises(SearchProviderUnavailableError):
+        await elastic_provider_searching_with(search).search(
+            index="idx", query={"match_all": {}}
+        )
 
 
 @pytest.mark.asyncio
@@ -368,10 +423,8 @@ async def test_elastic_check_health_reports_a_missing_index_as_not_ready():
     client = MagicMock()
     client.options.return_value = MagicMock(cluster=MagicMock(health=health))
 
-    with pytest.raises(IndexNotReadyError) as raised:
+    with pytest.raises(SearchProviderUnavailableError):
         await ElasticSearchProvider(client).check_health("idx")
-
-    assert raised.value.status == 503
 
 
 @pytest.mark.asyncio
@@ -382,7 +435,5 @@ async def test_opensearch_check_health_reports_a_missing_index_as_not_ready():
     client = MagicMock(cluster=MagicMock(health=health))
     provider = OpenSearchProvider(client, service_type=OpenSearchServiceType.ES)
 
-    with pytest.raises(IndexNotReadyError) as raised:
+    with pytest.raises(SearchProviderUnavailableError):
         await provider.check_health("idx")
-
-    assert raised.value.status == 503
