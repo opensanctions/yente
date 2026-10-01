@@ -14,10 +14,21 @@ import yaml
 
 from yente import settings
 from yente.data.util import get_url_local_path, httpx_session
-from yente.exc import ChecksumError
 from yente.logs import get_logger
 
 log = get_logger(__name__)
+
+
+class ChecksumError(Exception):
+    """Raised when the SHA1 checksum of a downloaded resource does not match the catalog."""
+
+    def __init__(self, actual: str, expected: str, url: str = ""):
+        super().__init__(
+            f"Checksum mismatch for {url!r}: got {actual!r}, expected {expected!r}"
+        )
+        self.actual = actual
+        self.expected = expected
+        self.url = url
 
 
 def raise_for_status_with_custom_error(resp: httpx.Response) -> None:

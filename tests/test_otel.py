@@ -43,10 +43,10 @@ async def test_search_provider_creates_spans(search_provider, span_exporter):
 @pytest.mark.usefixtures("zala_test_dataset")
 async def test_search_provider_records_errors_in_spans(search_provider, span_exporter):
     """Verify that SearchProvider errors are recorded in OTEL spans."""
-    from yente.exc import YenteNotFoundError
+    from yente.provider.exc import SearchProviderError
 
     fake_index = "nonexistent-index-otel-test"
-    with pytest.raises((YenteNotFoundError, Exception)):
+    with pytest.raises(SearchProviderError):
         await search_provider.refresh(fake_index)
 
     spans = span_exporter.get_finished_spans()
