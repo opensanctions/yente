@@ -22,6 +22,12 @@ log = get_logger(__name__)
 # A set of symbol categories that we don't want to match on and therefore don't want to index.
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
+# Deletion budget of a name part by its length, the same bands as Elasticsearch
+# fuzziness `AUTO`: no edits up to 2 characters, one from 3, two from 6.
+VARIANT_ONE_DELETION_LENGTH = 3
+VARIANT_TWO_DELETIONS_LENGTH = 6
+VARIANT_MAX_LENGTH = 64
+
 
 def extract_values(values: Any) -> list[str]:
     """Extract a list of string values from a property value, which may be a string or a list."""
@@ -38,6 +44,26 @@ def index_symbols(symbols: set[Symbol]) -> Generator[str, None, None]:
     for symbol in symbols:
         if symbol.category not in NON_MATCHABLE_SYMBOLS:
             yield f"{symbol.category.value}:{symbol.id}"
+
+
+def name_part_variants(part: str) -> set[str]:
+    """Generate the deletion variants of a comparable name part.
+
+    Use the same keys when indexing and querying to retrieve misspelled names.
+    Parts of 3–5 characters allow one deletion, 6–64 allow two. Outside those
+    bands, return only the original part to avoid quadratic expansion of long tokens.
+    """
+    variants = {part}
+    if len(part) < VARIANT_ONE_DELETION_LENGTH or len(part) > VARIANT_MAX_LENGTH:
+        return variants
+    for i in range(len(part)):
+        variants.add(part[:i] + part[i + 1 :])
+    if len(part) < VARIANT_TWO_DELETIONS_LENGTH:
+        return variants
+    for i in range(len(part)):
+        for j in range(i + 1, len(part)):
+            variants.add(part[:i] + part[i + 1 : j] + part[j + 1 :])
+    return variants
 
 
 @cache
