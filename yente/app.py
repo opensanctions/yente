@@ -156,6 +156,10 @@ def create_app() -> FastAPI:
         # New behavior in FastAPI 0.132.0 that requires Content-Type to be set for JSON requests
         # That's cool, but we might have customers depending on it, so we disable it for now.
         strict_content_type=False,
+        # The opentelemetry-instrument wrapper configures the OTel providers and
+        # their exporters. FastAPI's own OTLP setup would add a second exporter
+        # to those providers and send everything twice.
+        telemetry={"auto_configure": False},
     )
     app.middleware("http")(json_exception_middleware)
     app.add_middleware(RequestLogMiddleware)
