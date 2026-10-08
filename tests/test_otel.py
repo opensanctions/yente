@@ -52,3 +52,27 @@ async def test_search_provider_records_errors_in_spans(search_provider, span_exp
     spans = span_exporter.get_finished_spans()
     error_spans = [s for s in spans if s.status.status_code == trace.StatusCode.ERROR]
     assert len(error_spans) >= 1, f"Expected error span, got: {[s.name for s in spans]}"
+
+
+def test_http_request_telemetry(span_exporter):
+    """Verify that FastAPI records a server span and the request duration metric."""
+    from .conftest import client, metric_reader
+
+    res = client.get("/healthz")
+    assert res.status_code == 200
+
+    spans = span_exporter.get_finished_spans()
+    server_spans = [s for s in spans if s.kind == trace.SpanKind.SERVER]
+    assert [s.name for s in server_spans] == ["GET /healthz"]
+    assert server_spans[0].attributes["http.route"] == "/healthz"
+    assert server_spans[0].attributes["http.response.status_code"] == 200
+
+    points = [
+        point
+        for resource_metrics in metric_reader.get_metrics_data().resource_metrics
+        for scope_metrics in resource_metrics.scope_metrics
+        for metric in scope_metrics.metrics
+        if metric.name == "http.server.request.duration"
+        for point in metric.data.data_points
+    ]
+    assert any(p.attributes.get("http.route") == "/healthz" for p in points)
