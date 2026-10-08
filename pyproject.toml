@@ -39,7 +39,6 @@ dependencies = [
     "aiofiles == 25.1.0",
     "rich",
     "opentelemetry-distro[otlp]",
-    "opentelemetry-instrumentation-fastapi >= 0.64b0",
 ]
 requires-python = ">=3.11,<3.15"
 
