@@ -190,6 +190,7 @@ async def search(
             offset=offset,
             aggregations=aggregations,
             sort=parse_sorts(sort),
+            metric_attributes={"endpoint": "search"},
         )
     # The query syntax, sort fields and facets come from the request as given, so
     # a query the search provider cannot run may be the client's fault. The status

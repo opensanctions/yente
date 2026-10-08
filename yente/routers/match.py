@@ -87,7 +87,12 @@ async def _match_one_query(
     # query never reads hits.total; skipping the count lets the backend
     # prune non-competitive documents early.
     search_result = await search_entities(
-        provider, query, limit=candidates, sort=DEFAULT_SORTS, track_total_hits=False
+        provider,
+        query,
+        limit=candidates,
+        sort=DEFAULT_SORTS,
+        track_total_hits=False,
+        metric_attributes={"endpoint": "match"},
     )
     ents = result_entities(search_result)
     algorithm_type = get_algorithm_by_name(algorithm)

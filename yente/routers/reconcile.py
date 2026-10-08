@@ -274,7 +274,13 @@ async def reconcile_query(
     candidates = min(candidates, settings.MAX_MATCH_CANDIDATES)
 
     candidates, offset = limit_window(candidates, 0)
-    resp = await search_entities(provider, es_query, limit=candidates, offset=offset)
+    resp = await search_entities(
+        provider,
+        es_query,
+        limit=candidates,
+        offset=offset,
+        metric_attributes={"endpoint": "reconcile"},
+    )
     algorithm_ = get_algorithm_by_name(algorithm)
     entities = result_entities(resp)
 
@@ -365,7 +371,13 @@ async def reconcile_suggest_entity(
     results = []
     query = prefix_query(ds, prefix)
     limit, offset = limit_window(limit, 0)
-    resp = await search_entities(provider, query, limit=limit, offset=offset)
+    resp = await search_entities(
+        provider,
+        query,
+        limit=limit,
+        offset=offset,
+        metric_attributes={"endpoint": "reconcile_suggest"},
+    )
     for result, _ in result_entities(resp):
         results.append(FreebaseEntity.from_proxy(result))
     log.info(
