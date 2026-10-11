@@ -61,6 +61,7 @@ nav:
   - Changelog: https://github.com/opensanctions/yente/releases
   - Deployment:
       - Overview: deploy/index.md
+      - Production checklist: deploy/checklist.md
       - Upgrading: deploy/upgrading.md
       - Monitoring: deploy/monitoring.md
       - Scaling: deploy/scaling.md
