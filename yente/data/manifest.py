@@ -76,10 +76,17 @@ class Manifest(BaseModel):
         """Fetch all datasets specified in the manifest."""
 
         all_datasets: list[dict[str, Any]] = []
-        all_datasets.extend(self.datasets)
+        for entry in self.datasets:
+            metadata_url = entry.get("metadata_url")
+            if metadata_url is None:
+                all_datasets.append(entry)
+                continue
+            metadata = await load_yaml_url(
+                metadata_url, auth_token=entry.get("auth_token")
+            )
+            all_datasets.append({**metadata, **entry})
         for catalog in self.catalogs:
             all_datasets.extend(await catalog.fetch_datasets())
-        # TODO: load remote metadata from a `metadata_url` on each dataset?
         return all_datasets
 
 
