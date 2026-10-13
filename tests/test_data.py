@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,9 @@ from yente.data.manifest import Catalog, Manifest
 from yente.data.util import expand_dates, get_url_local_path
 from yente.exc import YenteConfigError
 
-from .conftest import patch_catalog_response
+from .conftest import FIXTURES_PATH, patch_catalog_response
+
+GB_COH_PSC_INDEX = FIXTURES_PATH / "dataset" / "gb_coh_psc" / "index.json"
 
 
 def _resource_dataset_spec(checksum: str) -> dict:
@@ -113,6 +116,53 @@ async def test_manifest_with_auth_token_env_expansion(monkeypatch):
         assert client_constructor_kwargs["auth"].auth_token == "secretenv"
 
         mock_client.get.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_manifest_metadata_url():
+    metadata = json.loads(GB_COH_PSC_INDEX.read_text())
+    catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "datasets": [
+                    {
+                        "name": "gb_coh_psc",
+                        "metadata_url": GB_COH_PSC_INDEX.as_uri(),
+                        "resource_name": "entities.ftm.json",
+                    }
+                ]
+            }
+        )
+    )
+    ds = catalog.require("gb_coh_psc")
+    assert ds.model.version == metadata["version"]
+    assert ds.model.entities_url == metadata["resources"][0]["url"]
+    assert ds.model.delta_url == metadata["delta_url"]
+
+
+@pytest.mark.asyncio
+async def test_manifest_metadata_url_entry_overrides():
+    metadata = json.loads(GB_COH_PSC_INDEX.read_text())
+    catalog = await Catalog.load(
+        Manifest.model_validate(
+            {
+                "datasets": [
+                    {
+                        "name": "psc",
+                        "title": "Companies House PSC",
+                        "version": "20220419001",
+                        "metadata_url": GB_COH_PSC_INDEX.as_uri(),
+                        "resource_name": "entities.ftm.json",
+                    }
+                ]
+            }
+        )
+    )
+    assert catalog.get("gb_coh_psc") is None
+    ds = catalog.require("psc")
+    assert ds.model.title == "Companies House PSC"
+    assert ds.model.version == "20220419001"
+    assert ds.model.entities_url == metadata["resources"][0]["url"]
 
 
 @pytest.mark.asyncio
