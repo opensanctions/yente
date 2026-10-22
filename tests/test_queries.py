@@ -78,7 +78,6 @@ def test_one_clause_per_unique_part():
         "aleksandr",
         "vyacheslavovich",
         "vjaceslavovic",
-        "vaceslavovic",
         "zakharov",
         "zaharov",
         "zacharov",
