@@ -63,6 +63,7 @@ NAME_PART_FIELD = "name_parts"
 NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_JOINED_FIELD = "name_joined"
 NAME_VARIANTS_FIELD = "name_part_variants"
+ADDRESS_TOKENS_FIELD = "address_tokens"
 
 
 def make_field(
@@ -168,6 +169,8 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
         # Only ever looked up by term; doc values would cost as much disk again as
         # the inverted index of this field.
         NAME_VARIANTS_FIELD: make_keyword(doc_values=False),
+        # Already casefolded and transliterated by rigour, so no normalizer.
+        ADDRESS_TOKENS_FIELD: make_keyword(doc_values=False),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
@@ -194,6 +197,7 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
     drop_fields.append(NAME_SYMBOLS_FIELD)
     drop_fields.append(NAME_JOINED_FIELD)
     drop_fields.append(NAME_VARIANTS_FIELD)
+    drop_fields.append(ADDRESS_TOKENS_FIELD)
     drop_fields.remove(NAMES_FIELD)
     return {
         "dynamic": "strict",

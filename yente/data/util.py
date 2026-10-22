@@ -10,6 +10,7 @@ import httpx
 from followthemoney import EntityProxy, Property, Schema, registry
 from followthemoney.util import sanitize_text
 from prefixdate.precision import Precision
+from rigour.addresses import address_fingerprint
 from rigour.names import Symbol
 from rigour.time import iso_datetime
 
@@ -85,6 +86,18 @@ def entity_weak_names(entity: EntityProxy) -> set[str]:
         for value in entity.get_prop(prop):
             weak_names.add(value.casefold())
     return weak_names
+
+
+def address_tokens(entity: EntityProxy) -> set[str]:
+    """Tokens of the canonical forms rigour's address analysis reduces an
+    entity's addresses to: digit-folded numbers, short keyword forms (`blvd`),
+    territory codes (`sy`) and transliterated free text."""
+    tokens: set[str] = set()
+    for address in entity.get_type_values(registry.address, matchable=True):
+        fingerprint = address_fingerprint(address)
+        if fingerprint is not None:
+            tokens.update(fingerprint.split())
+    return tokens
 
 
 def expand_dates(dates: list[str]) -> list[str]:
