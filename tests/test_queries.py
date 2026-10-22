@@ -15,6 +15,7 @@ from yente.search.queries import (
     SYMBOL_BOOST,
     VARIANTS_BOOST,
     WEAK_ALIAS_BOOST,
+    address_query,
     names_query,
 )
 
@@ -309,3 +310,22 @@ def test_primary_name_parts_come_first():
     )
     parts = list(part_clauses(names_query(entity)))
     assert parts[:2] == ["zebediah", "quill"]
+
+
+def test_address_query():
+    entity = make_entity(
+        "q-address",
+        "Company",
+        {"address": ["Main Boulevard 5, Syrian Arab Republic", "Main Blvd. 5, Syria"]},
+    )
+    shoulds = address_query(entity)
+    # Both renderings reduce to the same fingerprint tokens:
+    assert shoulds == [
+        {"term": {"address_tokens": "5"}},
+        {"fuzzy": {"address_tokens": {"value": "blvd", "fuzziness": "AUTO"}}},
+        {"fuzzy": {"address_tokens": {"value": "main", "fuzziness": "AUTO"}}},
+        {"fuzzy": {"address_tokens": {"value": "sy", "fuzziness": "AUTO"}}},
+    ]
+
+    entity = make_entity("q-no-address", "Company", {"name": ["Acme"]})
+    assert address_query(entity) == []

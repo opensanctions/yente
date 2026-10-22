@@ -16,12 +16,14 @@ from yente.data.dataset import Dataset
 from yente.data.util import (
     VARIANT_MAX_LENGTH,
     VARIANT_ONE_DELETION_LENGTH,
+    address_tokens,
     entity_weak_names,
     index_symbols,
     name_part_variants,
 )
 from yente.logs import get_logger
 from yente.search.mapping import (
+    ADDRESS_TOKENS_FIELD,
     NAME_JOINED_FIELD,
     NAME_PART_FIELD,
     NAME_SYMBOLS_FIELD,
@@ -254,6 +256,26 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     return shoulds
 
 
+def address_query(entity: EntityProxy) -> list[Clause]:
+    """Build the address clauses of a /match candidate query.
+
+    Each token of rigour's address fingerprint is a separate clause, so a
+    candidate scores by the summed IDF of the tokens it shares. Tokens carrying a
+    digit (house numbers, postcodes) must match exactly; all others match within
+    Elasticsearch's `AUTO` edit distance, which scores an approximate hit below
+    an exact one.
+    """
+    shoulds: list[Clause] = []
+    for token in sorted(address_tokens(entity)):
+        if any(char.isdigit() for char in token):
+            shoulds.append({"term": {ADDRESS_TOKENS_FIELD: token}})
+        else:
+            shoulds.append(
+                {"fuzzy": {ADDRESS_TOKENS_FIELD: {"value": token, "fuzziness": "AUTO"}}}
+            )
+    return shoulds
+
+
 def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
@@ -270,11 +292,11 @@ def entity_query(
         if prop.type == registry.name or not prop.matchable:
             continue
         if prop.type == registry.address:
-            query = {"match": {prop.type.group: value}}
-            shoulds.append(query)
-        elif prop.type.group is not None:
+            continue
+        if prop.type.group is not None:
             boost = TYPE_BOOSTS.get(prop.type, 1.0)
             shoulds.append(tq(prop.type.group, value, boost))
+    shoulds.extend(address_query(entity))
 
     return filter_query(
         dataset,
