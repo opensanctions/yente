@@ -20,7 +20,7 @@ from yente.data.util import (
     address_tokens,
     entity_weak_names,
     index_symbols,
-    name_part_variants,
+    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.search.mapping import (
@@ -65,7 +65,7 @@ TYPE_BOOSTS = {
 #   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
 #           script allows it, diacritics and punctuation stripped) is identical.
 #   fuzzy   `terms` on `name_part_variants`: the query part and the indexed part share
-#           a deletion variant (see `name_part_variants`), which is the case whenever
+#           a deletion variant (see `deletion_variants`), which is the case whenever
 #           they are within the part's Damerau-Levenshtein budget of 0 edits up to 2
 #           chars, 1 edit at 3-5, 2 edits at 6-64, at any position including the first
 #           letter. Covers typos and short transliteration variants (mohammed/muhammad,
@@ -236,7 +236,7 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     for comparable in part_symbols:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
         if comparable in variant_parts:
-            variants = sorted(name_part_variants(comparable))
+            variants = sorted(deletion_variants(comparable))
             channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
         ids = symbol_ids.get(comparable, [])
         if len(ids) > 0:
