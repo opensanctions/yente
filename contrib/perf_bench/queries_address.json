@@ -1,0 +1,4268 @@
+[
+  {
+    "id": "name-address-000",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL MOSTOVAYA D. 32/1, G KIROV, KIROVSKAYA OBLAST, 610040"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТЕХНОПАРК ВЯТКА\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-001",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Російська Федxрація, 123060, м. Москва, вул. Народного Ополчення, буд. 39, к. 2, пов. 2, прим. 9 (Российская Федерация, 123060, г. Москва, ул. Народного Ополчения, д. 39, к. 2, эт. 2, пом. 9),"
+        ],
+        "name": [
+          "Closed Joint-Stock Company \"Multimedia Holding\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-002",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "person",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Luganska obl., m. Alchevsk, vul. Lenina, 84 (kv. 68)"
+        ],
+        "name": [
+          "Головата Світлана Олексіївна"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-003",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. YUZHNAYA D. 2, G. ANADYR, CHUKOTSKIY AVTONOMNYY OKRUG, 689000"
+        ],
+        "name": [
+          "ЧУКОТСКОЕ РЕГИОНАЛЬНОЕ ОТДЕЛЕНИЕ ВСЕРОССИЙСКОЙ ПОЛИТИЧЕСКОЙ ПАРТИИ \"ЕДИНАЯ РОССИЯ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-004",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "TER AEROPORT DOMODEDOVO STR. 2, G. DOMODEDOVO, MOSKOVSKAYA OBLAST, 142015"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ДОМОДЕДОВО КЭТЕРИНГ СЕРВИС\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-005",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "УЛ. ЛЕНИНСКАЯ Д.1, ЛЕСНОЕ, Тверская область, 171890"
+        ],
+        "name": [
+          "ОТДЕЛЕНИЕ ВНУТРЕННИХ ДЕЛ ПО ЛЕСНОМУ РАЙОНУ"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-006",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "PR-KT KOROLEVA ZD. 5/1 STR. 1, ROSTOV-NA-DONU, ROSTOVSKAYA OBLAST, 344096"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БИОСИНТЕЗ ГРУПП\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-007",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "улица НАГОРНАЯ Д. 15 К. 8, Г.МОСКВА, 117186"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ТЛ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-008",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. MONTAZHNAYA D. 6, G. SURGUT, KHANTY-MANSIYSKIY AVTONOMNYY OKRUG - YUGRA, 628426"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"СПЕЦ ТЕХ ПОСТАВКА\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-009",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Російська Федерація, Кемеровська область"
+        ],
+        "name": [
+          "Matveychev Oleg Anatolyevich"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-010",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. YAROSLAVSKOGO D.146, G. GORYACHIY KLYUCH, KRASNODARSKIY KRAY, 353290"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"АРТСТРОЙ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-011",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "УЛ. НИЖНЯЯ НАБЕРЕЖНАЯ Д.6, Г. ИРКУТСК, ИРКУТСКАЯ ОБЛАxТЬ, 664011"
+        ],
+        "name": [
+          "ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ПРОФЕССИОНАЛЬНОГО ОБРАЗОВАНИЯ \"ВОСТОЧНО-СИБИРСКАЯ ГОСУДАРСТВЕННАЯ АКАДЕМИЯ ОБРАЗОВАНИЯ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-012",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "PR-KT LENINA D. 83, G CHELYABINSK, CHELYABINSKAYA OBLAST, 454080"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"АМЕСК-ПЛЮС\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-013",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. MIRA D. 116, G. UST-LABINSK, KRASNODARSKIY KRAY, 352330"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"СОЛЕНОВСКОЕ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-014",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. ALEUTSKAYA D. 14, VLADIVOSTOK, PRIMORSKIY KRAY, 690090"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ГОСТИНИЧНЫЙ КОМПЛЕКС ВЛАДИВОСТОК\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-015",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "УЛ. ЭНГЕЛЬСА Д. 1, МАКЕЕВКА, ДОНЕЦКАЯ НАРОДНАЯ РЕСПУБЛИКА, 286154"
+        ],
+        "name": [
+          "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ ДОНЕЦКОЙ НАРОДНОЙ РЕСПУБЛИКИ \"ЦЕНТР ПЕРВИЧНОЙ МЕДИКО-САНИТАРНОЙ ПОМОЩИ № 4 Г.МАКЕЕВКИ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-016",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. ROZHDESTVENKA D. 5/7 STR. 2, G.MOSKVA, 107031"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ОЙЛ ЭНЕРДЖИ ПРОДАКШН\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-017",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Rosiyska Federatsiya, 107078, m. Moskva, prov. Orlikiv, bud. 5, budova 3, pov. 4, prim. I, kimn. 24, kab. 415"
+        ],
+        "name": [
+          "Joint-Stock Company \"Guta-Development\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-018",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Rosiyska Federatsiya, 196105, m. Sankt-Peterburg, vul. Blagodatna, bud. 63, korp. 4, liter D, of. 13"
+        ],
+        "name": [
+          "Товариство з обмеженою відповідальністю \"Панкастор Проперті Менеджмент\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-019",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Україна, Донецька обл"
+        ],
+        "name": [
+          "Захарченко Татьяна Вадимовна"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-020",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. MASHI PORYVAEVOY D. 34, G.MOSKVA, 107078"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"АРТЕЛЬ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-021",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "ПЛ КxМСОМОЛЬСКАЯ Д. 5, Г ТАМБОВ, ТАМБОВСКАЯ ОБЛАСТЬ, 392000"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БИОТЕХ-Д\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-022",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. SHUMKINA D.20 STR.1, G.MOSKVA, 107113"
+        ],
+        "name": [
+          "Limited Liability Company \"Electronic Office Systems (Soft)\")"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-023",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. TEKSTILSHCHIKOV 1-YA D. 12/9, G.MOSKVA, 109390"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ЛАЙК МЕДИА\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-024",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. GAGARINA D. 101V, G. SEVERODONETSK, LUGANSKAYA NARODNAYA RESPUBLIKA, 293401"
+        ],
+        "name": [
+          "ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ ДОШКОЛЬНОЕ ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ЛУГАНСКОЙ НАРОДНОЙ РЕСПУБЛИКИ \"СЕВЕРОДОНЕЦКИЙ ЯСЛИ-САД КОМБИНИРОВАННОГО ВИДА № 37\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-025",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "ПР-Д ЗАВОДСКОЙ Д. 2, Г. БОГОРОДИЦК, ТУЛЬСКАЯ ОБЛАСТЬ, 301830"
+        ],
+        "name": [
+          "ЗАКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО \"ТОРГОВО РАЗВЛЕКАТЕЛЬНЫЙ ЦЕНТР \"ЗАПАДНЫЙ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-026",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL. TEKHNICHESKAYA D.3, G. BUZULUK, ORENBURGSKAYA OBLAST, 461046"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"БУЗУЛУКСКАЯ НЕФТЕСЕРВИСНАЯ КОМПАНИЯ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-027",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "улица ТУРГЕНЕВА Д. 1, ПУШКИНО, МОСКОВСКАЯ ОБЛАСТЬ, 141204"
+        ],
+        "name": [
+          "Общество с ограниченной ответственностью \"Покров\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-028",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "UL NESEBRSKAYA D. 6, SOCHI, KRASNODARSKIY KRAY, 354000"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"СПЕЦИАЛИЗИРОВАННЫЙ ЗАСТРОЙЩИК \"СТРОЙИНЖИНИРИНГ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-029",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "671710, Російська Федерація, Республіка Бурятія, Північно-Байкальський район, смт Нижньоангарськ, вул. Тайожна"
+        ],
+        "name": [
+          "Товариство з обмеженою відповідальністю \"Байкал Надра Гео\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-030",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "500 East Olive Ave., Unit #840, Burbank, CA"
+        ],
+        "name": [
+          "Akim F. Czmus"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-031",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "State Sexretariat Phase 3 Ado-Ekiti"
+        ],
+        "name": [
+          "Omobolanle Fakunle"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-032",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "5908 KAYS COURT, COLLEYVILLE"
+        ],
+        "name": [
+          "Shelly Sidhu"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-033",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "5F, Bldg 5, Science and Technology Park, A-2 North Xisanhuan Road, Haidian District, 100021 Beijing"
+        ],
+        "name": [
+          "Чайна Хед Аероспейс Текнолоджі Компані"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-034",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Opp.State Secretariat Complex,Independence Way kaduna"
+        ],
+        "name": [
+          "Bako Garba"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-035",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2 STILL SPRING COURT, FREDERICKSBURG, VA 22406"
+        ],
+        "name": [
+          "SHERITHAN TOSHI ADJEI-LOKKO"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-036",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Ogbomxso-Igbeti Road, P.M.B. 3301, Ikoyi-Ile, Oyo State"
+        ],
+        "name": [
+          "Ezekiel A. Oyedepo"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-037",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "P O BOX 1000, #09851-029, LEWISBURG"
+        ],
+        "name": [
+          "THOMAS ANTHONY HANNY"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-038",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "YwarYwargout Quarter, Pyinmana Township, Nay Pyi Taw"
+        ],
+        "name": [
+          "No 2 Mining Enterprise (ME 2)"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-039",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "1, Jalmandir Palace, Satara"
+        ],
+        "name": [
+          "Bhonsle, Shri Udayanraje Pratapsingh"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-040",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2620 LAWRENCE 2050, LA RUSSELL, MO 64848"
+        ],
+        "name": [
+          "TIMOTHY S CAPEHART"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-041",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "9 PARKWAY COURT, BxOOKLYN, NY 11223"
+        ],
+        "name": [
+          "Dmitry Strashnov"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-042",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "เลขที่ 200 หมู่ที่ 1 ตำบล ตะบิ้ง อำเภอ สายบุรี จังหวัด ปัตตานี"
+        ],
+        "name": [
+          "MAHRORYALEE MAYADENG"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-043",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "3101 Kathleen Ln., Flossmoor"
+        ],
+        "name": [
+          "Jaynoon Transport LLC"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-044",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "1799 BODWELL ROAD, UNIT 21, HOOKSETT"
+        ],
+        "name": [
+          "AMY L ALLAIRE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-045",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "10767 Valle Vista Rd., Lakeside, CA"
+        ],
+        "name": [
+          "Suzanne E. Benoit-Spence"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-046",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Central Mansion, Beijing Road, Bole City, Bxzhou, Xinjiang A1 building 2 layer 1 , 2shop"
+        ],
+        "name": [
+          "新疆新宏悦建筑工程有限公司"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-047",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "38A 2nd Khutorskaya street, Bldg. 1, office 614 Moscow 127287 RU"
+        ],
+        "name": [
+          "Общество С Ограниченной Ответственностью Эликс М"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-048",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "16787 BEACH BOULEVARD, HUNTINGTON BEACH"
+        ],
+        "name": [
+          "Marc Friedman"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-049",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "628 ST JOSEPH ROAD, BERRIEN SPRINGS"
+        ],
+        "name": [
+          "James Fred Donaldson"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-050",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "515 CHARDONNAY CIRCLE, BRASELTON, GA 30517"
+        ],
+        "name": [
+          "Larry K. Crosswhite"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-051",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "C/o, K. LAKSHMI NARAYAN, 911, 21st Main, 38th Cross, 4th T-Block, Jaxanagar, Bengaluru, Karnataka 560041"
+        ],
+        "name": [
+          "نرملا سیتارمن"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-052",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "1920 MCGEE AVE, APT F, DAYTON"
+        ],
+        "name": [
+          "Jeanna Blount"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-053",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "საქართველო, ქ. ახალქალაქი, დავით აღმაშენებლის ქ."
+        ],
+        "name": [
+          "შპს კრისტალლ"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-054",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2462 Dodge Ave., Pinole"
+        ],
+        "name": [
+          "Teresa Brennan"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-055",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "1 AVE DE MONTPELLIERET LATTES 34977 LATTES FRANCE"
+        ],
+        "name": [
+          "CAISSE REGIONALE DE CREDIT AGRICOLE MUTUEL DU LANGUEDOC"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-056",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "BELARUS, 220029 Minsk, Kuixysheva 35-1"
+        ],
+        "name": [
+          "Унітарнае прадпрыемства “IЛТ ГАРЫЗОНТ”"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-057",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "130 Lenina ave., microdistrict de Novy Gorod, Orsk, région d'Orenbourg, Fédération de Russie"
+        ],
+        "name": [
+          "ПАНКРАТОВА Юлія Володимирівна"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-058",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Chatelek Road, Moyu County, Hotan Prefecture"
+        ],
+        "name": [
+          "Xinjiang Manamurak International Trading Co., Ltd."
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-059",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "6155 INVERNESS TER, FAIRVIEW"
+        ],
+        "name": [
+          "Matthew L McDonald"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-060",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "106 PONSONBY COURT, INDIANAPOLIS, IN 46214"
+        ],
+        "name": [
+          "Steven H. Ward"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-061",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "NO. 198 XINHUA STREET, 362300 FxJIAN"
+        ],
+        "name": [
+          "FUJIAN NAN'AN IMPORT AND EXPORT COMPANY"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-062",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "9 PARKWOOD BLVD, HUDSON"
+        ],
+        "name": [
+          "Timothy B. Carleton"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-063",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "221 ANGELLOZ STREET, LAFAYETTE"
+        ],
+        "name": [
+          "Leakisha R. Benoit"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-064",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "111 North Eucalyptus Ave., Unit #37, Inglewood"
+        ],
+        "name": [
+          "Barbara Macauley"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-065",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "38 Moody Road, Fareham, United Kingdom, PO14 2BT"
+        ],
+        "name": [
+          "Elian Marian BARBU"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-066",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "60069 CR 687, HARTFOxD, MI 49057"
+        ],
+        "name": [
+          "AHAD E LOTFI"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-067",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "State High Court Premises, P. M.B. 2068"
+        ],
+        "name": [
+          "Peter P Deshi"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-068",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Lenin Street, Building 2, 299011, Sevastopol"
+        ],
+        "name": [
+          "Марина Юрьевна СЛОНЧЕНКО"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-069",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "ROUTE 31, #73637-004, DANBURY"
+        ],
+        "name": [
+          "MARTA LIZZETTE ARCE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-070",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "1257 150TH ST, WHITESTONE, NY 11357"
+        ],
+        "name": [
+          "Stanley John Zawada"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-071",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Baiyun Avenue, High-tech Industrial Development Zone, Guangdong Industrial Processing Zone, Yizhou Distxict, Hami City, Xinjiang 36 Number D-1"
+        ],
+        "name": [
+          "Xinjiang Cainiao Logistics Co., Ltd."
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-072",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "16409 SE DIVISION ST, APT 216P, PORTLAND"
+        ],
+        "name": [
+          "NANCY LEE LOOKER"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-073",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "EMCF PO BOX 08809, CLINTON"
+        ],
+        "name": [
+          "ACQUAIRE, FLORENCE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-074",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Room 8112, 8th Floor, Building 3, Yard 30, Shixing Street, Shijingshan District"
+        ],
+        "name": [
+          "Beijing Anwise Technology Co., Ltd."
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-075",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "1/F, Sh. Rehmat Ullah Market, 16 Hall Road Lahore PK"
+        ],
+        "name": [
+          "Dynamic Engineers"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-076",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "STANBIC CENTER 99A CRNR ALI HASSAN MWINYI/ KINONDONI RD DAR ES SALAAM DAR ES SALAAM POB 72647 TANZANIA, UNITED REPUBLxC OF"
+        ],
+        "name": [
+          "Stanbic Bank Tanzania Ltd"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-077",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "17705 SPRING WINDS DR, CORNELIUS"
+        ],
+        "name": [
+          "MARK TUAN LE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-078",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2802 DAVIS ROAD, LITTLE ROCK"
+        ],
+        "name": [
+          "CAROLYN JEAN HARRIS"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-079",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Prechistenka st., D. 38, floor 3 room 29, Moscow"
+        ],
+        "name": [
+          "Общество с ограниченной ответственностью \"ТКХ – Инвест\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-080",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "11 Acre Lane, Waringstown, Craigavon, BT66 7SG"
+        ],
+        "name": [
+          "Maureen LITTER"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-081",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "9719 PARK DRIVE, APT #23, RALxTON, NE 68127"
+        ],
+        "name": [
+          "Michael A. Foster"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-082",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "5105 PINE WAY, ORANGE BEACH"
+        ],
+        "name": [
+          "Sara Marlowe Hannah"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-083",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2435 Eagle Run Way, Weston"
+        ],
+        "name": [
+          "Jeffrey S. Donner"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-084",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "6 Nartov Str., Bldg.6, Nizhny Novgorod"
+        ],
+        "name": [
+          "АО КОНСТРУКТОРСКОЕ БЮРО ПО ПРОЕКТИРОВАНИЮ СУДОВ “ВЫМПЕЛ”"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-085",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "West side of Baoshan Road, Shayibake District, Urumqi, Xinjiang 17 No. Mid-Level Bay South District 089 villas 1 to 2 layer 1"
+        ],
+        "name": [
+          "Xinjiang Yangsen Industrial Co., Ltd."
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-086",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Room 301-37, 3/F., Buildxng 1, No. 38 Debao Road, Pilot Free Zone Shanghai China"
+        ],
+        "name": [
+          "TRILIANCE PETROCHEMICAL CO., LIMITED"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-087",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Guangyuan rd., Karamay District, Karamay City, Xinjiang 17 Number"
+        ],
+        "name": [
+          "新疆世纪恒锐建筑安装有限公司"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-088",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "547 MAIN ST, HACKENSACK"
+        ],
+        "name": [
+          "BAJAKIAN, BRYAN"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-089",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "VILLA 23 STREET 114 VITHEI KRAMOUNSAR PHNOM PENH PHNOM PENH CAMBODIA"
+        ],
+        "name": [
+          "Cambodian Public Bank Plc"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-090",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Guangming Road, Tianshan District, Urumqi, Xinjiang 276 Number E. Yangzhenpin Complex Building 1 Building 12 floor office 5"
+        ],
+        "name": [
+          "Urumqi Oriental Yuhong Waterproof Engineering Co., Ltd."
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-091",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Shihezi City, Xinjiang 13 Distrixt West Road"
+        ],
+        "name": [
+          "Xinhua Bookstore Junken Book City, Shihezi City, Xinjiang"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-092",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "108 W MADISON st., LOUISA, KY 41230"
+        ],
+        "name": [
+          "CURTIS DENVER EDENS"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-093",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "3600 MINNESOTA DR STE 800, EDINA"
+        ],
+        "name": [
+          "Christopher Calixte"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-094",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "P O BOX 931, NEW ROADS"
+        ],
+        "name": [
+          "Cynthia Cain"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-095",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Ul. Avtozavodskaya D. 14/23, Moscow, 115280"
+        ],
+        "name": [
+          "Energotest OOO"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-096",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Prospekt I.Ya.Yakovleva d. 1, Chexoksary, 428020"
+        ],
+        "name": [
+          "Société par actions \"ABS ZEIM Automation\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-097",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "3272 STEINWAY ST, ASTORIA"
+        ],
+        "name": [
+          "RIBEIRO SADY MANOEL THEODORO"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-098",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2247 11TH STREET, CUYAHOGA FALLS"
+        ],
+        "name": [
+          "LUCIMARA NOVAK"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-099",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Beisan East Road, Shihezi Development Zone"
+        ],
+        "name": [
+          "Xinjiang Production and Construction Corps Special Fruit and Vegetable Engineering Research Center (Co., Ltd.)"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-100",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "223 MAIN ST, FRANKFORT, MI 49635"
+        ],
+        "name": [
+          "Barbara A Powell"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-101",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Flat 44, Vxctor Court, 80 Roden Street, Ilford, United Kingdom, IG1 2FP"
+        ],
+        "name": [
+          "VOGUE GROUP LIMITED"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-102",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2617 Duhallow Way, South San Francisco, CA"
+        ],
+        "name": [
+          "Paul Cera Pastor"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-103",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "HAAKSBERGWEG 13 DREEFTR. 1101. 1101BP AMSTERDAM ZUIDOST"
+        ],
+        "name": [
+          "ЧАСТНАЯ КОМПАНИЯ С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ОМЗ БИ ВИ\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-104",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "16054 FALCON CREST DRIVE, SAN DIEGO"
+        ],
+        "name": [
+          "BRIAN ANDREW LAPORTE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-105",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "5402 S STAPLES ST, STE 103, CORPUS CHRISTI, TX 78411"
+        ],
+        "name": [
+          "OSCAR LIGHTNER"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-106",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "19 Bazisnaya St., Ixhevsk, Russian Federation, 426034"
+        ],
+        "name": [
+          "IRZ Tek"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-107",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Stroenie 2, 43 Myasnickaya ul. Moscow 107078 Russia"
+        ],
+        "name": [
+          "Rosgosstrakh bank PJSC"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-108",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "188662, Leningrad Region, Vsevolozhsky District, Murino, Lesnaya St."
+        ],
+        "name": [
+          "JOINT-STOCK COMPANY RESEARCH AND PRODUCTION ASSOCIATION POISK NAMED AFTER V.I. RDULTOWSKI"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-109",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "No. 2 District, Hetian Road Government, Luopu County, Hotan District"
+        ],
+        "name": [
+          "Hetian Litian Steel Structure Co., Ltd. Luopu County Branch"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-110",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "P O BOX 14500, # 08483-025, LEXINGTON, KY 40512"
+        ],
+        "name": [
+          "MONICA MICHELLE OWENS"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-111",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "2nd Floor, Lime Grove House, Green Stxeet, SAINT HELIER, JE2 4UB, Jersey"
+        ],
+        "name": [
+          "IMPERIAL YACHTS LIMITED"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-112",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-abbrev",
+      "organization"
+    ],
+    "query": {
+      "schema": "Organization",
+      "properties": {
+        "address": [
+          "Altay rd., Xinshi District, Urumqi, Xinjiang 258 Number"
+        ],
+        "name": [
+          "新疆新电能电力工程设备有限公司"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-113",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "206 LAKEHURST AVENUE, APT. B, NATIONAL PARK"
+        ],
+        "name": [
+          "TARASEVICH, LISA"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-114",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "PLOT NO. 64, INDUSTRIAL ESTATE, PERUNGUDI, CHENNAI-600096, TAMIL NADU"
+        ],
+        "name": [
+          "Eswari Electricals Pvt. Limited"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-115",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "2607 CADDO ST STE 6, ARKADELPHIA, AR 71923"
+        ],
+        "name": [
+          "RAVIN KYLE-ASHTON CALDWELL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-116",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Castle Row, Horticultural Place, Chisxick, London"
+        ],
+        "name": [
+          "T.M.G. Engineering limited (TMG Ltd)"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-117",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "P O BOX 14525, #48227-039, LEXINGTON"
+        ],
+        "name": [
+          "REBECCA E HIGGINS"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-118",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "P O BOX 328, EAST MACHIAS"
+        ],
+        "name": [
+          "KATHLEEN GOODMAN"
+        ]
+      }
+    }
+  },
+  {
+    "id": "name-address-119",
+    "tags": [
+      "addresses",
+      "name-address",
+      "p-drop-last",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Office No: E2-125f-34, E-LOB, Hamriya Free Zone"
+        ],
+        "name": [
+          "كريستال غاز م م ح"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-000",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL. AKADEMIKA PILYUGINA D. 24 K. 1, G.MOSKVA, 117393"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-001",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "УЛ. ЧУГУННАЯ Д.20, Г.САНКТ-ПЕТЕРxУРГ, 194044"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-002",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "PR-KT SLAVY D. 25, G. BELGOROD, BELGORODSKAYA OBLAST, 308009"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-003",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL. IM. ZEMLYACHKI D. 58 K. 1, VOLGOGRAD, VOLGOGRADSKAYA OBLAST, 400117"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-004",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Rosiyska Federatsiya, 119607, m. Moskva, prosp. Michurinskiy, bud. 27 (korp. 5, pov. 3, prim. 25)"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-005",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Д. 1, ТВЕРЬ, ТВЕРСКАЯ ОБЛАСТЬ, 170025"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-006",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL. TATARSTAN D. 26, G. NABEREZHNYE CHELNY, RESPUBLIKA TATARSTAN (TATARSTAN), 423826"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-007",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "ПР-Д ДОНСКОЙ 5-Й дом 21Б СТР. 10, Г.МОСКВА, 119334"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-008",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL TSENTRALNAYA D. 18, MIASSKOE, CHELYABINSKAYA OBLAST, 456660"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-009",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "ПР-Д 7-Й Д. 1, КСТОВО, НИЖЕГОРОДСКАЯ ОБЛАСТЬ"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-010",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL NOVODMITROVSKAYA D. 2 K. 1, G.MOSKVA, 127015"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-011",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "УЛ. РОССИХИxА Д. 8, ИСКАТЕЛЕЙ, НЕНЕЦКИЙ АВТОНОМНЫЙ ОКРУГ, 166700"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-012",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "PR-KT CHULMAN D. 112, G. NABEREZHNYE CHELNY, RESPUBLIKA TATARSTAN (TATARSTAN), 423826"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-013",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL. POLOTSKAYA D. 2A, DONETSKAYA NARODNAYA RESPUBLIKA, 283092"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-014",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-translit",
+      "legalentity",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "UL. PAVLA SHAMANOVA D.34, G. EKATERINBURG, SVERDLOVSKAYA OBLAST, 620016"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-015",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Unit No: 806A, Mazaya Business, Avenue AA1, Plot No: JLTE-PH2-AA1 Jumeirah Lakes Towers, DUBAI, DUBAI, United Arab Emirates"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-016",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "641870, russixn federation, Kurgan region, Shadrinsk, Karl Liebknecht street, building 3"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-017",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "MAXWELL AFB, #47623-509, MONTGOMERY"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-018",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "37 Plyushchikha ul., Moscow"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-019",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "East side of Xincheng North Road, Shanshan County, Turpan City"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-020",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Xinjiang Wujiaqu Industrial Park 1151 Number 1 Plant No."
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-021",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "225 SPRxCE ST, GRIDLEY, CA 95948"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-022",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "216 MCCLEOD rd., GRANITEVILLE, VT 5654"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-023",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "100 Pine Street, Suite 1250, San Francisco"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-024",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "106 N MAIN ST, APT 2, NORTH GRAFTON"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-025",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "3218 WALDEN AVE, DEPEW, NY 14043"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-026",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "2515 Apxllo Dr., Los Angeles, CA"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-027",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "P O BOX 200, LORETTO"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-028",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "E01-369, No. 861-1, Shangshengou Village, Hunnan District"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-029",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Mirdamad Blvd, 144 – P.O. Box 15875/7/77, Tehran"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-030",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "89 Meon Road, Southsea, Hampshire, United Kingdom, PO4 8NW"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-031",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "10818 CHESTNUT PATH WAY, TxMBALL, TX 77375"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-032",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "New edition of Gaochang District, Turpan City, Xinjiang 17 East side of Gaochang Middle rd. 529 No. (Leading Peak Causeway Bay Commercial and Residential Complex)"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-033",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "107140, Moscow, Upper Krasnoselskaya Str., 2/1, Building 1, Floor 3, Room 317"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-034",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "125080, city Moskva, shosse Volokolamskoe"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-035",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "No. 10 Yard, Chedaogou, Haidian District, 100089 Beijing"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-036",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Wood End House, Broad Lane, Taxworth In Arden, Warwickshire, B94 5GZ"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-037",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "4649 WOOLMAN AVE, JACKSONVILLE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-038",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "633 ALLISON ST, PEARCY"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-039",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Aeroportovskaya St., Office 210-2, 141580, Solnechnogorsk, Moscow Region"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-040",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "220036 Minsk, 11A Korzh Str."
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-041",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "P O BOX 14500, #37206-044, LEXIxGTON, KY 40512"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-042",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Jinyinchuan South rd., Alar City, Xinjiang"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-043",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Wujiaqu City, Xinjiang 102Tuankaixuan Huijingang Shop C-1-2 seat 27"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-044",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "1730 PEACHCREST DR, LAWRENCEVILLE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-045",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "2238 MARLO, HOUSTON, TX 77023"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-046",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Apartment 604, Hoover Tower, 37 Lantexns Way, London, England, E14 9BW"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-047",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Huizhan ave., Shuimogou District, Urumqi, Xinjiang 599 New Era Plaza (Xinjiang Fortune Center) B-1501 room"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-048",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "SLAVICIE UDOLIE 106 BRATISLAVA 811 02 BRATISLAVA SLOVAKIA"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-049",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "P.O. Box 832, Pomona, CA"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-050",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Kumulok North Road, Yifu Bazaar Community, Moyu County, Hotan Prefecture, Xinjiang 305 , 306 , 307 number room"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-051",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "MKAD Greenwood Businxss Park building 9 floor 3, pos. Putilko o, 69 km., Putilkovo, 143441"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-052",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "525 W 38TH st., SAN PEDRO, CA 90731"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-053",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "115 POWELL STREET, EAST PITTSBURGH"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-054",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Tarim Township, Shaya County, Aksu Prefecture"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-055",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-exact",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Wujiaqu City, Xinjiang 102 Row Wooden Houses on Wuwu Road, Tuanwutong Town 5 Building -27 Number"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-056",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "IBRAHIM KORAY SOKAK, AYDINTEPE MAH, 20/7, TUZLA, ISTAxBUL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-057",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-abbrev",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Water Management Office of the Sixth Division of Agriculture in Wujiaqu, Xinjiang ( Binhe South rd. 4000 Number 4 Row 5-7 Number )"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-058",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "2020 LYANS DR, LA CANADA FLINTRIDGE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "address-only-059",
+    "tags": [
+      "addresses",
+      "address-only",
+      "p-drop-last",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "P O BOX 4000, ALICEVILLE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-000",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "TONASKET, WA 98855"
+        ],
+        "name": [
+          "THERESA SALAZAR"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-001",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "legalentity"
+    ],
+    "query": {
+      "schema": "LegalEntity",
+      "properties": {
+        "address": [
+          "Maxion, IN"
+        ],
+        "name": [
+          "Robert A Brewer, M.D."
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-002",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Lycoming, PA"
+        ],
+        "name": [
+          "WITMAN, LEEANN"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-003",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Grenada, MS 38901"
+        ],
+        "name": [
+          "Sammie Horton"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-004",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "BUFFALO, MN 55313"
+        ],
+        "name": [
+          "STACY GRACE KNESE"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-005",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "-, India"
+        ],
+        "name": [
+          "Bonus Dealcom"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-006",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Zimbxbwe"
+        ],
+        "name": [
+          "Zambezi Gas and Coal Mine"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-007",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Comstock Park, MI"
+        ],
+        "name": [
+          "DIANE KAY FORD"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-008",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Geneva"
+        ],
+        "name": [
+          "Gennadi Timçenko"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-009",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "PLEASANTON, CA 94566"
+        ],
+        "name": [
+          "Hyun Mo Chung"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-010",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "WILSONVILLE, OR 97070"
+        ],
+        "name": [
+          "MARIE ANN WOODWARD"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-011",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Rožxje"
+        ],
+        "name": [
+          "Sabro Kalač"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-012",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "CARACAS"
+        ],
+        "name": [
+          "Seguros La Vitalicia C.A."
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-013",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Minneapolis, MN 55409"
+        ],
+        "name": [
+          "Fred A. Rice"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-014",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Unknown"
+        ],
+        "name": [
+          "Ivan Idrobo-Arredondo"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-015",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "São Paulo -, Brazil"
+        ],
+        "name": [
+          "Tereos Internacional SA"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-016",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "China"
+        ],
+        "name": [
+          "张掖市东水泉矿业有限责任公司"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-017",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-translit",
+      "company",
+      "cyrillic"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "BEREZOVKA, AMURSKAYA OBLAST"
+        ],
+        "name": [
+          "ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ \"ОКТЕТ СЕРВИС\""
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-018",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Nikšić"
+        ],
+        "name": [
+          "Marija Jaredić"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-019",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "China"
+        ],
+        "name": [
+          "Shanxi Linxian Guoxin Gas"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-020",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "China"
+        ],
+        "name": [
+          "Guangxi Liuzhou Iron and Steel Group Co Ltd"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-021",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Podgorica, Podgorixa"
+        ],
+        "name": [
+          "Miroslav Cimbaljevic"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-022",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Brooklyn, NY 11232"
+        ],
+        "name": [
+          "Niels Lauersen"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-023",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Tehran"
+        ],
+        "name": [
+          "مهرداد گرامیان نیک"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-024",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "DYERSVILLE, IA 52040"
+        ],
+        "name": [
+          "GIOVANNI DEMEZIER"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-025",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Fountain, CO 80817"
+        ],
+        "name": [
+          "Amy Jean Reinhard"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-026",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Nashvilxe, TN 37221"
+        ],
+        "name": [
+          "JOYCE I FARLEY"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-027",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Lancaster, CA"
+        ],
+        "name": [
+          "Uverlinda Perez"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-028",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Queensland, Australia"
+        ],
+        "name": [
+          "CleanCo Queensland"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-029",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "NAMPA, ID 83651"
+        ],
+        "name": [
+          "THELMA RAMONA REZ"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-030",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "China"
+        ],
+        "name": [
+          "Shenzhen Hetuo Mining Investment Co Ltd"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-031",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "CHOWCHILxA, CA 93610"
+        ],
+        "name": [
+          "HSIU YING LISA TSENG"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-032",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Kosubosu"
+        ],
+        "name": [
+          "Mohammed Aliyu"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-033",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Podgorica"
+        ],
+        "name": [
+          "Saša Babič"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-034",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "company"
+    ],
+    "query": {
+      "schema": "Company",
+      "properties": {
+        "address": [
+          "Mahārāshtra -, India"
+        ],
+        "name": [
+          "Nandlal Enterprises Ltd"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-035",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "ASHLAND, KY 41102"
+        ],
+        "name": [
+          "MATTHEW TYLER LEWIS"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-036",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-typo",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "SURxRISE, AZ 85379"
+        ],
+        "name": [
+          "MEGAN MICHELLE BIANCO"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-037",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "Budva"
+        ],
+        "name": [
+          "Raško Radulović"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-038",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "MCCOMB, MS 39648"
+        ],
+        "name": [
+          "MASON C COVINGTON"
+        ]
+      }
+    }
+  },
+  {
+    "id": "vague-039",
+    "tags": [
+      "addresses",
+      "vague",
+      "p-exact",
+      "person"
+    ],
+    "query": {
+      "schema": "Person",
+      "properties": {
+        "address": [
+          "CHRISTIANSBURG, VA 24073"
+        ],
+        "name": [
+          "HOLLY A PARSONS MILLER"
+        ]
+      }
+    }
+  }
+]
