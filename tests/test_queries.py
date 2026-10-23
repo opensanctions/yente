@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 
 from yente.data.entity import Entity
-from yente.data.util import name_part_variants
+from yente.data.util import address_token_variants, name_part_variants
 from yente.search.queries import (
     JOINED_BOOST,
     MAX_NAME_CLAUSES,
@@ -319,13 +319,38 @@ def test_address_query():
         {"address": ["Main Boulevard 5, Syrian Arab Republic", "Main Blvd. 5, Syria"]},
     )
     shoulds = address_query(entity)
-    # Both renderings reduce to the same fingerprint tokens:
+
+    def approximate(token: str) -> dict[str, Any]:
+        return {
+            "dis_max": {
+                "queries": [
+                    {"term": {"address_tokens": {"value": token, "boost": 1.0}}},
+                    {
+                        "terms": {
+                            "address_token_variants": sorted(name_part_variants(token)),
+                            "boost": 1.0,
+                        }
+                    },
+                ]
+            }
+        }
+
+    # Both renderings reduce to the same fingerprint tokens. The house number
+    # and the territory code match exactly, the rest also by deletion variant:
     assert shoulds == [
-        {"term": {"address_tokens": "5"}},
-        {"fuzzy": {"address_tokens": {"value": "blvd", "fuzziness": "AUTO"}}},
-        {"fuzzy": {"address_tokens": {"value": "main", "fuzziness": "AUTO"}}},
-        {"fuzzy": {"address_tokens": {"value": "sy", "fuzziness": "AUTO"}}},
+        {"term": {"address_tokens": {"value": "5", "boost": 1.0}}},
+        approximate("blvd"),
+        approximate("main"),
+        {"term": {"address_tokens": {"value": "sy", "boost": 1.0}}},
     ]
 
     entity = make_entity("q-no-address", "Company", {"name": ["Acme"]})
     assert address_query(entity) == []
+
+
+def test_address_token_variants():
+    variants = address_token_variants({"tverskaya", "5", "ru-mow", "北京市朝阳区"})
+    # "tverskaa" (rigour's romanization of Тверская) is one deletion away:
+    assert "tverskaa" in variants
+    assert not any("5" in v or "ru-" in v for v in variants)
+    assert not any("北" in v for v in variants)
