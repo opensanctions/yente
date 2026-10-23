@@ -20,7 +20,7 @@ from yente.data.util import (
     entity_weak_names,
     expand_dates,
     index_symbols,
-    name_part_variants,
+    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.provider import SearchProvider, with_provider
@@ -132,7 +132,7 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
         for comparable in comparables:
             if comparable not in name_parts:
                 name_parts.add(comparable)
-                name_variants.update(name_part_variants(comparable))
+                name_variants.update(deletion_variants(comparable))
         if len(comparables) > 0:
             name_joined.add("".join(comparables))
 

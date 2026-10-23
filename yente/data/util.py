@@ -25,7 +25,7 @@ log = get_logger(__name__)
 # A set of symbol categories that we don't want to match on and therefore don't want to index.
 NON_MATCHABLE_SYMBOLS = {Symbol.Category.INITIAL}
 
-# Deletion budget of a name part by its length, the same bands as Elasticsearch
+# Deletion budget of a token by its length, the same bands as Elasticsearch
 # fuzziness `AUTO`: no edits up to 2 characters, one from 3, two from 6.
 VARIANT_ONE_DELETION_LENGTH = 3
 VARIANT_TWO_DELETIONS_LENGTH = 6
@@ -49,23 +49,24 @@ def index_symbols(symbols: set[Symbol]) -> Generator[str, None, None]:
             yield f"{symbol.category.value}:{symbol.id}"
 
 
-def name_part_variants(part: str) -> set[str]:
-    """Generate the deletion variants of a comparable name part.
+def deletion_variants(token: str) -> set[str]:
+    """Generate the deletion variants of a comparable token, such as a name part.
 
-    Use the same keys when indexing and querying to retrieve misspelled names.
-    Parts of 3–5 characters allow one deletion, 6–64 allow two. Outside those
-    bands, return only the original part to avoid quadratic expansion of long tokens.
+    Use the same keys when indexing and querying to retrieve misspelled tokens.
+    Tokens of 3–5 characters allow one deletion, 6–64 allow two. Outside those
+    bands, return only the original token to avoid quadratic expansion of long
+    tokens.
     """
-    variants = {part}
-    if len(part) < VARIANT_ONE_DELETION_LENGTH or len(part) > VARIANT_MAX_LENGTH:
+    variants = {token}
+    if len(token) < VARIANT_ONE_DELETION_LENGTH or len(token) > VARIANT_MAX_LENGTH:
         return variants
-    for i in range(len(part)):
-        variants.add(part[:i] + part[i + 1 :])
-    if len(part) < VARIANT_TWO_DELETIONS_LENGTH:
+    for i in range(len(token)):
+        variants.add(token[:i] + token[i + 1 :])
+    if len(token) < VARIANT_TWO_DELETIONS_LENGTH:
         return variants
-    for i in range(len(part)):
-        for j in range(i + 1, len(part)):
-            variants.add(part[:i] + part[i + 1 : j] + part[j + 1 :])
+    for i in range(len(token)):
+        for j in range(i + 1, len(token)):
+            variants.add(token[:i] + token[i + 1 : j] + token[j + 1 :])
     return variants
 
 
@@ -117,14 +118,14 @@ def is_exact_address_token(token: str) -> bool:
 
 def address_token_variants(tokens: set[str]) -> set[str]:
     """Deletion variants of the address tokens that match approximately, keyed
-    like `name_part_variants`. Dense-script tokens are skipped: rigour leaves a
+    like name parts by `deletion_variants`. Dense-script tokens are skipped: rigour leaves a
     Chinese, Japanese or Korean address as one long token, whose variants would
     number in the thousands."""
     variants: set[str] = set()
     for token in tokens:
         if is_exact_address_token(token) or is_dense_script(token):
             continue
-        variants.update(name_part_variants(token))
+        variants.update(deletion_variants(token))
     return variants
 
 

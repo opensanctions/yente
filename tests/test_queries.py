@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 
 from yente.data.entity import Entity
-from yente.data.util import address_token_variants, name_part_variants
+from yente.data.util import address_token_variants, deletion_variants
 from yente.search.queries import (
     JOINED_BOOST,
     MAX_NAME_CLAUSES,
@@ -107,9 +107,7 @@ def test_fuzzy_channel():
     }
     variants = variants_channel(parts["vladimir"])
     assert variants is not None
-    assert set(variants["terms"]["name_part_variants"]) == name_part_variants(
-        "vladimir"
-    )
+    assert set(variants["terms"]["name_part_variants"]) == deletion_variants("vladimir")
     assert channel(parts["vladimir"], "fuzzy") is None
     assert channel(parts["vladimir"], "constant_score") is None
 
@@ -230,7 +228,7 @@ def test_expansion_thresholds(count, variants, symbols, leaves):
             side_effect=lambda _: (f"NAME:{i}" for i in range(30)),
         ),
         mock.patch(
-            "yente.search.queries.name_part_variants", wraps=name_part_variants
+            "yente.search.queries.deletion_variants", wraps=deletion_variants
         ) as expand,
     ):
         shoulds = names_query(entity)
@@ -257,7 +255,7 @@ def test_name_clause_limit():
     oversized = make_entity(
         "q-over-limit", "Person", {"name": many_parts(MAX_NAME_CLAUSES)}
     )
-    with mock.patch("yente.search.queries.name_part_variants") as expand:
+    with mock.patch("yente.search.queries.deletion_variants") as expand:
         with pytest.raises(ValueError, match="requires 901 clauses; maximum is 900"):
             names_query(oversized)
         expand.assert_not_called()
@@ -276,7 +274,7 @@ def test_joined_form_limit():
         assert len(joined[0]["terms"]["name_joined"]) == 3
     with (
         mock.patch("yente.search.queries.MAX_JOINED_NAMES", 2),
-        mock.patch("yente.search.queries.name_part_variants") as expand,
+        mock.patch("yente.search.queries.deletion_variants") as expand,
     ):
         with pytest.raises(ValueError, match="3 joined forms; maximum is 2"):
             names_query(entity)
@@ -295,7 +293,7 @@ def test_long_part_query(length):
     part = ("abcdefgh" * 48)[:length]
     entity = make_entity(f"q-long-{length}", "Person", {"name": [part]})
     with mock.patch(
-        "yente.search.queries.name_part_variants", wraps=name_part_variants
+        "yente.search.queries.deletion_variants", wraps=deletion_variants
     ) as expand:
         channels = part_clauses(names_query(entity))[part]
     assert (variants_channel(channels) is not None) == (length == 64)
@@ -327,7 +325,7 @@ def test_address_query():
                     {"term": {"address_tokens": {"value": token, "boost": 1.0}}},
                     {
                         "terms": {
-                            "address_token_variants": sorted(name_part_variants(token)),
+                            "address_token_variants": sorted(deletion_variants(token)),
                             "boost": 1.0,
                         }
                     },
