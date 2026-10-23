@@ -101,7 +101,18 @@ class Options:
     batch: int
     profile: str | None
     profile_out: Path | None
+    weights: dict[str, float] = field(default_factory=dict)
     candidates: int = 0
+
+
+def parse_weights(specs: Sequence[str]) -> dict[str, float]:
+    weights: dict[str, float] = {}
+    for spec in specs:
+        name, sep, value = spec.partition("=")
+        if not sep:
+            raise click.BadParameter(f"Expected name=value: {spec!r}")
+        weights[name.strip()] = float(value)
+    return weights
 
 
 def candidate_count(limit: int) -> int:
@@ -170,7 +181,7 @@ async def time_stages(
         threshold=opts.threshold,
         cutoff=opts.cutoff,
         limit=opts.limit,
-        config=ScoringConfig(weights={}, config={}),
+        config=ScoringConfig(weights=dict(opts.weights), config={}),
     )
     t5 = time.perf_counter()
     stages["score"] = t5 - t4
@@ -202,7 +213,7 @@ async def time_stages(
 
 def match_one(case: Case, ds: Dataset, provider: SearchProvider, opts: Options) -> Any:
     """Build the same ``_match_one_query`` coroutine the router builds."""
-    match = EntityMatchQuery(queries={case.id: case.example})
+    match = EntityMatchQuery(queries={case.id: case.example}, weights=opts.weights)
     return _match_one_query(
         ds,
         opts.algorithm,
@@ -324,6 +335,7 @@ async def run_async(
         "cutoff": opts.cutoff,
         "repeat": opts.repeat,
         "batch": opts.batch,
+        "weights": opts.weights,
     }
     return results, batches, meta
 
@@ -544,6 +556,12 @@ def cli() -> None:
     help="Where to write the HTML profile.",
 )
 @click.option(
+    "--weight",
+    "weights",
+    multiple=True,
+    help="Feature weight override as name=value, e.g. address_match=0.7.",
+)
+@click.option(
     "--output",
     type=click.Path(path_type=Path),
     default=None,
@@ -561,6 +579,7 @@ def run(
     tags: tuple[str, ...],
     profile: str | None,
     profile_out: Path | None,
+    weights: tuple[str, ...],
     output: Path | None,
 ) -> None:
     """Time every stage of the match pipeline for each query in the set."""
@@ -581,12 +600,13 @@ def run(
         batch=batch,
         profile=profile,
         profile_out=profile_out,
+        weights=parse_weights(weights),
     )
     results, batches, meta = asyncio.run(run_async(cases, opts))
     console.print(
         f"[dim]{meta['git_sha']} yente {meta['yente_version']} · {', '.join(meta['indices'])} · "
         f"algorithm={meta['algorithm_resolved']} candidates={meta['candidates']} "
-        f"repeat={meta['repeat']}[/dim]"
+        f"repeat={meta['repeat']} weights={meta['weights']}[/dim]"
     )
     print_cases(results)
     print_summary(results)
