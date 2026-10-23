@@ -16,6 +16,7 @@ from yente.data.dataset import Dataset
 from yente.data.util import (
     VARIANT_MAX_LENGTH,
     VARIANT_ONE_DELETION_LENGTH,
+    address_token_variants,
     address_tokens,
     entity_weak_names,
     index_symbols,
@@ -24,6 +25,7 @@ from yente.data.util import (
 from yente.logs import get_logger
 from yente.search.mapping import (
     ADDRESS_TOKENS_FIELD,
+    ADDRESS_VARIANTS_FIELD,
     NAME_JOINED_FIELD,
     NAME_PART_FIELD,
     NAME_SYMBOLS_FIELD,
@@ -261,18 +263,21 @@ def address_query(entity: EntityProxy) -> list[Clause]:
 
     Each token of rigour's address fingerprint is a separate clause, so a
     candidate scores by the summed IDF of the tokens it shares. Tokens carrying a
-    digit (house numbers, postcodes) must match exactly; all others match within
-    Elasticsearch's `AUTO` edit distance, which scores an approximate hit below
-    an exact one.
+    digit (house numbers, postcodes) and territory codes (`sy`, `ru-mow`) must
+    match exactly, since one edit away is a different place. All others also
+    match through the deletion variants indexed in `address_token_variants`, as
+    for name parts: a shared variant is a constant-scored `terms` hit below the
+    IDF-scored exact hit, and `dis_max` counts the token once when both match.
     """
     shoulds: list[Clause] = []
     for token in sorted(address_tokens(entity)):
-        if any(char.isdigit() for char in token):
-            shoulds.append({"term": {ADDRESS_TOKENS_FIELD: token}})
-        else:
-            shoulds.append(
-                {"fuzzy": {ADDRESS_TOKENS_FIELD: {"value": token, "fuzziness": "AUTO"}}}
-            )
+        exact = tq(ADDRESS_TOKENS_FIELD, token)
+        variants = address_token_variants({token})
+        if not variants:
+            shoulds.append(exact)
+            continue
+        approximate = tqs(ADDRESS_VARIANTS_FIELD, sorted(variants))
+        shoulds.append({"dis_max": {"queries": [exact, approximate]}})
     return shoulds
 
 

@@ -64,6 +64,7 @@ NAME_SYMBOLS_FIELD = "name_symbols"
 NAME_JOINED_FIELD = "name_joined"
 NAME_VARIANTS_FIELD = "name_part_variants"
 ADDRESS_TOKENS_FIELD = "address_tokens"
+ADDRESS_VARIANTS_FIELD = "address_token_variants"
 
 
 def make_field(
@@ -171,6 +172,7 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
         NAME_VARIANTS_FIELD: make_keyword(doc_values=False),
         # Already casefolded and transliterated by rigour, so no normalizer.
         ADDRESS_TOKENS_FIELD: make_keyword(doc_values=False),
+        ADDRESS_VARIANTS_FIELD: make_keyword(doc_values=False),
         "last_change": make_field("date", format=DATE_FORMAT),
         "last_seen": make_field("date", format=DATE_FORMAT),
         "first_seen": make_field("date", format=DATE_FORMAT),
@@ -198,6 +200,7 @@ def make_entity_mapping(schemata: Iterable[Schema] | None = None) -> dict[str, A
     drop_fields.append(NAME_JOINED_FIELD)
     drop_fields.append(NAME_VARIANTS_FIELD)
     drop_fields.append(ADDRESS_TOKENS_FIELD)
+    drop_fields.append(ADDRESS_VARIANTS_FIELD)
     drop_fields.remove(NAMES_FIELD)
     return {
         "dynamic": "strict",

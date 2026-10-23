@@ -12,6 +12,8 @@ from followthemoney.util import sanitize_text
 from prefixdate.precision import Precision
 from rigour.addresses import address_fingerprint
 from rigour.names import Symbol
+from rigour.territories import get_territories
+from rigour.text.scripts import is_dense_script
 from rigour.time import iso_datetime
 
 from yente import settings
@@ -98,6 +100,32 @@ def address_tokens(entity: EntityProxy) -> set[str]:
         if fingerprint is not None:
             tokens.update(fingerprint.split())
     return tokens
+
+
+@cache
+def territory_codes() -> frozenset[str]:
+    """Territory codes as `address_fingerprint` emits them for recognised
+    country and subdivision names (`sy`, `ru-mow`)."""
+    return frozenset(t.code for t in get_territories())
+
+
+def is_exact_address_token(token: str) -> bool:
+    """Tokens that only match exactly: those carrying a digit (house numbers,
+    postcodes) and territory codes, where one edit away is a different place."""
+    return token in territory_codes() or any(char.isdigit() for char in token)
+
+
+def address_token_variants(tokens: set[str]) -> set[str]:
+    """Deletion variants of the address tokens that match approximately, keyed
+    like `name_part_variants`. Dense-script tokens are skipped: rigour leaves a
+    Chinese, Japanese or Korean address as one long token, whose variants would
+    number in the thousands."""
+    variants: set[str] = set()
+    for token in tokens:
+        if is_exact_address_token(token) or is_dense_script(token):
+            continue
+        variants.update(name_part_variants(token))
+    return variants
 
 
 def expand_dates(dates: list[str]) -> list[str]:
