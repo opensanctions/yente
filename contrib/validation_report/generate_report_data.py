@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Validation report: compare logic-v1 vs logic-v2 against fixture JSONs via the yente HTTP API."""
+"""Validation report: run fixture JSONs via the yente HTTP API, each with the
+algorithms and feature weights listed in its `runs`."""
 
 import logging
 from dataclasses import dataclass
@@ -12,9 +13,13 @@ import orjson
 
 log = logging.getLogger(__name__)
 
-ALGORITHMS = ["logic-v1", "logic-v2"]
 BATCH_SIZE = 100
 FIXTURES_DIR = Path(__file__).parent / "build" / "fixtures"
+
+
+def run_label(algorithm: str, weights: dict[str, float]) -> str:
+    """Key of a run in the report, e.g. `logic-v2 address_match=0.9`."""
+    return " ".join([algorithm] + [f"{k}={v}" for k, v in sorted(weights.items())])
 
 
 @dataclass
@@ -22,6 +27,7 @@ class Fixture:
     name: str
     is_positive: bool
     entities: list[dict[str, Any]]  # FTM entities: {id, schema, properties}
+    runs: list[dict[str, Any]]  # {algorithm, weights?}
 
 
 def read_fixture(path: Path) -> Fixture:
@@ -30,6 +36,7 @@ def read_fixture(path: Path) -> Fixture:
         name=data["name"],
         is_positive=data.get("type") == "positive",
         entities=data["data"],
+        runs=data["runs"],
     )
 
 
@@ -42,6 +49,7 @@ def run_fixture(
     client: httpx.Client,
     fixture: Fixture,
     algorithm: str,
+    weights: dict[str, float],
     base_url: str,
     dataset: str,
     threshold: float,
@@ -58,7 +66,7 @@ def run_fixture(
         queries = {f"q{i}": entity_to_query(e) for i, e in enumerate(batch)}
         resp = client.post(
             f"{base_url}/match/{dataset}",
-            json={"queries": queries},
+            json={"queries": queries, "weights": weights},
             params={"algorithm": algorithm, "limit": 5, "threshold": threshold},
         )
         resp.raise_for_status()
@@ -141,9 +149,17 @@ def main(
         for fixture in fixtures:
             log.info("fixture: %s (%d entities)", fixture.name, len(fixture.entities))
             results[fixture.name] = {}
-            for algo in ALGORITHMS:
-                results[fixture.name][algo] = run_fixture(
-                    client, fixture, algo, base_url, dataset, threshold
+            for run in fixture.runs:
+                algorithm = run["algorithm"]
+                weights = run.get("weights", {})
+                results[fixture.name][run_label(algorithm, weights)] = run_fixture(
+                    client=client,
+                    fixture=fixture,
+                    algorithm=algorithm,
+                    weights=weights,
+                    base_url=base_url,
+                    dataset=dataset,
+                    threshold=threshold,
                 )
 
     report: dict[str, Any] = {
