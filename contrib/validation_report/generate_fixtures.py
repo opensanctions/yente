@@ -304,6 +304,30 @@ def generate_address_fixtures(client: httpx.Client) -> None:
         [LOGIC_V2_ADDRESS],
     )
 
+    # The same entities by treated name, each with another entity's address, as
+    # when a listed party is screened with an address that isn't theirs.
+    rng = random.Random("other_addresses")
+    other_addresses = copy.deepcopy(entities)
+    for entity in other_addresses:
+        apply_treatment(entity, entity_rng(entity["id"]))
+        own = entity["properties"]["address"][0]
+        other = rng.choice(pool)
+        while other == own:
+            other = rng.choice(pool)
+        entity["properties"]["address"] = [other]
+    write_fixture(
+        "positives_names_other_addresses.json",
+        "positive",
+        "The same legal entities as positives_addresses_treated, queried by their "
+        "treated name and the street-level address of another listed entity. "
+        "These are true-positives. This has been useful to detect recall problems "
+        "caused by address matches crowding out name matches from the candidate window. "
+        "Higher ID Matched is better.",
+        generated_from,
+        other_addresses,
+        NAME_RUNS,
+    )
+
     # Each fixture below takes its own slice of synthetic names.
     names = iter(read_negative_names("negatives_global.csv"))
     listed = sorted(set(pool))
