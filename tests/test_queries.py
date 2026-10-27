@@ -4,10 +4,12 @@ from typing import Any
 from unittest import mock
 
 import pytest
+from rigour.addresses import address_fingerprint
 
 from yente.data.entity import Entity
 from yente.data.util import address_token_variants, deletion_variants
 from yente.search.queries import (
+    ADDRESS_BOOST,
     JOINED_BOOST,
     MAX_NAME_CLAUSES,
     MAX_SYMBOLS_PER_PART,
@@ -318,29 +320,49 @@ def test_address_query():
     )
     shoulds = address_query(entity)
 
+    # 4 because both addresses fingerprint to 4 tokens.
+    boost = ADDRESS_BOOST / 4
+
+    def exact(token: str) -> dict[str, Any]:
+        return {"term": {"address_tokens": {"value": token, "boost": boost}}}
+
     def approximate(token: str) -> dict[str, Any]:
         return {
             "dis_max": {
                 "queries": [
-                    {"term": {"address_tokens": {"value": token, "boost": 1.0}}},
+                    exact(token),
                     {
                         "terms": {
                             "address_token_variants": sorted(deletion_variants(token)),
-                            "boost": 1.0,
+                            "boost": boost,
                         }
                     },
                 ]
             }
         }
 
-    # Both renderings reduce to the same fingerprint tokens. The house number
-    # and the territory code match exactly, the rest also by deletion variant:
+    # Both renderings reduce to the same four fingerprint tokens, each boosted by
+    # a quarter. The house number and the territory code match exactly, the rest
+    # also by deletion variant:
     assert shoulds == [
-        {"term": {"address_tokens": {"value": "5", "boost": 1.0}}},
+        exact("5"),
         approximate("blvd"),
         approximate("main"),
-        {"term": {"address_tokens": {"value": "sy", "boost": 1.0}}},
+        exact("sy"),
     ]
+
+    # Each address is weighted by its own length:
+    dense = "127055, Москва, ул. Бутырский Вал, д. 68/70, стр. 1, пом. 5"
+    entity = make_entity(
+        "q-addresses", "Company", {"address": [dense, "Damascus, Syria"]}
+    )
+    boosts = {
+        c["term"]["address_tokens"]["boost"]
+        for c in address_query(entity)
+        if "term" in c
+    }
+    dense_tokens = len(address_fingerprint(dense).split())
+    assert boosts == {ADDRESS_BOOST / dense_tokens, ADDRESS_BOOST / 2}
 
     entity = make_entity("q-no-address", "Company", {"name": ["Acme"]})
     assert address_query(entity) == []

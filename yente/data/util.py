@@ -91,16 +91,22 @@ def entity_weak_names(entity: EntityProxy) -> set[str]:
     return weak_names
 
 
-def address_tokens(entity: EntityProxy) -> set[str]:
-    """Tokens of the canonical forms rigour's address analysis reduces an
-    entity's addresses to: digit-folded numbers, short keyword forms (`blvd`),
-    territory codes (`sy`) and transliterated free text."""
-    tokens: set[str] = set()
+def address_value_tokens(entity: EntityProxy) -> set[frozenset[str]]:
+    """The tokens of each of an entity's addresses: the canonical forms rigour's
+    address analysis reduces an address to, i.e. digit-folded numbers, short
+    keyword forms (`blvd`), territory codes (`sy`) and transliterated free text.
+    Renderings with the same tokens count once."""
+    values: set[frozenset[str]] = set()
     for address in entity.get_type_values(registry.address, matchable=True):
         fingerprint = address_fingerprint(address)
         if fingerprint is not None:
-            tokens.update(fingerprint.split())
-    return tokens
+            values.add(frozenset(fingerprint.split()))
+    return values
+
+
+def address_tokens(entity: EntityProxy) -> set[str]:
+    """The tokens of all of an entity's addresses (see address_value_tokens)."""
+    return set().union(*address_value_tokens(entity))
 
 
 @cache

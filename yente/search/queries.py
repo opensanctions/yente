@@ -17,7 +17,7 @@ from yente.data.util import (
     VARIANT_MAX_LENGTH,
     VARIANT_ONE_DELETION_LENGTH,
     address_token_variants,
-    address_tokens,
+    address_value_tokens,
     entity_weak_names,
     index_symbols,
     deletion_variants,
@@ -96,6 +96,9 @@ MAX_SYMBOL_PARTS = 24
 MAX_NAME_CLAUSES = 900
 MAX_SYMBOLS_PER_PART = 30
 MAX_JOINED_NAMES = 65536
+# Score an address adds when a candidate shares all of its tokens, at the average
+# IDF of those tokens; see address_query.
+ADDRESS_BOOST = 1.0
 
 
 class Operator(enum.StrEnum):
@@ -261,23 +264,27 @@ def names_query(entity: EntityProxy) -> list[Clause]:
 def address_query(entity: EntityProxy) -> list[Clause]:
     """Build the address clauses of a /match candidate query.
 
-    Each token of rigour's address fingerprint is a separate clause, so a
-    candidate scores by the summed IDF of the tokens it shares. Tokens carrying a
-    digit (house numbers, postcodes) and territory codes (`sy`, `ru-mow`) must
-    match exactly, since one edit away is a different place. All others also
-    match through the deletion variants indexed in `address_token_variants`, as
-    for name parts: a shared variant is a constant-scored `terms` hit below the
-    IDF-scored exact hit, and `dis_max` counts the token once when both match.
+    Each token of an address's rigour fingerprint is a clause boosted by
+    ADDRESS_BOOST divided by the address's token count, so an address adds the
+    average score of its tokens, unshared ones counting as zero. A candidate
+    sharing more of the address ranks higher, but a long address adds no more
+    than a short one: it shouldn't outweigh a strong name hit and crowd name
+    candidates out of the window. Tokens carrying a digit (house numbers,
+    postcodes) and territory codes (`sy`, `ru-mow`) must match exactly, since one
+    edit away is a different place. All others also match through the deletion
+    variants indexed in `address_token_variants`.
     """
     shoulds: list[Clause] = []
-    for token in sorted(address_tokens(entity)):
-        exact = tq(ADDRESS_TOKENS_FIELD, token)
-        variants = address_token_variants({token})
-        if not variants:
-            shoulds.append(exact)
-            continue
-        approximate = tqs(ADDRESS_VARIANTS_FIELD, sorted(variants))
-        shoulds.append({"dis_max": {"queries": [exact, approximate]}})
+    for tokens in sorted(address_value_tokens(entity), key=sorted):
+        boost = ADDRESS_BOOST / len(tokens)
+        for token in sorted(tokens):
+            exact = tq(ADDRESS_TOKENS_FIELD, token, boost)
+            variants = address_token_variants({token})
+            if not variants:
+                shoulds.append(exact)
+                continue
+            approximate = tqs(ADDRESS_VARIANTS_FIELD, sorted(variants), boost)
+            shoulds.append({"dis_max": {"queries": [exact, approximate]}})
     return shoulds
 
 
