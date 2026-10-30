@@ -76,3 +76,29 @@ def test_http_request_telemetry(span_exporter):
         for point in metric.data.data_points
     ]
     assert any(p.attributes.get("http.route") == "/healthz" for p in points)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("zala_test_dataset")
+async def test_search_entities_records_query_duration(search_provider):
+    """Verify that search_entities records its duration with the metric attributes."""
+    from yente.search.search import _QUERY_DURATION_BUCKETS, search_entities
+
+    from .conftest import metric_reader
+
+    await search_entities(
+        search_provider, {"match_all": {}}, metric_attributes={"endpoint": "test"}
+    )
+
+    points = [
+        point
+        for resource_metrics in metric_reader.get_metrics_data().resource_metrics
+        for scope_metrics in resource_metrics.scope_metrics
+        for metric in scope_metrics.metrics
+        if metric.name == "yente.search.query_duration"
+        for point in metric.data.data_points
+        if point.attributes.get("endpoint") == "test"
+    ]
+    assert len(points) == 1
+    assert points[0].count >= 1
+    assert list(points[0].explicit_bounds) == _QUERY_DURATION_BUCKETS
