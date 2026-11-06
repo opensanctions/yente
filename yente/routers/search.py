@@ -1,7 +1,7 @@
 import enum
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, Query, Response
+from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from followthemoney import model
 from followthemoney.types import registry
@@ -217,6 +217,15 @@ async def search(
     return output
 
 
+def _entity_redirect(
+    request: Request, route_name: str, **path_params: str
+) -> RedirectResponse:
+    url = str(router.url_path_for(route_name, **path_params))
+    if request.url.query:
+        url = f"{url}?{request.url.query}"
+    return RedirectResponse(status_code=308, url=url)
+
+
 @router.get(
     "/entities/{entity_id}",
     tags=["Data access"],
@@ -229,6 +238,7 @@ async def search(
 )
 async def fetch_entity(
     response: Response,
+    request: Request,
     provider: ProviderDep,
     entity_id: Annotated[
         str, Path(description="ID of the entity to retrieve", examples=["Q7747"])
@@ -249,8 +259,7 @@ async def fetch_entity(
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
-        url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
-        return RedirectResponse(status_code=308, url=url)
+        return _entity_redirect(request, "fetch_entity", entity_id=redir.canonical_id)
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     if nested:
@@ -274,6 +283,7 @@ async def fetch_entity(
 )
 async def fetch_adjacent_entities(
     response: Response,
+    request: Request,
     provider: ProviderDep,
     entity_id: Annotated[
         str,
@@ -303,8 +313,9 @@ async def fetch_adjacent_entities(
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
-        url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
-        return RedirectResponse(status_code=308, url=url)
+        return _entity_redirect(
+            request, "Fetch Adjacent Entities*", entity_id=redir.canonical_id
+        )
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
 
@@ -335,6 +346,7 @@ async def fetch_adjacent_entities(
 )
 async def fetch_adjacent_by_prop(
     response: Response,
+    request: Request,
     provider: ProviderDep,
     entity_id: Annotated[
         str,
@@ -371,8 +383,12 @@ async def fetch_adjacent_by_prop(
     try:
         entity = await get_entity(provider, entity_id)
     except EntityRedirect as redir:
-        url = router.url_path_for("fetch_entity", entity_id=redir.canonical_id)
-        return RedirectResponse(status_code=308, url=url)
+        return _entity_redirect(
+            request,
+            "Fetch Adjacent by Property*",
+            entity_id=redir.canonical_id,
+            property_name=property_name,
+        )
     if entity is None:
         raise HTTPException(404, detail="No such entity!")
     if (
