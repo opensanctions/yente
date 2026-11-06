@@ -63,7 +63,7 @@ dev = [
     "flake8 >= 2.6.0",
     "types-aiofiles>=24.0,<26.0",
     "boto3-stubs ~= 1.37",
-    "bump2version == 1.0.1",
+    "bump-my-version",
     "pip >10.0.0",
     "prek",
     "types-PyYAML",
@@ -79,6 +79,31 @@ docs = [
     "mkdocs-material",
     "mkdocs-redirects",
 ]
+
+[tool.bumpversion]
+current_version = "5.5.0"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "yente/settings.py"
+search = 'VERSION = "{current_version}"'
+replace = 'VERSION = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "docker-compose.yml"
+search = "ghcr.io/opensanctions/yente:{current_version}"
+replace = "ghcr.io/opensanctions/yente:{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "docker-compose.opensearch.yml"
+search = "ghcr.io/opensanctions/yente:{current_version}"
+replace = "ghcr.io/opensanctions/yente:{new_version}"
 
 [tool.uv]
 default-groups = ["dev", "docs"]

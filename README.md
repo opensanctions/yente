@@ -36,7 +36,7 @@ yente serve
 
 ### Releasing
 
-    bump2version --verbose minor # or patch
+    bump-my-version bump --verbose minor # or patch
     git push && git push --tags
 
 ### Debugging using OpenTelemetry Tracing
