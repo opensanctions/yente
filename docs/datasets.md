@@ -42,10 +42,9 @@ catalogs:
     scope: default
     resource_name: entities.ftm.json
 
-  # Additional data catalogs can be specified. Using catalog entries for additional
-  # datasets (rather than dataset entries shown below) has the advantage that a catalog file
-  # will specify the latest `version` of each dataset, and thus changes to the datasets in
-  # the catalog will automatically trigger a re-index in yente:
+  # Additional data catalogs can be specified. A catalog file will specify the latest
+  # `version` of each dataset, and thus changes to the datasets in the catalog will
+  # automatically trigger a re-index in yente:
   - url: "https://data.opensanctions.org/datasets/latest/banks/catalog.json"
     # Make sure to limit the scope such that two catalog entries don't load datasets
     # with the same name.
@@ -58,7 +57,13 @@ datasets:
   # scope defined upstream in OpenSanctions:
   - name: offshoreleaks
     title: ICIJ OffshoreLeaks
-    entities_url: https://data.opensanctions.org/datasets/latest/icij_offshoreleaks/entities.ftm.json
+    # With `metadata_url`, yente loads the dataset's published metadata (`version`,
+    # `resources`, `delta_url`, `title` and the rest) on each catalog refresh, so a new
+    # export triggers a re-index. Keys set here override it. After switching a dataset
+    # indexed from a remote `entities_url`, run `yente reindex -f` once: its old version
+    # can sort above the published one.
+    metadata_url: https://data.opensanctions.org/datasets/latest/icij_offshoreleaks/index.json
+    resource_name: entities.ftm.json
   # Example B: a local dataset from a path that is visible within the container used
   # to run the service:
   - name: blocklist
