@@ -310,3 +310,13 @@ def test_adjacent_prop_offset():
     assert len(beneficiaries) == 1
     cdu = by_id(beneficiaries, "c326dd8021ee75fe9608f31ecb4e2e7388144102")
     assert cdu["properties"]["name"] == ["CDU"]
+
+
+@pytest.mark.usefixtures("parteispenden_test_dataset")
+@pytest.mark.parametrize("query", ['sort=["score:desc"]', "limit=-1", "offset=-1"])
+def test_adjacent_invalid_query(query: str):
+    base = "/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9/adjacent"
+    res = client.get(f"{base}?{query}")
+    assert res.status_code == 400, res
+    res = client.get(f"{base}/addressEntity?{query}")
+    assert res.status_code == 400, res

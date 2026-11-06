@@ -268,6 +268,7 @@ async def fetch_entity(
     response_model=EntityAdjacentResponse,
     responses={
         308: {"description": "The entity was merged into another ID"},
+        400: {"model": ErrorResponse, "description": "Invalid query"},
         404: {"model": ErrorResponse, "description": "Entity not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
@@ -313,13 +314,21 @@ async def fetch_adjacent_entities(
         action="adjacent",
         entity_id=entity_id,
     )
-    return await get_adjacent_entities(
-        provider,
-        entity,
-        limit=limit,
-        offset=offset,
-        sort=parse_sorts(sort, defaults=["_doc"]),
-    )
+    try:
+        return await get_adjacent_entities(
+            provider,
+            entity,
+            limit=limit,
+            offset=offset,
+            sort=parse_sorts(sort, defaults=["_doc"]),
+        )
+    # The sort fields come from the request as given, and limit and offset are
+    # only checked against an upper bound, so a query the search provider cannot
+    # run may be the client's fault. The status does not tell that apart from a
+    # query that yente built wrong, and a client error is the more likely cause
+    # here, so the client gets a 400.
+    except* SearchProviderInvalidQueryError as eg:
+        raise HTTPException(400, detail=str(eg.exceptions[0])) from eg
 
 
 @router.get(
@@ -329,6 +338,7 @@ async def fetch_adjacent_entities(
     response_model=AdjacentResultsResponse,
     responses={
         308: {"description": "The entity was merged into another ID"},
+        400: {"model": ErrorResponse, "description": "Invalid query"},
         404: {"model": ErrorResponse, "description": "Entity or property not found"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
@@ -388,14 +398,22 @@ async def fetch_adjacent_by_prop(
         property_name=property_name,
     )
     prop = entity.schema.properties[property_name]
-    nested, total = await get_nested_entity(
-        provider,
-        entity,
-        prop,
-        parse_sorts(sort, defaults=["_doc"]),
-        limit,
-        offset,
-    )
+    try:
+        nested, total = await get_nested_entity(
+            provider,
+            entity,
+            prop,
+            parse_sorts(sort, defaults=["_doc"]),
+            limit,
+            offset,
+        )
+    # The sort fields come from the request as given, and limit and offset are
+    # only checked against an upper bound, so a query the search provider cannot
+    # run may be the client's fault. The status does not tell that apart from a
+    # query that yente built wrong, and a client error is the more likely cause
+    # here, so the client gets a 400.
+    except SearchProviderInvalidQueryError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
     results = nested.properties.get(prop.name, [])
     return AdjacentResultsResponse(
         results=results,
