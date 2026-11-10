@@ -11,6 +11,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
+from bench_utils.trans_util import romanize_bgn
 from rigour.addresses import address_fingerprint
 from rigour.territories import lookup_territory
 from rigour.territories.territory import Territory
@@ -129,30 +130,6 @@ ADDRESS_KEYWORD_SWAPS = [
     ("будинок", "буд."),
 ]
 
-# BGN/PCGN-style romanization of Russian and Ukrainian, deliberately not the
-# ICU scheme rigour uses, the way a Western party might transcribe an address.
-BGN_ROMANIZATION = dict(
-    zip(
-        "абвгдезийклмнопрстуфыэі",
-        "a b v g d e z i y k l m n o p r s t u f y e i".split(),
-    )
-) | {
-    "ё": "yo",
-    "ж": "zh",
-    "х": "kh",
-    "ц": "ts",
-    "ч": "ch",
-    "ш": "sh",
-    "щ": "shch",
-    "ъ": "",
-    "ь": "",
-    "ю": "yu",
-    "я": "ya",
-    "ї": "yi",
-    "є": "ye",
-    "ґ": "g",
-}
-
 
 def address_typo(s: str, rng: random.Random) -> str:
     """Replace a letter inside a word of six or more letters. e.g. Moscow -> Mosxow"""
@@ -176,18 +153,7 @@ def address_swap_keyword(s: str, rng: random.Random) -> str:
 
 def address_romanize(s: str, rng: random.Random) -> str:
     """Romanize Cyrillic BGN-style. e.g. ул. Тверская -> ul. Tverskaya"""
-    all_caps = s == s.upper()
-    out = []
-    for char in s:
-        low = char.lower()
-        rom = BGN_ROMANIZATION.get(low)
-        if rom is None:
-            out.append(char)
-        elif char == low:
-            out.append(rom)
-        else:
-            out.append(rom.upper() if all_caps else rom.capitalize())
-    return "".join(out)
+    return romanize_bgn(s)
 
 
 def address_drop_last_part(s: str, rng: random.Random) -> str:

@@ -25,6 +25,7 @@ from collections.abc import Callable
 from typing import Any
 
 import orjson
+from bench_utils.trans_util import romanize_bgn
 from followthemoney import model
 from rigour.addresses import address_fingerprint
 from rigour.text.scripts import is_dense_script, text_scripts
@@ -46,32 +47,6 @@ KEYWORD_SWAPS = [
     ("дом", "д."),
     ("строение", "стр."),
 ]
-
-# BGN/PCGN-style romanization, deliberately not rigour's ICU scheme.
-BGN = dict(
-    zip(
-        "абвгдезийклмнопрстуфыэі",
-        "a b v g d e z i y k l m n o p r s t u f y e i".split(),
-    )
-)
-BGN.update(
-    {
-        "ё": "yo",
-        "ж": "zh",
-        "х": "kh",
-        "ц": "ts",
-        "ч": "ch",
-        "ш": "sh",
-        "щ": "shch",
-        "ъ": "",
-        "ь": "",
-        "ю": "yu",
-        "я": "ya",
-        "ї": "yi",
-        "є": "ye",
-        "ґ": "g",
-    }
-)
 
 Record = tuple[str, str, str]  # schema, name, address
 
@@ -97,18 +72,7 @@ def abbrev(addr: str, rng: random.Random) -> str | None:
 def translit(addr: str, rng: random.Random) -> str | None:
     if "Cyrillic" not in text_scripts(addr):
         return None
-    all_caps = addr == addr.upper()
-    out = []
-    for char in addr:
-        low = char.lower()
-        rom = BGN.get(low)
-        if rom is None:
-            out.append(char)
-        elif char == low:
-            out.append(rom)
-        else:
-            out.append(rom.upper() if all_caps else rom.capitalize())
-    return "".join(out)
+    return romanize_bgn(addr)
 
 
 def drop_last(addr: str, rng: random.Random) -> str | None:

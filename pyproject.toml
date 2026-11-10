@@ -69,6 +69,7 @@ dev = [
     "types-PyYAML",
     "markdown-it-py",
     "pyinstrument",
+    "bench-utils",
 ]
 docs = [
     "pillow",
@@ -107,6 +108,9 @@ replace = "ghcr.io/opensanctions/yente:{new_version}"
 
 [tool.uv]
 default-groups = ["dev", "docs"]
+
+[tool.uv.sources]
+bench-utils = { path = "contrib/bench_utils", editable = true }
 
 [tool.hatch.build.targets.sdist]
 only-include = ["yente", "LICENSE", "README.md"]

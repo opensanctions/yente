@@ -1,0 +1,10 @@
+[project]
+name = "bench-utils"
+version = "0.0.0"
+description = "Helpers shared by yente's contrib benchmark and validation scripts."
+requires-python = ">=3.11"
+dependencies = ["pyicu"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

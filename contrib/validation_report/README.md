@@ -32,12 +32,7 @@ Requires a running yente instance.
 python generate_report_data.py
 ```
 
-Each fixture runs with the algorithms and weights listed in its `runs`. Against
-a yente version without `address_match`, the weighted run equals plain
-logic-v2. The weight is
-set in `generate_fixtures.py` and must be above the 0.7 threshold for an
-address-only match to be returned: `/match` drops results scoring at or below
-the cutoff, which defaults to the threshold.
+Each fixture runs with the algorithms and weights listed in its `runs`.
 
 ### Step 3: Render the report
 
