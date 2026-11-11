@@ -132,8 +132,8 @@ ADDRESS_KEYWORD_SWAPS = [
 
 
 def address_typo(s: str, rng: random.Random) -> str:
-    """Replace a letter inside a word of six or more letters. e.g. Moscow -> Mosxow"""
-    words = list(re.finditer(r"[^\W\d_]{6,}", s))
+    """Replace a letter inside a word of 3 or more letters. e.g. Moscow -> Mosxow"""
+    words = list(re.finditer(r"[^\W\d_]{3,}", s))
     if not words:
         return s
     word = rng.choice(words)
@@ -213,7 +213,9 @@ def change_number(number: str, rng: random.Random) -> str:
 
 
 def near_miss_house_number(s: str, rng: random.Random) -> str | None:
-    """A different house number on the same street. e.g. Main St 12 -> Main St 15"""
+    """A different house number on the same street. e.g. Main St 12 -> Main St 15
+    
+    Returns None if a house number can not be found to modify."""
     match = HOUSE_NUMBER.search(s)
     if match is None:
         return None
@@ -233,7 +235,9 @@ def street_names(addresses: list[str]) -> list[str]:
 
 def near_miss_street(s: str, rng: random.Random, names: list[str]) -> str | None:
     """Another street of the same script in the same place, house number kept.
-    e.g. ул. Тверская, д. 7 -> ул. Арбат, д. 7"""
+    e.g. ул. Тверская, д. 7 -> ул. Арбат, д. 7
+    
+    Returns None if no suitable street can be found to swap in input or candidates."""
     match = STREET_AFTER_KEYWORD.search(s)
     group = 2
     if match is None:

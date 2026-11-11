@@ -69,8 +69,10 @@ dev = [
     "types-PyYAML",
     "markdown-it-py",
     "pyinstrument",
-    "bench-utils",
 ]
+# Only resolvable through uv, via tool.uv.sources: a package of the same name
+# exists on PyPI, so this group is kept out of the pip installs in CI.
+contrib = ["bench-utils"]
 docs = [
     "pillow",
     "cairosvg",
@@ -107,7 +109,7 @@ search = "ghcr.io/opensanctions/yente:{current_version}"
 replace = "ghcr.io/opensanctions/yente:{new_version}"
 
 [tool.uv]
-default-groups = ["dev", "docs"]
+default-groups = ["dev", "docs", "contrib"]
 
 [tool.uv.sources]
 bench-utils = { path = "contrib/bench_utils", editable = true }

@@ -322,7 +322,7 @@ def generate_address_fixtures(client: httpx.Client) -> None:
         "address.",
         generated_from,
         rows,
-        [LOGIC_V1, LOGIC_V2],
+        [LOGIC_V2, LOGIC_V2_ADDRESS],
     )
 
     # Near misses: a listed address changed to name a different place, the kinds

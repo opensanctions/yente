@@ -1,0 +1,44 @@
+name: validation_report
+
+on:
+  push:
+    # Avoid duplicate push and pull_request runs on PR branches.
+    branches: [main]
+    paths:
+      - "contrib/validation_report/**"
+      - "contrib/bench_utils/**"
+      - ".github/workflows/validation_report.yml"
+  pull_request:
+    paths:
+      - "contrib/validation_report/**"
+      - "contrib/bench_utils/**"
+      - ".github/workflows/validation_report.yml"
+
+permissions: {} # Default to no permissions. Enable as needed for specific jobs.
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install system dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          # pyicu builds from source.
+          sudo apt-get install -y -qq libicu-dev
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      # uv rather than pip, because the contrib group's bench-utils resolves to a
+      # local path only through tool.uv.sources.
+      - name: Install dependencies
+        run: uv sync --no-default-groups --group dev --group contrib
+      - name: Run validation_report tests
+        run: uv run pytest -p no:cacheprovider contrib/validation_report
