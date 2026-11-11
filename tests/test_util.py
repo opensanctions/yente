@@ -1,6 +1,6 @@
 import pytest
 
-from yente.data.util import iso_to_version, name_part_variants
+from yente.data.util import iso_to_version, deletion_variants
 
 
 def test_iso_to_version_basic() -> None:
@@ -28,29 +28,29 @@ def test_iso_to_version_empty() -> None:
         ("rotenberg", 46),
     ],
 )
-def test_name_part_variants_count(part: str, count: int) -> None:
-    variants = name_part_variants(part)
+def test_deletion_variants_count(part: str, count: int) -> None:
+    variants = deletion_variants(part)
     assert part in variants
     assert len(variants) == count
 
 
-def test_name_part_variants_short_parts_are_themselves() -> None:
-    assert name_part_variants("v") == {"v"}
-    assert name_part_variants("li") == {"li"}
+def test_deletion_variants_short_parts_are_themselves() -> None:
+    assert deletion_variants("v") == {"v"}
+    assert deletion_variants("li") == {"li"}
 
 
 @pytest.mark.parametrize("length,count", [(64, 2081), (65, 1), (384, 1)])
-def test_name_part_variants_long_parts(length: int, count: int) -> None:
+def test_deletion_variants_long_parts(length: int, count: int) -> None:
     part = "".join(chr(0x4E00 + i) for i in range(length))
-    variants = name_part_variants(part)
+    variants = deletion_variants(part)
     assert part in variants
     assert len(variants) == count
 
 
-def test_name_part_variants_one_deletion_band() -> None:
-    assert name_part_variants("kim") == {"kim", "im", "km", "ki"}
+def test_deletion_variants_one_deletion_band() -> None:
+    assert deletion_variants("kim") == {"kim", "im", "km", "ki"}
     # Repeated letters collapse into the same variant.
-    assert name_part_variants("anna") == {"anna", "nna", "ana", "ann"}
+    assert deletion_variants("anna") == {"anna", "nna", "ana", "ann"}
 
 
 @pytest.mark.parametrize(
@@ -72,8 +72,8 @@ def test_name_part_variants_one_deletion_band() -> None:
         ("alexander", "zlexandr"),
     ],
 )
-def test_name_part_variants_bridge_edits(a: str, b: str) -> None:
-    assert name_part_variants(a) & name_part_variants(b)
+def test_deletion_variants_bridge_edits(a: str, b: str) -> None:
+    assert deletion_variants(a) & deletion_variants(b)
 
 
 @pytest.mark.parametrize(
@@ -110,8 +110,8 @@ def test_name_part_variants_bridge_edits(a: str, b: str) -> None:
         ("rotenberg", "rottenberg"),
     ],
 )
-def test_name_part_variants_bridge_spelling_variants(a: str, b: str) -> None:
-    assert name_part_variants(a) & name_part_variants(b)
+def test_deletion_variants_bridge_spelling_variants(a: str, b: str) -> None:
+    assert deletion_variants(a) & deletion_variants(b)
 
 
 @pytest.mark.parametrize(
@@ -124,5 +124,5 @@ def test_name_part_variants_bridge_spelling_variants(a: str, b: str) -> None:
         ("maria", "petrov"),
     ],
 )
-def test_name_part_variants_do_not_bridge_unrelated(a: str, b: str) -> None:
-    assert not name_part_variants(a) & name_part_variants(b)
+def test_deletion_variants_do_not_bridge_unrelated(a: str, b: str) -> None:
+    assert not deletion_variants(a) & deletion_variants(b)

@@ -16,12 +16,16 @@ from yente.data.dataset import Dataset
 from yente.data.util import (
     VARIANT_MAX_LENGTH,
     VARIANT_ONE_DELETION_LENGTH,
+    address_token_variants,
+    address_value_tokens,
     entity_weak_names,
     index_symbols,
-    name_part_variants,
+    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.search.mapping import (
+    ADDRESS_TOKENS_FIELD,
+    ADDRESS_VARIANTS_FIELD,
     NAME_JOINED_FIELD,
     NAME_PART_FIELD,
     NAME_SYMBOLS_FIELD,
@@ -61,7 +65,7 @@ TYPE_BOOSTS = {
 #   exact   `term` on `name_parts`: the comparable form (casefolded, latinised where a
 #           script allows it, diacritics and punctuation stripped) is identical.
 #   fuzzy   `terms` on `name_part_variants`: the query part and the indexed part share
-#           a deletion variant (see `name_part_variants`), which is the case whenever
+#           a deletion variant (see `deletion_variants`), which is the case whenever
 #           they are within the part's Damerau-Levenshtein budget of 0 edits up to 2
 #           chars, 1 edit at 3-5, 2 edits at 6-64, at any position including the first
 #           letter. Covers typos and short transliteration variants (mohammed/muhammad,
@@ -92,6 +96,9 @@ MAX_SYMBOL_PARTS = 24
 MAX_NAME_CLAUSES = 900
 MAX_SYMBOLS_PER_PART = 30
 MAX_JOINED_NAMES = 65536
+# Score an address adds when a candidate shares all of its tokens, at the average
+# IDF of those tokens; see address_query.
+ADDRESS_BOOST = 1.0
 
 
 class Operator(enum.StrEnum):
@@ -232,7 +239,7 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     for comparable in part_symbols:
         channels: list[Clause] = [tq(NAME_PART_FIELD, comparable, NAME_PART_BOOST)]
         if comparable in variant_parts:
-            variants = sorted(name_part_variants(comparable))
+            variants = sorted(deletion_variants(comparable))
             channels.append(tqs(NAME_VARIANTS_FIELD, variants, VARIANTS_BOOST))
         ids = symbol_ids.get(comparable, [])
         if len(ids) > 0:
@@ -254,6 +261,33 @@ def names_query(entity: EntityProxy) -> list[Clause]:
     return shoulds
 
 
+def address_query(entity: EntityProxy) -> list[Clause]:
+    """Build the address clauses of a /match candidate query.
+
+    Each token of an address's rigour fingerprint is a clause boosted by
+    ADDRESS_BOOST divided by the address's token count, so an address adds the
+    average score of its tokens, unshared ones counting as zero. A candidate
+    sharing more of the address ranks higher, but a long address adds no more
+    than a short one: it shouldn't outweigh a strong name hit and crowd name
+    candidates out of the window. Tokens carrying a digit (house numbers,
+    postcodes) and territory codes (`sy`, `ru-mow`) must match exactly, since one
+    edit away is a different place. All others also match through the deletion
+    variants indexed in `address_token_variants`.
+    """
+    shoulds: list[Clause] = []
+    for tokens in sorted(address_value_tokens(entity), key=sorted):
+        boost = ADDRESS_BOOST / len(tokens)
+        for token in sorted(tokens):
+            exact = tq(ADDRESS_TOKENS_FIELD, token, boost)
+            variants = address_token_variants({token})
+            if not variants:
+                shoulds.append(exact)
+                continue
+            approximate = tqs(ADDRESS_VARIANTS_FIELD, sorted(variants), boost)
+            shoulds.append({"dis_max": {"queries": [exact, approximate]}})
+    return shoulds
+
+
 def entity_query(
     dataset: Dataset,
     entity: EntityProxy,
@@ -270,11 +304,11 @@ def entity_query(
         if prop.type == registry.name or not prop.matchable:
             continue
         if prop.type == registry.address:
-            query = {"match": {prop.type.group: value}}
-            shoulds.append(query)
-        elif prop.type.group is not None:
+            continue
+        if prop.type.group is not None:
             boost = TYPE_BOOSTS.get(prop.type, 1.0)
             shoulds.append(tq(prop.type.group, value, boost))
+    shoulds.extend(address_query(entity))
 
     return filter_query(
         dataset,

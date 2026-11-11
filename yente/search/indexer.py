@@ -15,10 +15,12 @@ from yente.data.manifest import Catalog
 from yente.data.metrics import update_dataset_version_metric
 from yente.data.updater import DatasetUpdater
 from yente.data.util import (
+    address_token_variants,
+    address_tokens,
     entity_weak_names,
     expand_dates,
     index_symbols,
-    name_part_variants,
+    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.provider import SearchProvider, with_provider
@@ -32,6 +34,8 @@ from yente.search.lock import (
     release_lock,
 )
 from yente.search.mapping import (
+    ADDRESS_TOKENS_FIELD,
+    ADDRESS_VARIANTS_FIELD,
     INDEX_SETTINGS,
     NAME_JOINED_FIELD,
     NAME_PART_FIELD,
@@ -128,7 +132,7 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
         for comparable in comparables:
             if comparable not in name_parts:
                 name_parts.add(comparable)
-                name_variants.update(name_part_variants(comparable))
+                name_variants.update(deletion_variants(comparable))
         if len(comparables) > 0:
             name_joined.add("".join(comparables))
 
@@ -139,6 +143,9 @@ def build_indexable_entity_doc(entity: Entity) -> dict[str, Any]:
     doc[NAME_SYMBOLS_FIELD] = list(name_symbols)
     doc[NAME_JOINED_FIELD] = list(name_joined)
     doc[NAME_VARIANTS_FIELD] = list(name_variants)
+    tokens = address_tokens(entity)
+    doc[ADDRESS_TOKENS_FIELD] = list(tokens)
+    doc[ADDRESS_VARIANTS_FIELD] = list(address_token_variants(tokens))
     if registry.date.group is not None:
         doc[registry.date.group] = expand_dates(doc.pop(registry.date.group, []))
     doc["text"] = entity.pop("indexText")

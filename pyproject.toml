@@ -31,7 +31,7 @@ dependencies = [
     "cryptography == 50.0.2",
     "followthemoney == 4.11.2",
     "fingerprints == 1.3.1",
-    "nomenklatura == 4.17.5",
+    "nomenklatura == 4.18.0",
     "rigour == 2.6.1",
     "asyncstdlib == 3.14.0",
     "aiocron == 2.1",
@@ -70,6 +70,10 @@ dev = [
     "markdown-it-py",
     "pyinstrument",
 ]
+# Only resolvable through uv, via tool.uv.sources: a package of the same name
+# exists on PyPI, so this group is kept out of the pip installs in CI.
+# Using pip, 'pip install -e contrib/bench_utils' directly.
+contrib = ["bench-utils"]
 docs = [
     "pillow",
     "cairosvg",
@@ -106,7 +110,10 @@ search = "ghcr.io/opensanctions/yente:{current_version}"
 replace = "ghcr.io/opensanctions/yente:{new_version}"
 
 [tool.uv]
-default-groups = ["dev", "docs"]
+default-groups = ["dev", "docs", "contrib"]
+
+[tool.uv.sources]
+bench-utils = { path = "contrib/bench_utils", editable = true }
 
 [tool.hatch.build.targets.sdist]
 only-include = ["yente", "LICENSE", "README.md"]

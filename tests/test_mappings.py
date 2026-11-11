@@ -2,7 +2,7 @@ import pytest
 
 from yente import settings
 from yente.data.entity import Entity
-from yente.data.util import name_part_variants
+from yente.data.util import deletion_variants
 from yente.search.indexer import build_indexable_entity_doc
 from yente.search.mapping import INDEX_SETTINGS, make_entity_mapping
 
@@ -120,7 +120,7 @@ def test_long_name_part_variants_indexed(length):
     )
     doc = build_indexable_entity_doc(entity)
     assert set(doc["name_parts"]) == {part}
-    assert set(doc["name_part_variants"]) == name_part_variants(part)
+    assert set(doc["name_part_variants"]) == deletion_variants(part)
     if length > 64:
         assert doc["name_part_variants"] == [part]
 
@@ -222,7 +222,7 @@ def test_name_part_variants_indexed():
     doc = build_indexable_entity_doc(entity)
 
     variants = set(doc["name_part_variants"])
-    assert variants == name_part_variants("vladimir") | name_part_variants("putin") | {
+    assert variants == deletion_variants("vladimir") | deletion_variants("putin") | {
         "v"
     }
     # Weak aliases go into name_parts only.

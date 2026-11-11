@@ -4,10 +4,12 @@ from typing import Any
 from unittest import mock
 
 import pytest
+from rigour.addresses import address_fingerprint
 
 from yente.data.entity import Entity
-from yente.data.util import name_part_variants
+from yente.data.util import address_token_variants, deletion_variants
 from yente.search.queries import (
+    ADDRESS_BOOST,
     JOINED_BOOST,
     MAX_NAME_CLAUSES,
     MAX_SYMBOLS_PER_PART,
@@ -15,6 +17,7 @@ from yente.search.queries import (
     SYMBOL_BOOST,
     VARIANTS_BOOST,
     WEAK_ALIAS_BOOST,
+    address_query,
     names_query,
 )
 
@@ -105,9 +108,7 @@ def test_fuzzy_channel():
     }
     variants = variants_channel(parts["vladimir"])
     assert variants is not None
-    assert set(variants["terms"]["name_part_variants"]) == name_part_variants(
-        "vladimir"
-    )
+    assert set(variants["terms"]["name_part_variants"]) == deletion_variants("vladimir")
     assert channel(parts["vladimir"], "fuzzy") is None
     assert channel(parts["vladimir"], "constant_score") is None
 
@@ -228,7 +229,7 @@ def test_expansion_thresholds(count, variants, symbols, leaves):
             side_effect=lambda _: (f"NAME:{i}" for i in range(30)),
         ),
         mock.patch(
-            "yente.search.queries.name_part_variants", wraps=name_part_variants
+            "yente.search.queries.deletion_variants", wraps=deletion_variants
         ) as expand,
     ):
         shoulds = names_query(entity)
@@ -255,7 +256,7 @@ def test_name_clause_limit():
     oversized = make_entity(
         "q-over-limit", "Person", {"name": many_parts(MAX_NAME_CLAUSES)}
     )
-    with mock.patch("yente.search.queries.name_part_variants") as expand:
+    with mock.patch("yente.search.queries.deletion_variants") as expand:
         with pytest.raises(ValueError, match="requires 901 clauses; maximum is 900"):
             names_query(oversized)
         expand.assert_not_called()
@@ -274,7 +275,7 @@ def test_joined_form_limit():
         assert len(joined[0]["terms"]["name_joined"]) == 3
     with (
         mock.patch("yente.search.queries.MAX_JOINED_NAMES", 2),
-        mock.patch("yente.search.queries.name_part_variants") as expand,
+        mock.patch("yente.search.queries.deletion_variants") as expand,
     ):
         with pytest.raises(ValueError, match="3 joined forms; maximum is 2"):
             names_query(entity)
@@ -293,7 +294,7 @@ def test_long_part_query(length):
     part = ("abcdefgh" * 48)[:length]
     entity = make_entity(f"q-long-{length}", "Person", {"name": [part]})
     with mock.patch(
-        "yente.search.queries.name_part_variants", wraps=name_part_variants
+        "yente.search.queries.deletion_variants", wraps=deletion_variants
     ) as expand:
         channels = part_clauses(names_query(entity))[part]
     assert (variants_channel(channels) is not None) == (length == 64)
@@ -308,3 +309,67 @@ def test_primary_name_parts_come_first():
     )
     parts = list(part_clauses(names_query(entity)))
     assert parts[:2] == ["zebediah", "quill"]
+
+
+def test_address_query():
+    entity = make_entity(
+        "q-address",
+        "Company",
+        {"address": ["Main Boulevard 5, Syrian Arab Republic", "Main Blvd. 5, Syria"]},
+    )
+    shoulds = address_query(entity)
+
+    # 4 because both addresses fingerprint to 4 tokens.
+    boost = ADDRESS_BOOST / 4
+
+    def exact(token: str) -> dict[str, Any]:
+        return {"term": {"address_tokens": {"value": token, "boost": boost}}}
+
+    def approximate(token: str) -> dict[str, Any]:
+        return {
+            "dis_max": {
+                "queries": [
+                    exact(token),
+                    {
+                        "terms": {
+                            "address_token_variants": sorted(deletion_variants(token)),
+                            "boost": boost,
+                        }
+                    },
+                ]
+            }
+        }
+
+    # Both renderings reduce to the same four fingerprint tokens, each boosted by
+    # a quarter. The house number and the territory code match exactly, the rest
+    # also by deletion variant:
+    assert shoulds == [
+        exact("5"),
+        approximate("blvd"),
+        approximate("main"),
+        exact("sy"),
+    ]
+
+    # Each address is weighted by its own length:
+    dense = "127055, Москва, ул. Бутырский Вал, д. 68/70, стр. 1, пом. 5"
+    entity = make_entity(
+        "q-addresses", "Company", {"address": [dense, "Damascus, Syria"]}
+    )
+    boosts = {
+        c["term"]["address_tokens"]["boost"]
+        for c in address_query(entity)
+        if "term" in c
+    }
+    dense_tokens = len(address_fingerprint(dense).split())
+    assert boosts == {ADDRESS_BOOST / dense_tokens, ADDRESS_BOOST / 2}
+
+    entity = make_entity("q-no-address", "Company", {"name": ["Acme"]})
+    assert address_query(entity) == []
+
+
+def test_address_token_variants():
+    variants = address_token_variants({"tverskaya", "5", "ru-mow", "北京市朝阳区"})
+    # "tverskaa" (rigour's romanization of Тверская) is one deletion away:
+    assert "tverskaa" in variants
+    assert not any("5" in v or "ru-" in v for v in variants)
+    assert not any("北" in v for v in variants)
