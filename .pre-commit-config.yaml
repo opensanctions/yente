@@ -1,24 +1,33 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v6.0.0
-  hooks:
-    - id: check-yaml
-      args: ['--allow-multiple-documents']
-    - id: end-of-file-fixer
-      exclude: '^tests/fixtures/'
-    - id: trailing-whitespace
-      exclude: '^tests/fixtures/'
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.1
-  hooks:
-    - id: ruff-check
-      args: [ --fix ]
-    - id: ruff-format
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.18.1
-  hooks:
-    - id: mypy
-      # Don't run isolated but use the activated venv. Not perfect but better than re-declaring all deps here
-      language: system
-      exclude: '^(tests|examples|contrib)/'
-      args: ['--strict']
+  # prek's Rust built-ins: no hook repo to fetch and no Python env to build.
+  # Dependabot skips this entry because it has no rev.
+  - repo: builtin
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: end-of-file-fixer
+        exclude: ^tests/fixtures/
+      - id: trailing-whitespace
+        exclude: ^tests/fixtures/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy imports the package and its dependencies, so it runs in the
+  # developer's venv instead of an isolated hook environment.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy --strict
+        entry: mypy --strict yente
+        language: system
+        types: [python]
+        files: ^yente/
+        pass_filenames: false
