@@ -8,14 +8,12 @@ from nomenklatura.matching.types import ScoringConfig
 from yente import settings
 from yente.data.common import (
     EntityExample,
-    EntityMatches,
-    EntityMatchQuery,
-    EntityMatchResponse,
     ErrorResponse,
     TotalSpec,
 )
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
+from yente.data.match_v1 import EntityMatches, EntityMatchQuery, EntityMatchResponse
 from yente.logs import get_logger
 from yente.provider import SearchProvider
 from yente.routers.util import (

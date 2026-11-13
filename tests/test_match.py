@@ -103,7 +103,7 @@ def test_match_name_clause_limit():
             }
         }
     }
-    with mock.patch("yente.routers.match.search_entities") as search:
+    with mock.patch("yente.routers.match_v1.search_entities") as search:
         resp = client.post("/match/zala", json=query)
         search.assert_not_called()
     assert resp.status_code == 400, resp.text
@@ -347,7 +347,7 @@ def test_exclude_entity_ids():
 
 @pytest.mark.usefixtures("zala_test_dataset")
 def test_match_candidate_search_skips_total():
-    import yente.routers.match as match_router
+    import yente.routers.match_v1 as match_router
 
     with mock.patch.object(
         match_router, "search_entities", wraps=match_router.search_entities

@@ -24,7 +24,7 @@ from yente.middleware import (
 )
 from yente.provider import close_provider, with_provider
 from yente.provider.exc import SearchProviderError, SearchProviderUnavailableError
-from yente.routers import admin, match, reconcile, search
+from yente.routers import admin, match_v1, match_v2, reconcile, search
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 
@@ -173,7 +173,8 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(MaxURLLengthMiddleware)
-    app.include_router(match.router)
+    app.include_router(match_v1.router)
+    app.include_router(match_v2.router)
     app.include_router(search.router)
     app.include_router(reconcile.router)
     app.include_router(admin.router)

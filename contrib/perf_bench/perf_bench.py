@@ -29,16 +29,14 @@ from yente import settings
 from yente.app import warm_up
 from yente.data.common import (
     EntityExample,
-    EntityMatches,
-    EntityMatchQuery,
-    EntityMatchResponse,
     TotalSpec,
 )
 from yente.data.dataset import Dataset
 from yente.data.entity import Entity
+from yente.data.match_v1 import EntityMatches, EntityMatchQuery, EntityMatchResponse
 from yente.logs import configure_logging
 from yente.provider import SearchProvider, with_provider
-from yente.routers.match import _match_one_query
+from yente.routers.match_v1 import _match_one_query
 from yente.routers.util import get_algorithm_by_name, get_dataset
 from yente.scoring import score_results
 from yente.search.queries import DEFAULT_SORTS, Operator, entity_query
@@ -116,7 +114,7 @@ def parse_weights(specs: Sequence[str]) -> dict[str, float]:
 
 
 def candidate_count(limit: int) -> int:
-    # Mirrors the candidate window computation in yente/routers/match.py.
+    # Mirrors the candidate window computation in yente/routers/match_v1.py.
     candidates = limit * settings.MATCH_CANDIDATES
     candidates = max(20, min(settings.MAX_RESULTS, candidates))
     candidates = min(candidates, max(settings.MAX_MATCH_CANDIDATES, limit))
