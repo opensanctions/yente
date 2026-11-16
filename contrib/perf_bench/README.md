@@ -23,6 +23,7 @@ python contrib/perf_bench/perf_bench.py run --output /tmp/baseline.json
 python contrib/perf_bench/perf_bench.py run --batch 5
 python contrib/perf_bench/perf_bench.py run --tag dense --profile text
 python contrib/perf_bench/perf_bench.py run --profile html --profile-out /tmp/profile.html
+python contrib/perf_bench/perf_bench.py run --weight address_match=0.7
 ```
 
 Each query runs `--repeat` times sequentially and the median is reported. Every
@@ -78,3 +79,23 @@ carries a schema tag (`person`, `company`, `vessel`, ...) and `positive` or
 `negative` where the expected outcome is known. Positives are real entities in
 the OpenSanctions default collection, so they only resolve against an index of
 that data.
+
+## Address query set
+
+`queries_address.json` holds 220 queries built from real addresses of LegalEntity
+records in the `default` collection, regenerated with:
+
+```bash
+python contrib/perf_bench/generate_address_queries.py \
+    /path/to/default/entities.ftm.json contrib/perf_bench/queries_address.json
+```
+
+Tags: `name-address` (name plus a street-level address), `address-only`, `vague`
+(name plus a city-level address, which matches the most documents), the
+perturbation applied to the address (`p-exact`, `p-typo`, `p-abbrev`,
+`p-translit`, `p-drop-last`), `cyrillic`, and the schema. Run it with
+`--queries contrib/perf_bench/queries_address.json`.
+
+Weights don't change the candidate query, so comparing a run with
+`--weight address_match=0.7` against one without isolates the cost of scoring
+the address feature, which is disabled by default.

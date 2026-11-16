@@ -109,6 +109,7 @@ def main(input_json: str | None, dataset: str, output: str | None) -> None:
         threshold=threshold,
         indexed_dataset=indexed_dataset,
         fixtures=fixtures,
+        descriptions={f["name"]: f["description"] for f in fixtures},
         results=results,
         pip_freeze=pip_freeze,
         yente_git_version=yente_git_version,
