@@ -79,7 +79,9 @@ async def scores(properties: dict[str, list[str]]) -> dict[str, float]:
     """Candidate query scores by entity ID, for a LegalEntity query."""
     dataset = await get_dataset("address_scoring")
     example = EntityExample(schema="LegalEntity", properties=properties)
-    query = entity_query(dataset, Entity.from_example(example), filter_op=Operator.OR)
+    query = entity_query(
+        dataset.dataset_names, Entity.from_example(example), filter_op=Operator.OR
+    )
     async with with_provider() as provider:
         response = await search_entities(provider, query, limit=10)
     return {entity.id: score for entity, score in result_entities(response)}

@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Coroutine, Sequence
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
@@ -12,28 +12,24 @@ from yente.data.common import (
     TotalSpec,
 )
 from yente.data.dataset import Dataset
-from yente.data.entity import Entity
 from yente.data.match_v1 import EntityMatches, EntityMatchQuery, EntityMatchResponse
 from yente.logs import get_logger
 from yente.provider import SearchProvider
+from yente.routers.match import (
+    build_match_query,
+    candidate_count,
+    echo_example,
+    get_algorithm,
+    score_candidates,
+)
 from yente.routers.util import (
     ALGO_HELP,
     TS_PATTERN,
     DatasetPath,
     ProviderDep,
-    get_algorithm_by_name,
     get_dataset,
 )
-from yente.scoring import score_results
-from yente.search.queries import (
-    DEFAULT_SORTS,
-    Filters,
-    FilterSpec,
-    Operator,
-    entity_query,
-)
-from yente.search.search import result_entities, search_entities
-from yente.util import limit_window
+from yente.search.queries import Filters, FilterSpec
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -61,47 +57,27 @@ async def _match_one_query(
     and all queries are triggered simultaneously. Previous yente versions used to do all searches concurrently
     but score sequentially - but this meant that scoring would not start before the slowest ES query returned.
     """
-    try:
-        entity = Entity.from_example(example)
-        query = entity_query(
-            ds,
-            entity,
-            filters=filters,
-            filter_op=Operator.OR,
-            include_dataset=include_dataset,
-            exclude_schema=exclude_schema,
-            exclude_dataset=exclude_dataset,
-            changed_since=changed_since,
-            exclude_entity_ids=exclude_entity_ids,
-        )
-    # Any failure to build a query from the example is the client's fault.
-    except Exception as exc:  # noqa: BLE001
-        log.info(f"Cannot parse example entity: {exc!s}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot parse example entity: {exc}",
-        )
-    # The response total is the number of scored results, so the candidate
-    # query never reads hits.total; skipping the count lets the backend
-    # prune non-competitive documents early.
-    search_result = await search_entities(
-        provider,
-        query,
-        limit=candidates,
-        sort=DEFAULT_SORTS,
-        track_total_hits=False,
-        metric_attributes={"endpoint": "match"},
+    entity, query = build_match_query(
+        example,
+        ds.dataset_names,
+        filters,
+        include_dataset=include_dataset,
+        exclude_schema=exclude_schema,
+        exclude_dataset=exclude_dataset,
+        changed_since=changed_since,
+        exclude_entity_ids=exclude_entity_ids,
     )
-    ents = result_entities(search_result)
-    algorithm_type = get_algorithm_by_name(algorithm)
-    total, scored = await score_results(
-        algorithm_type,
+    total, scored = await score_candidates(
+        provider,
         entity,
-        ents,
+        query,
+        get_algorithm(algorithm),
+        ScoringConfig(weights=match.weights, config=match.config),
+        candidates=candidates,
+        limit=limit,
         threshold=threshold,
         cutoff=cutoff,
-        limit=limit,
-        config=ScoringConfig(weights=match.weights, config=match.config),
+        metric_attributes={"endpoint": "match"},
     )
     log.info(
         f"/match/{ds.name}",
@@ -114,20 +90,11 @@ async def _match_one_query(
         # Log the algorithm passed in the request, which may be None or "best"
         algorithm_param=algorithm,
     )
-    # Restore the caller-supplied id on the echoed query only. The internal
-    # entity keeps its checksum-derived id so scoring/candidate-dedup can't
-    # be influenced by a caller picking an id that collides with a real
-    # dataset entity.
-    parsed = EntityExample(
-        id=example.id,
-        schema=entity.schema.name,
-        properties=dict(entity.properties),
-    )
     matches = EntityMatches(
         status=200,
         results=scored,
         total=TotalSpec(value=total, relation="eq"),
-        query=parsed,
+        query=echo_example(example, entity),
     )
     return (name, matches)
 
@@ -143,7 +110,6 @@ async def _match_one_query(
     },
 )
 async def match(
-    request: Request,
     response: Response,
     match: EntityMatchQuery,
     provider: ProviderDep,
@@ -248,32 +214,13 @@ async def match(
     # is not greater than the threshold because that would be weird.
     cutoff = min(cutoff, threshold)
     filters: list[FilterSpec] = [("topics", t) for t in topics]
-    algorithm_type = get_algorithm_by_name(algorithm)
-
-    for config_key in match.config:
-        if config_key not in algorithm_type.CONFIG:
-            raise HTTPException(
-                400,
-                detail=f"Invalid configuration parameter: {config_key} for algorithm {algorithm_type.NAME}",
-            )
+    get_algorithm(algorithm, match.config)
 
     if len(match.queries) > settings.MAX_BATCH:
         msg = f"Too many queries in one batch (limit: {settings.MAX_BATCH})"
         raise HTTPException(400, detail=msg)
 
-    # We're using a higher limit for candidate generation, because we want to
-    # get a broad range of candidates to score against. This is a trade-off
-    # between speed and accuracy.
-    candidates = limit * settings.MATCH_CANDIDATES
-    # We want at least 20 candidates to score to have good results even for limit = 1
-    candidates = max(20, min(settings.MAX_RESULTS, candidates))
-    # We want to retrieve at most MAX_MATCH_CANDIDATES, other wise we will be
-    # very slow or OOM for high values of limit.
-    # But at least `limit` candidates, otherwise we'll run out of results to return.
-    # One day we might drop the max for limit, see https://github.com/opensanctions/yente/issues/927
-    candidates = min(candidates, max(settings.MAX_MATCH_CANDIDATES, limit))
-    # This is more of a formality - candidates will never be >= 10000 (settings.MAX_RESULTS)
-    candidates, _ = limit_window(candidates, 0)
+    candidates = candidate_count(limit)
 
     tasks: list[Coroutine[Any, Any, tuple[str, EntityMatches]]] = []
     for name, example in match.queries.items():

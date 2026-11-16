@@ -24,7 +24,9 @@ from yente.middleware import (
 )
 from yente.provider import close_provider, with_provider
 from yente.provider.exc import SearchProviderError, SearchProviderUnavailableError
-from yente.routers import admin, match_v1, match_v2, reconcile, search
+from yente.routers import admin, reconcile, search
+from yente.routers.match import v1 as match_v1
+from yente.routers.match import v2 as match_v2
 from yente.routers.util import ENABLED_ALGORITHMS
 from yente.search.indexer import update_index_threaded
 

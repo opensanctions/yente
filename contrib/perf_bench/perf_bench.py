@@ -36,12 +36,12 @@ from yente.data.entity import Entity
 from yente.data.match_v1 import EntityMatches, EntityMatchQuery, EntityMatchResponse
 from yente.logs import configure_logging
 from yente.provider import SearchProvider, with_provider
-from yente.routers.match_v1 import _match_one_query
+from yente.routers.match import candidate_count
+from yente.routers.match.v1 import _match_one_query
 from yente.routers.util import get_algorithm_by_name, get_dataset
 from yente.scoring import score_results
 from yente.search.queries import DEFAULT_SORTS, Operator, entity_query
 from yente.search.search import result_entities, search_entities
-from yente.util import limit_window
 
 STAGES = ("from_example", "build_query", "search", "decode", "score", "serialize")
 STAGE_HEADERS = ("example", "query", "search", "decode", "score", "serial.")
@@ -113,15 +113,6 @@ def parse_weights(specs: Sequence[str]) -> dict[str, float]:
     return weights
 
 
-def candidate_count(limit: int) -> int:
-    # Mirrors the candidate window computation in yente/routers/match_v1.py.
-    candidates = limit * settings.MATCH_CANDIDATES
-    candidates = max(20, min(settings.MAX_RESULTS, candidates))
-    candidates = min(candidates, max(settings.MAX_MATCH_CANDIDATES, limit))
-    candidates, _ = limit_window(candidates, 0)
-    return candidates
-
-
 def load_cases(path: Path, tags: Sequence[str]) -> list[Case]:
     with open(path, encoding="utf-8") as fh:
         raw = json.load(fh)
@@ -154,7 +145,7 @@ async def time_stages(
     t1 = time.perf_counter()
     stages["from_example"] = t1 - t0
 
-    query = entity_query(ds, entity, filter_op=Operator.OR)
+    query = entity_query(ds.dataset_names, entity, filter_op=Operator.OR)
     t2 = time.perf_counter()
     stages["build_query"] = t2 - t1
 

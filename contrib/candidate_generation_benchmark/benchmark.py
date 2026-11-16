@@ -132,7 +132,7 @@ async def benchmark_person(
     entity = Entity.from_example(example)
 
     # Generate candidates using entity_query
-    query = entity_query(dataset, entity)
+    query = entity_query(dataset.dataset_names, entity)
 
     # Use the same limit for candidate generation as in match.py
     candidates_limit = settings.MATCH_PAGE * settings.MATCH_CANDIDATES

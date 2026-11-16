@@ -88,4 +88,3 @@ class EntityMatches(BaseModel):
     results: list[ScoredEntityResponse]
     total: TotalSpec
     query: EntityExample
-    limit: int = Field(..., examples=[5])
