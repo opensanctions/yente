@@ -1,8 +1,11 @@
-from collections.abc import Generator
+import time
+from collections.abc import Generator, Mapping
 from typing import Any
 
 from followthemoney import Schema, model, registry
 from followthemoney.dataset import DataCatalog
+from opentelemetry import metrics
+from opentelemetry.util.types import AttributeValue
 
 from yente import settings
 from yente.data.common import SearchFacet, SearchFacetItem, TotalSpec
@@ -14,6 +17,23 @@ from yente.util import EntityRedirect, limit_window
 
 log = get_logger(__name__)
 AggType = dict[str, dict[str, list[dict[str, Any]]]]
+
+# Fine steps between 10ms and 1s, where match and search queries land, so
+# percentiles interpolated from the buckets stay within about 25%.
+# fmt: off
+_QUERY_DURATION_BUCKETS = [
+    0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.075,
+    0.1, 0.125, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75,
+    1, 1.5, 2.5, 5, 10,
+]
+# fmt: on
+_meter = metrics.get_meter("yente.search")
+_query_duration = _meter.create_histogram(
+    "yente.search.query_duration",
+    unit="s",
+    description="Duration of entity search queries against the search backend",
+    explicit_bucket_boundaries_advisory=_QUERY_DURATION_BUCKETS,
+)
 
 
 def result_entity(data: dict[str, Any]) -> Entity | None:
@@ -111,10 +131,12 @@ async def search_entities(
     aggregations: dict[str, Any] | None = None,
     sort: list[Any] | None = None,
     track_total_hits: bool = True,
+    metric_attributes: Mapping[str, AttributeValue] | None = None,
 ) -> dict[str, Any]:
     limit, offset = limit_window(limit, offset)
 
-    return await provider.search(
+    start = time.perf_counter()
+    response = await provider.search(
         index=settings.ENTITY_INDEX,
         query=query,
         size=limit,
@@ -124,6 +146,8 @@ async def search_entities(
         rank_precise=True,
         track_total_hits=track_total_hits,
     )
+    _query_duration.record(time.perf_counter() - start, metric_attributes)
+    return response
 
 
 async def get_entity(provider: SearchProvider, entity_id: str) -> Entity | None:
