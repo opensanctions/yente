@@ -145,7 +145,7 @@ def address_swap_keyword(s: str, rng: random.Random) -> str:
     """Abbreviate or expand one address keyword. e.g. Main Street -> Main st."""
     for long, short in ADDRESS_KEYWORD_SWAPS:
         for find, repl in ((long, short), (short, long)):
-            pattern = re.compile(rf"(?<!\w){re.escape(find)}(?!\w)", re.I)
+            pattern = re.compile(rf"(?<!\w){re.escape(find)}(?!\w)", re.IGNORECASE)
             if pattern.search(s):
                 return pattern.sub(repl, s, count=1)
     return s
@@ -214,7 +214,7 @@ def change_number(number: str, rng: random.Random) -> str:
 
 def near_miss_house_number(s: str, rng: random.Random) -> str | None:
     """A different house number on the same street. e.g. Main St 12 -> Main St 15
-    
+
     Returns None if a house number can not be found to modify."""
     match = HOUSE_NUMBER.search(s)
     if match is None:
@@ -236,7 +236,7 @@ def street_names(addresses: list[str]) -> list[str]:
 def near_miss_street(s: str, rng: random.Random, names: list[str]) -> str | None:
     """Another street of the same script in the same place, house number kept.
     e.g. ул. Тверская, д. 7 -> ул. Арбат, д. 7
-    
+
     Returns None if no suitable street can be found to swap in input or candidates."""
     match = STREET_AFTER_KEYWORD.search(s)
     group = 2

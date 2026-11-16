@@ -17,10 +17,10 @@ from yente.data.updater import DatasetUpdater
 from yente.data.util import (
     address_token_variants,
     address_tokens,
+    deletion_variants,
     entity_weak_names,
     expand_dates,
     index_symbols,
-    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.provider import SearchProvider, with_provider
