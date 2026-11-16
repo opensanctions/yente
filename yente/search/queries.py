@@ -18,9 +18,9 @@ from yente.data.util import (
     VARIANT_ONE_DELETION_LENGTH,
     address_token_variants,
     address_value_tokens,
+    deletion_variants,
     entity_weak_names,
     index_symbols,
-    deletion_variants,
 )
 from yente.logs import get_logger
 from yente.search.mapping import (

@@ -7,7 +7,6 @@ from treatments import (
     address_romanize,
     address_swap_keyword,
     address_typo,
-    apply_address_treatment,
     named_territory,
     near_miss_country,
     near_miss_house_number,

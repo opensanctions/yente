@@ -1,6 +1,6 @@
 import pytest
 
-from yente.data.util import iso_to_version, deletion_variants
+from yente.data.util import deletion_variants, iso_to_version
 
 
 def test_iso_to_version_basic() -> None:

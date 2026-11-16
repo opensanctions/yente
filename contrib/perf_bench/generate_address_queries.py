@@ -63,7 +63,7 @@ def typo(addr: str, rng: random.Random) -> str | None:
 def abbrev(addr: str, rng: random.Random) -> str | None:
     for long, short in KEYWORD_SWAPS:
         for find, repl in ((long, short), (short, long)):
-            pattern = re.compile(rf"(?<!\w){re.escape(find)}(?!\w)", re.I)
+            pattern = re.compile(rf"(?<!\w){re.escape(find)}(?!\w)", re.IGNORECASE)
             if pattern.search(addr):
                 return pattern.sub(repl, addr, count=1)
     return None
