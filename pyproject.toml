@@ -18,7 +18,7 @@ dependencies = [
     # clients. Gotta go fast.
     "aiohttp[speedups] == 3.14.5",
     "boto3 ~= 1.37",
-    "fastapi == 0.162.0",
+    "fastapi == 0.163.0",
     "python-multipart == 0.0.32",
     "structlog == 26.1.0",
     # Not imported directly. The pin is intentional: pyicu builds from source
