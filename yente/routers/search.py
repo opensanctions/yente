@@ -264,7 +264,7 @@ async def fetch_entity(
 
 @router.get(
     "/entities/{entity_id}/adjacent",
-    name="Fetch Adjacent Entities*",
+    summary="Fetch Adjacent Entities*",
     tags=["Data access"],
     response_model=EntityAdjacentResponse,
     responses={
@@ -335,7 +335,7 @@ async def fetch_adjacent_entities(
 @router.get(
     "/entities/{entity_id}/adjacent/{property_name}",
     tags=["Data access"],
-    name="Fetch Adjacent by Property*",
+    summary="Fetch Adjacent by Property*",
     response_model=AdjacentResultsResponse,
     responses={
         308: {"description": "The entity was merged into another ID"},
