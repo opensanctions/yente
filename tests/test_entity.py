@@ -39,6 +39,18 @@ def test_entity_fetch():
     assert sanc["schema"] == "Sanction"
 
 
+@pytest.mark.usefixtures("zala_test_dataset")
+def test_merged_entity_redirect_keeps_endpoint_and_query():
+    for suffix in [
+        "?nested=false",
+        "/adjacent?limit=2",
+        "/adjacent/addressEntity?limit=2&offset=1",
+    ]:
+        res = client.get(f"/entities/ofac-45928{suffix}", follow_redirects=False)
+        assert res.status_code == 308
+        assert res.headers["location"] == f"/entities/NK-abdzbEBkqyT29GyREbiURZ{suffix}"
+
+
 @pytest.mark.usefixtures("parteispenden_test_dataset")
 def test_entity_not_nested():
     res = client.get("/entities/281d01c426ce39ddf80aa0e46574843c1ba8bfc9?nested=false")
