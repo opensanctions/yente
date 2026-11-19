@@ -37,7 +37,7 @@ router = APIRouter()
 
 async def _match_one_query(
     ds: Dataset,
-    algorithm: str,
+    algorithm_name: str,
     match: EntityMatchQuery,
     name: str,
     example: EntityExample,
@@ -58,9 +58,9 @@ async def _match_one_query(
     but score sequentially - but this meant that scoring would not start before the slowest ES query returned.
     """
     entity, query = build_match_query(
-        example,
-        ds.dataset_names,
-        filters,
+        example=example,
+        dataset_names=ds.dataset_names,
+        filters=filters,
         include_dataset=include_dataset,
         exclude_schema=exclude_schema,
         exclude_dataset=exclude_dataset,
@@ -71,7 +71,7 @@ async def _match_one_query(
         provider,
         entity,
         query,
-        get_algorithm(algorithm),
+        get_algorithm(algorithm_name),
         ScoringConfig(weights=match.weights, config=match.config),
         candidates=candidates,
         limit=limit,
@@ -88,7 +88,7 @@ async def _match_one_query(
         dataset=ds.name,
         limit=limit,
         # Log the algorithm passed in the request, which may be None or "best"
-        algorithm_param=algorithm,
+        algorithm_param=algorithm_name,
     )
     matches = EntityMatches(
         status=200,

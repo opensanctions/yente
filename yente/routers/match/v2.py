@@ -100,9 +100,9 @@ async def match(
     topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
 
     entity, query = build_match_query(
-        match.query,
-        {ds.name for ds in scope},
-        topics,
+        example=match.query,
+        dataset_names={ds.name for ds in scope},
+        filters=topics,
         exclude_schema=filters.exclude_schemata,
         changed_since=filters.changed_since,
         exclude_entity_ids=filters.exclude_entities,

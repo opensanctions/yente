@@ -18,6 +18,8 @@ from yente.search.queries import (
     VARIANTS_BOOST,
     WEAK_ALIAS_BOOST,
     address_query,
+    entity_query,
+    filter_query,
     names_query,
 )
 
@@ -373,3 +375,41 @@ def test_address_token_variants():
     assert "tverskaa" in variants
     assert not any("5" in v or "ru-" in v for v in variants)
     assert not any("北" in v for v in variants)
+
+
+def _filtered_datasets(query: dict[str, Any]) -> list[str]:
+    """The dataset names in the query's `terms` filter on `datasets`."""
+    for clause in query["bool"]["filter"]:
+        if "datasets" in clause.get("terms", {}):
+            return sorted(clause["terms"]["datasets"])
+    raise AssertionError("No datasets filter")
+
+
+def test_filter_query_dataset_names():
+    query = filter_query(["alpha", "beta"], [])
+    assert _filtered_datasets(query) == ["alpha", "beta"]
+
+
+def test_filter_query_no_datasets():
+    assert {"match_none": {}} in filter_query([], [])["bool"]["filter"]
+
+
+def test_filter_query_include_exclude_dataset():
+    query = filter_query(
+        ["alpha", "beta", "gamma"],
+        [],
+        include_dataset=["alpha", "beta"],
+    )
+    assert _filtered_datasets(query) == ["alpha", "beta"]
+    query = filter_query(["alpha", "beta"], [], exclude_dataset=["beta"])
+    assert _filtered_datasets(query) == ["alpha"]
+    query = filter_query(["alpha"], [], exclude_dataset=["alpha"])
+    assert {"match_none": {}} in query["bool"]["filter"]
+
+
+def test_entity_query_dataset_names():
+    entity = Entity.from_dict(
+        {"id": "x", "schema": "Person", "properties": {"name": ["Jane Doe"]}}
+    )
+    query = entity_query(["alpha"], entity)
+    assert _filtered_datasets(query) == ["alpha"]
