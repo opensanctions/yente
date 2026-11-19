@@ -1,13 +1,24 @@
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from yente import settings
-from yente.data.common import EntityExample, ScoredEntityResponse, TotalSpec
+from yente.data.common import ScoredEntityResponse, TotalSpec
 from yente.routers.util import ALGO_HELP, TS_PATTERN
 
 
+class QueryEntity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_: str = Field(min_length=1, alias="schema", examples=["Person"])
+    properties: dict[str, str | list[Any]] = Field(
+        min_length=1, examples=[{"name": ["John Doe"]}]
+    )
+
+
 class MatcherOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     weights: dict[str, float] = Field(
         default={},
         description="Override the weights of features in the scoring algorithm.",
@@ -21,6 +32,8 @@ class MatcherOptions(BaseModel):
 
 
 class Filters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # The structured form of followthemoney.dataset.DatasetQuery. A top-level
     # string is excluded so it can't be confused with the string query syntax.
     datasets: list[Any] | dict[str, Any] = Field(
@@ -65,15 +78,22 @@ class Filters(BaseModel):
 
 
 class EntityMatchQuery(BaseModel):
-    query: EntityExample
+    model_config = ConfigDict(extra="forbid")
+
+    query: QueryEntity
     algorithm: str = Field(settings.DEFAULT_ALGORITHM, title=ALGO_HELP)
     threshold: float = Field(
         settings.SCORE_THRESHOLD,
+        ge=0.0,
+        le=1.0,
         title="Score threshold for results to be considered matches",
     )
     cutoff: float = Field(
         settings.SCORE_THRESHOLD,
+        ge=0.0,
+        le=1.0,
         title="Lower bound of score for results to be returned at all",
+        description="Must not be above the threshold.",
     )
     limit: int = Field(
         settings.MATCH_PAGE,
@@ -83,8 +103,14 @@ class EntityMatchQuery(BaseModel):
     matcher: MatcherOptions = Field(default=MatcherOptions())
     filters: Filters = Field(default=Filters())
 
+    @model_validator(mode="after")
+    def cutoff_not_above_threshold(self) -> "EntityMatchQuery":
+        if self.cutoff > self.threshold:
+            raise ValueError("cutoff must not be above threshold")
+        return self
+
 
 class EntityMatches(BaseModel):
     results: list[ScoredEntityResponse]
     total: TotalSpec
-    query: EntityExample
+    query: QueryEntity

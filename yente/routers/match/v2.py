@@ -1,16 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from followthemoney.dataset import evaluate_query
 from followthemoney.exc import InvalidDatasetQuery
 from nomenklatura.matching.types import ScoringConfig
 
 from yente.data import get_catalog
-from yente.data.common import ErrorResponse, TotalSpec
-from yente.data.match_v2 import EntityMatches, EntityMatchQuery
+from yente.data.common import EntityExample, ErrorResponse, TotalSpec
+from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
 from yente.logs import get_logger
 from yente.routers.match import (
     build_match_query,
     candidate_count,
-    echo_example,
     get_algorithm,
     score_candidates,
 )
@@ -21,11 +21,27 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/v2")
 
 
+def no_query_params(request: Request) -> None:
+    """All options go in the request body, so reject any in the query string."""
+    errors = [
+        {
+            "type": "extra_forbidden",
+            "loc": ("query", name),
+            "msg": "Extra inputs are not permitted; options go in the request body",
+            "input": value,
+        }
+        for name, value in request.query_params.multi_items()
+    ]
+    if errors:
+        raise RequestValidationError(errors)
+
+
 @router.post(
     "/match",
     summary="Query by example matcher",
     tags=["Matching"],
     response_model=EntityMatches,
+    dependencies=[Depends(no_query_params)],
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
@@ -95,12 +111,12 @@ async def match(
     except InvalidDatasetQuery as exc:
         raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
-    # A cutoff above the threshold would hide matches.
-    cutoff = min(match.cutoff, match.threshold)
     topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
 
     entity, query = build_match_query(
-        example=match.query,
+        example=EntityExample(
+            id=None, schema=match.query.schema_, properties=match.query.properties
+        ),
         dataset_names={ds.name for ds in scope},
         filters=topics,
         exclude_schema=filters.exclude_schemata,
@@ -116,7 +132,7 @@ async def match(
         candidates=candidate_count(match.limit),
         limit=match.limit,
         threshold=match.threshold,
-        cutoff=cutoff,
+        cutoff=match.cutoff,
         metric_attributes={"endpoint": "match_v2"},
     )
     log.info(
@@ -133,5 +149,7 @@ async def match(
     return EntityMatches(
         results=scored,
         total=TotalSpec(value=total, relation="eq"),
-        query=echo_example(match.query, entity),
+        query=QueryEntity(
+            schema=entity.schema.name, properties=dict(entity.properties)
+        ),
     )

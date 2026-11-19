@@ -158,35 +158,94 @@ def test_unknown_schema():
 
 @pytest.mark.usefixtures("match_v2_dataset")
 def test_query_echo():
-    query = {
-        "id": "my-id",
-        "schema": "Person",
-        "properties": {"name": [NAME], "country": "Russia"},
-    }
+    query = {"schema": "Person", "properties": {"name": [NAME], "country": "Russia"}}
     resp = post({"query": query})
     assert resp.status_code == 200, resp.text
-    echoed = resp.json()["query"]
-    assert echoed["id"] == "my-id"
-    assert echoed["schema"] == "Person"
-    assert echoed["properties"]["country"] == ["ru"]
+    assert resp.json()["query"] == {
+        "schema": "Person",
+        "properties": {"name": [NAME], "country": ["ru"]},
+    }
 
 
 @pytest.mark.parametrize(
-    "body",
+    "body,loc",
     [
-        pytest.param({"filters": {"datasets": "alpha"}}, id="datasets-string"),
-        pytest.param({"limit": settings.MAX_MATCHES + 1}, id="limit"),
+        pytest.param({"query": None}, ["body", "query"], id="no-query"),
+        pytest.param(
+            {"query": {"properties": {"name": [NAME]}}},
+            ["body", "query", "schema"],
+            id="no-schema",
+        ),
+        pytest.param(
+            {"query": {"schema": "", "properties": {"name": [NAME]}}},
+            ["body", "query", "schema"],
+            id="empty-schema",
+        ),
+        pytest.param(
+            {"query": {"schema": "Person"}},
+            ["body", "query", "properties"],
+            id="no-properties",
+        ),
+        pytest.param(
+            {"query": {"schema": "Person", "properties": {}}},
+            ["body", "query", "properties"],
+            id="empty-properties",
+        ),
+        pytest.param(
+            {"query": {**QUERY_PERSON, "id": "my-id"}},
+            ["body", "query", "id"],
+            id="query-id",
+        ),
+        pytest.param({"queries": {}}, ["body", "queries"], id="queries"),
+        pytest.param(
+            {"include_dataset": ["alpha"]}, ["body", "include_dataset"], id="toplevel"
+        ),
+        pytest.param(
+            {"filters": {"exclude_dataset": ["alpha"]}},
+            ["body", "filters", "exclude_dataset"],
+            id="filters",
+        ),
+        pytest.param(
+            {"matcher": {"weight": {}}}, ["body", "matcher", "weight"], id="matcher"
+        ),
+        pytest.param({"threshold": 70}, ["body", "threshold"], id="threshold-above"),
+        pytest.param({"threshold": -0.1}, ["body", "threshold"], id="threshold-below"),
+        pytest.param({"cutoff": 1.5}, ["body", "cutoff"], id="cutoff-above"),
+        pytest.param(
+            {"threshold": 0.5, "cutoff": 0.6}, ["body"], id="cutoff-above-threshold"
+        ),
+        pytest.param({"threshold": 0.5}, ["body"], id="default-cutoff-above-threshold"),
+        pytest.param(
+            {"limit": settings.MAX_MATCHES + 1}, ["body", "limit"], id="limit"
+        ),
         pytest.param(
             {"filters": {"exclude_entities": [f"id-{i}" for i in range(51)]}},
+            ["body", "filters", "exclude_entities"],
             id="exclude-entities",
         ),
-        pytest.param({"filters": {"changed_since": "yesterday"}}, id="changed-since"),
-        pytest.param({"query": None}, id="no-query"),
+        pytest.param(
+            {"filters": {"changed_since": "yesterday"}},
+            ["body", "filters", "changed_since"],
+            id="changed-since",
+        ),
     ],
 )
-def test_request_validation(body):
+def test_request_validation(body, loc):
     resp = post({"query": QUERY_PERSON, **body})
     assert resp.status_code == 422, resp.text
+    # A union type reports one error per member, each with the member type
+    # appended to the location.
+    errors = resp.json()["detail"]
+    assert errors
+    assert all(error["loc"][: len(loc)] == loc for error in errors)
+
+
+def test_query_string_rejected():
+    resp = client.post(
+        "/v2/match", json={"query": QUERY_PERSON}, params={"threshold": 0.5}
+    )
+    assert resp.status_code == 422, resp.text
+    assert [error["loc"] for error in resp.json()["detail"]] == [["query", "threshold"]]
 
 
 @pytest.mark.parametrize(
@@ -262,14 +321,20 @@ def test_changed_since(changed_since, expected):
 @pytest.mark.usefixtures("match_v2_dataset")
 def test_threshold_and_cutoff():
     # The details of threshold and cutoff are tested against score_results. This
-    # checks that the request values reach it, and that the cutoff is capped.
-    body: dict[str, Any] = {"query": QUERY_PERSON, "filters": {"datasets": ["alpha"]}}
-    resp = post({**body, "threshold": 1.01, "cutoff": 0.0})
+    # checks that the request values reach it.
+    # The birth date doesn't match, so the result scores below the default threshold.
+    query = {
+        "schema": "Person",
+        "properties": {"name": [NAME], "birthDate": ["1980-01-01"]},
+    }
+    body: dict[str, Any] = {"query": query, "filters": {"datasets": ["alpha"]}}
+    assert result_ids(body) == []
+
+    resp = post({**body, "threshold": 1.0, "cutoff": 0.0})
     assert resp.status_code == 200, resp.text
     assert [r["match"] for r in resp.json()["results"]] == [False]
 
-    # A cutoff above the threshold is lowered to the threshold.
-    resp = post({**body, "threshold": 0.0, "cutoff": 1.01})
+    resp = post({**body, "threshold": 0.5, "cutoff": 0.5})
     assert resp.status_code == 200, resp.text
     assert [r["match"] for r in resp.json()["results"]] == [True]
 
