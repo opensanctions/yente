@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from followthemoney.dataset import evaluate_query
+from followthemoney.dataset import (
+    DatasetQuery,
+    evaluate_query,
+    parse_query,
+    validate_query,
+)
 from followthemoney.exc import InvalidDatasetQuery
 from nomenklatura.matching.types import ScoringConfig
 
 from yente.data import get_catalog
 from yente.data.common import EntityExample, ErrorResponse, TotalSpec
+from yente.data.dataset import Dataset
 from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
 from yente.logs import get_logger
 from yente.routers.match import (
@@ -34,6 +40,31 @@ def no_query_params(request: Request) -> None:
     ]
     if errors:
         raise RequestValidationError(errors)
+
+
+async def resolve_scope(datasets: str | DatasetQuery) -> set[Dataset]:
+    """The leaf datasets selected by the request's dataset query.
+
+    A query that doesn't parse is a malformed request (400). A well-formed query
+    naming a dataset that isn't in the catalog is an invalid value (422).
+    """
+    try:
+        query = parse_query(datasets) if isinstance(datasets, str) else datasets
+        validate_query(query)
+    except InvalidDatasetQuery as exc:
+        raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
+    catalog = await get_catalog()
+    try:
+        return evaluate_query(catalog, query)
+    except InvalidDatasetQuery as exc:
+        # The query is valid, so evaluating it only fails on an unknown dataset.
+        error = {
+            "type": "unknown_dataset",
+            "loc": ("body", "filters", "datasets"),
+            "msg": str(exc),
+            "input": datasets,
+        }
+        raise RequestValidationError([error])
 
 
 @router.post(
@@ -79,8 +110,9 @@ async def match(
     ```
 
     The datasets to match against are selected using a
-    [dataset query](https://followthemoney.tech/docs/metadata/#dataset-query-dsl):
-    a list of dataset names, collection names and `#tag` selectors, or a
+    [dataset query](https://followthemoney.tech/docs/metadata/#dataset-query-dsl).
+    This is either a string such as `"default-#list.pep"`, or its structured
+    form: a list of dataset names, collection names and `#tag` selectors, or a
     combination of them using `or`, `and` and `not`, e.g.
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
     `default` collection is used.
@@ -105,11 +137,7 @@ async def match(
       ``incorporationDate``
     """
     filters = match.filters
-    catalog = await get_catalog()
-    try:
-        scope = evaluate_query(catalog, filters.datasets)
-    except InvalidDatasetQuery as exc:
-        raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
+    scope = await resolve_scope(filters.datasets)
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
     topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
 

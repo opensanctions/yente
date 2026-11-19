@@ -34,18 +34,24 @@ class MatcherOptions(BaseModel):
 class Filters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # The structured form of followthemoney.dataset.DatasetQuery. A top-level
-    # string is excluded so it can't be confused with the string query syntax.
-    datasets: list[Any] | dict[str, Any] = Field(
+    # A string is a query in the string syntax, parsed by
+    # followthemoney.dataset.parse_query. A list or object is the structured
+    # form of followthemoney.dataset.DatasetQuery.
+    datasets: str | list[Any] | dict[str, Any] = Field(
         default=["default"],
         description=(
-            "The datasets to match against, as a structured FollowTheMoney dataset "
-            "query: a list of dataset names, collection names and `#tag` selectors, "
+            "The datasets to match against, as a FollowTheMoney dataset query. "
+            "Either a string such as `default-#list.pep`, or the structured form: "
+            "a list of dataset names, collection names and `#tag` selectors, "
             "or an `or`/`and`/`not` operator object. "
             "Defaults to the `default` collection. "
             "See https://followthemoney.tech/docs/metadata/#dataset-query-dsl"
         ),
-        examples=[["#list.sanction"], {"and": ["default", {"not": "#list.pep"}]}],
+        examples=[
+            "default-#list.pep",
+            ["#list.sanction"],
+            {"and": ["default", {"not": "#list.pep"}]},
+        ],
     )
     topics: list[str] = Field(
         default=[],

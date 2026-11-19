@@ -233,11 +233,7 @@ def test_query_echo():
 def test_request_validation(body, loc):
     resp = post({"query": QUERY_PERSON, **body})
     assert resp.status_code == 422, resp.text
-    # A union type reports one error per member, each with the member type
-    # appended to the location.
-    errors = resp.json()["detail"]
-    assert errors
-    assert all(error["loc"][: len(loc)] == loc for error in errors)
+    assert [error["loc"] for error in resp.json()["detail"]] == [loc]
 
 
 def test_query_string_rejected():
@@ -251,15 +247,33 @@ def test_query_string_rejected():
 @pytest.mark.parametrize(
     "datasets,detail",
     [
-        pytest.param(["nope"], "Unknown dataset: 'nope'", id="unknown-dataset"),
         pytest.param({"xor": ["alpha"]}, "Unknown operator: 'xor'", id="operator"),
+        pytest.param([], "Empty array in query", id="empty-list"),
+        pytest.param("alpha|", "Expected identifier", id="string-syntax"),
+        pytest.param("", "Empty query string", id="string-empty"),
     ],
 )
 @pytest.mark.usefixtures("match_v2_dataset")
-def test_invalid_dataset_query(datasets, detail):
+def test_malformed_dataset_query(datasets, detail):
     resp = post({"query": QUERY_PERSON, "filters": {"datasets": datasets}})
     assert resp.status_code == 400, resp.text
     assert detail in resp.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "datasets",
+    [
+        pytest.param(["alpha", "nope"], id="structured"),
+        pytest.param("alpha|nope", id="string"),
+    ],
+)
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_unknown_dataset(datasets):
+    resp = post({"query": QUERY_PERSON, "filters": {"datasets": datasets}})
+    assert resp.status_code == 422, resp.text
+    [error] = resp.json()["detail"]
+    assert error["loc"] == ["body", "filters", "datasets"]
+    assert error["msg"] == "Unknown dataset: 'nope'"
 
 
 # We don't have to test the query language exhaustively. Just that the logic is invoked.
@@ -273,6 +287,7 @@ def test_invalid_dataset_query(datasets, detail):
             id="dataset",
         ),
         pytest.param({"datasets": ["#list.pep"]}, ["beta-person"], id="tag"),
+        pytest.param({"datasets": "default-#list.pep"}, ["alpha-person"], id="string"),
     ],
 )
 @pytest.mark.usefixtures("match_v2_dataset")
