@@ -1,0 +1,18 @@
+{
+  "name": "gb_coh_psc",
+  "title": "Companies House (UK) Persons with Significant Control",
+  "type": "source",
+  "version": "20261007130236-lhf",
+  "last_export": "2026-10-07T13:02:36",
+  "resources": [
+    {
+      "name": "entities.ftm.json",
+      "checksum": "d3b6917d58b43fc8743e1ae0ef18c849c78f72a2",
+      "mime_type": "application/json+ftm",
+      "title": "FollowTheMoney entities",
+      "path": "entities.ftm.json",
+      "url": "https://data.opensanctions.org/artifacts/gb_coh_psc/20261007130236-lhf/entities.ftm.json"
+    }
+  ],
+  "delta_url": "https://data.opensanctions.org/artifacts/gb_coh_psc/20261007130236-lhf/delta.json"
+}
