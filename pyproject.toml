@@ -19,7 +19,7 @@ dependencies = [
     "aiohttp[speedups] == 3.14.5",
     "boto3 ~= 1.37",
     "fastapi == 0.163.1",
-    "python-multipart == 0.0.33",
+    "python-multipart == 0.0.34",
     "structlog == 26.1.0",
     # Not imported directly. The pin is intentional: pyicu builds from source
     # against the system ICU, so we control its version here.
