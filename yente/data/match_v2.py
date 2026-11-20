@@ -1,18 +1,59 @@
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from followthemoney.util import sanitize_text
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from yente import settings
 from yente.data.common import ScoredEntityResponse, TotalSpec
 from yente.routers.util import ALGO_HELP, TS_PATTERN
 
 
+def _number_as_str(value: Any) -> Any:
+    # Format numbers the way FtM does when the query entity is built. bool is a
+    # subclass of int, but True isn't a meaningful property value.
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return sanitize_text(value)
+    return value
+
+
+def _as_list(value: Any) -> Any:
+    """A single value is shorthand for a list containing it."""
+    return value if isinstance(value, list) else [value]
+
+
+PropertyValue = Annotated[
+    str,
+    BeforeValidator(_number_as_str, json_schema_input_type=str | int | float),
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
+PropertyValues = Annotated[
+    list[PropertyValue],
+    Field(min_length=1),
+    BeforeValidator(
+        _as_list, json_schema_input_type=PropertyValue | list[PropertyValue]
+    ),
+]
+
+
 class QueryEntity(BaseModel):
+    """An entity to match against, formatted like the entities the API returns.
+
+    The schema, property names and values are checked against the
+    FollowTheMoney model when the request is handled.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     schema_: str = Field(min_length=1, alias="schema", examples=["Person"])
-    properties: dict[str, str | list[Any]] = Field(
-        min_length=1, examples=[{"name": ["John Doe"]}]
+    properties: dict[str, PropertyValues] = Field(
+        min_length=1, examples=[{"name": ["John Doe"], "birthDate": ["1975-04-21"]}]
     )
 
 

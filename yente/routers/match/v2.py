@@ -1,5 +1,8 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from followthemoney import model
 from followthemoney.dataset import (
     DatasetQuery,
     evaluate_query,
@@ -9,6 +12,7 @@ from followthemoney.dataset import (
 from followthemoney.exc import InvalidDatasetQuery
 from nomenklatura.matching.types import ScoringConfig
 
+from yente import settings
 from yente.data import get_catalog
 from yente.data.common import EntityExample, ErrorResponse, TotalSpec
 from yente.data.dataset import Dataset
@@ -38,6 +42,51 @@ def no_query_params(request: Request) -> None:
         }
         for name, value in request.query_params.multi_items()
     ]
+    if errors:
+        raise RequestValidationError(errors)
+
+
+def check_query_entity(entity: QueryEntity) -> None:
+    """Check the query entity against the FollowTheMoney model, reporting every
+    unknown property and every value that the property's type can't parse."""
+    loc = ("body", "query")
+    schema = model.get(entity.schema_)
+    if schema is None or not (schema.matchable or schema.name == settings.BASE_SCHEMA):
+        reason = "Unknown" if schema is None else "Non-matchable"
+        error = {
+            "type": "invalid_schema",
+            "loc": (*loc, "schema"),
+            "msg": f"{reason} schema: {entity.schema_!r}",
+            "input": entity.schema_,
+        }
+        raise RequestValidationError([error])
+
+    errors: list[dict[str, Any]] = []
+    for name, values in entity.properties.items():
+        prop = schema.get(name)
+        if prop is None:
+            errors.append(
+                {
+                    "type": "unknown_property",
+                    "loc": (*loc, "properties", name),
+                    "msg": f"Unknown property for {schema.name}: {name!r}",
+                    "input": values,
+                }
+            )
+            continue
+        for index, value in enumerate(values):
+            # Clean the same way the query entity is built, so that values
+            # like "Russia" for a country are accepted.
+            cleaned = prop.type.clean_text(value, fuzzy=True, format=prop.format)
+            if cleaned is None:
+                errors.append(
+                    {
+                        "type": "invalid_value",
+                        "loc": (*loc, "properties", name, index),
+                        "msg": f"Invalid {prop.type.label.lower()} value: {value!r}",
+                        "input": value,
+                    }
+                )
     if errors:
         raise RequestValidationError(errors)
 
@@ -117,6 +166,12 @@ async def match(
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
     `default` collection is used.
 
+    The query entity is checked against the FollowTheMoney model: the schema must
+    be matchable, every property must exist in the schema, and every value must
+    be valid for the property's type, e.g. `1975-04-21` for a date. An invalid
+    request gets a 422 response listing each problem with its location in the
+    request body.
+
     The response contains the scored results and the query entity as it was
     understood by the matcher:
 
@@ -137,13 +192,16 @@ async def match(
       ``incorporationDate``
     """
     filters = match.filters
+    check_query_entity(match.query)
     scope = await resolve_scope(filters.datasets)
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
     topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
 
     entity, query = build_match_query(
         example=EntityExample(
-            id=None, schema=match.query.schema_, properties=match.query.properties
+            id=None,
+            schema=match.query.schema_,
+            properties=dict[str, str | list[Any]](match.query.properties),
         ),
         dataset_names={ds.name for ds in scope},
         filters=topics,

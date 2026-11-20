@@ -150,21 +150,109 @@ def test_unknown_algorithm():
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
-def test_unknown_schema():
-    resp = post({"query": {"schema": "Banana", "properties": {"name": [NAME]}}})
-    assert resp.status_code == 400, resp.text
-    assert "Cannot parse example entity" in resp.json()["detail"]
-
-
-@pytest.mark.usefixtures("match_v2_dataset")
 def test_query_echo():
-    query = {"schema": "Person", "properties": {"name": [NAME], "country": "Russia"}}
+    # A single value is shorthand for a list, and numbers are read as strings.
+    query = {
+        "schema": "Person",
+        "properties": {
+            "name": NAME,
+            "country": "Russia",
+            "birthDate": [1970],
+            "weight": [70.50],
+        },
+    }
     resp = post({"query": query})
     assert resp.status_code == 200, resp.text
     assert resp.json()["query"] == {
         "schema": "Person",
-        "properties": {"name": [NAME], "country": ["ru"]},
+        "properties": {
+            "name": [NAME],
+            "country": ["ru"],
+            "birthDate": ["1970"],
+            "weight": ["70.5"],
+        },
     }
+
+
+def person(**properties: Any) -> dict[str, Any]:
+    return {"schema": "Person", "properties": {"name": [NAME], **properties}}
+
+
+@pytest.mark.parametrize(
+    "query,locs",
+    [
+        pytest.param(
+            {"schema": "Banana", "properties": {"name": [NAME]}},
+            [["body", "query", "schema"]],
+            id="unknown-schema",
+        ),
+        pytest.param(
+            {"schema": "Ownership", "properties": {"role": ["owner"]}},
+            [["body", "query", "schema"]],
+            id="non-matchable-schema",
+        ),
+        pytest.param(
+            {"schema": "LegalEntity", "properties": {"birthDate": ["1970-05-01"]}},
+            [["body", "query", "properties", "birthDate"]],
+            id="property-not-in-schema",
+        ),
+        pytest.param(
+            person(barfDate=["1970-05-01"]),
+            [["body", "query", "properties", "barfDate"]],
+            id="unknown-property",
+        ),
+        pytest.param(
+            person(birthDate=["1970-13-28"]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="invalid-date",
+        ),
+        pytest.param(
+            person(
+                barfDate=["x"], birthDate=["1970", "1970-02-30"], country=["Narnia"]
+            ),
+            [
+                ["body", "query", "properties", "barfDate"],
+                ["body", "query", "properties", "birthDate", 1],
+                ["body", "query", "properties", "country", 0],
+            ],
+            id="all-errors-reported",
+        ),
+        pytest.param(
+            person(birthDate=[None]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="null-value",
+        ),
+        pytest.param(
+            person(birthDate=None),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="null-property",
+        ),
+        pytest.param(
+            person(birthDate=[" "]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="blank-value",
+        ),
+        pytest.param(
+            person(birthDate=[]),
+            [["body", "query", "properties", "birthDate"]],
+            id="empty-list",
+        ),
+        pytest.param(
+            person(birthDate=[{"year": 1970}]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="object-value",
+        ),
+        pytest.param(
+            person(birthDate=[True]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="bool-value",
+        ),
+    ],
+)
+def test_query_entity_validation(query, locs):
+    resp = post({"query": query})
+    assert resp.status_code == 422, resp.text
+    assert [error["loc"] for error in resp.json()["detail"]] == locs
 
 
 @pytest.mark.parametrize(
