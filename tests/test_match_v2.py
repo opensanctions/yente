@@ -101,7 +101,8 @@ def test_match():
     resp = post(body)
     assert resp.status_code == 200, resp.text
     data = resp.json()
-    assert set(data.keys()) == {"query", "results", "total"}
+    assert set(data.keys()) == {"query", "results", "total", "warnings"}
+    assert data["warnings"] == []
     assert [r["id"] for r in data["results"]] == ["alpha-person"]
     assert data["results"][0]["match"] is True
     assert data["total"] == {"value": 1, "relation": "eq"}
@@ -330,6 +331,80 @@ def test_query_string_rejected():
     )
     assert resp.status_code == 422, resp.text
     assert [error["loc"] for error in resp.json()["detail"]] == [["query", "threshold"]]
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_lenient_mode():
+    body = {
+        "strict_mode": False,
+        "query": {
+            "id": "my-id",
+            "schema": "Person",
+            "properties": {
+                "name": [NAME],
+                "barfDate": ["1970"],
+                "birthDate": ["1970-13-28", "1970-05-01"],
+                "nationality": [None],
+            },
+        },
+        "threshold": 70,
+        "cutoff": 0.9,
+        "include_dataset": ["alpha"],
+    }
+    resp = client.post("/v2/match", json=body, params={"limit": 1})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert sorted(w["loc"] for w in data["warnings"]) == sorted(
+        [
+            ["body", "query", "id"],
+            ["body", "query", "properties", "nationality", 0],
+            ["body", "threshold"],
+            ["body", "include_dataset"],
+            ["body", "cutoff"],
+            ["query", "limit"],
+            ["body", "query", "properties", "barfDate"],
+            ["body", "query", "properties", "birthDate", 0],
+        ]
+    )
+    assert all(
+        w["msg"].endswith((", ignored", ", using the default", ", using the threshold"))
+        for w in data["warnings"]
+    )
+    assert data["query"]["properties"] == {"name": [NAME], "birthDate": ["1970-05-01"]}
+    # The threshold and the cutoff are the default.
+    assert [r["id"] for r in data["results"]] == ["alpha-person", "beta-person"]
+
+
+@pytest.mark.parametrize(
+    "query,loc",
+    [
+        pytest.param(None, ["body", "query"], id="no-query"),
+        pytest.param(
+            {"schema": "Banana", "properties": {"name": [NAME]}},
+            ["body", "query", "schema"],
+            id="unknown-schema",
+        ),
+        pytest.param(
+            {"schema": "Person", "properties": {}},
+            ["body", "query", "properties"],
+            id="empty-properties",
+        ),
+        pytest.param(
+            {"schema": "Person", "properties": {"name": [None]}},
+            ["body", "query", "properties"],
+            id="no-values-left",
+        ),
+        pytest.param(
+            {"schema": "Person", "properties": {"barfDate": ["1970"]}},
+            ["body", "query", "properties"],
+            id="no-properties-left",
+        ),
+    ],
+)
+def test_lenient_mode_errors(query, loc):
+    resp = post({"strict_mode": False, "query": query})
+    assert resp.status_code == 422, resp.text
+    assert [error["loc"] for error in resp.json()["detail"]] == [loc]
 
 
 @pytest.mark.parametrize(

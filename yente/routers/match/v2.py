@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from followthemoney import model
 from followthemoney.dataset import (
@@ -16,7 +16,12 @@ from yente import settings
 from yente.data import get_catalog
 from yente.data.common import EntityExample, ErrorResponse, TotalSpec
 from yente.data.dataset import Dataset
-from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
+from yente.data.match_v2 import (
+    EntityMatches,
+    EntityMatchQuery,
+    QueryEntity,
+    RequestWarning,
+)
 from yente.logs import get_logger
 from yente.routers.match import (
     build_match_query,
@@ -31,64 +36,88 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/v2")
 
 
-def no_query_params(request: Request) -> None:
-    """All options go in the request body, so reject any in the query string."""
-    errors = [
-        {
-            "type": "extra_forbidden",
-            "loc": ("query", name),
-            "msg": "Extra inputs are not permitted; options go in the request body",
-            "input": value,
-        }
+def check_query_params(request: Request, strict: bool) -> list[RequestWarning]:
+    """All options go in the request body, so query string parameters are an
+    error, or ignored with a warning when strict mode is off."""
+    problems = [
+        RequestWarning(
+            type="extra_forbidden",
+            loc=["query", name],
+            msg="Extra inputs are not permitted; options go in the request body",
+            input=value,
+        )
         for name, value in request.query_params.multi_items()
     ]
-    if errors:
-        raise RequestValidationError(errors)
+    return report(problems, strict, "ignored")
 
 
-def check_query_entity(entity: QueryEntity) -> None:
-    """Check the query entity against the FollowTheMoney model, reporting every
-    unknown property and every value that the property's type can't parse."""
-    loc = ("body", "query")
+def report(
+    problems: list[RequestWarning], strict: bool, fix: str
+) -> list[RequestWarning]:
+    """Raise the problems as validation errors in strict mode, otherwise return
+    them as warnings, with what was done about them."""
+    if strict and problems:
+        raise RequestValidationError([p.model_dump() for p in problems])
+    return [p.model_copy(update={"msg": f"{p.msg}, {fix}"}) for p in problems]
+
+
+def check_query_entity(
+    entity: QueryEntity, strict: bool
+) -> tuple[QueryEntity, list[RequestWarning]]:
+    """Check the query entity against the FollowTheMoney model. Unknown
+    properties and values the property's type can't parse are errors, or are
+    discarded with a warning when strict mode is off."""
+    loc: list[str | int] = ["body", "query"]
     schema = model.get(entity.schema_)
     if schema is None or not (schema.matchable or schema.name == settings.BASE_SCHEMA):
         reason = "Unknown" if schema is None else "Non-matchable"
-        error = {
-            "type": "invalid_schema",
-            "loc": (*loc, "schema"),
-            "msg": f"{reason} schema: {entity.schema_!r}",
-            "input": entity.schema_,
-        }
-        raise RequestValidationError([error])
+        error = RequestWarning(
+            type="invalid_schema",
+            loc=[*loc, "schema"],
+            msg=f"{reason} schema: {entity.schema_!r}",
+            input=entity.schema_,
+        )
+        raise RequestValidationError([error.model_dump()])
 
-    errors: list[dict[str, Any]] = []
+    problems: list[RequestWarning] = []
+    properties: dict[str, list[str]] = {}
     for name, values in entity.properties.items():
         prop = schema.get(name)
         if prop is None:
-            errors.append(
-                {
-                    "type": "unknown_property",
-                    "loc": (*loc, "properties", name),
-                    "msg": f"Unknown property for {schema.name}: {name!r}",
-                    "input": values,
-                }
+            problems.append(
+                RequestWarning(
+                    type="unknown_property",
+                    loc=[*loc, "properties", name],
+                    msg=f"Unknown property for {schema.name}: {name!r}",
+                    input=values,
+                )
             )
             continue
         for index, value in enumerate(values):
             # Clean the same way the query entity is built, so that values
             # like "Russia" for a country are accepted.
-            cleaned = prop.type.clean_text(value, fuzzy=True, format=prop.format)
-            if cleaned is None:
-                errors.append(
-                    {
-                        "type": "invalid_value",
-                        "loc": (*loc, "properties", name, index),
-                        "msg": f"Invalid {prop.type.label.lower()} value: {value!r}",
-                        "input": value,
-                    }
+            if prop.type.clean_text(value, fuzzy=True, format=prop.format) is None:
+                problems.append(
+                    RequestWarning(
+                        type="invalid_value",
+                        loc=[*loc, "properties", name, index],
+                        msg=f"Invalid {prop.type.label.lower()} value: {value!r}",
+                        input=value,
+                    )
                 )
-    if errors:
-        raise RequestValidationError(errors)
+            else:
+                properties.setdefault(name, []).append(value)
+    warnings = report(problems, strict, "ignored")
+    if not properties:
+        error = RequestWarning(
+            type="no_valid_properties",
+            loc=[*loc, "properties"],
+            msg="None of the properties are valid",
+            input=entity.properties,
+        )
+        raise RequestValidationError([error.model_dump()])
+    checked = QueryEntity(schema=entity.schema_, properties=properties)
+    return checked, warnings
 
 
 async def resolve_scope(datasets: str | DatasetQuery) -> set[Dataset]:
@@ -121,13 +150,13 @@ async def resolve_scope(datasets: str | DatasetQuery) -> set[Dataset]:
     summary="Query by example matcher",
     tags=["Matching"],
     response_model=EntityMatches,
-    dependencies=[Depends(no_query_params)],
     responses={
         400: {"model": ErrorResponse, "description": "Invalid query"},
         500: {"model": ErrorResponse, "description": "Server error"},
     },
 )
 async def match(
+    request: Request,
     provider: ProviderDep,
     match: EntityMatchQuery,
 ) -> EntityMatches:
@@ -170,7 +199,13 @@ async def match(
     be matchable, every property must exist in the schema, and every value must
     be valid for the property's type, e.g. `1975-04-21` for a date. An invalid
     request gets a 422 response listing each problem with its location in the
-    request body.
+    request.
+
+    With `"strict_mode": false`, problems that can be ignored are ignored
+    instead: unexpected fields and query string parameters, invalid properties
+    and values, and invalid `threshold` and `cutoff` values. Each is listed in
+    the response `warnings`, in the same form as a validation error. A missing
+    query, schema or properties, or an unknown schema, is always an error.
 
     The response contains the scored results and the query entity as it was
     understood by the matcher:
@@ -192,7 +227,9 @@ async def match(
       ``incorporationDate``
     """
     filters = match.filters
-    check_query_entity(match.query)
+    warnings = [*match.warnings, *check_query_params(request, match.strict_mode)]
+    query_entity, entity_warnings = check_query_entity(match.query, match.strict_mode)
+    warnings.extend(entity_warnings)
     scope = await resolve_scope(filters.datasets)
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
     topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
@@ -200,8 +237,8 @@ async def match(
     entity, query = build_match_query(
         example=EntityExample(
             id=None,
-            schema=match.query.schema_,
-            properties=dict[str, str | list[Any]](match.query.properties),
+            schema=query_entity.schema_,
+            properties=dict[str, str | list[Any]](query_entity.properties),
         ),
         dataset_names={ds.name for ds in scope},
         filters=topics,
@@ -238,4 +275,5 @@ async def match(
         query=QueryEntity(
             schema=entity.schema.name, properties=dict(entity.properties)
         ),
+        warnings=warnings,
     )
