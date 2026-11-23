@@ -341,6 +341,18 @@ async def match(
     * **Organization**: ``name``, ``country``, ``registrationNumber``, ``address``
     * **Company**: ``name``, ``jurisdiction``, ``registrationNumber``, ``address``,
       ``incorporationDate``
+
+    Each request is logged with the following fields. The query entity's
+    property values and the results are not logged.
+
+    * From the request: the query entity's `schema`, `algorithm` as given (e.g.
+      `best`), `threshold`, `limit`, `matcher.profile`, `filters.profile`, and
+      the dataset query used, whether from `filters.datasets`, the filter
+      profile or the default.
+    * From the response: the number of matching results.
+    * About the HTTP request: the method, the URL including any query string,
+      the user agent, the client IP address, the referer, the status code and
+      the latency.
     """
     filters = match.filters
     check_query_entity(match.query)
@@ -378,6 +390,10 @@ async def match(
         cutoff=match.cutoff,
         metric_attributes={"endpoint": "match_v2"},
     )
+    # PII: query entities describe people. Before logging another field,
+    # consider whether it could contain personal data from the request, or make
+    # it easier to infer, like a result ID.
+    # The endpoint docs document the logged fields. Keep in sync.
     log.info(
         "/v2/match",
         action="match",

@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 import pytest_asyncio
 from orjson import dumps
+from structlog.testing import capture_logs
 
 import yente.data
 from yente import settings
@@ -574,3 +575,26 @@ def test_match_examples(name):
     docs = (Path(__file__).parent.parent / "docs" / "datasets.md").read_text()
     for defined in [match.matcher.profile, match.filters.profile]:
         assert defined is None or f"  {defined}:\n" in docs
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_logged_fields():
+    # The logged fields are listed in the endpoint's docstring.
+    # Take care not to introduce logging that reveals personally
+    # identifying information.
+    with capture_logs() as logs:
+        result_ids({"query": QUERY_PERSON, "filters": {"profile": "peps"}})
+    [event] = [e for e in logs if e["event"] == "/v2/match"]
+    assert event == {
+        "event": "/v2/match",
+        "log_level": "info",
+        "action": "match",
+        "schema": "Person",
+        "results": 1,
+        "threshold": settings.SCORE_THRESHOLD,
+        "datasets": "default",
+        "filter_profile": "peps",
+        "match_profile": None,
+        "limit": settings.MATCH_PAGE,
+        "algorithm_param": settings.DEFAULT_ALGORITHM,
+    }
