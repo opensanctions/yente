@@ -101,7 +101,7 @@ def _parse_manifest_query(value: DatasetQuery) -> DatasetQuery:
 ManifestDatasetQuery = Annotated[DatasetQuery, AfterValidator(_parse_manifest_query)]
 
 
-class FilterScope(BaseModel):
+class FilterProfile(BaseModel):
     """Named defaults for the `filters.datasets` and `filters.topics` fields of a
     match request."""
 
@@ -120,9 +120,9 @@ class Manifest(BaseModel):
     # Default `None` here while /v2/match is in beta so that instances which don't
     # load the OpenSanctions `default` collection keep working without config changes.
     # /v2/match falls back to `default` in the router.
-    default_scope: ManifestDatasetQuery | None = None
+    default_datasets: ManifestDatasetQuery | None = None
     match_profiles: dict[str, MatchProfile] = {}
-    filter_scopes: dict[str, FilterScope] = {}
+    filter_profiles: dict[str, FilterProfile] = {}
 
     @classmethod
     async def load(cls, manifest_path: str) -> "Manifest":
@@ -162,11 +162,11 @@ def check_dataset_queries(manifest: Manifest, catalog: Catalog) -> None:
     """Check that the manifest's dataset queries only name datasets in the
     catalog loaded from it. Raises YenteConfigError."""
     queries: dict[str, DatasetQuery] = {}
-    if manifest.default_scope is not None:
-        queries["default_scope"] = manifest.default_scope
-    for name, scope in manifest.filter_scopes.items():
-        if scope.datasets is not None:
-            queries[f"filter_scopes.{name}.datasets"] = scope.datasets
+    if manifest.default_datasets is not None:
+        queries["default_datasets"] = manifest.default_datasets
+    for name, profile in manifest.filter_profiles.items():
+        if profile.datasets is not None:
+            queries[f"filter_profiles.{name}.datasets"] = profile.datasets
     for path, query in queries.items():
         try:
             evaluate_query(catalog, query)

@@ -79,8 +79,8 @@ datasets:
       - sanctions
 
 # The datasets query used when none is provided in the request or via selected
-# filter scope. The default value is "default".
-default_scope: "eu_journal_sanctions | eu_fsf"
+# filter profile. The default value is "default".
+default_datasets: "eu_journal_sanctions | eu_fsf"
 
 # Match profiles are named defaults for the `matcher.weights` and `matcher.config`
 # match request fields. Feature and config names are specific to the scoring
@@ -115,13 +115,13 @@ match_profiles:
       nm_name_property: "name"
       nm_extra_result_name: 0.4
 
-# Filter scopes are named defaults for the `filters.datasets` and `filters.topics`
+# Filter profiles are named defaults for the `filters.datasets` and `filters.topics`
 # match request fields.
 #
 # The configuration below and the query
 # {
 #   "query": {"schema": "Person", ...},
-#   "filters": {"scope": "enriched_peps_and_associates"}
+#   "filters": {"profile": "enriched_peps_and_associates"}
 # }
 # is equivalent to the query
 # {
@@ -133,7 +133,7 @@ match_profiles:
 # }
 #
 # Values provided in the request take precedence over values defined here.
-filter_scopes:
+filter_profiles:
   enriched_peps_and_associates:
     datasets:
       - default

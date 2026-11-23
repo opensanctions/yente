@@ -90,11 +90,11 @@ class MatcherOptions(BaseModel):
 class Filters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    scope: str | None = Field(
+    profile: str | None = Field(
         default=None,
-        title="A filter scope defined in the yente manifest",
+        title="A filter profile defined in the yente manifest",
         description=(
-            "The scope's `datasets` and `topics` are used as defaults for the `datasets` "
+            "The filter profile's `datasets` and `topics` are used as defaults for the `datasets` "
             "and `topics` fields in the request. Values provided in the request take precedence."
         ),
         examples=["enriched_peps_and_associates"],
@@ -109,8 +109,8 @@ class Filters(BaseModel):
             "Either a string such as `default -#list.pep`, or the structured form: "
             "a list of dataset names, collection names and `#tag` selectors, "
             "or an `or`/`and`/`not` operator object. "
-            "Defaults to the filter scope's datasets, or else the yente "
-            'manifest\'s `default_scope`. Defaults to the "default" collection. '
+            "Defaults to the filter profile's datasets, or else the yente "
+            'manifest\'s `default_datasets`. Defaults to the "default" collection. '
             "See https://followthemoney.tech/docs/metadata/#dataset-query-dsl"
         ),
         examples=[

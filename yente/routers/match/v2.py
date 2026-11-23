@@ -20,7 +20,7 @@ from yente.data.common import (
 from yente.data.dataset import Dataset
 from yente.data.manifest import (
     Catalog,
-    FilterScope,
+    FilterProfile,
     MatchProfile,
     parse_dataset_query,
 )
@@ -95,17 +95,17 @@ MATCH_EXAMPLES: dict[str, Example] = {
             },
         },
     },
-    "profile_and_scope": {
-        "summary": "With a match profile and filter scope",
+    "profiles": {
+        "summary": "With a match profile and filter profile",
         "description": (
-            "Match a person using a match profile and filter scope defined in "
+            "Match a person using a match profile and filter profile defined in "
             "the yente manifest. These names are the examples in the "
             "[manifest documentation](https://www.opensanctions.org/docs/yente/datasets/)."
         ),
         "value": {
             "query": QUERY_PERSON,
             "matcher": {"profile": "strict_names"},
-            "filters": {"scope": "enriched_peps_and_associates"},
+            "filters": {"profile": "enriched_peps_and_associates"},
         },
     },
 }
@@ -173,7 +173,7 @@ def check_query_entity(entity: QueryEntity) -> None:
 
 Loc = tuple[str | int, ...]
 # The dataset query when neither the request nor the manifest gives one.
-DEFAULT_SCOPE = "default"
+DEFAULT_DATASETS = "default"
 
 
 def unknown_name(kind: str, loc: Loc, name: str) -> RequestValidationError:
@@ -211,28 +211,28 @@ def request_datasets(datasets: DatasetQuery) -> DatasetQuery:
         raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
 
 
-def apply_scope(
-    scopes: dict[str, FilterScope], default_datasets: DatasetQuery, filters: Filters
+def apply_filter_profile(
+    profiles: dict[str, FilterProfile], default_datasets: DatasetQuery, filters: Filters
 ) -> tuple[DatasetQuery, list[str]]:
     """The parsed dataset query and the topics to filter by.
 
-    Each is the one given in the request, or else the one in the filter scope
+    Each is the one given in the request, or else the one in the filter profile
     the request names. Without either, the dataset query is the manifest's
-    `default_scope`.
+    `default_datasets`.
     """
-    scope = None
+    profile = None
     topics = filters.topics
-    if filters.scope is not None:
-        scope = scopes.get(filters.scope)
-        if scope is None:
-            loc = ("body", "filters", "scope")
-            raise unknown_name("filter scope", loc, filters.scope)
-        if "topics" not in filters.model_fields_set and scope.topics is not None:
-            topics = scope.topics
+    if filters.profile is not None:
+        profile = profiles.get(filters.profile)
+        if profile is None:
+            loc = ("body", "filters", "profile")
+            raise unknown_name("filter profile", loc, filters.profile)
+        if "topics" not in filters.model_fields_set and profile.topics is not None:
+            topics = profile.topics
     if filters.datasets is not None:
         return request_datasets(filters.datasets), topics
-    if scope is not None and scope.datasets is not None:
-        return scope.datasets, topics
+    if profile is not None and profile.datasets is not None:
+        return profile.datasets, topics
     return default_datasets, topics
 
 
@@ -242,7 +242,7 @@ def resolve_datasets(catalog: Catalog, query: DatasetQuery) -> set[Dataset]:
 
     The manifest's queries are checked against the catalog when it's loaded, so
     this only fails for a query in the request, or for the implicit
-    DEFAULT_SCOPE in a catalog without a `default` collection.
+    DEFAULT_DATASETS in a catalog without a `default` collection.
     """
     try:
         return evaluate_query(catalog, query)
@@ -309,13 +309,13 @@ async def match(
     form: a list of dataset names, collection names and `#tag` selectors, or a
     combination of them using `or`, `and` and `not`, e.g.
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
-    yente manifest's `default_scope` is used, which is the `default` collection
+    yente manifest's `default_datasets` is used, which is the `default` collection
     unless configured otherwise.
 
     The yente manifest can define named
-    [match profiles and filter scopes](https://www.opensanctions.org/docs/yente/datasets/),
-    selected with `matcher.profile` and `filters.scope`. A profile gives defaults
-    for `matcher.weights` and `matcher.config`. A filter scope gives defaults for
+    [match profiles and filter profiles](https://www.opensanctions.org/docs/yente/datasets/),
+    selected with `matcher.profile` and `filters.profile`. A profile gives defaults
+    for `matcher.weights` and `matcher.config`. A filter profile gives defaults for
     `filters.datasets`.
 
     The query entity is checked against the FollowTheMoney model: the schema must
@@ -347,10 +347,10 @@ async def match(
     manifest = await get_manifest()
     catalog = await get_catalog()
     weights, config = apply_profile(manifest.match_profiles, match.matcher)
-    datasets_query, topics = apply_scope(
-        manifest.filter_scopes, manifest.default_scope or DEFAULT_SCOPE, filters
+    datasets_query, topics = apply_filter_profile(
+        manifest.filter_profiles, manifest.default_datasets or DEFAULT_DATASETS, filters
     )
-    scope = resolve_datasets(catalog, datasets_query)
+    datasets = resolve_datasets(catalog, datasets_query)
     algorithm = get_algorithm(match.algorithm, config)
     topic_filters: list[FilterSpec] = [("topics", t) for t in topics]
 
@@ -360,7 +360,7 @@ async def match(
             schema=match.query.schema_,
             properties=dict[str, str | list[Any]](match.query.properties),
         ),
-        dataset_names={ds.name for ds in scope},
+        dataset_names={ds.name for ds in datasets},
         filters=topic_filters,
         exclude_schema=filters.exclude_schemata,
         changed_since=filters.changed_since,
@@ -385,7 +385,7 @@ async def match(
         results=total,
         threshold=match.threshold,
         datasets=datasets_query,
-        filter_scope=filters.scope,
+        filter_profile=filters.profile,
         match_profile=match.matcher.profile,
         limit=match.limit,
         # Log the algorithm passed in the request, which may be "best"
