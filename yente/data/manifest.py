@@ -1,14 +1,15 @@
 import os.path
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 from followthemoney.dataset import (
     DataCatalog,
     DatasetQuery,
+    evaluate_query,
     parse_query,
     validate_query,
 )
 from followthemoney.exc import InvalidDatasetQuery
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, field_validator
 
 from yente.data.common import ScoringConfigValues, ScoringWeights
 from yente.data.dataset import Dataset
@@ -87,28 +88,27 @@ def parse_dataset_query(value: DatasetQuery) -> DatasetQuery:
     return query
 
 
+def _parse_manifest_query(value: DatasetQuery) -> DatasetQuery:
+    try:
+        return parse_dataset_query(value)
+    except InvalidDatasetQuery as exc:
+        raise ValueError(f"Invalid dataset query: {exc}") from exc
+
+
+# A dataset query in the manifest, given as a string or in its structured form,
+# and stored in its parsed form. Whether the datasets it names exist is checked
+# against the catalog when it's used.
+ManifestDatasetQuery = Annotated[DatasetQuery, AfterValidator(_parse_manifest_query)]
+
+
 class FilterScope(BaseModel):
     """Named defaults for the `filters.datasets` and `filters.topics` fields of a
     match request."""
 
     model_config = ConfigDict(extra="forbid")
 
-    # A dataset query, given as a string or in its structured form, and stored
-    # in its parsed form.
-    datasets: DatasetQuery | None = None
+    datasets: ManifestDatasetQuery | None = None
     topics: list[str] | None = None
-
-    @field_validator("datasets")
-    @classmethod
-    def parse_datasets(cls, v: DatasetQuery | None) -> DatasetQuery | None:
-        """Parse the dataset query. Whether the datasets it names exist is
-        checked against the catalog when it's used."""
-        if v is None:
-            return v
-        try:
-            return parse_dataset_query(v)
-        except InvalidDatasetQuery as exc:
-            raise ValueError(f"Invalid dataset query: {exc}") from exc
 
 
 class Manifest(BaseModel):
@@ -117,6 +117,10 @@ class Manifest(BaseModel):
 
     catalogs: list[CatalogManifest] = []
     datasets: list[dict[str, Any]] = []
+    # Default `None` here while /v2/match is in beta so that instances which don't
+    # load the OpenSanctions `default` collection keep working without config changes.
+    # /v2/match falls back to `default` in the router.
+    default_scope: ManifestDatasetQuery | None = None
     match_profiles: dict[str, MatchProfile] = {}
     filter_scopes: dict[str, FilterScope] = {}
 
@@ -152,3 +156,19 @@ class Catalog(DataCatalog[Dataset]):
             catalog.make_dataset(dataset_spec)
 
         return catalog
+
+
+def check_dataset_queries(manifest: Manifest, catalog: Catalog) -> None:
+    """Check that the manifest's dataset queries only name datasets in the
+    catalog loaded from it. Raises YenteConfigError."""
+    queries: dict[str, DatasetQuery] = {}
+    if manifest.default_scope is not None:
+        queries["default_scope"] = manifest.default_scope
+    for name, scope in manifest.filter_scopes.items():
+        if scope.datasets is not None:
+            queries[f"filter_scopes.{name}.datasets"] = scope.datasets
+    for path, query in queries.items():
+        try:
+            evaluate_query(catalog, query)
+        except InvalidDatasetQuery as exc:
+            raise YenteConfigError(f"Invalid {path} in the manifest: {exc}") from exc

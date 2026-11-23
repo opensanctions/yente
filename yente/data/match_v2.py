@@ -71,7 +71,7 @@ class MatcherOptions(BaseModel):
         description=(
             "The profile's weights and config are used as defaults for the `weights` and "
             "`config` fields in the request. Values provided in the request "
-            "takes precedence."
+            "take precedence."
         ),
         examples=["strict_names"],
     )
@@ -102,14 +102,15 @@ class Filters(BaseModel):
     # A string is a query in the string syntax, parsed by
     # followthemoney.dataset.parse_query. A list or object is the structured
     # form of followthemoney.dataset.DatasetQuery.
-    datasets: str | list[Any] | dict[str, Any] = Field(
-        default=["default"],
+    datasets: str | list[Any] | dict[str, Any] | None = Field(
+        default=None,
         description=(
             "The datasets to match against, as a FollowTheMoney dataset query. "
             "Either a string such as `default-#list.pep`, or the structured form: "
             "a list of dataset names, collection names and `#tag` selectors, "
             "or an `or`/`and`/`not` operator object. "
-            "Defaults to the `default` collection. "
+            "Defaults to the filter scope's datasets, or else the yente "
+            'manifest\'s `default_scope`. Defaults to the "default" collection. '
             "See https://followthemoney.tech/docs/metadata/#dataset-query-dsl"
         ),
         examples=[

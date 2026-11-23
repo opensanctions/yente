@@ -105,6 +105,8 @@ def check_query_entity(entity: QueryEntity) -> None:
 
 
 Loc = tuple[str | int, ...]
+# The dataset query when neither the request nor the manifest gives one.
+DEFAULT_SCOPE = "default"
 
 
 def unknown_name(kind: str, loc: Loc, name: str) -> RequestValidationError:
@@ -133,48 +135,59 @@ def apply_profile(
     return weights, config
 
 
-def request_datasets(filters: Filters) -> DatasetQuery:
+def request_datasets(datasets: DatasetQuery) -> DatasetQuery:
     """The request's dataset query, parsed. A query that doesn't parse is a
     malformed request (400)."""
     try:
-        return parse_dataset_query(filters.datasets)
+        return parse_dataset_query(datasets)
     except InvalidDatasetQuery as exc:
         raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
 
 
 def apply_scope(
-    scopes: dict[str, FilterScope], filters: Filters
-) -> tuple[DatasetQuery, Loc, list[str]]:
-    """The parsed dataset query, where it came from in the request, and the
-    topics to filter by: those given in the request, or else those of the filter
-    scope it names."""
+    scopes: dict[str, FilterScope], default_datasets: DatasetQuery, filters: Filters
+) -> tuple[DatasetQuery, list[str]]:
+    """The parsed dataset query and the topics to filter by.
+
+    Each is the one given in the request, or else the one in the filter scope
+    the request names. Without either, the dataset query is the manifest's
+    `default_scope`.
+    """
+    scope = None
     topics = filters.topics
-    datasets_loc: Loc = ("body", "filters", "datasets")
-    if filters.scope is None:
-        return request_datasets(filters), datasets_loc, topics
-    scope_loc: Loc = ("body", "filters", "scope")
-    scope = scopes.get(filters.scope)
-    if scope is None:
-        raise unknown_name("filter scope", scope_loc, filters.scope)
-    if "datasets" not in filters.model_fields_set and scope.datasets is not None:
-        datasets = scope.datasets
-        datasets_loc = scope_loc
-    else:
-        datasets = request_datasets(filters)
-    if "topics" not in filters.model_fields_set and scope.topics is not None:
-        topics = scope.topics
-    return datasets, datasets_loc, topics
+    if filters.scope is not None:
+        scope = scopes.get(filters.scope)
+        if scope is None:
+            loc = ("body", "filters", "scope")
+            raise unknown_name("filter scope", loc, filters.scope)
+        if "topics" not in filters.model_fields_set and scope.topics is not None:
+            topics = scope.topics
+    if filters.datasets is not None:
+        return request_datasets(filters.datasets), topics
+    if scope is not None and scope.datasets is not None:
+        return scope.datasets, topics
+    return default_datasets, topics
 
 
-def resolve_datasets(catalog: Catalog, query: DatasetQuery, loc: Loc) -> set[Dataset]:
+def resolve_datasets(catalog: Catalog, query: DatasetQuery) -> set[Dataset]:
     """The leaf datasets selected by a parsed dataset query. A dataset that
-    isn't in the catalog is an invalid value (422)."""
+    isn't in the catalog is an invalid value (422).
+
+    The manifest's queries are checked against the catalog when it's loaded, so
+    this only fails for a query in the request, or for the implicit
+    DEFAULT_SCOPE in a catalog without a `default` collection.
+    """
     try:
         return evaluate_query(catalog, query)
     except InvalidDatasetQuery as exc:
         # The query is well-formed, so evaluating it only fails on an unknown
         # dataset.
-        error = {"type": "unknown_dataset", "loc": loc, "msg": str(exc), "input": query}
+        error = {
+            "type": "unknown_dataset",
+            "loc": ("body", "filters", "datasets"),
+            "msg": str(exc),
+            "input": query,
+        }
         raise RequestValidationError([error])
 
 
@@ -226,7 +239,8 @@ async def match(
     form: a list of dataset names, collection names and `#tag` selectors, or a
     combination of them using `or`, `and` and `not`, e.g.
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
-    `default` collection is used.
+    yente manifest's `default_scope` is used, which is the `default` collection
+    unless configured otherwise.
 
     The yente manifest can define named
     [match profiles and filter scopes](https://www.opensanctions.org/docs/yente/datasets/),
@@ -264,8 +278,10 @@ async def match(
     manifest = await get_manifest()
     catalog = await get_catalog()
     weights, config = apply_profile(manifest.match_profiles, match.matcher)
-    datasets_query, datasets_loc, topics = apply_scope(manifest.filter_scopes, filters)
-    scope = resolve_datasets(catalog, datasets_query, datasets_loc)
+    datasets_query, topics = apply_scope(
+        manifest.filter_scopes, manifest.default_scope or DEFAULT_SCOPE, filters
+    )
+    scope = resolve_datasets(catalog, datasets_query)
     algorithm = get_algorithm(match.algorithm, config)
     topic_filters: list[FilterSpec] = [("topics", t) for t in topics]
 

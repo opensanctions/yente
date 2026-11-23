@@ -78,6 +78,10 @@ datasets:
       # include OpenSanctions collections:
       - sanctions
 
+# The datasets query used when none is provided in the request or via selected
+# filter scope. The default value is "default".
+default_scope: "eu_journal_sanctions | eu_fsf"
+
 # Match profiles are named defaults for the `matcher.weights` and `matcher.config`
 # match request fields. Feature and config names are specific to the scoring
 # algorithm; the profiles below are for `logic-v2`.

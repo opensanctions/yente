@@ -5,7 +5,7 @@ import structlog
 from structlog.stdlib import BoundLogger
 
 from yente import settings
-from yente.data.manifest import Catalog, Manifest
+from yente.data.manifest import Catalog, Manifest, check_dataset_queries
 
 log: BoundLogger = structlog.get_logger(__name__)
 lock = asyncio.Lock()
@@ -17,7 +17,11 @@ async def _load() -> None:
     global _manifest, _catalog
     manifest = await Manifest.load(settings.MANIFEST)
     catalog = await Catalog.load(manifest)
-    _manifest, _catalog = manifest, catalog
+    check_dataset_queries(manifest, catalog)
+    # Replace both only once they're known to be valid, so that a failed load
+    # leaves the previous ones in use.
+    _manifest = manifest
+    _catalog = catalog
 
 
 async def get_manifest() -> Manifest:
@@ -47,4 +51,4 @@ async def refresh_catalog() -> None:
     except httpx.HTTPError as exc:
         log.exception(f"Metadata fetch error ({exc.request.url})")
     except (Exception, KeyboardInterrupt):
-        log.exception("Metadata fetch error")
+        log.exception("Metadata update error")

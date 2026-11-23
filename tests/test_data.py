@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -6,11 +7,12 @@ from followthemoney.names import entity_names
 from pydantic import ValidationError
 from rigour.names import NamePartTag
 
+import yente.data
 from yente import settings
-from yente.data import get_catalog
+from yente.data import get_catalog, refresh_catalog
 from yente.data.dataset import Dataset
 from yente.data.loader import load_json_lines
-from yente.data.manifest import Catalog, Manifest
+from yente.data.manifest import Catalog, Manifest, check_dataset_queries
 from yente.data.util import expand_dates, get_url_local_path
 from yente.exc import YenteConfigError
 
@@ -277,3 +279,71 @@ def test_manifest_profiles_and_scopes():
 
     with pytest.raises(ValidationError):
         Manifest.model_validate({"match_profiles": {"strict": {"weight": {}}}})
+
+
+def test_manifest_default_scope():
+    assert Manifest.model_validate({}).default_scope is None
+    manifest = Manifest.model_validate({"default_scope": "alpha | beta"})
+    assert manifest.default_scope == {"or": ["alpha", "beta"]}
+    with pytest.raises(ValidationError, match="Invalid dataset query"):
+        Manifest.model_validate({"default_scope": "alpha|"})
+
+
+DATASETS = [{"name": "alpha", "title": "Alpha"}, {"name": "beta", "title": "Beta"}]
+
+
+@pytest.mark.asyncio
+async def test_check_dataset_queries():
+    manifest = Manifest.model_validate(
+        {
+            "datasets": DATASETS,
+            "default_scope": "alpha | beta",
+            "filter_scopes": {"betas": {"datasets": ["beta"]}, "pep": {}},
+        }
+    )
+    check_dataset_queries(manifest, await Catalog.load(manifest))
+
+
+@pytest.mark.asyncio
+async def test_check_dataset_queries_implicit_default():
+    # There's no `default` collection, and no default_scope to check.
+    manifest = Manifest.model_validate({"datasets": DATASETS})
+    check_dataset_queries(manifest, await Catalog.load(manifest))
+
+
+@pytest.mark.parametrize(
+    "config,path",
+    [
+        pytest.param({"default_scope": "alpha | nope"}, "default_scope", id="default"),
+        pytest.param({"default_scope": "default"}, "default_scope", id="explicit"),
+        pytest.param(
+            {"filter_scopes": {"s": {"datasets": ["nope"]}}},
+            "filter_scopes.s.datasets",
+            id="filter-scope",
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_check_dataset_queries_unknown_dataset(config, path):
+    manifest = Manifest.model_validate({"datasets": DATASETS, **config})
+    catalog = await Catalog.load(manifest)
+    with pytest.raises(YenteConfigError, match=f"Invalid {path} in the manifest"):
+        check_dataset_queries(manifest, catalog)
+
+
+@pytest.mark.asyncio
+async def test_refresh_keeps_valid_manifest(monkeypatch, tmp_path):
+    monkeypatch.setattr(yente.data, "_manifest", None)
+    monkeypatch.setattr(yente.data, "_catalog", None)
+    path = tmp_path / "manifest.yml"
+    monkeypatch.setattr(settings, "MANIFEST", str(path))
+
+    path.write_text(json.dumps({"datasets": DATASETS, "default_scope": "alpha"}))
+    await refresh_catalog()
+    manifest = yente.data._manifest
+    assert manifest is not None
+    assert manifest.default_scope == "alpha"
+
+    path.write_text(json.dumps({"datasets": DATASETS, "default_scope": "nope"}))
+    await refresh_catalog()
+    assert yente.data._manifest is manifest

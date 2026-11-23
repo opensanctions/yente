@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 from orjson import dumps
 
+import yente.data
 from yente import settings
 from yente.data.manifest import Manifest
 from yente.search.indexer import update_index
@@ -15,7 +16,7 @@ from .conftest import build_index_alias_name_for_fixture, client, patch_yente_ca
 # so that dataset queries can select either, both or neither.
 NAME = "Jane Fixture Example"
 ADDRESS = "No. 53 Monivong Boulevard, Phnom Penh"
-ENTITIES: dict[str, list[dict[str, Any]]] = {
+DATASET_ENTITIES: dict[str, list[dict[str, Any]]] = {
     "alpha": [
         {
             "id": "alpha-person",
@@ -58,7 +59,6 @@ MATCH_PROFILES = {
 FILTER_SCOPES = {
     "sanctioned_beta": {"datasets": ["beta"], "topics": ["sanction"]},
     "peps": {"topics": ["role.pep"]},
-    "missing": {"datasets": "alpha|nope"},
 }
 QUERY_PERSON = {"schema": "Person", "properties": {"name": [NAME]}}
 
@@ -67,7 +67,7 @@ QUERY_PERSON = {"schema": "Person", "properties": {"name": [NAME]}}
 async def match_v2_dataset(tmp_path, monkeypatch):
     datasets: list[dict[str, Any]] = []
     tags = {"alpha": ["list.sanction"], "beta": ["list.pep"]}
-    for name, entities in ENTITIES.items():
+    for name, entities in DATASET_ENTITIES.items():
         path = tmp_path / f"{name}.ftm.json"
         path.write_bytes(
             b"\n".join(
@@ -85,7 +85,9 @@ async def match_v2_dataset(tmp_path, monkeypatch):
                 "version": "1",
             }
         )
-    datasets.append({"name": "default", "title": "Default", "children": list(ENTITIES)})
+    datasets.append(
+        {"name": "default", "title": "Default", "children": list(DATASET_ENTITIES)}
+    )
     monkeypatch.setattr(
         settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("match_v2")
     )
@@ -204,20 +206,13 @@ def test_filter_scope(filters, expected):
     assert result_ids({"query": QUERY_PERSON, "filters": filters}) == expected
 
 
-@pytest.mark.parametrize(
-    "scope,msg",
-    [
-        pytest.param("nope", "Unknown filter scope: 'nope'", id="unknown-scope"),
-        pytest.param("missing", "Unknown dataset: 'nope'", id="unknown-dataset"),
-    ],
-)
 @pytest.mark.usefixtures("match_v2_dataset")
-def test_invalid_filter_scope(scope, msg):
-    resp = post({"query": QUERY_PERSON, "filters": {"scope": scope}})
+def test_unknown_filter_scope():
+    resp = post({"query": QUERY_PERSON, "filters": {"scope": "nope"}})
     assert resp.status_code == 422, resp.text
     [error] = resp.json()["detail"]
     assert error["loc"] == ["body", "filters", "scope"]
-    assert error["msg"] == msg
+    assert error["msg"] == "Unknown filter scope: 'nope'"
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
@@ -459,6 +454,29 @@ def test_unknown_dataset(datasets):
 @pytest.mark.usefixtures("match_v2_dataset")
 def test_dataset_scope(filters, expected):
     assert sorted(result_ids({"query": QUERY_PERSON, "filters": filters})) == expected
+
+
+def set_default_scope(monkeypatch: pytest.MonkeyPatch, query: Any) -> None:
+    manifest = yente.data._manifest
+    assert manifest is not None
+    manifest = manifest.model_copy(update={"default_scope": query})
+    monkeypatch.setattr(yente.data, "_manifest", manifest)
+
+
+@pytest.mark.parametrize(
+    "filters,expected",
+    [
+        pytest.param({}, ["alpha-person"], id="default-scope"),
+        pytest.param({"datasets": ["beta"]}, ["beta-person"], id="request-datasets"),
+        pytest.param({"scope": "sanctioned_beta"}, [], id="filter-scope-datasets"),
+        # The scope's topics, with the default datasets.
+        pytest.param({"scope": "peps"}, [], id="filter-scope-without-datasets"),
+    ],
+)
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_default_scope(monkeypatch, filters, expected):
+    set_default_scope(monkeypatch, "alpha")
+    assert result_ids({"query": QUERY_PERSON, "filters": filters}) == expected
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
