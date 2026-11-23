@@ -13,6 +13,10 @@ from yente.data.dataset import YenteDatasetModel
 from yente.data.entity import Entity
 
 EntityProperties = dict[str, list[Union[str, "EntityResponse"]]]
+# The weights and config of a scoring algorithm, as in
+# nomenklatura.matching.types.ScoringConfig.
+ScoringWeights = dict[str, float]
+ScoringConfigValues = dict[str, str | int | float | bool | None]
 
 
 class ErrorResponse(BaseModel):

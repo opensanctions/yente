@@ -1,9 +1,16 @@
 import os.path
 from typing import Any, cast
 
-from followthemoney.dataset import DataCatalog
-from pydantic import BaseModel, field_validator
+from followthemoney.dataset import (
+    DataCatalog,
+    DatasetQuery,
+    parse_query,
+    validate_query,
+)
+from followthemoney.exc import InvalidDatasetQuery
+from pydantic import BaseModel, ConfigDict, field_validator
 
+from yente.data.common import ScoringConfigValues, ScoringWeights
 from yente.data.dataset import Dataset
 from yente.data.loader import load_yaml_url
 from yente.exc import YenteConfigError
@@ -59,12 +66,59 @@ class CatalogManifest(BaseModel):
         return cast(list[dict[str, Any]], data["datasets"])
 
 
+class MatchProfile(BaseModel):
+    """Named defaults for the `matcher.weights` and `matcher.config` fields of a
+    match request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    weights: ScoringWeights = {}
+    config: ScoringConfigValues = {}
+
+
+def parse_dataset_query(value: DatasetQuery) -> DatasetQuery:
+    """Parse a dataset query given as a string, and check a query is well-formed.
+
+    Raises InvalidDatasetQuery. In the parsed form, a string is a single dataset
+    name or tag.
+    """
+    query = parse_query(value) if isinstance(value, str) else value
+    validate_query(query)
+    return query
+
+
+class FilterScope(BaseModel):
+    """Named defaults for the `filters.datasets` and `filters.topics` fields of a
+    match request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # A dataset query, given as a string or in its structured form, and stored
+    # in its parsed form.
+    datasets: DatasetQuery | None = None
+    topics: list[str] | None = None
+
+    @field_validator("datasets")
+    @classmethod
+    def parse_datasets(cls, v: DatasetQuery | None) -> DatasetQuery | None:
+        """Parse the dataset query. Whether the datasets it names exist is
+        checked against the catalog when it's used."""
+        if v is None:
+            return v
+        try:
+            return parse_dataset_query(v)
+        except InvalidDatasetQuery as exc:
+            raise ValueError(f"Invalid dataset query: {exc}") from exc
+
+
 class Manifest(BaseModel):
     """A manifest (usually loaded from a YAML configuration file) that specifies datasets
     to be loaded, directly and via catalogs."""
 
     catalogs: list[CatalogManifest] = []
     datasets: list[dict[str, Any]] = []
+    match_profiles: dict[str, MatchProfile] = {}
+    filter_scopes: dict[str, FilterScope] = {}
 
     @classmethod
     async def load(cls, manifest_path: str) -> "Manifest":

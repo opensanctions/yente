@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from followthemoney import model
 from followthemoney.names import entity_names
+from pydantic import ValidationError
 from rigour.names import NamePartTag
 
 from yente import settings
@@ -242,3 +243,37 @@ def test_expand_dates():
     expanded = expand_dates(dates)
     assert len(expanded) == 4
     assert "2022" in expanded
+
+
+@pytest.mark.parametrize("datasets", ["alpha|", {"xor": ["alpha"]}, []])
+def test_manifest_filter_scope_invalid_datasets(datasets):
+    with pytest.raises(ValidationError, match="Invalid dataset query"):
+        Manifest.model_validate({"filter_scopes": {"scope1": {"datasets": datasets}}})
+
+
+def test_manifest_profiles_and_scopes():
+    manifest = Manifest.model_validate(
+        {
+            "match_profiles": {"strict": {"weights": {"weak_alias_match": 0.0}}},
+            "filter_scopes": {
+                "peps": {"datasets": "alpha | beta", "topics": ["role.pep"]}
+            },
+        }
+    )
+    assert manifest.match_profiles["strict"].weights == {"weak_alias_match": 0.0}
+    assert manifest.match_profiles["strict"].config == {}
+    # String form is parsed (and validated)
+    assert manifest.filter_scopes["peps"].datasets == {"or": ["alpha", "beta"]}
+
+    manifest = Manifest.model_validate(
+        {"filter_scopes": {"scope1": {"datasets": {"or": ["alpha", "beta"]}}}}
+    )
+    assert manifest.filter_scopes["scope1"].datasets == {"or": ["alpha", "beta"]}
+
+    manifest = Manifest.model_validate(
+        {"filter_scopes": {"scope1": {"datasets": "alpha"}}}
+    )
+    assert manifest.filter_scopes["scope1"].datasets == "alpha"
+
+    with pytest.raises(ValidationError):
+        Manifest.model_validate({"match_profiles": {"strict": {"weight": {}}}})

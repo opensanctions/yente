@@ -3,20 +3,33 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from followthemoney import model
-from followthemoney.dataset import (
-    DatasetQuery,
-    evaluate_query,
-    parse_query,
-    validate_query,
-)
+from followthemoney.dataset import DatasetQuery, evaluate_query
 from followthemoney.exc import InvalidDatasetQuery
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
-from yente.data import get_catalog
-from yente.data.common import EntityExample, ErrorResponse, TotalSpec
+from yente.data import get_catalog, get_manifest
+from yente.data.common import (
+    EntityExample,
+    ErrorResponse,
+    ScoringConfigValues,
+    ScoringWeights,
+    TotalSpec,
+)
 from yente.data.dataset import Dataset
-from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
+from yente.data.manifest import (
+    Catalog,
+    FilterScope,
+    MatchProfile,
+    parse_dataset_query,
+)
+from yente.data.match_v2 import (
+    EntityMatches,
+    EntityMatchQuery,
+    Filters,
+    MatcherOptions,
+    QueryEntity,
+)
 from yente.logs import get_logger
 from yente.routers.match import (
     build_match_query,
@@ -91,28 +104,77 @@ def check_query_entity(entity: QueryEntity) -> None:
         raise RequestValidationError(errors)
 
 
-async def resolve_scope(datasets: str | DatasetQuery) -> set[Dataset]:
-    """The leaf datasets selected by the request's dataset query.
+Loc = tuple[str | int, ...]
 
-    A query that doesn't parse is a malformed request (400). A well-formed query
-    naming a dataset that isn't in the catalog is an invalid value (422).
-    """
+
+def unknown_name(kind: str, loc: Loc, name: str) -> RequestValidationError:
+    error = {
+        "type": f"unknown_{kind.replace(' ', '_')}",
+        "loc": loc,
+        "msg": f"Unknown {kind}: {name!r}",
+        "input": name,
+    }
+    return RequestValidationError([error])
+
+
+def apply_profile(
+    profiles: dict[str, MatchProfile], matcher: MatcherOptions
+) -> tuple[ScoringWeights, ScoringConfigValues]:
+    """The weights and config to score with: the request's, on top of those of
+    the match profile it names."""
+    if matcher.profile is None:
+        return matcher.weights, matcher.config
+    profile = profiles.get(matcher.profile)
+    if profile is None:
+        loc = ("body", "matcher", "profile")
+        raise unknown_name("match profile", loc, matcher.profile)
+    weights = {**profile.weights, **matcher.weights}
+    config = {**profile.config, **matcher.config}
+    return weights, config
+
+
+def request_datasets(filters: Filters) -> DatasetQuery:
+    """The request's dataset query, parsed. A query that doesn't parse is a
+    malformed request (400)."""
     try:
-        query = parse_query(datasets) if isinstance(datasets, str) else datasets
-        validate_query(query)
+        return parse_dataset_query(filters.datasets)
     except InvalidDatasetQuery as exc:
         raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
-    catalog = await get_catalog()
+
+
+def apply_scope(
+    scopes: dict[str, FilterScope], filters: Filters
+) -> tuple[DatasetQuery, Loc, list[str]]:
+    """The parsed dataset query, where it came from in the request, and the
+    topics to filter by: those given in the request, or else those of the filter
+    scope it names."""
+    topics = filters.topics
+    datasets_loc: Loc = ("body", "filters", "datasets")
+    if filters.scope is None:
+        return request_datasets(filters), datasets_loc, topics
+    scope_loc: Loc = ("body", "filters", "scope")
+    scope = scopes.get(filters.scope)
+    if scope is None:
+        raise unknown_name("filter scope", scope_loc, filters.scope)
+    if "datasets" not in filters.model_fields_set and scope.datasets is not None:
+        datasets = scope.datasets
+        datasets_loc = scope_loc
+    else:
+        datasets = request_datasets(filters)
+    if "topics" not in filters.model_fields_set and scope.topics is not None:
+        topics = scope.topics
+    return datasets, datasets_loc, topics
+
+
+def resolve_datasets(catalog: Catalog, query: DatasetQuery, loc: Loc) -> set[Dataset]:
+    """The leaf datasets selected by a parsed dataset query. A dataset that
+    isn't in the catalog is an invalid value (422)."""
     try:
         return evaluate_query(catalog, query)
     except InvalidDatasetQuery as exc:
-        # The query is valid, so evaluating it only fails on an unknown dataset.
-        error = {
-            "type": "unknown_dataset",
-            "loc": ("body", "filters", "datasets"),
-            "msg": str(exc),
-            "input": datasets,
-        }
+        # The query is well-formed, so evaluating it only fails on an unknown
+        # dataset.
+        error = {"type": "unknown_dataset", "loc": loc, "msg": str(exc), "input": query}
         raise RequestValidationError([error])
 
 
@@ -166,6 +228,12 @@ async def match(
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
     `default` collection is used.
 
+    The yente manifest can define named
+    [match profiles and filter scopes](https://www.opensanctions.org/docs/yente/datasets/),
+    selected with `matcher.profile` and `filters.scope`. A profile gives defaults
+    for `matcher.weights` and `matcher.config`. A filter scope gives defaults for
+    `filters.datasets`.
+
     The query entity is checked against the FollowTheMoney model: the schema must
     be matchable, every property must exist in the schema, and every value must
     be valid for the property's type, e.g. `1975-04-21` for a date. An invalid
@@ -193,9 +261,13 @@ async def match(
     """
     filters = match.filters
     check_query_entity(match.query)
-    scope = await resolve_scope(filters.datasets)
-    algorithm = get_algorithm(match.algorithm, match.matcher.config)
-    topics: list[FilterSpec] = [("topics", t) for t in filters.topics]
+    manifest = await get_manifest()
+    catalog = await get_catalog()
+    weights, config = apply_profile(manifest.match_profiles, match.matcher)
+    datasets_query, datasets_loc, topics = apply_scope(manifest.filter_scopes, filters)
+    scope = resolve_datasets(catalog, datasets_query, datasets_loc)
+    algorithm = get_algorithm(match.algorithm, config)
+    topic_filters: list[FilterSpec] = [("topics", t) for t in topics]
 
     entity, query = build_match_query(
         example=EntityExample(
@@ -204,7 +276,7 @@ async def match(
             properties=dict[str, str | list[Any]](match.query.properties),
         ),
         dataset_names={ds.name for ds in scope},
-        filters=topics,
+        filters=topic_filters,
         exclude_schema=filters.exclude_schemata,
         changed_since=filters.changed_since,
         exclude_entity_ids=filters.exclude_entities,
@@ -214,7 +286,7 @@ async def match(
         entity,
         query,
         algorithm,
-        ScoringConfig(weights=match.matcher.weights, config=match.matcher.config),
+        ScoringConfig(weights=weights, config=config),
         candidates=candidate_count(match.limit),
         limit=match.limit,
         threshold=match.threshold,
@@ -227,7 +299,9 @@ async def match(
         schema=entity.schema.name,
         results=total,
         threshold=match.threshold,
-        datasets=filters.datasets,
+        datasets=datasets_query,
+        filter_scope=filters.scope,
+        match_profile=match.matcher.profile,
         limit=match.limit,
         # Log the algorithm passed in the request, which may be "best"
         algorithm_param=match.algorithm,

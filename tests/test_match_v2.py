@@ -51,6 +51,15 @@ ENTITIES: dict[str, list[dict[str, Any]]] = {
     ],
 }
 LAST_CHANGE = "2026-01-01T00:00:00"
+MATCH_PROFILES = {
+    "addresses": {"weights": {"address_match": 1.0}},
+    "bad_config": {"config": {"invalid_option": 0.4}},
+}
+FILTER_SCOPES = {
+    "sanctioned_beta": {"datasets": ["beta"], "topics": ["sanction"]},
+    "peps": {"topics": ["role.pep"]},
+    "missing": {"datasets": "alpha|nope"},
+}
 QUERY_PERSON = {"schema": "Person", "properties": {"name": [NAME]}}
 
 
@@ -80,7 +89,14 @@ async def match_v2_dataset(tmp_path, monkeypatch):
     monkeypatch.setattr(
         settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("match_v2")
     )
-    async with patch_yente_catalog(Manifest.model_validate({"datasets": datasets})):
+    manifest = Manifest.model_validate(
+        {
+            "datasets": datasets,
+            "match_profiles": MATCH_PROFILES,
+            "filter_scopes": FILTER_SCOPES,
+        }
+    )
+    async with patch_yente_catalog(manifest):
         await update_index()
         yield
 
@@ -140,6 +156,68 @@ def test_matcher_weights():
     assert result_ids({"query": query}) == []
     body = {"query": query, "matcher": {"weights": {"address_match": 1.0}}}
     assert result_ids(body) == ["alpha-hotel"]
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_match_profile():
+    query = {"schema": "Organization", "properties": {"address": [ADDRESS]}}
+    assert result_ids({"query": query, "matcher": {"profile": "addresses"}}) == [
+        "alpha-hotel"
+    ]
+    # A weight in the request overrides the profile's weight.
+    matcher = {"profile": "addresses", "weights": {"address_match": 0.0}}
+    assert result_ids({"query": query, "matcher": matcher}) == []
+
+    resp = post({"query": query, "matcher": {"profile": "bad_config"}})
+    assert resp.status_code == 400, resp.text
+    assert "invalid_option" in resp.json()["detail"]
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_unknown_match_profile():
+    resp = post({"query": QUERY_PERSON, "matcher": {"profile": "nope"}})
+    assert resp.status_code == 422, resp.text
+    [error] = resp.json()["detail"]
+    assert error["loc"] == ["body", "matcher", "profile"]
+    assert error["msg"] == "Unknown match profile: 'nope'"
+
+
+@pytest.mark.parametrize(
+    "filters,expected",
+    [
+        pytest.param({"scope": "sanctioned_beta"}, [], id="scope"),
+        pytest.param(
+            {"scope": "sanctioned_beta", "datasets": ["default"]},
+            ["alpha-person"],
+            id="request-datasets",
+        ),
+        pytest.param(
+            {"scope": "sanctioned_beta", "topics": ["role.pep"]},
+            ["beta-person"],
+            id="request-topics",
+        ),
+        pytest.param({"scope": "peps"}, ["beta-person"], id="scope-without-datasets"),
+    ],
+)
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_filter_scope(filters, expected):
+    assert result_ids({"query": QUERY_PERSON, "filters": filters}) == expected
+
+
+@pytest.mark.parametrize(
+    "scope,msg",
+    [
+        pytest.param("nope", "Unknown filter scope: 'nope'", id="unknown-scope"),
+        pytest.param("missing", "Unknown dataset: 'nope'", id="unknown-dataset"),
+    ],
+)
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_invalid_filter_scope(scope, msg):
+    resp = post({"query": QUERY_PERSON, "filters": {"scope": scope}})
+    assert resp.status_code == 422, resp.text
+    [error] = resp.json()["detail"]
+    assert error["loc"] == ["body", "filters", "scope"]
+    assert error["msg"] == msg
 
 
 @pytest.mark.usefixtures("match_v2_dataset")

@@ -11,7 +11,12 @@ from pydantic import (
 )
 
 from yente import settings
-from yente.data.common import ScoredEntityResponse, TotalSpec
+from yente.data.common import (
+    ScoredEntityResponse,
+    ScoringConfigValues,
+    ScoringWeights,
+    TotalSpec,
+)
 from yente.routers.util import ALGO_HELP, TS_PATTERN
 
 
@@ -60,12 +65,22 @@ class QueryEntity(BaseModel):
 class MatcherOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    weights: dict[str, float] = Field(
+    profile: str | None = Field(
+        default=None,
+        title="A match profile defined in the yente manifest",
+        description=(
+            "The profile's weights and config are used as defaults for the `weights` and "
+            "`config` fields in the request. Values provided in the request "
+            "takes precedence."
+        ),
+        examples=["strict_names"],
+    )
+    weights: ScoringWeights = Field(
         default={},
         description="Override the weights of features in the scoring algorithm.",
         examples=[{"name_literal": 0.8}],
     )
-    config: dict[str, str | int | float | bool | None] = Field(
+    config: ScoringConfigValues = Field(
         default={},
         description="Algorithm-specific configuration parameters.",
         examples=[{"nm_number_mismatch": 0.4}],
@@ -75,6 +90,15 @@ class MatcherOptions(BaseModel):
 class Filters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    scope: str | None = Field(
+        default=None,
+        title="A filter scope defined in the yente manifest",
+        description=(
+            "The scope's `datasets` and `topics` are used as defaults for the `datasets` "
+            "and `topics` fields in the request. Values provided in the request take precedence."
+        ),
+        examples=["enriched_peps_and_associates"],
+    )
     # A string is a query in the string syntax, parsed by
     # followthemoney.dataset.parse_query. A list or object is the structured
     # form of followthemoney.dataset.DatasetQuery.

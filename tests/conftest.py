@@ -43,11 +43,14 @@ metrics.set_meter_provider(MeterProvider(metric_readers=[metric_reader]))
 
 @asynccontextmanager
 async def patch_yente_catalog(manifest: Manifest):
+    old_manifest = yente.data._manifest
     old_catalog = yente.data._catalog
+    yente.data._manifest = manifest
     yente.data._catalog = await Catalog.load(manifest)
     try:
         yield
     finally:
+        yente.data._manifest = old_manifest
         yente.data._catalog = old_catalog
 
 

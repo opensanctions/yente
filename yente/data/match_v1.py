@@ -1,11 +1,17 @@
 from pydantic import BaseModel, Field
 
-from yente.data.common import EntityExample, ScoredEntityResponse, TotalSpec
+from yente.data.common import (
+    EntityExample,
+    ScoredEntityResponse,
+    ScoringConfigValues,
+    ScoringWeights,
+    TotalSpec,
+)
 
 
 class EntityMatchQuery(BaseModel):
-    weights: dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
-    config: dict[str, str | int | float | bool | None] = Field(
+    weights: ScoringWeights = Field({}, examples=[{"name_literal": 0.8}])
+    config: ScoringConfigValues = Field(
         default_factory=dict,
         description="Algorithm-specific configuration parameters.",
         examples=[{"nm_number_mismatch": 0.4}],

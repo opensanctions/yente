@@ -77,6 +77,65 @@ datasets:
       - blocklist
       # include OpenSanctions collections:
       - sanctions
+
+# Match profiles are named defaults for the `matcher.weights` and `matcher.config`
+# match request fields. Feature and config names are specific to the scoring
+# algorithm; the profiles below are for `logic-v2`.
+#
+# The configuration below and the query
+# {
+#   "query": {"schema": "Person", ...},
+#   "matcher": {"profile": "strict_names"}
+# }
+# is equivalent to the query
+# {
+#   "query": {"schema": "Person", ...},
+#   "matcher": {
+#     "weights": {"weak_alias_match": 0.0},
+#     "config": {"nm_name_property": "name", "nm_extra_result_name": 0.4}
+#   }
+# }
+#
+# Values provided in the request take precedence over values defined here.
+match_profiles:
+  lenient_names:
+    weights:
+      weak_alias_match: 0.9
+    config:
+      nm_fuzzy_cutoff_factor: 1.5
+      nm_extra_result_name: 0.1
+  strict_names:
+    weights:
+      weak_alias_match: 0.0
+    config:
+      nm_name_property: "name"
+      nm_extra_result_name: 0.4
+
+# Filter scopes are named defaults for the `filters.datasets` and `filters.topics`
+# match request fields.
+#
+# The configuration below and the query
+# {
+#   "query": {"schema": "Person", ...},
+#   "filters": {"scope": "enriched_peps_and_associates"}
+# }
+# is equivalent to the query
+# {
+#   "query": {"schema": "Person", ...},
+#   "filters": {
+#     "datasets": ["default"],
+#     "topics": ["role.pep", "role.rca"]
+#   }
+# }
+#
+# Values provided in the request take precedence over values defined here.
+filter_scopes:
+  enriched_peps_and_associates:
+    datasets:
+      - default
+    topics:
+      - role.pep
+      - role.rca
 ```
 
 ### Learn more
