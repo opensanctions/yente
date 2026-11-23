@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.models import Example
 from followthemoney import model
 from followthemoney.dataset import DatasetQuery, evaluate_query
 from followthemoney.exc import InvalidDatasetQuery
@@ -42,6 +43,72 @@ from yente.search.queries import FilterSpec
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/v2")
+
+QUERY_PERSON = {
+    "schema": "Person",
+    "properties": {
+        "name": ["John Doe"],
+        "birthDate": ["1975-04-21"],
+        "nationality": ["us"],
+    },
+}
+# Request samples for the API docs.
+MATCH_EXAMPLES: dict[str, Example] = {
+    "defaults": {
+        "summary": "Using the defaults",
+        "description": (
+            "Match a person against the default datasets, with the default "
+            "algorithm, threshold and limit."
+        ),
+        "value": {"query": QUERY_PERSON},
+    },
+    "options": {
+        "summary": "With filters and matcher options",
+        "description": (
+            "Match a company against everything in the `default` collection "
+            "except PEP lists, changed since the start of 2026, with "
+            "custom scoring."
+        ),
+        "value": {
+            "query": {
+                "schema": "Company",
+                "properties": {
+                    "name": ["Acme Trading Ltd"],
+                    "jurisdiction": ["gb"],
+                    "registrationNumber": ["01234567"],
+                    "address": ["1 Example Street, London"],
+                },
+            },
+            "algorithm": "logic-v2",
+            "threshold": 0.8,
+            "cutoff": 0.6,
+            "limit": 10,
+            "matcher": {
+                "weights": {"address_match": 0.2},
+                "config": {"nm_number_mismatch": 0.4},
+            },
+            "filters": {
+                "datasets": "default -#list.pep",
+                "topics": ["sanction"],
+                "changed_since": "2026-01-01",
+                "exclude_entities": ["NK-abc123"],
+            },
+        },
+    },
+    "profile_and_scope": {
+        "summary": "With a match profile and filter scope",
+        "description": (
+            "Match a person using a match profile and filter scope defined in "
+            "the yente manifest. These names are the examples in the "
+            "[manifest documentation](https://www.opensanctions.org/docs/yente/datasets/)."
+        ),
+        "value": {
+            "query": QUERY_PERSON,
+            "matcher": {"profile": "strict_names"},
+            "filters": {"scope": "enriched_peps_and_associates"},
+        },
+    },
+}
 
 
 def no_query_params(request: Request) -> None:
@@ -193,7 +260,7 @@ def resolve_datasets(catalog: Catalog, query: DatasetQuery) -> set[Dataset]:
 
 @router.post(
     "/match",
-    summary="Query by example matcher",
+    summary="Query by example matcher (v2)*",
     tags=["Matching"],
     response_model=EntityMatches,
     dependencies=[Depends(no_query_params)],
@@ -204,9 +271,12 @@ def resolve_datasets(catalog: Catalog, query: DatasetQuery) -> set[Dataset]:
 )
 async def match(
     provider: ProviderDep,
-    match: EntityMatchQuery,
+    match: Annotated[EntityMatchQuery, Body(openapi_examples=MATCH_EXAMPLES)],
 ) -> EntityMatches:
-    """Match entities based on a complex set of criteria, like name, date of birth
+    """***Beta:** This endpoint is released for wider testing and is not yet recommended
+    for production use. We welcome feedback. Its interface may change without announcement.
+
+    Match entities based on a complex set of criteria, like name, date of birth
     and nationality of a person. This works by submitting an entity formatted like
     those returned by the API.
 
@@ -235,7 +305,7 @@ async def match(
 
     The datasets to match against are selected using a
     [dataset query](https://followthemoney.tech/docs/metadata/#dataset-query-dsl).
-    This is either a string such as `"default-#list.pep"`, or its structured
+    This is either a string such as `"default -#list.pep"`, or its structured
     form: a list of dataset names, collection names and `#tag` selectors, or a
     combination of them using `or`, `and` and `not`, e.g.
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
@@ -251,8 +321,7 @@ async def match(
     The query entity is checked against the FollowTheMoney model: the schema must
     be matchable, every property must exist in the schema, and every value must
     be valid for the property's type, e.g. `1975-04-21` for a date. An invalid
-    request gets a 422 response listing each problem with its location in the
-    request body.
+    request results in a 422 response indicating each problem and its location.
 
     The response contains the scored results and the query entity as it was
     understood by the matcher:

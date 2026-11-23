@@ -106,7 +106,7 @@ class Filters(BaseModel):
         default=None,
         description=(
             "The datasets to match against, as a FollowTheMoney dataset query. "
-            "Either a string such as `default-#list.pep`, or the structured form: "
+            "Either a string such as `default -#list.pep`, or the structured form: "
             "a list of dataset names, collection names and `#tag` selectors, "
             "or an `or`/`and`/`not` operator object. "
             "Defaults to the filter scope's datasets, or else the yente "
@@ -114,7 +114,7 @@ class Filters(BaseModel):
             "See https://followthemoney.tech/docs/metadata/#dataset-query-dsl"
         ),
         examples=[
-            "default-#list.pep",
+            "default -#list.pep",
             ["#list.sanction"],
             {"and": ["default", {"not": "#list.pep"}]},
         ],

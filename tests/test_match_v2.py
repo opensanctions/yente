@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 from unittest import mock
 
@@ -7,7 +8,10 @@ from orjson import dumps
 
 import yente.data
 from yente import settings
-from yente.data.manifest import Manifest
+from yente.data.manifest import Manifest, parse_dataset_query
+from yente.data.match_v2 import EntityMatchQuery
+from yente.routers.match import get_algorithm
+from yente.routers.match.v2 import MATCH_EXAMPLES, check_query_entity
 from yente.search.indexer import update_index
 
 from .conftest import build_index_alias_name_for_fixture, client, patch_yente_catalog
@@ -448,7 +452,7 @@ def test_unknown_dataset(datasets):
             id="dataset",
         ),
         pytest.param({"datasets": ["#list.pep"]}, ["beta-person"], id="tag"),
-        pytest.param({"datasets": "default-#list.pep"}, ["alpha-person"], id="string"),
+        pytest.param({"datasets": "default -#list.pep"}, ["alpha-person"], id="string"),
     ],
 )
 @pytest.mark.usefixtures("match_v2_dataset")
@@ -552,3 +556,19 @@ def test_metric_attributes():
         resp = client.post("/match/default", json={"queries": {"q": QUERY_PERSON}})
         assert resp.status_code == 200, resp.text
         assert spy.call_args.kwargs["metric_attributes"] == {"endpoint": "match"}
+
+
+@pytest.mark.parametrize("name", list(MATCH_EXAMPLES))
+def test_match_examples(name):
+    # The examples work against any index, so check them the way a request is
+    # checked before it's run against one.
+    match = EntityMatchQuery.model_validate(MATCH_EXAMPLES[name]["value"])
+    check_query_entity(match.query)
+    if match.filters.datasets is not None:
+        parse_dataset_query(match.filters.datasets)
+    algorithm = get_algorithm(match.algorithm, match.matcher.config)
+    assert set(match.matcher.weights) <= {f.name for f in algorithm.features}
+    # Profiles and scopes are the ones in the manifest documentation.
+    docs = (Path(__file__).parent.parent / "docs" / "datasets.md").read_text()
+    for defined in [match.matcher.profile, match.filters.scope]:
+        assert defined is None or f"  {defined}:\n" in docs
