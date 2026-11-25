@@ -149,6 +149,9 @@ BEST_ALGORITHM = env_str("YENTE_BEST_ALGORITHM", "logic-v2")
 HIDDEN_ALGORITHMS = [
     algo for algo in env_str("YENTE_HIDDEN_ALGORITHMS", "").split(",") if algo != ""
 ]
+# The dataset or collection that /v2/match matches against when the request
+# doesn't give a dataset query:
+DEFAULT_DATASET = env_str("YENTE_DEFAULT_DATASET", "default")
 
 
 # How many results to return per page of search results max:

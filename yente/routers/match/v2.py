@@ -4,33 +4,21 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.models import Example
 from followthemoney import model
-from followthemoney.dataset import DatasetQuery, evaluate_query
+from followthemoney.dataset import (
+    DatasetQuery,
+    evaluate_query,
+    parse_query,
+    validate_query,
+)
 from followthemoney.exc import InvalidDatasetQuery
 from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
-from yente.data import get_catalog, get_manifest
-from yente.data.common import (
-    EntityExample,
-    ErrorResponse,
-    ScoringConfigValues,
-    ScoringWeights,
-    TotalSpec,
-)
+from yente.data import get_catalog
+from yente.data.common import EntityExample, ErrorResponse, TotalSpec
 from yente.data.dataset import Dataset
-from yente.data.manifest import (
-    Catalog,
-    FilterProfile,
-    MatchProfile,
-    parse_dataset_query,
-)
-from yente.data.match_v2 import (
-    EntityMatches,
-    EntityMatchQuery,
-    Filters,
-    MatcherOptions,
-    QueryEntity,
-)
+from yente.data.manifest import Catalog
+from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
 from yente.logs import get_logger
 from yente.routers.match import (
     build_match_query,
@@ -93,19 +81,6 @@ MATCH_EXAMPLES: dict[str, Example] = {
                 "changed_since": "2026-01-01",
                 "exclude_entities": ["NK-abc123"],
             },
-        },
-    },
-    "profiles": {
-        "summary": "With a match profile and filter profile",
-        "description": (
-            "Match a person using a match profile and filter profile defined in "
-            "the yente manifest. These names are the examples in the "
-            "[manifest documentation](https://www.opensanctions.org/docs/yente/datasets/)."
-        ),
-        "value": {
-            "query": QUERY_PERSON,
-            "matcher": {"profile": "strict_names"},
-            "filters": {"profile": "enriched_peps_and_associates"},
         },
     },
 }
@@ -171,78 +146,24 @@ def check_query_entity(entity: QueryEntity) -> None:
         raise RequestValidationError(errors)
 
 
-Loc = tuple[str | int, ...]
-# The dataset query when neither the request nor the manifest gives one.
-DEFAULT_DATASETS = "default"
-
-
-def unknown_name(kind: str, loc: Loc, name: str) -> RequestValidationError:
-    error = {
-        "type": f"unknown_{kind.replace(' ', '_')}",
-        "loc": loc,
-        "msg": f"Unknown {kind}: {name!r}",
-        "input": name,
-    }
-    return RequestValidationError([error])
-
-
-def apply_profile(
-    profiles: dict[str, MatchProfile], matcher: MatcherOptions
-) -> tuple[ScoringWeights, ScoringConfigValues]:
-    """The weights and config to score with: the request's, on top of those of
-    the match profile it names."""
-    if matcher.profile is None:
-        return matcher.weights, matcher.config
-    profile = profiles.get(matcher.profile)
-    if profile is None:
-        loc = ("body", "matcher", "profile")
-        raise unknown_name("match profile", loc, matcher.profile)
-    weights = {**profile.weights, **matcher.weights}
-    config = {**profile.config, **matcher.config}
-    return weights, config
-
-
-def request_datasets(datasets: DatasetQuery) -> DatasetQuery:
+def parse_dataset_query(datasets: DatasetQuery) -> DatasetQuery:
     """The request's dataset query, parsed. A query that doesn't parse is a
-    malformed request (400)."""
+    malformed request (400). In the parsed form, a string is a single dataset
+    name or tag."""
     try:
-        return parse_dataset_query(datasets)
+        query = parse_query(datasets) if isinstance(datasets, str) else datasets
+        validate_query(query)
     except InvalidDatasetQuery as exc:
         raise HTTPException(400, detail=f"Invalid dataset query: {exc}")
-
-
-def apply_filter_profile(
-    profiles: dict[str, FilterProfile], default_datasets: DatasetQuery, filters: Filters
-) -> tuple[DatasetQuery, list[str]]:
-    """The parsed dataset query and the topics to filter by.
-
-    Each is the one given in the request, or else the one in the filter profile
-    the request names. Without either, the dataset query is the manifest's
-    `default_datasets`.
-    """
-    profile = None
-    topics = filters.topics
-    if filters.profile is not None:
-        profile = profiles.get(filters.profile)
-        if profile is None:
-            loc = ("body", "filters", "profile")
-            raise unknown_name("filter profile", loc, filters.profile)
-        if "topics" not in filters.model_fields_set and profile.topics is not None:
-            topics = profile.topics
-    if filters.datasets is not None:
-        return request_datasets(filters.datasets), topics
-    if profile is not None and profile.datasets is not None:
-        return profile.datasets, topics
-    return default_datasets, topics
+    return query
 
 
 def resolve_datasets(catalog: Catalog, query: DatasetQuery) -> set[Dataset]:
     """The leaf datasets selected by a parsed dataset query. A dataset that
     isn't in the catalog is an invalid value (422).
 
-    The manifest's queries are checked against the catalog when it's loaded, so
-    this only fails for a query in the request, or for the implicit
-    DEFAULT_DATASETS in a catalog without a `default` collection.
+    settings.DEFAULT_DATASET isn't validated against the catalog, so this also
+    fails when it names a dataset that isn't in the catalog.
     """
     try:
         return evaluate_query(catalog, query)
@@ -309,14 +230,7 @@ async def match(
     form: a list of dataset names, collection names and `#tag` selectors, or a
     combination of them using `or`, `and` and `not`, e.g.
     `{"and": ["default", {"not": "#list.pep"}]}`. If no datasets are given, the
-    yente manifest's `default_datasets` is used, which is the `default` collection
-    unless configured otherwise.
-
-    The yente manifest can define named
-    [match profiles and filter profiles](https://www.opensanctions.org/docs/yente/datasets/),
-    selected with `matcher.profile` and `filters.profile`. A profile gives defaults
-    for `matcher.weights` and `matcher.config`. A filter profile gives defaults for
-    `filters.datasets`.
+    `default` collection is used, unless the yente instance is configured otherwise.
 
     The query entity is checked against the FollowTheMoney model: the schema must
     be matchable, every property must exist in the schema, and every value must
@@ -346,9 +260,8 @@ async def match(
     property values and the results are not logged.
 
     * From the request: the query entity's `schema`, `algorithm` as given (e.g.
-      `best`), `threshold`, `limit`, `matcher.profile`, `filters.profile`, and
-      the dataset query used, whether from `filters.datasets`, the filter
-      profile or the default.
+      `best`), `threshold`, `limit`, and the dataset query used, whether from
+      `filters.datasets` or the default.
     * From the response: the number of matching results.
     * About the HTTP request: the method, the URL including any query string,
       the user agent, the client IP address, the referer, the status code and
@@ -356,15 +269,14 @@ async def match(
     """
     filters = match.filters
     check_query_entity(match.query)
-    manifest = await get_manifest()
     catalog = await get_catalog()
-    weights, config = apply_profile(manifest.match_profiles, match.matcher)
-    datasets_query, topics = apply_filter_profile(
-        manifest.filter_profiles, manifest.default_datasets or DEFAULT_DATASETS, filters
-    )
+    datasets_query: DatasetQuery = settings.DEFAULT_DATASET
+    if filters.datasets is not None:
+        datasets_query = parse_dataset_query(filters.datasets)
     datasets = resolve_datasets(catalog, datasets_query)
+    weights, config = match.matcher.weights, match.matcher.config
     algorithm = get_algorithm(match.algorithm, config)
-    topic_filters: list[FilterSpec] = [("topics", t) for t in topics]
+    topic_filters: list[FilterSpec] = [("topics", t) for t in filters.topics]
 
     entity, query = build_match_query(
         example=EntityExample(
@@ -401,8 +313,6 @@ async def match(
         results=total,
         threshold=match.threshold,
         datasets=datasets_query,
-        filter_profile=filters.profile,
-        match_profile=match.matcher.profile,
         limit=match.limit,
         # Log the algorithm passed in the request, which may be "best"
         algorithm_param=match.algorithm,

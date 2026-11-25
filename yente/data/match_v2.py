@@ -65,16 +65,6 @@ class QueryEntity(BaseModel):
 class MatcherOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    profile: str | None = Field(
-        default=None,
-        title="A match profile defined in the yente manifest",
-        description=(
-            "The profile's weights and config are used as defaults for the `weights` and "
-            "`config` fields in the request. Values provided in the request "
-            "take precedence."
-        ),
-        examples=["strict_names"],
-    )
     weights: ScoringWeights = Field(
         default={},
         description="Override the weights of features in the scoring algorithm.",
@@ -90,15 +80,6 @@ class MatcherOptions(BaseModel):
 class Filters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    profile: str | None = Field(
-        default=None,
-        title="A filter profile defined in the yente manifest",
-        description=(
-            "The filter profile's `datasets` and `topics` are used as defaults for the `datasets` "
-            "and `topics` fields in the request. Values provided in the request take precedence."
-        ),
-        examples=["enriched_peps_and_associates"],
-    )
     # A string is a query in the string syntax, parsed by
     # followthemoney.dataset.parse_query. A list or object is the structured
     # form of followthemoney.dataset.DatasetQuery.
@@ -109,8 +90,8 @@ class Filters(BaseModel):
             "Either a string such as `default -#list.pep`, or the structured form: "
             "a list of dataset names, collection names and `#tag` selectors, "
             "or an `or`/`and`/`not` operator object. "
-            "Defaults to the filter profile's datasets, or else the yente "
-            'manifest\'s `default_datasets`. Defaults to the "default" collection. '
+            "Defaults to the `default` collection, unless the yente instance is "
+            "configured otherwise. "
             "See https://followthemoney.tech/docs/metadata/#dataset-query-dsl"
         ),
         examples=[

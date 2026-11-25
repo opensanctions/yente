@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 from unittest import mock
 
@@ -7,12 +6,15 @@ import pytest_asyncio
 from orjson import dumps
 from structlog.testing import capture_logs
 
-import yente.data
 from yente import settings
-from yente.data.manifest import Manifest, parse_dataset_query
+from yente.data.manifest import Manifest
 from yente.data.match_v2 import EntityMatchQuery
 from yente.routers.match import get_algorithm
-from yente.routers.match.v2 import MATCH_EXAMPLES, check_query_entity
+from yente.routers.match.v2 import (
+    MATCH_EXAMPLES,
+    check_query_entity,
+    parse_dataset_query,
+)
 from yente.search.indexer import update_index
 
 from .conftest import build_index_alias_name_for_fixture, client, patch_yente_catalog
@@ -57,14 +59,6 @@ DATASET_ENTITIES: dict[str, list[dict[str, Any]]] = {
     ],
 }
 LAST_CHANGE = "2026-01-01T00:00:00"
-MATCH_PROFILES = {
-    "addresses": {"weights": {"address_match": 1.0}},
-    "bad_config": {"config": {"invalid_option": 0.4}},
-}
-FILTER_PROFILES = {
-    "sanctioned_beta": {"datasets": ["beta"], "topics": ["sanction"]},
-    "peps": {"topics": ["role.pep"]},
-}
 QUERY_PERSON = {"schema": "Person", "properties": {"name": [NAME]}}
 
 
@@ -96,13 +90,7 @@ async def match_v2_dataset(tmp_path, monkeypatch):
     monkeypatch.setattr(
         settings, "ENTITY_INDEX", build_index_alias_name_for_fixture("match_v2")
     )
-    manifest = Manifest.model_validate(
-        {
-            "datasets": datasets,
-            "match_profiles": MATCH_PROFILES,
-            "filter_profiles": FILTER_PROFILES,
-        }
-    )
+    manifest = Manifest.model_validate({"datasets": datasets})
     async with patch_yente_catalog(manifest):
         await update_index()
         yield
@@ -163,63 +151,6 @@ def test_matcher_weights():
     assert result_ids({"query": query}) == []
     body = {"query": query, "matcher": {"weights": {"address_match": 1.0}}}
     assert result_ids(body) == ["alpha-hotel"]
-
-
-@pytest.mark.usefixtures("match_v2_dataset")
-def test_match_profile():
-    query = {"schema": "Organization", "properties": {"address": [ADDRESS]}}
-    assert result_ids({"query": query, "matcher": {"profile": "addresses"}}) == [
-        "alpha-hotel"
-    ]
-    # A weight in the request overrides the profile's weight.
-    matcher = {"profile": "addresses", "weights": {"address_match": 0.0}}
-    assert result_ids({"query": query, "matcher": matcher}) == []
-
-    resp = post({"query": query, "matcher": {"profile": "bad_config"}})
-    assert resp.status_code == 400, resp.text
-    assert "invalid_option" in resp.json()["detail"]
-
-
-@pytest.mark.usefixtures("match_v2_dataset")
-def test_unknown_match_profile():
-    resp = post({"query": QUERY_PERSON, "matcher": {"profile": "nope"}})
-    assert resp.status_code == 422, resp.text
-    [error] = resp.json()["detail"]
-    assert error["loc"] == ["body", "matcher", "profile"]
-    assert error["msg"] == "Unknown match profile: 'nope'"
-
-
-@pytest.mark.parametrize(
-    "filters,expected",
-    [
-        pytest.param({"profile": "sanctioned_beta"}, [], id="profile"),
-        pytest.param(
-            {"profile": "sanctioned_beta", "datasets": ["default"]},
-            ["alpha-person"],
-            id="request-datasets",
-        ),
-        pytest.param(
-            {"profile": "sanctioned_beta", "topics": ["role.pep"]},
-            ["beta-person"],
-            id="request-topics",
-        ),
-        pytest.param(
-            {"profile": "peps"}, ["beta-person"], id="profile-without-datasets"
-        ),
-    ],
-)
-@pytest.mark.usefixtures("match_v2_dataset")
-def test_filter_profile(filters, expected):
-    assert result_ids({"query": QUERY_PERSON, "filters": filters}) == expected
-
-
-@pytest.mark.usefixtures("match_v2_dataset")
-def test_unknown_filter_profile():
-    resp = post({"query": QUERY_PERSON, "filters": {"profile": "nope"}})
-    assert resp.status_code == 422, resp.text
-    [error] = resp.json()["detail"]
-    assert error["loc"] == ["body", "filters", "profile"]
-    assert error["msg"] == "Unknown filter profile: 'nope'"
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
@@ -463,27 +394,24 @@ def test_dataset_scope(filters, expected):
     assert sorted(result_ids({"query": QUERY_PERSON, "filters": filters})) == expected
 
 
-def set_default_datasets(monkeypatch: pytest.MonkeyPatch, query: Any) -> None:
-    manifest = yente.data._manifest
-    assert manifest is not None
-    manifest = manifest.model_copy(update={"default_datasets": query})
-    monkeypatch.setattr(yente.data, "_manifest", manifest)
-
-
 @pytest.mark.parametrize(
     "filters,expected",
     [
-        pytest.param({}, ["alpha-person"], id="default-datasets"),
+        pytest.param({}, ["alpha-person"], id="default-dataset"),
         pytest.param({"datasets": ["beta"]}, ["beta-person"], id="request-datasets"),
-        pytest.param({"profile": "sanctioned_beta"}, [], id="filter-profile-datasets"),
-        # The filter profile's topics, with the default datasets.
-        pytest.param({"profile": "peps"}, [], id="filter-profile-without-datasets"),
     ],
 )
 @pytest.mark.usefixtures("match_v2_dataset")
-def test_default_datasets(monkeypatch, filters, expected):
-    set_default_datasets(monkeypatch, "alpha")
+def test_default_dataset(monkeypatch, filters, expected):
+    monkeypatch.setattr(settings, "DEFAULT_DATASET", "alpha")
     assert result_ids({"query": QUERY_PERSON, "filters": filters}) == expected
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_unknown_default_dataset(monkeypatch):
+    monkeypatch.setattr(settings, "DEFAULT_DATASET", "nope")
+    resp = post({"query": QUERY_PERSON})
+    assert resp.status_code == 422, resp.text
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
@@ -571,10 +499,6 @@ def test_match_examples(name):
         parse_dataset_query(match.filters.datasets)
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
     assert set(match.matcher.weights) <= {f.name for f in algorithm.features}
-    # Profiles are the ones in the manifest documentation.
-    docs = (Path(__file__).parent.parent / "docs" / "datasets.md").read_text()
-    for defined in [match.matcher.profile, match.filters.profile]:
-        assert defined is None or f"  {defined}:\n" in docs
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
@@ -583,7 +507,7 @@ def test_logged_fields():
     # Take care not to introduce logging that reveals personally
     # identifying information.
     with capture_logs() as logs:
-        result_ids({"query": QUERY_PERSON, "filters": {"profile": "peps"}})
+        result_ids({"query": QUERY_PERSON, "filters": {"topics": ["role.pep"]}})
     [event] = [e for e in logs if e["event"] == "/v2/match"]
     assert event == {
         "event": "/v2/match",
@@ -593,8 +517,6 @@ def test_logged_fields():
         "results": 1,
         "threshold": settings.SCORE_THRESHOLD,
         "datasets": "default",
-        "filter_profile": "peps",
-        "match_profile": None,
         "limit": settings.MATCH_PAGE,
         "algorithm_param": settings.DEFAULT_ALGORITHM,
     }

@@ -1,18 +1,15 @@
-import json
 from pathlib import Path
 
 import pytest
 from followthemoney import model
 from followthemoney.names import entity_names
-from pydantic import ValidationError
 from rigour.names import NamePartTag
 
-import yente.data
 from yente import settings
-from yente.data import get_catalog, refresh_catalog
+from yente.data import get_catalog
 from yente.data.dataset import Dataset
 from yente.data.loader import load_json_lines
-from yente.data.manifest import Catalog, Manifest, check_dataset_queries
+from yente.data.manifest import Catalog, Manifest
 from yente.data.util import expand_dates, get_url_local_path
 from yente.exc import YenteConfigError
 
@@ -245,111 +242,3 @@ def test_expand_dates():
     expanded = expand_dates(dates)
     assert len(expanded) == 4
     assert "2022" in expanded
-
-
-@pytest.mark.parametrize("datasets", ["alpha|", {"xor": ["alpha"]}, []])
-def test_manifest_filter_profile_invalid_datasets(datasets):
-    with pytest.raises(ValidationError, match="Invalid dataset query"):
-        Manifest.model_validate(
-            {"filter_profiles": {"profile1": {"datasets": datasets}}}
-        )
-
-
-def test_manifest_match_and_filter_profiles():
-    manifest = Manifest.model_validate(
-        {
-            "match_profiles": {"strict": {"weights": {"weak_alias_match": 0.0}}},
-            "filter_profiles": {
-                "peps": {"datasets": "alpha | beta", "topics": ["role.pep"]}
-            },
-        }
-    )
-    assert manifest.match_profiles["strict"].weights == {"weak_alias_match": 0.0}
-    assert manifest.match_profiles["strict"].config == {}
-    # String form is parsed (and validated)
-    assert manifest.filter_profiles["peps"].datasets == {"or": ["alpha", "beta"]}
-
-    manifest = Manifest.model_validate(
-        {"filter_profiles": {"profile1": {"datasets": {"or": ["alpha", "beta"]}}}}
-    )
-    assert manifest.filter_profiles["profile1"].datasets == {"or": ["alpha", "beta"]}
-
-    manifest = Manifest.model_validate(
-        {"filter_profiles": {"profile1": {"datasets": "alpha"}}}
-    )
-    assert manifest.filter_profiles["profile1"].datasets == "alpha"
-
-    with pytest.raises(ValidationError):
-        Manifest.model_validate({"match_profiles": {"strict": {"weight": {}}}})
-
-
-def test_manifest_default_datasets():
-    assert Manifest.model_validate({}).default_datasets is None
-    manifest = Manifest.model_validate({"default_datasets": "alpha | beta"})
-    assert manifest.default_datasets == {"or": ["alpha", "beta"]}
-    with pytest.raises(ValidationError, match="Invalid dataset query"):
-        Manifest.model_validate({"default_datasets": "alpha|"})
-
-
-DATASETS = [{"name": "alpha", "title": "Alpha"}, {"name": "beta", "title": "Beta"}]
-
-
-@pytest.mark.asyncio
-async def test_check_dataset_queries():
-    manifest = Manifest.model_validate(
-        {
-            "datasets": DATASETS,
-            "default_datasets": "alpha | beta",
-            "filter_profiles": {"betas": {"datasets": ["beta"]}, "pep": {}},
-        }
-    )
-    check_dataset_queries(manifest, await Catalog.load(manifest))
-
-
-@pytest.mark.asyncio
-async def test_check_dataset_queries_implicit_default():
-    # There's no `default` collection, and no default_datasets to check.
-    manifest = Manifest.model_validate({"datasets": DATASETS})
-    check_dataset_queries(manifest, await Catalog.load(manifest))
-
-
-@pytest.mark.parametrize(
-    "config,path",
-    [
-        pytest.param(
-            {"default_datasets": "alpha | nope"}, "default_datasets", id="default"
-        ),
-        pytest.param(
-            {"default_datasets": "default"}, "default_datasets", id="explicit"
-        ),
-        pytest.param(
-            {"filter_profiles": {"s": {"datasets": ["nope"]}}},
-            "filter_profiles.s.datasets",
-            id="filter-profile",
-        ),
-    ],
-)
-@pytest.mark.asyncio
-async def test_check_dataset_queries_unknown_dataset(config, path):
-    manifest = Manifest.model_validate({"datasets": DATASETS, **config})
-    catalog = await Catalog.load(manifest)
-    with pytest.raises(YenteConfigError, match=f"Invalid {path} in the manifest"):
-        check_dataset_queries(manifest, catalog)
-
-
-@pytest.mark.asyncio
-async def test_refresh_keeps_valid_manifest(monkeypatch, tmp_path):
-    monkeypatch.setattr(yente.data, "_manifest", None)
-    monkeypatch.setattr(yente.data, "_catalog", None)
-    path = tmp_path / "manifest.yml"
-    monkeypatch.setattr(settings, "MANIFEST", str(path))
-
-    path.write_text(json.dumps({"datasets": DATASETS, "default_datasets": "alpha"}))
-    await refresh_catalog()
-    manifest = yente.data._manifest
-    assert manifest is not None
-    assert manifest.default_datasets == "alpha"
-
-    path.write_text(json.dumps({"datasets": DATASETS, "default_datasets": "nope"}))
-    await refresh_catalog()
-    assert yente.data._manifest is manifest

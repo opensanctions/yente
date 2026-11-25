@@ -31,7 +31,7 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 import yente.data
 from yente import settings
 from yente.app import create_app
-from yente.data.manifest import Catalog, Manifest, check_dataset_queries
+from yente.data.manifest import Catalog, Manifest
 from yente.provider import close_provider, with_provider
 from yente.search.indexer import update_index
 
@@ -43,16 +43,11 @@ metrics.set_meter_provider(MeterProvider(metric_readers=[metric_reader]))
 
 @asynccontextmanager
 async def patch_yente_catalog(manifest: Manifest):
-    old_manifest = yente.data._manifest
     old_catalog = yente.data._catalog
-    catalog = await Catalog.load(manifest)
-    check_dataset_queries(manifest, catalog)
-    yente.data._manifest = manifest
-    yente.data._catalog = catalog
+    yente.data._catalog = await Catalog.load(manifest)
     try:
         yield
     finally:
-        yente.data._manifest = old_manifest
         yente.data._catalog = old_catalog
 
 
