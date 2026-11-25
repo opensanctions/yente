@@ -7,12 +7,11 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
-    model_validator,
 )
 
 from yente import settings
 from yente.data.common import (
-    ScoredEntityResponse,
+    ScoredEntity,
     ScoringConfigValues,
     ScoringWeights,
     TotalSpec,
@@ -141,13 +140,6 @@ class EntityMatchQuery(BaseModel):
         le=1.0,
         title="Score threshold for results to be considered matches",
     )
-    cutoff: float = Field(
-        settings.SCORE_THRESHOLD,
-        ge=0.0,
-        le=1.0,
-        title="Lower bound of score for results to be returned at all",
-        description="Must not be above the threshold.",
-    )
     limit: int = Field(
         settings.MATCH_PAGE,
         le=settings.MAX_MATCHES,
@@ -156,14 +148,11 @@ class EntityMatchQuery(BaseModel):
     matcher: MatcherOptions = Field(default=MatcherOptions())
     filters: Filters = Field(default=Filters())
 
-    @model_validator(mode="after")
-    def cutoff_not_above_threshold(self) -> "EntityMatchQuery":
-        if self.cutoff > self.threshold:
-            raise ValueError("cutoff must not be above threshold")
-        return self
-
 
 class EntityMatches(BaseModel):
-    results: list[ScoredEntityResponse]
+    # Only matches are returned, so results don't say whether they're a match.
+    # Pydantic serializes the ScoredEntityResponse results by this declared
+    # type, leaving out `match`.
+    results: list[ScoredEntity]
     total: TotalSpec
     query: QueryEntity

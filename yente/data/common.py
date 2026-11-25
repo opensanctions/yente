@@ -54,11 +54,14 @@ class EntityResponse(BaseModel):
 EntityResponse.model_rebuild()
 
 
-class ScoredEntityResponse(EntityResponse):
+class ScoredEntity(EntityResponse):
     score: float = 0.99
     explanations: dict[str, FeatureResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
+
+
+class ScoredEntityResponse(ScoredEntity):
     match: bool = Field(description="Whether the score is above the match threshold.")
 
     @classmethod

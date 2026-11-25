@@ -114,7 +114,7 @@ def test_match():
     data = resp.json()
     assert set(data.keys()) == {"query", "results", "total"}
     assert [r["id"] for r in data["results"]] == ["alpha-person"]
-    assert data["results"][0]["match"] is True
+    assert "match" not in data["results"][0]
     assert data["total"] == {"value": 1, "relation": "eq"}
 
 
@@ -309,11 +309,7 @@ def test_query_entity_validation(query, locs):
         ),
         pytest.param({"threshold": 70}, ["body", "threshold"], id="threshold-above"),
         pytest.param({"threshold": -0.1}, ["body", "threshold"], id="threshold-below"),
-        pytest.param({"cutoff": 1.5}, ["body", "cutoff"], id="cutoff-above"),
-        pytest.param(
-            {"threshold": 0.5, "cutoff": 0.6}, ["body"], id="cutoff-above-threshold"
-        ),
-        pytest.param({"threshold": 0.5}, ["body"], id="default-cutoff-above-threshold"),
+        pytest.param({"cutoff": 0.5}, ["body", "cutoff"], id="cutoff"),
         pytest.param(
             {"limit": settings.MAX_MATCHES + 1}, ["body", "limit"], id="limit"
         ),
@@ -453,9 +449,10 @@ def test_changed_since(changed_since, expected):
 
 
 @pytest.mark.usefixtures("match_v2_dataset")
-def test_threshold_and_cutoff():
-    # The details of threshold and cutoff are tested against score_results. This
-    # checks that the request values reach it.
+def test_threshold():
+    # The details of the threshold are tested against score_results. This
+    # checks that the request's threshold reaches it, and that only matches
+    # are returned.
     # The birth date doesn't match, so the result scores below the default threshold.
     query = {
         "schema": "Person",
@@ -464,13 +461,12 @@ def test_threshold_and_cutoff():
     body: dict[str, Any] = {"query": query, "filters": {"datasets": ["alpha"]}}
     assert result_ids(body) == []
 
-    resp = post({**body, "threshold": 1.0, "cutoff": 0.0})
+    resp = post({**body, "threshold": 0.5})
     assert resp.status_code == 200, resp.text
-    assert [r["match"] for r in resp.json()["results"]] == [False]
+    [result] = resp.json()["results"]
 
-    resp = post({**body, "threshold": 0.5, "cutoff": 0.5})
-    assert resp.status_code == 200, resp.text
-    assert [r["match"] for r in resp.json()["results"]] == [True]
+    # A result scoring exactly the threshold is a match, and is returned.
+    assert result_ids({**body, "threshold": result["score"]}) == ["alpha-person"]
 
 
 @pytest.mark.usefixtures("match_v2_dataset")

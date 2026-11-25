@@ -15,7 +15,7 @@ from nomenklatura.matching.types import ScoringConfig
 
 from yente import settings
 from yente.data import get_catalog
-from yente.data.common import EntityExample, ErrorResponse, TotalSpec
+from yente.data.common import EntityExample, ErrorResponse, ScoredEntity, TotalSpec
 from yente.data.dataset import Dataset
 from yente.data.manifest import Catalog
 from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
@@ -69,7 +69,6 @@ MATCH_EXAMPLES: dict[str, Example] = {
             },
             "algorithm": "logic-v2",
             "threshold": 0.8,
-            "cutoff": 0.6,
             "limit": 10,
             "matcher": {
                 "weights": {"address_match": 0.2},
@@ -299,9 +298,12 @@ async def match(
         candidates=candidate_count(match.limit),
         limit=match.limit,
         threshold=match.threshold,
-        cutoff=match.cutoff,
+        cutoff=0.0,  # fetch everything within `limit`
         metric_attributes={"endpoint": "match_v2"},
     )
+    # Return up to `limit` matching results. That's where score >= threshold,
+    # compared to v1's score > cutoff.
+    results: list[ScoredEntity] = [result for result in scored if result.match]
     # PII: query entities describe people. Before logging another field,
     # consider whether it could contain personal data from the request, or make
     # it easier to infer, like a result ID.
@@ -318,7 +320,7 @@ async def match(
         algorithm_param=match.algorithm,
     )
     return EntityMatches(
-        results=scored,
+        results=results,
         total=TotalSpec(value=total, relation="eq"),
         query=QueryEntity(
             schema=entity.schema.name, properties=dict(entity.properties)
