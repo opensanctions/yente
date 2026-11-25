@@ -112,7 +112,8 @@ def test_match():
     resp = post(body)
     assert resp.status_code == 200, resp.text
     data = resp.json()
-    assert set(data.keys()) == {"query", "results", "total"}
+    assert set(data.keys()) == {"query", "results", "total", "warnings"}
+    assert data["warnings"] == []
     assert [r["id"] for r in data["results"]] == ["alpha-person"]
     assert "match" not in data["results"][0]
     assert data["total"] == {"value": 1, "relation": "eq"}
@@ -264,6 +265,77 @@ def test_query_entity_validation(query, locs):
     resp = post({"query": query})
     assert resp.status_code == 422, resp.text
     assert [error["loc"] for error in resp.json()["detail"]] == locs
+    assert post({"query": query, "invalid_values": "reject"}).json() == resp.json()
+
+
+@pytest.mark.usefixtures("match_v2_dataset")
+def test_drop_invalid_values():
+    query = person(birthDate=["1970-13-28", "1970-05-01"], country=["Narnia"])
+    resp = post({"query": query, "invalid_values": "drop"})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["warnings"] == [
+        {
+            "type": "invalid_value",
+            "loc": ["body", "query", "properties", "birthDate", 0],
+            "msg": "Invalid date value: '1970-13-28'",
+            "input": "1970-13-28",
+        },
+        {
+            "type": "invalid_value",
+            "loc": ["body", "query", "properties", "country", 0],
+            "msg": "Invalid country value: 'Narnia'",
+            "input": "Narnia",
+        },
+    ]
+    assert data["query"]["properties"] == {"name": [NAME], "birthDate": ["1970-05-01"]}
+    assert sorted(r["id"] for r in data["results"]) == ["alpha-person", "beta-person"]
+
+
+@pytest.mark.parametrize(
+    "query,locs",
+    [
+        pytest.param(
+            {"schema": "Banana", "properties": {"name": [NAME]}},
+            [["body", "query", "schema"]],
+            id="unknown-schema",
+        ),
+        pytest.param(
+            person(barfDate=["1970"], birthDate=["1970-13-28"]),
+            [
+                ["body", "query", "properties", "barfDate"],
+                ["body", "query", "properties", "birthDate", 0],
+            ],
+            id="unknown-property",
+        ),
+        pytest.param(
+            {"schema": "Person", "properties": {"birthDate": ["x", "y"]}},
+            [
+                ["body", "query", "properties", "birthDate", 0],
+                ["body", "query", "properties", "birthDate", 1],
+            ],
+            id="no-values-left",
+        ),
+        # Values that aren't strings or numbers are rejected before they're
+        # checked against the property's type.
+        pytest.param(
+            person(birthDate=[None]),
+            [["body", "query", "properties", "birthDate", 0]],
+            id="null-value",
+        ),
+    ],
+)
+def test_drop_invalid_values_errors(query, locs):
+    resp = post({"query": query, "invalid_values": "drop"})
+    assert resp.status_code == 422, resp.text
+    assert [error["loc"] for error in resp.json()["detail"]] == locs
+
+
+def test_unknown_invalid_values_option():
+    resp = post({"query": QUERY_PERSON, "invalid_values": "ignore"})
+    assert resp.status_code == 422, resp.text
+    [error] = resp.json()["detail"]
+    assert error["loc"] == ["body", "invalid_values"]
 
 
 @pytest.mark.parametrize(
@@ -490,7 +562,8 @@ def test_match_examples(name):
     # The examples work against any index, so check them the way a request is
     # checked before it's run against one.
     match = EntityMatchQuery.model_validate(MATCH_EXAMPLES[name]["value"])
-    check_query_entity(match.query)
+    _, warnings = check_query_entity(match.query, drop_invalid=False)
+    assert warnings == []
     if match.filters.datasets is not None:
         parse_dataset_query(match.filters.datasets)
     algorithm = get_algorithm(match.algorithm, match.matcher.config)
@@ -515,4 +588,6 @@ def test_logged_fields():
         "datasets": "default",
         "limit": settings.MATCH_PAGE,
         "algorithm_param": settings.DEFAULT_ALGORITHM,
+        "invalid_values": "reject",
+        "warnings": 0,
     }

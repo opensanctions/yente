@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from followthemoney.util import sanitize_text
 from pydantic import (
@@ -129,10 +129,33 @@ class Filters(BaseModel):
     )
 
 
+class RequestWarning(BaseModel):
+    """A problem with the request that was handled rather than rejected, shaped
+    like a validation error, with its location in the request."""
+
+    type: str = Field(examples=["invalid_value"])
+    loc: list[str | int] = Field(
+        examples=[["body", "query", "properties", "birthDate", 0]]
+    )
+    msg: str = Field(examples=["Invalid date value: 'yesterday'"])
+    input: Any = None
+
+
 class EntityMatchQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query: QueryEntity
+    invalid_values: Literal["reject", "drop"] = Field(
+        default="reject",
+        title="How to handle invalid query entity property values",
+        description=(
+            "With `reject`, values that aren't valid for their property's type "
+            "are rejected with a 422 response. With `drop`, they're dropped, "
+            "and each is listed in the response `warnings`. If no valid values "
+            "are left, the request is rejected as with `reject`. Unknown "
+            "properties are rejected either way."
+        ),
+    )
     algorithm: str = Field(settings.DEFAULT_ALGORITHM, title=ALGO_HELP)
     threshold: float = Field(
         settings.SCORE_THRESHOLD,
@@ -156,3 +179,10 @@ class EntityMatches(BaseModel):
     results: list[ScoredEntity]
     total: TotalSpec
     query: QueryEntity
+    warnings: list[RequestWarning] = Field(
+        default=[],
+        description=(
+            "The query entity property values that were dropped because "
+            "`invalid_values` is `drop`."
+        ),
+    )

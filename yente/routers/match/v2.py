@@ -18,7 +18,12 @@ from yente.data import get_catalog
 from yente.data.common import EntityExample, ErrorResponse, ScoredEntity, TotalSpec
 from yente.data.dataset import Dataset
 from yente.data.manifest import Catalog
-from yente.data.match_v2 import EntityMatches, EntityMatchQuery, QueryEntity
+from yente.data.match_v2 import (
+    EntityMatches,
+    EntityMatchQuery,
+    QueryEntity,
+    RequestWarning,
+)
 from yente.logs import get_logger
 from yente.routers.match import (
     build_match_query,
@@ -100,49 +105,62 @@ def no_query_params(request: Request) -> None:
         raise RequestValidationError(errors)
 
 
-def check_query_entity(entity: QueryEntity) -> None:
-    """Check the query entity against the FollowTheMoney model, reporting every
-    unknown property and every value that the property's type can't parse."""
-    loc = ("body", "query")
+def check_query_entity(
+    entity: QueryEntity, drop_invalid: bool
+) -> tuple[QueryEntity, list[RequestWarning]]:
+    """Check the query entity against the FollowTheMoney model.
+
+    Unknown properties and values that the property's type can't parse are
+    errors. With drop_invalid, the invalid values are dropped instead, and returned as
+    warnings. The entity is returned without the invalid values.
+    If no valid values are left, the invalid values are treated as errors.
+    """
+    loc: list[str | int] = ["body", "query"]
     schema = model.get(entity.schema_)
     if schema is None or not (schema.matchable or schema.name == settings.BASE_SCHEMA):
         reason = "Unknown" if schema is None else "Non-matchable"
-        error = {
-            "type": "invalid_schema",
-            "loc": (*loc, "schema"),
-            "msg": f"{reason} schema: {entity.schema_!r}",
-            "input": entity.schema_,
-        }
-        raise RequestValidationError([error])
+        error = RequestWarning(
+            type="invalid_schema",
+            loc=[*loc, "schema"],
+            msg=f"{reason} schema: {entity.schema_!r}",
+            input=entity.schema_,
+        )
+        raise RequestValidationError([error.model_dump()])
 
-    errors: list[dict[str, Any]] = []
+    problems: list[RequestWarning] = []  # warnings or errors
+    properties: dict[str, list[str]] = {}
     for name, values in entity.properties.items():
         prop = schema.get(name)
         if prop is None:
-            errors.append(
-                {
-                    "type": "unknown_property",
-                    "loc": (*loc, "properties", name),
-                    "msg": f"Unknown property for {schema.name}: {name!r}",
-                    "input": values,
-                }
+            problems.append(
+                RequestWarning(
+                    type="unknown_property",
+                    loc=[*loc, "properties", name],
+                    msg=f"Unknown property for {schema.name}: {name!r}",
+                    input=values,
+                )
             )
             continue
         for index, value in enumerate(values):
             # Clean the same way the query entity is built, so that values
             # like "Russia" for a country are accepted.
-            cleaned = prop.type.clean_text(value, fuzzy=True, format=prop.format)
-            if cleaned is None:
-                errors.append(
-                    {
-                        "type": "invalid_value",
-                        "loc": (*loc, "properties", name, index),
-                        "msg": f"Invalid {prop.type.label.lower()} value: {value!r}",
-                        "input": value,
-                    }
+            if prop.type.clean_text(value, fuzzy=True, format=prop.format) is None:
+                problems.append(
+                    RequestWarning(
+                        type="invalid_value",
+                        loc=[*loc, "properties", name, index],
+                        msg=f"Invalid {prop.type.label.lower()} value: {value!r}",
+                        input=value,
+                    )
                 )
-    if errors:
-        raise RequestValidationError(errors)
+            else:
+                properties.setdefault(name, []).append(value)
+    non_droppable = any(p.type != "invalid_value" for p in problems)
+    if problems and (not drop_invalid or non_droppable or not properties):
+        # Report every problem, not just the ones that can't be dropped.
+        raise RequestValidationError([p.model_dump() for p in problems])
+    checked = QueryEntity(schema=entity.schema_, properties=properties)
+    return checked, problems
 
 
 def parse_dataset_query(datasets: DatasetQuery) -> DatasetQuery:
@@ -235,6 +253,9 @@ async def match(
     be matchable, every property must exist in the schema, and every value must
     be valid for the property's type, e.g. `1975-04-21` for a date. An invalid
     request results in a 422 response indicating each problem and its location.
+    With `"invalid_values": "drop"`, invalid values are dropped instead, and each
+    is listed in the response `warnings` in the same form. Unknown properties are
+    still rejected, and so is a request with no valid values left.
 
     The response contains the scored results and the query entity as it was
     understood by the matcher:
@@ -243,7 +264,8 @@ async def match(
     {
         "query": {},
         "results": [...],
-        "total": {"value": 1, "relation": "eq"}
+        "total": {"value": 1, "relation": "eq"},
+        "warnings": []
     }
     ```
 
@@ -259,15 +281,18 @@ async def match(
     property values and the results are not logged.
 
     * From the request: the query entity's `schema`, `algorithm` as given (e.g.
-      `best`), `threshold`, `limit`, and the dataset query used, whether from
-      `filters.datasets` or the default.
-    * From the response: the number of matching results.
+      `best`), `threshold`, `limit`, `invalid_values`, and the dataset query used,
+      whether from `filters.datasets` or the default.
+    * From the response: the number of matching results and the number of
+      warnings.
     * About the HTTP request: the method, the URL including any query string,
       the user agent, the client IP address, the referer, the status code and
       the latency.
     """
     filters = match.filters
-    check_query_entity(match.query)
+    query_entity, warnings = check_query_entity(
+        match.query, drop_invalid=match.invalid_values == "drop"
+    )
     catalog = await get_catalog()
     datasets_query: DatasetQuery = settings.DEFAULT_DATASET
     if filters.datasets is not None:
@@ -280,8 +305,8 @@ async def match(
     entity, query = build_match_query(
         example=EntityExample(
             id=None,
-            schema=match.query.schema_,
-            properties=dict[str, str | list[Any]](match.query.properties),
+            schema=query_entity.schema_,
+            properties=dict[str, str | list[Any]](query_entity.properties),
         ),
         dataset_names={ds.name for ds in datasets},
         filters=topic_filters,
@@ -318,6 +343,8 @@ async def match(
         limit=match.limit,
         # Log the algorithm passed in the request, which may be "best"
         algorithm_param=match.algorithm,
+        invalid_values=match.invalid_values,
+        warnings=len(warnings),
     )
     return EntityMatches(
         results=results,
@@ -325,4 +352,5 @@ async def match(
         query=QueryEntity(
             schema=entity.schema.name, properties=dict(entity.properties)
         ),
+        warnings=warnings,
     )
