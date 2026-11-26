@@ -38,6 +38,9 @@ async def score_results(
     rank = -1
     algo_name = algorithm.__name__
     with _tracer.start_as_current_span("score_results") as span:
+        # PII: span attributes are exported with traces. The query entity
+        # describes a person, so consider whether a new attribute could contain
+        # personal data, or make it easier to infer, like a result ID or score.
         span.set_attribute("scoring.algorithm", algo_name)
         span.set_attribute("scoring.query_schema", entity.schema.name)
         for rank, (result, index_score) in enumerate(results):

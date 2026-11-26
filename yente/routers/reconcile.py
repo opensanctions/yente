@@ -260,7 +260,9 @@ async def reconcile_query(
         example.id = f"query.{uuid.uuid4()!s}"
     try:
         proxy = Entity.from_example(example)
-        es_query = entity_query(dataset, proxy, changed_since=changed_since)
+        es_query = entity_query(
+            dataset.dataset_names, proxy, changed_since=changed_since
+        )
     # Any failure to build a query from the example is the client's fault.
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(400, detail=str(exc))

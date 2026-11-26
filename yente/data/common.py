@@ -13,6 +13,10 @@ from yente.data.dataset import YenteDatasetModel
 from yente.data.entity import Entity
 
 EntityProperties = dict[str, list[Union[str, "EntityResponse"]]]
+# The weights and config of a scoring algorithm, as in
+# nomenklatura.matching.types.ScoringConfig.
+ScoringWeights = dict[str, float]
+ScoringConfigValues = dict[str, str | int | float | bool | None]
 
 
 class ErrorResponse(BaseModel):
@@ -50,11 +54,14 @@ class EntityResponse(BaseModel):
 EntityResponse.model_rebuild()
 
 
-class ScoredEntityResponse(EntityResponse):
+class ScoredEntity(EntityResponse):
     score: float = 0.99
     explanations: dict[str, FeatureResult] = Field(
         description="A dictionary of subscores from features in the algorithm and explanations for how they were calculated."
     )
+
+
+class ScoredEntityResponse(ScoredEntity):
     match: bool = Field(description="Whether the score is above the match threshold.")
 
     @classmethod
@@ -134,28 +141,6 @@ class EntityExample(BaseModel):
     properties: dict[str, str | list[Any]] = Field(
         ..., examples=[{"name": ["John Doe"]}]
     )
-
-
-class EntityMatchQuery(BaseModel):
-    weights: dict[str, float] = Field({}, examples=[{"name_literal": 0.8}])
-    config: dict[str, str | int | float | bool | None] = Field(
-        default_factory=dict,
-        description="Algorithm-specific configuration parameters.",
-        examples=[{"nm_number_mismatch": 0.4}],
-    )
-    queries: dict[str, EntityExample]
-
-
-class EntityMatches(BaseModel):
-    status: int = Field(200, examples=[200])
-    results: list[ScoredEntityResponse]
-    total: TotalSpec
-    query: EntityExample
-
-
-class EntityMatchResponse(BaseModel):
-    responses: dict[str, EntityMatches]
-    limit: int = Field(..., examples=[5])
 
 
 class DataCatalogModel(BaseModel):

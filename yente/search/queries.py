@@ -1,6 +1,6 @@
 import enum
 from collections import defaultdict
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Collection, Generator, Iterable, Sequence
 from pprint import pprint  # noqa
 from typing import Any
 
@@ -115,7 +115,7 @@ def tqs(field: str, values: Iterable[str | bool | float], boost: float = 1.0) ->
 
 
 def filter_query(
-    scope_dataset: Dataset,
+    dataset_names: Collection[str],
     shoulds: list[Clause],
     schema: Schema | None = None,
     filters: Filters = (),
@@ -129,7 +129,7 @@ def filter_query(
     filterqs: list[Clause] = []
     must_not: list[Clause] = []
 
-    datasets: set[str] = set(scope_dataset.dataset_names)
+    datasets: set[str] = set(dataset_names)
     if len(include_dataset):
         datasets = datasets.intersection(include_dataset)
     if len(exclude_dataset):
@@ -289,7 +289,7 @@ def address_query(entity: EntityProxy) -> list[Clause]:
 
 
 def entity_query(
-    dataset: Dataset,
+    dataset_names: Collection[str],
     entity: EntityProxy,
     filters: Filters = (),
     include_dataset: Sequence[str] = (),
@@ -311,7 +311,7 @@ def entity_query(
     shoulds.extend(address_query(entity))
 
     return filter_query(
-        dataset,
+        dataset_names,
         shoulds,
         filters=filters,
         filter_op=filter_op,
@@ -363,7 +363,7 @@ def text_query(
         }
         # log.info("Query", should=should)
     return filter_query(
-        dataset,
+        dataset.dataset_names,
         [should],
         schema=schema,
         filters=filters,
@@ -384,7 +384,7 @@ def prefix_query(
         should: Clause = {"match_none": {}}
     else:
         should = {"match_phrase_prefix": {"names": {"query": prefix, "slop": 2}}}
-    return filter_query(dataset, [should])
+    return filter_query(dataset.dataset_names, [should])
 
 
 def facet_aggregations(fields: Sequence[str] = ()) -> Clause:
