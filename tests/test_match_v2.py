@@ -123,8 +123,7 @@ def test_match():
 def test_matcher_config():
     body = {
         "query": QUERY_PERSON,
-        "algorithm": "logic-v2",
-        "matcher": {"config": {"nm_number_mismatch": 0.4}},
+        "matcher": {"name": "logic-v2", "config": {"nm_number_mismatch": 0.4}},
     }
     with mock.patch(
         "nomenklatura.matching.logic_v2.model.LogicV2.compare"
@@ -156,7 +155,7 @@ def test_matcher_weights():
 
 @pytest.mark.usefixtures("match_v2_dataset")
 def test_unknown_algorithm():
-    resp = post({"query": QUERY_PERSON, "algorithm": "nope"})
+    resp = post({"query": QUERY_PERSON, "matcher": {"name": "nope"}})
     assert resp.status_code == 400, resp.text
     assert "Invalid algorithm" in resp.json()["detail"]
 
@@ -566,7 +565,7 @@ def test_match_examples(name):
     assert warnings == []
     if match.filters.datasets is not None:
         parse_dataset_query(match.filters.datasets)
-    algorithm = get_algorithm(match.algorithm, match.matcher.config)
+    algorithm = get_algorithm(match.matcher.name, match.matcher.config)
     assert set(match.matcher.weights) <= {f.name for f in algorithm.features}
 
 

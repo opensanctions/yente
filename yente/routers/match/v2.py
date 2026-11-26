@@ -72,10 +72,10 @@ MATCH_EXAMPLES: dict[str, Example] = {
                     "address": ["1 Example Street, London"],
                 },
             },
-            "algorithm": "logic-v2",
             "threshold": 0.8,
             "limit": 10,
             "matcher": {
+                "name": "logic-v2",
                 "weights": {"address_match": 0.2},
                 "config": {"nm_number_mismatch": 0.4},
             },
@@ -280,9 +280,9 @@ async def match(
     Each request is logged with the following fields. The query entity's
     property values and the results are not logged.
 
-    * From the request: the query entity's `schema`, `algorithm` as given (e.g.
-      `best`), `threshold`, `limit`, `invalid_values`, and the dataset query used,
-      whether from `filters.datasets` or the default.
+    * From the request: the query entity's `schema`, `matcher.name` as given
+      (e.g. `best`), `threshold`, `limit`, `invalid_values`, and the dataset
+      query used, whether from `filters.datasets` or the default.
     * From the response: the number of matching results and the number of
       warnings.
     * About the HTTP request: the method, the URL including any query string,
@@ -299,7 +299,7 @@ async def match(
         datasets_query = parse_dataset_query(filters.datasets)
     datasets = resolve_datasets(catalog, datasets_query)
     weights, config = match.matcher.weights, match.matcher.config
-    algorithm = get_algorithm(match.algorithm, config)
+    algorithm = get_algorithm(match.matcher.name, config)
     topic_filters: list[FilterSpec] = [("topics", t) for t in filters.topics]
 
     entity, query = build_match_query(
@@ -342,7 +342,7 @@ async def match(
         datasets=datasets_query,
         limit=match.limit,
         # Log the algorithm passed in the request, which may be "best"
-        algorithm_param=match.algorithm,
+        algorithm_param=match.matcher.name,
         invalid_values=match.invalid_values,
         warnings=len(warnings),
     )

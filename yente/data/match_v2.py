@@ -64,6 +64,7 @@ class QueryEntity(BaseModel):
 class MatcherOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    name: str = Field(default=settings.DEFAULT_ALGORITHM, title=ALGO_HELP)
     weights: ScoringWeights = Field(
         default={},
         description="Override the weights of features in the scoring algorithm.",
@@ -156,7 +157,6 @@ class EntityMatchQuery(BaseModel):
             "properties are rejected either way."
         ),
     )
-    algorithm: str = Field(settings.DEFAULT_ALGORITHM, title=ALGO_HELP)
     threshold: float = Field(
         settings.SCORE_THRESHOLD,
         ge=0.0,
